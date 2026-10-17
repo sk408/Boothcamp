@@ -30,6 +30,21 @@ const DORIS := {
 	"hair": Color("#c9d3ea"), "hair_style": &"beehive", "mustache": false, "brows": false,
 	"glasses": &"cateye", "glasses_color": Color("#e5383b"), "walker": false, "prop": &"plate",
 }
+## (v3) Day 2: Bonnie Bunsworth, 34, baker. Bun with a wooden spoon in it, flour-dusted apron.
+const BONNIE := {
+	"name": "Bonnie", "face": &"doris",
+	"skin": Color("#e8b088"), "skin_shade": Color("#c98a62"), "nose": Color("#dd9670"),
+	"cardigan": Color("#f2a541"), "pants": Color("#4f6d8f"), "shirt": Color("#fff3dc"),
+	"accent": Color("#ff6f59"), "shoes": Color("#7a4b2a"),
+	"hair": Color("#8a4f2a"), "hair_style": &"bun", "mustache": false, "brows": false,
+	"glasses": &"", "glasses_color": Color("#5a3d2b"), "walker": false, "prop": &"", "apron": true,
+}
+## (v3) Pick a bean spec by patient id (unknown ids get Gus).
+static func spec_for(patient_id: String) -> Dictionary:
+	match patient_id:
+		"bonnie":
+			return BONNIE
+	return GUS
 
 var cfg: Dictionary = {}
 var parts: Dictionary = {}
@@ -105,7 +120,9 @@ func _build_body() -> void:
 	# pockets
 	for side: int in [-1, 1]:
 		Kit.box(torso, Vector3(0.14, 0.11, 0.02), Vector3(0.2 * side, 0.08, 0.335), cfg["cardigan"].darkened(0.1), {"outline": 0.006}).rotation.y = -0.45 * side
-	if String(cfg["face"]) == "gus":
+	if bool(cfg.get("apron", false)):
+		_build_apron(torso)
+	elif String(cfg["face"]) == "gus":
 		# bow tie
 		var bow := Node3D.new()
 		bow.position = Vector3(0, 0.76, 0.3)
@@ -208,6 +225,8 @@ func _build_head() -> void:
 			stem.rotation.z = 0.1
 			var hook := Kit.arc_tube(curl, 0.032, 0.011, -70.0, 180.0, 9, cfg["hair"], {"outline": 0.006})
 			hook.position = Vector3(0.032, 0.06, 0)
+		&"bun":
+			_build_bun(neck, hc)
 		&"beehive":
 			var hive := Node3D.new()
 			hive.position = hc
@@ -226,6 +245,46 @@ func _build_head() -> void:
 	emote.position = hc + Vector3(0.28, 0.5, 0.1)
 	neck.add_child(emote)
 	parts["emote"] = emote
+
+
+## (v3) Bonnie's hair: a smooth cap, a big round bun on top, a wooden spoon poked through it.
+func _build_bun(neck: Node3D, hc: Vector3) -> void:
+	var cap := Node3D.new()
+	cap.position = hc
+	neck.add_child(cap)
+	Kit.sphere(cap, 0.34, Vector3(0, 0.12, -0.06), cfg["hair"], Vector3(1.08, 0.78, 1.02), {}, 20)
+	for side: int in [-1, 1]:
+		Kit.sphere(cap, 0.11, Vector3(0.29 * side, 0.03, -0.02), cfg["hair"], Vector3(0.8, 1.1, 1.0), {"outline": 0.012}, 12)
+	var bun := Node3D.new()
+	bun.name = "Bun"
+	bun.position = hc + Vector3(0, 0.4, -0.08)
+	neck.add_child(bun)
+	parts["tuft_r"] = bun
+	parts["tuft_l"] = bun
+	parts["bun"] = bun
+	Kit.sphere(bun, 0.17, Vector3.ZERO, cfg["hair"], Vector3(1.0, 0.9, 1.0), {}, 16)
+	# the wooden spoon (handle + bowl), stuck through at a jaunty angle
+	var spoon := Node3D.new()
+	spoon.position = Vector3(0.0, 0.04, 0.0)
+	spoon.rotation.z = 0.95
+	bun.add_child(spoon)
+	var wood := Color("#d9a066")
+	Kit.capsule(spoon, 0.018, 0.5, Vector3(0, 0, 0), wood, {"outline": 0.006}, 8)
+	Kit.sphere(spoon, 0.055, Vector3(0, 0.27, 0), wood, Vector3(0.9, 1.25, 0.45), {"outline": 0.008}, 10)
+
+
+## (v3) A baker's apron with a pocket, a little flour on it and a loaf stitched on the bib.
+func _build_apron(torso: Node3D) -> void:
+	var cream := Color("#fffaf0")
+	Kit.box(torso, Vector3(0.44, 0.52, 0.04), Vector3(0, 0.1, 0.35), cream, {"outline": 0.008})
+	Kit.box(torso, Vector3(0.26, 0.2, 0.04), Vector3(0, 0.46, 0.33), cream, {"outline": 0.008})
+	for side: int in [-1, 1]:
+		var strap := Kit.box(torso, Vector3(0.04, 0.3, 0.03), Vector3(0.12 * side, 0.66, 0.29), cream, {"outline": 0.0})
+		strap.rotation.z = -0.25 * side
+	Kit.box(torso, Vector3(0.2, 0.09, 0.02), Vector3(0, -0.02, 0.375), Color("#f3e3c8"), {"outline": 0.006})
+	Kit.sphere(torso, 0.06, Vector3(0, 0.46, 0.355), Color("#d98b3a"), Vector3(1.4, 0.75, 0.35), {"outline": 0.006}, 10)
+	for p: Vector3 in [Vector3(-0.14, 0.24, 0.374), Vector3(0.12, 0.05, 0.374), Vector3(0.05, 0.3, 0.374)]:
+		Kit.sphere(torso, 0.022, p, Color("#ffffff"), Vector3(1.6, 1.0, 0.3), {"outline": 0.0}, 8)
 
 
 func _build_round_glasses(neck: Node3D, hc: Vector3) -> void:
@@ -647,7 +706,7 @@ func _hair_blast(intensity: float) -> void:
 			continue
 		var tuft: Node3D = parts[k]
 		var side := -1.0 if k == "tuft_r" else 1.0
-		if cfg["hair_style"] == &"beehive":
+		if cfg["hair_style"] == &"beehive" or cfg["hair_style"] == &"bun":
 			side = 0.0
 		var t := _channel(k)
 		var rest_pos: Vector3 = tuft.get_meta("rest_pos", tuft.position)

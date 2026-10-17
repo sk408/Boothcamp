@@ -5,6 +5,8 @@ extends CanvasLayer
 ## a coin count-up and the one-item upgrade shop (comfy chair, saved in Game.progress).
 ## Keys: B buys, A plays again, Enter / Space continues to the title. Every control is clickable.
 ## Beat: results_continue. Left alone for IDLE_S (a booth display), it returns to the title.
+## (v3) Day-aware: headlines per chapter, "Vol. <day>", the shop item of that day (Game.SHOP_ITEMS)
+## and a "Next day" button (key N, returns "next") once the next chapter is open.
 
 signal _continued
 
@@ -28,8 +30,33 @@ const SUBHEADS: Dictionary = {
 	"C": "A few beeps went astray. Hoot recommends practice and a snack.",
 	"Do-over": "Experts agree: every audiologist's first booth is a little wobbly.",
 }
+## (v3) Day 2 (Bonnie): grade -> headline / subhead.
+const CHAPTER_HEADLINES: Dictionary = {
+	"bonnie": {
+		"S": "GHOST BUSTED: TRAINEE MASKS LIKE A PRO",
+		"A": "BAKER'S EAR SENT TO ENT; OWL SUSPECTS A STIFF LITTLE BONE",
+		"B": "BONE BEEPS BRAVELY BEEPED AT BOOTH CAMP",
+		"C": "NOISE MOSTLY IN THE RIGHT EAR, CONFIRMS OWL",
+		"Do-over": "BONNIE BACK TOMORROW WITH CROISSANTS; GHOST STILL AT LARGE",
+	},
+}
+const CHAPTER_SUBHEADS: Dictionary = {
+	"bonnie": {
+		"S": "A textbook plateau at every pitch. The Cross-Hearing Ghost has filed a complaint.",
+		"A": "Air down, bone up: a conductive loss, referred to the ear doctor. Bonnie brings scones.",
+		"B": "The plateau held; a few noise steps wandered. Hoot recommends more practice and a bun.",
+		"C": "Some masked beeps went astray. Remember: heard means noise up 5.",
+		"Do-over": "Masking is the trickiest trick in the booth. Everyone overmasks once.",
+	},
+}
 const MEDAL_COLORS: Dictionary = {"gold": Color("#ffc93c"), "silver": Color("#c9ced8"), "bronze": Color("#d99a5b")}
 const MEDAL_BEATS: Array[Array] = [["history", "Chat"], ["otoscopy", "Peek"], ["earphones", "Phones"], ["evidence", "Evidence"]]
+## (v3) Medal rows per chapter (chapters not listed use MEDAL_BEATS).
+const CHAPTER_MEDAL_BEATS: Dictionary = {
+	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
+}
+## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),
@@ -64,7 +91,8 @@ func _input(event: InputEvent) -> void:
 		_idle = 0.0
 
 
-## (coroutine) summary: CONTRACTS.md §5.3. Returns "title" or "again" (play Gus again).
+## (coroutine) summary: CONTRACTS.md §5.3. Returns "title", "again" (same patient again) or
+## (v3) "next" (start summary.next_chapter_id).
 func show_summary(summary: Dictionary) -> String:
 	_summary = summary
 	_build(summary)
@@ -103,14 +131,44 @@ func _again() -> void:
 	_continue()
 
 
-func _try_buy() -> void:
-	if Game.has_upgrade(CHAIR_ID):
+## (v3) Continue straight to the next day (only offered when it is open).
+func _next_day() -> void:
+	if _done or not _has_next_day():
 		return
-	if Game.buy_upgrade(CHAIR_ID, CHAIR_COST):
+	_next = "next"
+	_continue()
+
+
+func _has_next_day() -> bool:
+	var nid := String(_summary.get("next_chapter_id", ""))
+	return nid != "" and Game.is_chapter_unlocked(nid)
+
+
+func _first_name() -> String:
+	return String(_summary.get("patient_name", "Gus")).split(" ")[0]
+
+
+## (v3) The classified ad's item: the one offered on this day (Game.SHOP_ITEMS).
+func _shop_id() -> String:
+	var day := int(_summary.get("day", 1))
+	for id: String in Game.SHOP_ITEMS:
+		if int(Game.SHOP_ITEMS[id]["day"]) == day:
+			return id
+	return CHAIR_ID
+
+
+func _shop_cost() -> int:
+	return int((Game.SHOP_ITEMS.get(_shop_id(), {"cost": CHAIR_COST}) as Dictionary)["cost"])
+
+
+func _try_buy() -> void:
+	if Game.has_upgrade(_shop_id()):
+		return
+	if Game.buy_upgrade(_shop_id(), _shop_cost()):
 		Sfx.play(&"kaching")
 		_buy.text = "Owned!"
 		_buy.disabled = true
-		_shop_note.text = "Delivered to the booth. Gus approves."
+		_shop_note.text = "Delivered to the booth. %s approves." % _first_name()
 		_total_label.text = "Wallet: %d Decibucks" % int(Game.progress.get("coins", 0))
 		Juice.pop(_buy, 1.3, 0.3)
 	else:
@@ -127,6 +185,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and (event as InputEventKey).keycode == KEY_A:
 		_again()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and (event as InputEventKey).keycode == KEY_N and _has_next_day():
+		_next_day()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"advance_dialogue") or event.is_action_pressed(&"ui_accept"):
 		_continue()
@@ -184,7 +245,7 @@ func _build(s: Dictionary) -> void:
 
 	var top := HBoxContainer.new()
 	v.add_child(top)
-	var l1 := UiKit.label("Vol. 1  -  Booth Camp Edition", 14, Palette.INK_SOFT, 600)
+	var l1 := UiKit.label("Vol. %d  -  Booth Camp Edition" % maxi(1, int(s.get("day", 1))), 14, Palette.INK_SOFT, 600)
 	l1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(l1)
 	top.add_child(UiKit.label("Weather: 100% chance of beeps", 14, Palette.INK_SOFT, 600))
@@ -193,11 +254,14 @@ func _build(s: Dictionary) -> void:
 	v.add_child(mast)
 	_rule(v, 4)
 	var grade := String(s.get("grade", "?"))
-	var head := UiKit.label(HEADLINES.get(grade, HEADLINES["B"]), 30, Palette.INK, 700)
+	var cid := String(s.get("chapter_id", "gus"))
+	var heads: Dictionary = CHAPTER_HEADLINES.get(cid, HEADLINES)
+	var head := UiKit.label(heads.get(grade, heads.get("B", HEADLINES["B"])), 30, Palette.INK, 700)
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
-	var sub := UiKit.label(SUBHEADS.get(grade, ""), 18, Palette.INK_SOFT, 500)
+	var subs: Dictionary = CHAPTER_SUBHEADS.get(cid, SUBHEADS)
+	var sub := UiKit.label(subs.get(grade, ""), 18, Palette.INK_SOFT, 500)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
 	_rule(v, 2)
@@ -240,7 +304,7 @@ func _build(s: Dictionary) -> void:
 	medals.add_theme_constant_override("separation", 10)
 	c1.add_child(medals)
 	var md: Dictionary = s.get("medals", {})
-	for pair: Array in MEDAL_BEATS:
+	for pair: Array in CHAPTER_MEDAL_BEATS.get(String(s.get("chapter_id", "")), MEDAL_BEATS):
 		medals.add_child(_medal(String(pair[1]), String(md.get(pair[0], ""))))
 
 	var vr := ColorRect.new()
@@ -296,7 +360,18 @@ func _build(s: Dictionary) -> void:
 	var chair := Control.new()
 	chair.custom_minimum_size = Vector2(48, 48)
 	chair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var is_chair := _shop_id() == CHAIR_ID
 	chair.draw.connect(func() -> void:
+		if not is_chair:
+			# (v3) insert earphones: two foam tips on a thin tube
+			chair.draw_arc(Vector2(24, 22), 16.0, PI * 0.15, PI * 0.85, 12, Palette.INK, 3.0, true)
+			for p: Vector2 in [Vector2(10, 32), Vector2(38, 32)]:
+				UiDraw.rounded_rect(chair, Rect2(p - Vector2(7, 11), Vector2(14, 22)), Color("#ffc46b"), 7, 2, Palette.INK)
+				chair.draw_line(p + Vector2(-5, -3), p + Vector2(5, -3), Color(Palette.INK, 0.35), 2.0)
+				chair.draw_line(p + Vector2(-5, 3), p + Vector2(5, 3), Color(Palette.INK, 0.35), 2.0)
+			chair.draw_circle(Vector2(10, 21), 3.0, Palette.RIGHT_RED)
+			chair.draw_circle(Vector2(38, 21), 3.0, Palette.LEFT_BLUE)
+			return
 		UiDraw.rounded_rect(chair, Rect2(8, 4, 32, 26), Color("#8e5cc4"), 8, 2, Palette.INK)
 		UiDraw.rounded_rect(chair, Rect2(4, 24, 40, 14), Color("#a77bd6"), 6, 2, Palette.INK)
 		chair.draw_line(Vector2(10, 38), Vector2(10, 46), Palette.INK, 3.0)
@@ -306,10 +381,12 @@ func _build(s: Dictionary) -> void:
 	sv.add_theme_constant_override("separation", 0)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sh.add_child(sv)
-	sv.add_child(UiKit.label("CLASSIFIEDS: Comfy booth chair, %d Decibucks" % CHAIR_COST, 16, Palette.INK, 700))
-	_shop_note = UiKit.label("Comfier patients stay alert and guess less.", 14, Palette.INK_SOFT, 500)
+	var item: Dictionary = Game.SHOP_ITEMS.get(_shop_id(), {})
+	var item_title := String(item.get("title", "Comfy booth chair"))
+	sv.add_child(UiKit.label("CLASSIFIEDS: %s, %d Decibucks" % [item_title, _shop_cost()], 16, Palette.INK, 700))
+	_shop_note = UiKit.label("Comfier patients stay alert and guess less." if _shop_id() == CHAIR_ID else String(item.get("blurb", "")), 14, Palette.INK_SOFT, 500)
 	sv.add_child(_shop_note)
-	var owned := Game.has_upgrade(CHAIR_ID)
+	var owned := Game.has_upgrade(_shop_id())
 	_buy = UiKit.button("Owned!" if owned else ("Buy  [B]" if UiKit.show_key_hints() else "Buy"), &"", Vector2(120, 46))
 	_buy.disabled = owned
 	_buy.pressed.connect(_try_buy)
@@ -322,9 +399,16 @@ func _build(s: Dictionary) -> void:
 	var cont := UiKit.button("Back to the title  [%s]" % Game.key_label(&"advance_dialogue") if UiKit.show_key_hints() else "Back to the title", &"AccentButton", Vector2(250, 50))
 	cont.pressed.connect(_continue)
 	btns.add_child(cont)
-	var again := UiKit.button("Play Gus again  [A]" if UiKit.show_key_hints() else "Play Gus again", &"", Vector2(250, 40))
+	var again_txt := "Play %s again" % _first_name()
+	var again := UiKit.button(again_txt + "  [A]" if UiKit.show_key_hints() else again_txt, &"", Vector2(250, 40))
 	again.pressed.connect(_again)
 	btns.add_child(again)
+	if _has_next_day():
+		var nch := Game.chapter(String(s.get("next_chapter_id", "")))
+		var ntxt := "Next: %s" % String(nch.get("title", "next day"))
+		var nb := UiKit.button(ntxt + "  [N]" if UiKit.show_key_hints() else ntxt, &"", Vector2(250, 40))
+		nb.pressed.connect(_next_day)
+		btns.add_child(nb)
 
 
 func _bar(name: String, value: float, col: Color) -> Control:
@@ -426,9 +510,14 @@ func _golf_card(res: Dictionary) -> Control:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.custom_minimum_size = Vector2(44, 0)
 		grid.add_child(l)
-	for e: String in ["right", "left"]:
-		var fl: Dictionary = (ears.get(e, {}) as Dictionary).get("freqs", {})
-		grid.add_child(UiKit.label("R  O" if e == "right" else "L  X", 15, Palette.ear_color(e), 700))
+	var rows: Array[Array] = [["freqs", "R  O", "right"], ["freqs", "L  X", "left"]]
+	for extra: Array in GOLF_EXTRA_ROWS:
+		if not ((ears.get(String(extra[2]), {}) as Dictionary).get(String(extra[0]), {}) as Dictionary).is_empty():
+			rows.append(extra)
+	for row: Array in rows:
+		var e := String(row[2])
+		var fl: Dictionary = (ears.get(e, {}) as Dictionary).get(String(row[0]), {})
+		grid.add_child(UiKit.label(String(row[1]), 15, Palette.ear_color(e), 700))
 		for f in freqs:
 			var cell := PanelContainer.new()
 			cell.custom_minimum_size = Vector2(44, 40)

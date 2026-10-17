@@ -5,12 +5,12 @@ extends Control
 ## Public API (keep stable):
 ##   ear                      "right", "left" or "both" (which points are drawn)
 ##   show_title               draws an ear title strip above the plot
-##   set_point(ear, freq, db, no_response := false, animate := true)
+##   set_point(ear, freq, db, no_response := false, animate := true, test := &"ac")
 ##   clear_points()
 ##   show_results(results, animate := false)   # results = CONTRACTS.md §5.1; emits draw_finished
 ##   set_cursor(freq, db, visible)
 ##   freq_to_x(freq) / db_to_y(db)             # local coordinates
-##   get_point_global_position(ear, freq) -> Vector2
+##   get_point_global_position(ear, freq, test := &"ac") -> Vector2
 ##   get_region_global_rect(freq_lo, freq_hi, db_lo := -10, db_hi := 120) -> Rect2
 ##   signal draw_finished
 ## Extras (ui-internal): signal freq_clicked(freq), play_melody(ear), point_count(ear).
@@ -18,6 +18,10 @@ extends Control
 ## 120, a faint normal band and speech banana, shading beyond the AudiOtron's maximum output,
 ## ASHA symbols (right = red O, left = blue X, no response = arrow) that STAMP on with a
 ## hit-stop and an ink splat, and connecting lines drawn in like a pen.
+## (v3) Bone and masked layers (test = &"bc" < >, &"bc_masked" [ ], &"ac_masked" triangle /
+## square): a masked air symbol replaces the plain one at its frequency and the air line runs
+## through it; a masked bone symbol replaces the unmasked one; bone symbols sit beside the
+## frequency line and are never connected (ASHA).
 
 signal draw_finished
 ## The player clicked the plot near a test frequency (AudiOtron uses it to jump there).
@@ -47,6 +51,12 @@ const PEN_S := 0.32
 
 ## ear -> freq -> {"db": int, "no_response": bool, "age": float (seconds since stamped, -1 = static), "seed": int}
 var points: Dictionary = {"right": {}, "left": {}}
+## (v3) The other tests: test -> ear -> freq -> the same point Dictionary.
+var layers: Dictionary = {}
+## (v3) The cursor ghost's symbol (the AudiOtron sets it to the current test).
+var cursor_test: StringName = &"ac"
+## (v3) Which maximum-output line to shade: &"phones" (air) or &"bone".
+var max_output_transducer: StringName = &"phones"
 var cursor_freq: int = 1000
 var cursor_db: int = 40
 var cursor_visible: bool = false
@@ -72,11 +82,19 @@ func _ready() -> void:
 
 # ---------------------------------------------------------------- public API
 
-func set_point(p_ear: String, freq: int, db: int, no_response: bool = false, animate: bool = true) -> void:
+func set_point(p_ear: String, freq: int, db: int, no_response: bool = false, animate: bool = true, test: StringName = &"ac") -> void:
+	var pt := {"db": db, "no_response": no_response, "age": 0.0 if animate else -1.0, "seed": freq * 7 + (1 if p_ear == "right" else 2)}
+	if test != &"ac" and test != &"":
+		_layer(test, p_ear)[freq] = pt
+		if test == &"ac_masked":
+			_refresh_segments(p_ear, freq, animate)  # the air line now runs through the masked level
+		_animating = _animating or animate
+		queue_redraw()
+		return
 	if not points.has(p_ear):
 		points[p_ear] = {}
 	var pts: Dictionary = points[p_ear]
-	pts[freq] = {"db": db, "no_response": no_response, "age": 0.0 if animate else -1.0, "seed": freq * 7 + (1 if p_ear == "right" else 2)}
+	pts[freq] = pt
 	_refresh_segments(p_ear, freq, animate)
 	_animating = _animating or animate
 	queue_redraw()
@@ -84,13 +102,33 @@ func set_point(p_ear: String, freq: int, db: int, no_response: bool = false, ani
 
 func clear_points() -> void:
 	points = {"right": {}, "left": {}}
+	layers.clear()
 	_segments.clear()
 	_bounce.clear()
 	queue_redraw()
 
 
-func point_count(p_ear: String) -> int:
+func point_count(p_ear: String, test: StringName = &"ac") -> int:
+	if test != &"ac" and test != &"":
+		return _layer(test, p_ear).size()
 	return (points.get(p_ear, {}) as Dictionary).size()
+
+
+func _layer(test: StringName, p_ear: String) -> Dictionary:
+	if not layers.has(test):
+		layers[test] = {"right": {}, "left": {}}
+	var l: Dictionary = layers[test]
+	if not l.has(p_ear):
+		l[p_ear] = {}
+	return l[p_ear]
+
+
+## The air level the line runs through at f: masked where measured.
+func _ac_db(p_ear: String, f: int) -> float:
+	var m := _layer(&"ac_masked", p_ear)
+	if m.has(f):
+		return float(m[f]["db"])
+	return float((points[p_ear][f] as Dictionary)["db"])
 
 
 ## Load every stored threshold from a results Dictionary (§5.1). animate = stamp them on one
@@ -100,15 +138,16 @@ func show_results(results: Dictionary, animate: bool = false) -> void:
 	var ears: Dictionary = results.get("ears", {})
 	var queue: Array = []
 	for e: String in ears:
-		var freqs: Dictionary = (ears[e] as Dictionary).get("freqs", {})
-		var fl: Array = freqs.keys()
-		fl.sort()
-		for f: int in fl:
-			var info: Dictionary = freqs[f]
-			queue.append([e, f, int(info["stored_db"]), bool(info.get("no_response", false))])
+		for key: String in ["freqs", "ac_masked", "bc", "bc_masked"]:
+			var freqs: Dictionary = (ears[e] as Dictionary).get(key, {})
+			var fl: Array = freqs.keys()
+			fl.sort()
+			for f: int in fl:
+				var info: Dictionary = freqs[f]
+				queue.append([e, f, int(info["stored_db"]), bool(info.get("no_response", false)), &"ac" if key == "freqs" else StringName(key)])
 	if not animate:
 		for q: Array in queue:
-			set_point(q[0], q[1], q[2], q[3], false)
+			set_point(q[0], q[1], q[2], q[3], false, q[4])
 		_reveal = 1.0
 		queue_redraw()
 		draw_finished.emit.call_deferred()
@@ -118,7 +157,7 @@ func show_results(results: Dictionary, animate: bool = false) -> void:
 	var t := create_tween()
 	for q: Array in queue:
 		t.tween_callback(func() -> void:
-			set_point(q[0], q[1], q[2], q[3], true)
+			set_point(q[0], q[1], q[2], q[3], true, q[4])
 			Sfx.play(&"stamp", randf_range(0.95, 1.08), -4.0)
 			Sfx.play_note(Sfx.audiogram_note_hz(int(q[1])), -8.0))
 		t.tween_interval(0.16)
@@ -171,10 +210,11 @@ func db_to_y(db: float) -> float:
 	return r.position.y + r.size.y * (db - DB_TOP) / float(DB_BOTTOM - DB_TOP)
 
 
-func get_point_global_position(p_ear: String, freq: int) -> Vector2:
-	var pts: Dictionary = points.get(p_ear, {})
+func get_point_global_position(p_ear: String, freq: int, test: StringName = &"ac") -> Vector2:
+	var pts: Dictionary = points.get(p_ear, {}) if test == &"ac" or test == &"" else _layer(test, p_ear)
 	var db: float = float(pts[freq]["db"]) if pts.has(freq) else 0.0
-	return get_global_transform_with_canvas() * Vector2(freq_to_x(freq), db_to_y(db))
+	var off := UiDraw.symbol_offset(p_ear, test, 17.0)
+	return get_global_transform_with_canvas() * (Vector2(freq_to_x(freq), db_to_y(db)) + off)
 
 
 func get_region_global_rect(freq_lo: int, freq_hi: int, db_lo: float = DB_TOP, db_hi: float = DB_BOTTOM) -> Rect2:
@@ -225,15 +265,19 @@ func _process(delta: float) -> void:
 	if not _animating:
 		return
 	var busy := false
-	for e: String in points:
-		for f: int in points[e]:
-			var p: Dictionary = points[e][f]
-			if float(p["age"]) >= 0.0:
-				p["age"] = float(p["age"]) + delta
-				if float(p["age"]) < STAMP_IN_S + HIT_STOP_S + STAMP_SETTLE_S + 0.6:
-					busy = true
-				else:
-					p["age"] = -1.0
+	var sets: Array = [points]
+	for t: StringName in layers:
+		sets.append(layers[t])
+	for set_: Dictionary in sets:
+		for e: String in set_:
+			for f: int in set_[e]:
+				var p: Dictionary = set_[e][f]
+				if float(p["age"]) >= 0.0:
+					p["age"] = float(p["age"]) + delta
+					if float(p["age"]) < STAMP_IN_S + HIT_STOP_S + STAMP_SETTLE_S + 0.6:
+						busy = true
+					else:
+						p["age"] = -1.0
 	for k: String in _segments.keys():
 		var v: float = _segments[k]
 		if v < 1.0:
@@ -385,8 +429,9 @@ func _draw_max_output(r: Rect2) -> void:
 	if r.size.x < 8.0 or r.size.y < 8.0:
 		return
 	var line := PackedVector2Array()
-	for f: int in ClinicRules.AC_FREQS:
-		var p := Vector2(freq_to_x(f), minf(db_to_y(float(ClinicRules.max_db(f)) + 2.5), r.end.y - 1.0))
+	var fs: Array[int] = ClinicRules.BC_FREQS if max_output_transducer == &"bone" else ClinicRules.AC_FREQS
+	for f: int in fs:
+		var p := Vector2(freq_to_x(f), minf(db_to_y(float(ClinicRules.max_db_for(f, max_output_transducer)) + 2.5), r.end.y - 1.0))
 		if line.is_empty() and p.x > r.position.x + 0.5:
 			line.append(Vector2(r.position.x, p.y))
 		if line.is_empty() or p.distance_to(line[line.size() - 1]) > 0.5:
@@ -412,7 +457,7 @@ func _draw_cursor(r: Rect2) -> void:
 	draw_rect(Rect2(x - 11.0, r.position.y, 22.0, r.size.y), Color(Palette.SELECT_ORANGE, 0.16))
 	AoDraw.dashed(self, Vector2(r.position.x, y), Vector2(r.end.x, y), Color(Palette.SELECT_ORANGE, 0.7), 2.0, 7.0, 5.0)
 	draw_circle(Vector2(x, y), 15.0, Color(Palette.SELECT_ORANGE, 0.25))
-	UiDraw.ear_symbol(self, Vector2(x, y), ce, 16.0, 3.0, false, Color(col, 0.5))
+	UiDraw.audiogram_symbol(self, Vector2(x, y) + UiDraw.symbol_offset(ce, cursor_test, 16.0), ce, cursor_test, 16.0, 3.0, false, Color(col, 0.5))
 	var tag := "%d" % cursor_db
 	var tw := AoDraw.text_size(tag, 13, AoDraw.FONT_BOLD).x + 12.0
 	var tr := Rect2(Vector2(x + 16.0, y - 11.0), Vector2(tw, 20.0))
@@ -424,9 +469,11 @@ func _draw_cursor(r: Rect2) -> void:
 
 func _draw_ear(e: String) -> void:
 	var pts: Dictionary = points.get(e, {})
+	_draw_layers(e)
 	if pts.is_empty():
 		return
 	var col := Palette.ear_color(e)
+	var masked_ac := _layer(&"ac_masked", e)
 	# ink splats under freshly stamped symbols
 	for f: int in pts:
 		var p: Dictionary = pts[f]
@@ -443,8 +490,8 @@ func _draw_ear(e: String) -> void:
 		var f2 := int(parts[2])
 		if not pts.has(f1) or not pts.has(f2):
 			continue
-		var a := Vector2(freq_to_x(f1), db_to_y(float(pts[f1]["db"])))
-		var b := Vector2(freq_to_x(f2), db_to_y(float(pts[f2]["db"])))
+		var a := Vector2(freq_to_x(f1), db_to_y(_ac_db(e, f1)))
+		var b := Vector2(freq_to_x(f2), db_to_y(_ac_db(e, f2)))
 		var prog: float = _segments[k] * _reveal
 		if prog <= 0.0:
 			continue
@@ -458,6 +505,8 @@ func _draw_ear(e: String) -> void:
 			draw_circle(end, 4.0, Palette.INK)
 	# symbols
 	for f: int in pts:
+		if masked_ac.has(f):
+			continue  # the masked symbol replaces it (_draw_layers)
 		var p: Dictionary = pts[f]
 		var c := Vector2(freq_to_x(f), db_to_y(float(p["db"])))
 		var age := float(p["age"])
@@ -474,3 +523,26 @@ func _draw_ear(e: String) -> void:
 			draw_arc(c, 12.0 + 26.0 * k2, 0.0, TAU, 32, Color(col, 0.6 * (1.0 - k2)), 3.0, true)
 		UiDraw.ear_symbol(self, c + Vector2(1.5, 2.0), e, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25))
 		UiDraw.ear_symbol(self, c, e, s, 4.0, bool(p["no_response"]))
+
+
+## (v3) Masked air, unmasked bone and masked bone symbols (no connecting lines for bone).
+func _draw_layers(e: String) -> void:
+	var masked_bc := _layer(&"bc_masked", e)
+	for test: StringName in [&"bc", &"bc_masked", &"ac_masked"]:
+		var pts := _layer(test, e)
+		var col := Palette.ear_color(e)
+		for f: int in pts:
+			if test == &"bc" and masked_bc.has(f):
+				continue  # masked bone replaces unmasked bone at that frequency
+			var p: Dictionary = pts[f]
+			var age := float(p["age"])
+			var s := 17.0 * stamp_scale(age)
+			var c := Vector2(freq_to_x(f), db_to_y(float(p["db"]))) + UiDraw.symbol_offset(e, test, 17.0)
+			if age >= STAMP_IN_S:
+				var fade := clampf(1.0 - (age - STAMP_IN_S) / 0.6, 0.0, 1.0)
+				AoDraw.splat(self, c, 15.0, Color(col, 0.22 * fade), int(p["seed"]) + 3)
+			if age >= STAMP_IN_S and age < STAMP_IN_S + 0.4:
+				var k2 := (age - STAMP_IN_S) / 0.4
+				draw_arc(c, 12.0 + 26.0 * k2, 0.0, TAU, 32, Color(col, 0.6 * (1.0 - k2)), 3.0, true)
+			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25))
+			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]))

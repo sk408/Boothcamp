@@ -449,4 +449,6 @@ func _results() -> void:
 	var paper: Node = (load(RESULTS_SCENE) as PackedScene).instantiate()
 	add_child(paper)
 	var next: Variant = await paper.call("show_summary", summary)
+	if String(next) == "next" and Game.start_chapter(String(summary.get("next_chapter_id", ""))):
+		return  # (v3) the paper's "Next: Day 2" button
 	Events.goto_scene.emit(LEVEL_SCENE if String(next) == "again" else TITLE_SCENE)

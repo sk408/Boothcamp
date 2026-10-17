@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_vywsh"]
+
+[resource]
+script = ExtResource("1_vywsh")
+id = "bonnie"
+display_name = "Bonnie Bunsworth"
+age = 34
+complaint = "My right ear has gone all underwater. Like listening through a loaf of sourdough."
+thresholds_right = Dictionary[int, int]({
+250: 55,
+500: 55,
+750: 50,
+1000: 50,
+1500: 50,
+2000: 50,
+3000: 40,
+4000: 35,
+6000: 35,
+8000: 40
+})
+thresholds_left = Dictionary[int, int]({
+250: 10,
+500: 5,
+750: 5,
+1000: 5,
+1500: 5,
+2000: 5,
+3000: 10,
+4000: 10,
+6000: 15,
+8000: 15
+})
+bc_right = Dictionary[int, int]({
+250: 10,
+500: 10,
+750: 10,
+1000: 10,
+1500: 15,
+2000: 25,
+3000: 15,
+4000: 10
+})
+bc_left = Dictionary[int, int]({
+250: 5,
+500: 5,
+750: 5,
+1000: 0,
+1500: 5,
+2000: 5,
+3000: 10,
+4000: 5
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.4
+reaction_time_min_s = 0.35
+reaction_time_max_s = 0.8
+psychometric_slope_db = 1.7
+attention = 0.97
+fatigue_per_tone = 0.0006
+min_tone_s = 0.5
+rhythm_sensitivity = 0.5
+tags = PackedStringArray("otosclerosis", "conductive", "unilateral", "chapter_2")

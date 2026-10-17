@@ -17,6 +17,11 @@ var tracker: Control
 var notes_box: VBoxContainer
 var games: Control
 var _current := -1
+## (v3) The visit's steps and labels: Day 1 uses STEPS / STEP_LABELS; other days call set_steps().
+var _steps: Array[StringName] = STEPS.duplicate()
+var _labels: Dictionary = STEP_LABELS.duplicate()
+var _colors: Dictionary = STEP_COLORS.duplicate()
+var _title := "GRANDPA GUS'S VISIT"
 var _done: Dictionary = {}
 var _hearts := ClinicRules.MAX_COMFORT
 var _heart_flash := 0.0
@@ -53,12 +58,27 @@ func add_game(c: Control) -> void:
 	games.add_child(c)
 
 
+## (v3) Replace the step tracker (a chapter other than Day 1). labels: {step: text};
+## colors: {step: Color} for ear-coloured steps; title: the small caption above the pills.
+func set_steps(steps: Array, labels: Dictionary, title: String = "", colors: Dictionary = {}) -> void:
+	_steps.clear()
+	for s in steps:
+		_steps.append(StringName(s))
+	_labels = labels.duplicate()
+	_colors = colors.duplicate()
+	if title != "":
+		_title = title
+	_current = -1
+	_done.clear()
+	tracker.queue_redraw()
+
+
 func set_step(step: StringName) -> void:
-	var i := STEPS.find(step)
+	var i := _steps.find(step)
 	if i < 0:
 		return
 	for j in i:
-		_done[STEPS[j]] = true
+		_done[_steps[j]] = true
 	_current = i
 	tracker.queue_redraw()
 
@@ -141,13 +161,13 @@ func _process(delta: float) -> void:
 
 
 func _pill_width(i: int) -> float:
-	var s: String = STEP_LABELS[STEPS[i]]
-	return _font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + (40.0 if _done.has(STEPS[i]) else 24.0)
+	var s: String = String(_labels.get(_steps[i], String(_steps[i])))
+	return _font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + (40.0 if _done.has(_steps[i]) else 24.0)
 
 
 func _tracker_width() -> float:
 	var w := 18.0
-	for i in STEPS.size():
+	for i in _steps.size():
 		w += _pill_width(i) + 6.0
 	return w
 
@@ -157,30 +177,30 @@ func _draw_tracker() -> void:
 	var bg := Rect2(Vector2.ZERO, Vector2(w + 120.0, 64.0))
 	UiDraw.rounded_rect(tracker, Rect2(bg.position + Vector2(0, 4), bg.size), Color(Palette.INK, 0.2), 18)
 	UiDraw.rounded_rect(tracker, bg, Palette.PAPER, 18, 3, Palette.INK)
-	tracker.draw_string(_font, Vector2(14, 20), "GRANDPA GUS'S VISIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Palette.INK_SOFT)
+	tracker.draw_string(_font, Vector2(14, 20), _title, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Palette.INK_SOFT)
 	var x := 10.0
-	for i in STEPS.size():
-		var id := STEPS[i]
+	for i in _steps.size():
+		var id := _steps[i]
 		var pw := _pill_width(i)
 		var done := _done.has(id)
 		var cur := i == _current and not done
 		var y := 27.0 - (absf(sin(_t * 4.0)) * 3.0 if cur else 0.0)
 		var r := Rect2(Vector2(x, y), Vector2(pw, 28))
-		var accent: Color = STEP_COLORS.get(id, Palette.SUNNY)
+		var accent: Color = _colors.get(id, Palette.SUNNY)
 		var fill := Palette.PAPER
 		var text_col := Palette.INK_SOFT
 		if done:
 			fill = Palette.MINT
 			text_col = Palette.INK
 		elif cur:
-			fill = accent if STEP_COLORS.has(id) else Palette.SUNNY
-			text_col = Color.WHITE if STEP_COLORS.has(id) else Palette.INK
+			fill = accent if _colors.has(id) else Palette.SUNNY
+			text_col = Color.WHITE if _colors.has(id) else Palette.INK
 		UiDraw.rounded_rect(tracker, r, fill, 14, 2, Palette.INK if (done or cur) else Color(Palette.INK, 0.35))
 		var tx := x + 12.0
 		if done:
 			UiDraw.check(tracker, Vector2(x + 15.0, y + 14.0), 12.0, Palette.INK, 3.0)
 			tx = x + 28.0
-		tracker.draw_string(_font, Vector2(tx, y + 20.0), STEP_LABELS[id], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, text_col)
+		tracker.draw_string(_font, Vector2(tx, y + 20.0), String(_labels.get(id, String(id))), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, text_col)
 		x += pw + 6.0
 	# comfort hearts
 	var hx := x + 14.0

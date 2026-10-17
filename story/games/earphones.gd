@@ -13,6 +13,8 @@ const CUP_R := 44.0
 const TARGET_R := 50.0
 
 var clinic: Node
+## (v3) "his" (Gus) or "her" (Bonnie): the patient's right is on YOUR left either way.
+var pronoun := "his"
 var mistakes := 0
 var placed: Dictionary = {"right": false, "left": false}
 var _targets: Dictionary = {}   # ear -> Control (ring)
@@ -29,8 +31,9 @@ var _hints: HBoxContainer
 var _legend: PanelContainer
 
 
-func setup(p_clinic: Node) -> void:
+func setup(p_clinic: Node, p_pronoun: String = "his") -> void:
 	clinic = p_clinic
+	pronoun = p_pronoun
 
 
 func _ready() -> void:
@@ -94,7 +97,7 @@ func _ready() -> void:
 	_legend.add_child(lv)
 	lv.add_child(UiKit.label("Red = Right   (O)", 20, Palette.RIGHT_RED, 700))
 	lv.add_child(UiKit.label("Blue = Left   (X)", 20, Palette.LEFT_BLUE, 700))
-	lv.add_child(UiKit.label("His right is YOUR left", 15, Palette.INK_SOFT, 500))
+	lv.add_child(UiKit.label("%s right is YOUR left" % pronoun.capitalize(), 15, Palette.INK_SOFT, 500))
 	add_child(_legend)
 	resized.connect(_layout)
 
@@ -137,7 +140,7 @@ func _set_hints() -> void:
 	for c in _hints.get_children():
 		c.queue_free()
 	if UiKit.show_key_hints():
-		_hints.add_child(UiKit.hint_panel(["Drag RED onto HIS right ear (your left)   or", ["Left", "Right"], "+", ["Enter"]], 16))
+		_hints.add_child(UiKit.hint_panel(["Drag RED onto %s right ear (your left)   or" % pronoun.to_upper(), ["Left", "Right"], "+", ["Enter"]], 16))
 
 
 func _in_hand() -> String:
@@ -236,7 +239,7 @@ func _drop(ear: String, at: Vector2) -> void:
 		Sfx.play(&"boing", 1.2)
 		Events.patient_reaction.emit(&"point_wrong_way", {"ear": hit})
 		Juice.float_text(self, "Wrong ear!", at + Vector2(-110, -80), Palette.CORAL, 30)  # clear of Hoot's bubble
-		Hoot.say_once("tip_red_right", "Red = Right! HIS right... which is on YOUR left.", Hoot.HIGH, "ear_target_right")
+		Hoot.say_once("tip_red_right", "Red = Right! %s right... which is on YOUR left." % pronoun.to_upper(), Hoot.HIGH, "ear_target_right")
 	_selected = ""
 	var home: Vector2 = _homes[ear]
 	var tb := cup.create_tween()
@@ -272,7 +275,7 @@ func _draw_ring(ear: String, ring: Control) -> void:
 		if i % 2 == 0:
 			var a0 := TAU * i / segs + _t * 0.8
 			ring.draw_arc(c, TARGET_R - 3.0, a0, a0 + TAU / segs, 6, Palette.SUNNY if hl else Palette.PAPER, 6.0 if hl else 4.5, true)
-	var who := "HIS RIGHT" if ear == "right" else "HIS LEFT"
+	var who := ("%s RIGHT" if ear == "right" else "%s LEFT") % pronoun.to_upper()
 	var f := UiKit.font(700)
 	var w := f.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 	ring.draw_string_outline(f, c + Vector2(-w * 0.5, TARGET_R + 20.0), who, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 6, Palette.INK)

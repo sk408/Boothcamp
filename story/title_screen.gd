@@ -1,7 +1,10 @@
 extends Control
 ## TitleScreen: the safety notice, then the title menu over a live 3D clinic backdrop.
 ## Phases: &"disclaimer" (beat disclaimer_ok) then &"title" (beat title_start).
-## Play -> res://story/level_gus.tscn. Options opens the pause menu. Quit quits.
+## Play -> the next chapter (v3: Game.start_chapter(Game.next_chapter_id()): Day 1 on a fresh
+## save, then the first open day not yet done). Days -> the day picker (phase / beat
+## &"chapter_select"): one card per chapter, locked days say how to open them, and the career-fair
+## toggle "Unlock all days (demo)". Options opens the pause menu. Quit quits.
 ## Keyboard: Up/Down + Enter/Space. Mouse: click. The notice shows once per session; the
 ## footer "This is a game, not a hearing test." is always on screen.
 
@@ -26,6 +29,11 @@ var _font: Font
 var _starting := false
 var _idle := 0.0
 var _reset_armed := false
+# v3: the day picker
+var _days_card: PanelContainer
+var _menu_buttons: Array[Button] = []
+var _day_buttons: Array[Button] = []
+var _days_note: Label
 
 
 func _ready() -> void:
@@ -103,14 +111,90 @@ func _show_title() -> void:
 
 
 func _on_start() -> void:
+	_start_chapter(Game.next_chapter_id(), &"title_start")
+
+
+## (v3) Start a chapter (falls back to Day 1's scene if it is locked or missing).
+func _start_chapter(id: String, beat: StringName) -> void:
 	if _starting:
 		return
 	_starting = true
 	_state = &"busy"
 	Sfx.play(&"fanfare")
-	Juice.pop(_buttons[0], 1.15, 0.25)
+	if not _buttons.is_empty():
+		Juice.pop(_buttons[clampi(_hl, 0, _buttons.size() - 1)], 1.15, 0.25)
+	Events.input_resolved.emit(beat)
+	if not Game.start_chapter(id):
+		Events.goto_scene.emit(LEVEL_SCENE)
+
+
+# ---------------------------------------------------------------- v3: day picker
+
+func _on_days() -> void:
+	if _state != &"menu":
+		return
+	_state = &"days"
 	Events.input_resolved.emit(&"title_start")
-	Events.goto_scene.emit(LEVEL_SCENE)
+	Events.phase_changed.emit(&"chapter_select", {"unlocked": Game.unlocked_chapter_ids()})
+	_menu_card.visible = false
+	_refresh_days()
+	_days_card.visible = true
+	Juice.bounce_in(_days_card, 0.4)
+	_buttons = _day_buttons
+	_set_hl(0, false)
+	Sfx.play(&"whoosh", 1.2, -8.0)
+	Events.awaiting_input.emit(&"chapter_select", {"chapters": Game.unlocked_chapter_ids(), "next": Game.next_chapter_id()},
+		func() -> void: _start_chapter(Game.next_chapter_id(), &"chapter_select"))
+
+
+func _days_back() -> void:
+	if _state != &"days":
+		return
+	Events.input_resolved.emit(&"chapter_select")
+	_days_card.visible = false
+	_buttons = _menu_buttons
+	_show_title()
+
+
+func _pick_day(id: String, b: Button) -> void:
+	if _state != &"days":
+		return
+	if not Game.is_chapter_unlocked(id):
+		Juice.shake(b, 6.0, 0.25)
+		Sfx.play(&"error", 1.0, -8.0)
+		_days_note.text = "Finish the day before to open this one, or switch on \"Unlock all days\"."
+		return
+	_start_chapter(id, &"chapter_select")
+
+
+func _toggle_unlock_all() -> void:
+	Game.set_setting("unlock_all_days", not bool(Game.settings.get("unlock_all_days", false)))
+	Sfx.play(&"click", 1.1, -4.0)
+	_refresh_days()
+	_set_hl(_hl, false)
+
+
+func _refresh_days() -> void:
+	var pats: Dictionary = Game.progress.get("patients", {})
+	for b: Button in _day_buttons:
+		var id := String(b.get_meta("chapter", ""))
+		if id == "":
+			continue
+		var ch := Game.chapter(id)
+		var label := String(ch["title"])
+		if not Game.is_chapter_unlocked(id):
+			label += "  (locked)"
+		else:
+			var best := String((pats.get(String(ch["patient_id"]), {}) as Dictionary).get("best_grade", ""))
+			if Game.is_chapter_done(id) and best != "":
+				label += "  [%s]" % best
+		b.set_meta("label", label)
+		b.tooltip_text = String(ch.get("teaches", ""))
+	for b: Button in _day_buttons:
+		if String(b.get_meta("toggle", "")) == "unlock":
+			b.set_meta("label", "Unlock all days (demo): %s" % ("ON" if bool(Game.settings.get("unlock_all_days", false)) else "OFF"))
+	if _days_note != null:
+		_days_note.text = "New days open when you finish the one before."
 
 
 func _on_options() -> void:
@@ -136,7 +220,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_on_notice_ok()
 			get_viewport().set_input_as_handled()
 		return
-	if _state != &"menu":
+	if _state == &"days" and event.is_action_pressed(&"ui_cancel"):
+		_days_back()
+		get_viewport().set_input_as_handled()
+		return
+	if _state != &"menu" and _state != &"days":
 		return
 	if event.is_action_pressed(&"ui_down"):
 		_set_hl((_hl + 1) % _buttons.size())
@@ -177,7 +265,7 @@ func _build() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	_menu_card.add_child(v)
-	var specs: Array = [["Play", _on_start], ["Options", _on_options]]
+	var specs: Array = [["Play", _on_start], ["Days", _on_days], ["Options", _on_options]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
 	specs.append(["Quit", _on_quit])
@@ -192,6 +280,7 @@ func _build() -> void:
 				_set_hl(idx))
 		v.add_child(b)
 		_buttons.append(b)
+	_menu_buttons = _buttons.duplicate()
 	if UiKit.show_key_hints():
 		var hr := UiKit.hint_row([["Up", "Down"], "+", ["Enter"], "or click"], 15)
 		hr.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -203,6 +292,8 @@ func _build() -> void:
 		sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		sl.custom_minimum_size = Vector2(340, 0)
 		v.add_child(sl)
+
+	_build_days(root)
 
 	var foot := UiKit.label("This is a game, not a hearing test.  All beeps are quiet and every dB is make-believe.", 18, Palette.PAPER, 600)
 	foot.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -263,6 +354,54 @@ func _build() -> void:
 	row.add_child(ok)
 
 
+## (v3) The day picker card: a button per chapter, the demo unlock toggle, Back.
+func _build_days(root: Control) -> void:
+	_days_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
+	_days_card.position = Vector2(92, 300)
+	_days_card.custom_minimum_size = Vector2(460, 0)
+	_days_card.visible = false
+	root.add_child(_days_card)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	_days_card.add_child(v)
+	var head := UiKit.label("Pick a day", 26, Palette.INK, 700)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	for ch: Dictionary in Game.chapters():
+		var id := String(ch["id"])
+		var b := UiKit.button(String(ch["title"]), &"", Vector2(420, 54))
+		b.set_meta("label", String(ch["title"]))
+		b.set_meta("chapter", id)
+		b.add_theme_font_size_override("font_size", 22)
+		b.pressed.connect(func() -> void: _pick_day(id, b))
+		_add_day_button(v, b)
+	var t := UiKit.button("Unlock all days (demo): OFF", &"", Vector2(420, 44))
+	t.set_meta("label", "Unlock all days (demo): OFF")
+	t.set_meta("toggle", "unlock")
+	t.add_theme_font_size_override("font_size", 17)
+	t.pressed.connect(_toggle_unlock_all)
+	_add_day_button(v, t)
+	var back := UiKit.button("Back", &"", Vector2(420, 44))
+	back.set_meta("label", "Back")
+	back.add_theme_font_size_override("font_size", 18)
+	back.pressed.connect(_days_back)
+	_add_day_button(v, back)
+	_days_note = UiKit.label("New days open when you finish the one before.", 15, Palette.INK_SOFT, 500)
+	_days_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_days_note.custom_minimum_size = Vector2(420, 0)
+	_days_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(_days_note)
+
+
+func _add_day_button(v: VBoxContainer, b: Button) -> void:
+	var idx := _day_buttons.size()
+	b.mouse_entered.connect(func() -> void:
+		if _state == &"days" and _hl != idx:
+			_set_hl(idx))
+	v.add_child(b)
+	_day_buttons.append(b)
+
+
 func _has_progress() -> bool:
 	return int(Game.progress.get("plays", 0)) > 0 or int(Game.progress.get("coins", 0)) > 0 \
 		or not (Game.progress.get("patients", {}) as Dictionary).is_empty()
@@ -282,7 +421,7 @@ func _on_new_player() -> void:
 		Sfx.play(&"error", 1.0, -8.0)
 		return
 	_reset_armed = false
-	for k: String in ["coins", "upgrades", "patients", "plays", "hoot_mastery"]:
+	for k: String in ["coins", "upgrades", "patients", "plays", "hoot_mastery", "chapters_done", "last_chapter"]:
 		var d: Variant = Game.DEFAULT_PROGRESS[k]
 		Game.progress[k] = d.duplicate(true) if (d is Dictionary or d is Array) else d
 	Game.save_game()
@@ -292,14 +431,20 @@ func _on_new_player() -> void:
 
 func _stats_text() -> String:
 	var parts: PackedStringArray = []
-	var rec: Dictionary = (Game.progress.get("patients", {}) as Dictionary).get("gus", {})
-	if not rec.is_empty() and String(rec.get("best_grade", "")) != "":
-		parts.append("Best with Gus: %s" % String(rec["best_grade"]))
+	var any := false
+	for ch: Dictionary in Game.chapters():
+		var rec: Dictionary = (Game.progress.get("patients", {}) as Dictionary).get(String(ch["patient_id"]), {})
+		if not rec.is_empty():
+			any = true
+		if not rec.is_empty() and String(rec.get("best_grade", "")) != "":
+			parts.append("Day %d best: %s" % [int(ch["day"]), String(rec["best_grade"])])
 	var coins := int(Game.progress.get("coins", 0))
-	if coins > 0 or not rec.is_empty():
+	if coins > 0 or any:
 		parts.append("%d Decibucks" % coins)
 	if Game.has_upgrade("comfy_chair"):
 		parts.append("Comfy chair owned")
+	if Game.has_upgrade("insert_earphones"):
+		parts.append("Insert earphones owned")
 	return "  -  ".join(parts)
 
 

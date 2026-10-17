@@ -6,6 +6,8 @@ extends Node
 ## by following AudiometrySession.recommended_action() step by step. It drives the AudiOtron
 ## through the screen's own controls, so the player sees every beep, answer, step and stamp.
 ## The screen speeds time up (Engine.time_scale x SPEED) and turns scoring off while it runs.
+## (v3) Day 2 tests too: it switches the route, turns the masker on and runs the plateau dance
+## (heard -> noise +5, missed -> tone +5) the same way, through the MASKING buttons.
 ## Timers are pausable: the pause menu freezes Hoot too.
 
 signal finished
@@ -56,6 +58,15 @@ func run(screen: Node, session: AudiometrySession, ear: String) -> void:
 				await _wait(0.35)
 				screen.call("_auto_store", true)
 				await _wait(1.0)
+			&"transducer":
+				screen.call("_auto_transducer", a["target"])
+				await _wait(0.6)
+			&"mask_toggle":
+				screen.call("_auto_mask_toggle")
+				await _wait(0.5)
+			&"mask_louder", &"mask_softer":
+				screen.call("_auto_mask_level", 1 if a["action"] == &"mask_louder" else -1)
+				await _wait(0.15)
 			_:
 				await get_tree().process_frame
 	running = false

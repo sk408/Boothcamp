@@ -15,7 +15,26 @@ const PATIENT_DIR := "res://core/patients/"
 const PHASES: Array[StringName] = [
 	&"disclaimer", &"title", &"intro", &"history", &"otoscopy", &"instructions", &"earphones",
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
+	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
+	&"chapter_select", &"bc_placement", &"masking", &"referral",
 ]
+
+## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
+## requires: the chapter id that must be completed first ("" = always open).
+## Story reads this for the title's day picker; Game uses it for unlocks (CONTRACTS.md §2.2 v3).
+const CHAPTERS: Array[Dictionary] = [
+	{"id": "gus", "day": 1, "title": "Day 1: Grandpa Gus", "patient_id": "gus", "teaches": "Air conduction",
+		"scene": "res://story/level_gus.tscn", "requires": ""},
+	{"id": "bonnie", "day": 2, "title": "Day 2: Bonnie Bunsworth", "patient_id": "bonnie", "teaches": "Bone conduction + masking",
+		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
+]
+
+## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
+## play: every chapter is fully playable without coins.
+const SHOP_ITEMS: Dictionary = {
+	"comfy_chair": {"cost": 40, "day": 1, "title": "Comfy booth chair", "blurb": "Patients tire half as fast."},
+	"insert_earphones": {"cost": 60, "day": 2, "title": "Insert earphones", "blurb": "55 dB of interaural attenuation: fewer ghosts."},
+}
 
 const KEY_STYLES: PackedStringArray = ["otosuite", "affinity"]
 
@@ -31,6 +50,7 @@ const DEFAULT_SETTINGS: Dictionary = {
 	"fullscreen": false,
 	"text_speed": 1.0,           ## dialogue typewriter speed multiplier
 	"quick_visit": true,         ## Hoot finishes the second ear at x8 after a few stamps (~10 min level)
+	"unlock_all_days": false,    ## (v3) career-fair demo: every day is playable from the title
 }
 
 const DEFAULT_PROGRESS: Dictionary = {
@@ -40,12 +60,16 @@ const DEFAULT_PROGRESS: Dictionary = {
 	"seen_disclaimer": false,
 	"hoot_mastery": {},          ## skill -> clean uses (Hoot autoload)
 	"plays": 0,
+	"chapters_done": [],         ## (v3) chapter ids completed at least once (CHAPTERS)
+	"last_chapter": "",          ## (v3) the chapter started most recently
 }
 
 var save_path: String = DEFAULT_SAVE_PATH
 var settings: Dictionary = DEFAULT_SETTINGS.duplicate(true)
 var progress: Dictionary = DEFAULT_PROGRESS.duplicate(true)
 var current_patient_id: String = "gus"
+## (v3) The chapter being played (CHAPTERS id). begin_visit() sets it from the patient.
+var current_chapter_id: String = "gus"
 ## Per-visit state, reset by begin_visit(). Shape: CONTRACTS.md §2.3.
 var visit: Dictionary = {}
 ## Parsed user args (after "--"). Keys without "--"; flags map to true. CONTRACTS.md §7.
@@ -61,7 +85,7 @@ var _default_events: Dictionary = {}
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	_parse_cli()
-	for action: StringName in [&"louder", &"softer"]:
+	for action: StringName in [&"louder", &"softer", &"mask_louder", &"mask_softer"]:
 		if InputMap.has_action(action):
 			_default_events[action] = InputMap.action_get_events(action).duplicate()
 	if cli_flag("autoplay"):
@@ -198,19 +222,23 @@ func _set_bus_volume(bus: StringName, linear: float) -> void:
 	AudioServer.set_bus_volume_db(idx, linear_to_db(clampf(linear, 0.0, 1.0)) if linear > 0.001 else -80.0)
 
 
-## OTOsuite style: louder = Up, softer = Down. Affinity style swaps the two.
+## OTOsuite style: louder = Up, softer = Down. Affinity style swaps the two (v3: and the masker's
+## Page Up / Page Down pair the same way).
 func _apply_key_style() -> void:
-	if not _default_events.has(&"louder") or not _default_events.has(&"softer"):
-		return
 	var affinity := get_key_style() == "affinity"
-	var louder_src: Array = _default_events[&"softer"] if affinity else _default_events[&"louder"]
-	var softer_src: Array = _default_events[&"louder"] if affinity else _default_events[&"softer"]
-	InputMap.action_erase_events(&"louder")
-	InputMap.action_erase_events(&"softer")
-	for ev: InputEvent in louder_src:
-		InputMap.action_add_event(&"louder", ev)
-	for ev: InputEvent in softer_src:
-		InputMap.action_add_event(&"softer", ev)
+	for pair: Array in [[&"louder", &"softer"], [&"mask_louder", &"mask_softer"]]:
+		var up: StringName = pair[0]
+		var down: StringName = pair[1]
+		if not _default_events.has(up) or not _default_events.has(down):
+			continue
+		var up_src: Array = _default_events[down] if affinity else _default_events[up]
+		var down_src: Array = _default_events[up] if affinity else _default_events[down]
+		InputMap.action_erase_events(up)
+		InputMap.action_erase_events(down)
+		for ev: InputEvent in up_src:
+			InputMap.action_add_event(up, ev)
+		for ev: InputEvent in down_src:
+			InputMap.action_add_event(down, ev)
 
 
 ## Short human label of the first key bound to an action, for on-screen key hints.
@@ -231,6 +259,12 @@ func key_labels(action: StringName) -> PackedStringArray:
 			var s := OS.get_keycode_string(code)
 			if s == "Escape":
 				s = "Esc"
+			elif s == "PageUp":
+				s = "PgUp"
+			elif s == "PageDown":
+				s = "PgDn"
+			if k.shift_pressed:
+				s = "Shift+" + s
 			out.append(s)
 		elif ev is InputEventMouseButton:
 			out.append("Click")
@@ -251,6 +285,9 @@ func load_patient(id: String) -> Resource:
 ## Start a new patient visit. Resets comfort, medals, flags and results. Story calls this first.
 func begin_visit(patient_id: String) -> void:
 	current_patient_id = patient_id
+	var ch := chapter_for_patient(patient_id)
+	if not ch.is_empty():
+		current_chapter_id = String(ch["id"])
 	visit = {
 		"patient_id": patient_id,
 		"comfort": ClinicRules.MAX_COMFORT,
@@ -334,6 +371,15 @@ func finish_visit() -> Dictionary:
 		rec["best_grade"] = grade
 	pats[id] = rec
 	progress["plays"] = int(progress.get("plays", 0)) + 1
+	var ch := chapter_for_patient(id)
+	var chapter_id := String(ch.get("id", ""))
+	var unlocked_before := unlocked_chapter_ids()
+	if chapter_id != "" and not is_chapter_done(chapter_id):
+		(progress["chapters_done"] as Array).append(chapter_id)
+	var newly: Array = []
+	for cid: String in unlocked_chapter_ids():
+		if not unlocked_before.has(cid):
+			newly.append(cid)
 	save_game()
 	var summary := {
 		"patient_id": id,
@@ -349,8 +395,16 @@ func finish_visit() -> Dictionary:
 		"coins_total": int(progress["coins"]),
 		"duration_s": clock - float(visit.get("started_at", clock)),
 		"audiometry": res,
+		# v3
+		"patient_name": _patient_name(id),
+		"chapter_id": chapter_id,
+		"day": int(ch.get("day", 0)),
+		"newly_unlocked": newly,
+		"next_chapter_id": _next_after(chapter_id),
 	}
 	visit["summary"] = summary
+	if chapter_id != "":
+		Events.chapter_completed.emit(chapter_id, newly)
 	return summary
 
 
@@ -370,6 +424,112 @@ func buy_upgrade(id: String, cost: int) -> bool:
 	(progress["upgrades"] as Array).append(id)
 	add_coins(-cost)
 	save_game()
+	return true
+
+
+# ---------------------------------------------------------------- chapters (v3)
+
+func chapters() -> Array[Dictionary]:
+	return CHAPTERS
+
+
+## The CHAPTERS entry with this id ({} if none).
+func chapter(id: String) -> Dictionary:
+	for c: Dictionary in CHAPTERS:
+		if String(c["id"]) == id:
+			return c
+	return {}
+
+
+func chapter_for_patient(patient_id: String) -> Dictionary:
+	for c: Dictionary in CHAPTERS:
+		if String(c["patient_id"]) == patient_id:
+			return c
+	return {}
+
+
+func chapter_for_day(day: int) -> Dictionary:
+	for c: Dictionary in CHAPTERS:
+		if int(c["day"]) == day:
+			return c
+	return {}
+
+
+func is_chapter_done(id: String) -> bool:
+	return (progress.get("chapters_done", []) as Array).has(id)
+
+
+## Open to play: its requirement is done, or the "unlock_all_days" demo setting is on, or the
+## command line asks for it (--day=N / --chapter=id / --unlock-all, dev and autoplay runs).
+func is_chapter_unlocked(id: String) -> bool:
+	var c := chapter(id)
+	if c.is_empty():
+		return false
+	if bool(settings.get("unlock_all_days", false)) or cli_flag("unlock-all") or cli_chapter_id() == id:
+		return true
+	var req := String(c.get("requires", ""))
+	return req == "" or is_chapter_done(req)
+
+
+func unlocked_chapter_ids() -> Array[String]:
+	var out: Array[String] = []
+	for c: Dictionary in CHAPTERS:
+		if is_chapter_unlocked(String(c["id"])):
+			out.append(String(c["id"]))
+	return out
+
+
+## The chapter the command line asks for (--chapter=id or --day=N), "" if none.
+func cli_chapter_id() -> String:
+	if cli.has("chapter") and not chapter(cli_value("chapter")).is_empty():
+		return cli_value("chapter")
+	if cli.has("day"):
+		return String(chapter_for_day(int(cli_value("day", "1"))).get("id", ""))
+	return ""
+
+
+## What the title's "Play" starts: the command-line chapter; else the first unlocked chapter not
+## yet done; else the last one played; else Day 1.
+func next_chapter_id() -> String:
+	var forced := cli_chapter_id()
+	if forced != "":
+		return forced
+	for c: Dictionary in CHAPTERS:
+		var id := String(c["id"])
+		if is_chapter_unlocked(id) and not is_chapter_done(id):
+			return id
+	var last := String(progress.get("last_chapter", ""))
+	if last != "" and is_chapter_unlocked(last):
+		return last
+	return String(CHAPTERS[0]["id"])
+
+
+func _patient_name(id: String) -> String:
+	var p := load_patient(id)
+	return String(p.get("display_name")) if p != null else id
+
+
+func _next_after(id: String) -> String:
+	for i in CHAPTERS.size() - 1:
+		if String(CHAPTERS[i]["id"]) == id:
+			return String(CHAPTERS[i + 1]["id"])
+	return ""
+
+
+func chapter_scene(id: String) -> String:
+	return String(chapter(id).get("scene", ""))
+
+
+## Start a chapter: remembers it and asks main to switch to its level scene. Returns false if the
+## chapter is unknown or locked.
+func start_chapter(id: String) -> bool:
+	if not is_chapter_unlocked(id) or not ResourceLoader.exists(chapter_scene(id)):
+		push_warning("Game.start_chapter: %s is locked or missing" % id)
+		return false
+	current_chapter_id = id
+	progress["last_chapter"] = id
+	save_game()
+	Events.goto_scene.emit(chapter_scene(id))
 	return true
 
 
@@ -421,6 +581,7 @@ func load_game() -> bool:
 	# JSON turns ints into floats; normalise the ones we use as ints.
 	progress["coins"] = int(progress.get("coins", 0))
 	progress["plays"] = int(progress.get("plays", 0))
+	_migrate_chapters()
 	if not KEY_STYLES.has(String(settings.get("key_style", ""))):
 		settings["key_style"] = "otosuite"
 	return true
@@ -440,6 +601,18 @@ static func _merge_typed(into: Dictionary, from: Variant) -> void:
 		var numeric := (want == TYPE_INT or want == TYPE_FLOAT) and (got == TYPE_INT or got == TYPE_FLOAT)
 		if got == want or numeric:
 			into[k] = src[k]
+
+
+## (v3) Saves from before chapters existed: a patient with a finished visit counts as that
+## chapter done (a Day 1 veteran finds Day 2 open).
+func _migrate_chapters() -> void:
+	var done: Array = progress.get("chapters_done", [])
+	var pats: Dictionary = progress.get("patients", {})
+	for c: Dictionary in CHAPTERS:
+		var rec: Variant = pats.get(String(c["patient_id"]), {})
+		if rec is Dictionary and int((rec as Dictionary).get("plays", 0)) > 0 and not done.has(String(c["id"])):
+			done.append(String(c["id"]))
+	progress["chapters_done"] = done
 
 
 func reset_save() -> void:

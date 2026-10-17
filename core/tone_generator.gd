@@ -9,6 +9,9 @@ extends Node
 ##    AudioSafety.clamp_sample(): 0 dB HL ~ -75 dBFS RMS, never above -12 dBFS peak.
 ## render(frames) is pure DSP (no audio server), so tests can measure exactly what would play.
 ## Visual indicators never depend on this node: the game is fully playable without sound.
+## (v3) Narrow-band masking noise for the OTHER ear (start_masker()): white noise through a
+## 1/3-octave band-pass at the test frequency, level from AudioSafety.masker_to_rms() and every
+## sample through AudioSafety.clamp_masker_sample() (quiet: a hiss, never a blast). 50 ms ramps.
 
 enum Stimulus { PURE, PULSED, WARBLE }
 
@@ -40,6 +43,25 @@ var _ramp := 0.0        ## on/off ramp position 0..1
 var _target := 0.0      ## 1 while the tone is on
 var _amp := 0.0         ## smoothed peak amplitude
 var _t_on := 0.0        ## seconds since the tone started (pulse clock)
+
+# ---- v3 masker
+const MASKER_RAMP_S := 0.05
+const MASKER_BW_OCT := 1.0 / 3.0
+var masker_on: bool = false
+var masker_ear: String = "left"
+var masker_freq: float = 1000.0
+var masker_db: float = 0.0
+var _m_ramp := 0.0
+var _m_gain := 0.0       ## smoothed noise gain (target RMS / the filter's noise RMS)
+var _m_norm := 1.0       ## 1 / RMS of the band-pass output for unit uniform noise
+var _m_b0 := 0.0
+var _m_a1 := 0.0
+var _m_a2 := 0.0
+var _m_x1 := 0.0
+var _m_x2 := 0.0
+var _m_y1 := 0.0
+var _m_y2 := 0.0
+var _m_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -81,6 +103,40 @@ func is_on() -> bool:
 	return _target > 0.0
 
 
+## (v3) Masking noise on in one ear (the non-test ear) at a frequency and masker level (dB EM).
+func start_masker(p_ear: String, p_freq: float, p_db_em: float) -> void:
+	if not masker_on and _m_ramp <= 0.0:
+		_m_gain = AudioSafety.masker_to_rms(p_db_em) * _m_norm
+	masker_ear = p_ear
+	set_masker(p_freq, p_db_em)
+	masker_on = true
+
+
+func set_masker(p_freq: float, p_db_em: float) -> void:
+	if not is_equal_approx(p_freq, masker_freq) or _m_b0 == 0.0:
+		masker_freq = p_freq
+		_design_band(p_freq)
+	masker_db = p_db_em
+
+
+func stop_masker() -> void:
+	masker_on = false
+
+
+## RBJ band-pass (constant 0 dB peak), 1/3 octave wide, and its noise normalisation: uniform
+## noise (RMS 1/sqrt(3)) through it comes out at about sqrt(pi * BW / fs) of that.
+func _design_band(f: float) -> void:
+	var w0 := TAU * clampf(f, 100.0, 16000.0) / MIX_RATE
+	var alpha := sin(w0) * sinh(log(2.0) / 2.0 * MASKER_BW_OCT * w0 / sin(w0))
+	var a0 := 1.0 + alpha
+	_m_b0 = alpha / a0
+	_m_a1 = -2.0 * cos(w0) / a0
+	_m_a2 = (1.0 - alpha) / a0
+	var bw_hz := f * (pow(2.0, MASKER_BW_OCT / 2.0) - pow(2.0, -MASKER_BW_OCT / 2.0))
+	var out_rms := sqrt(1.0 / 3.0) * sqrt(PI * bw_hz / MIX_RATE)
+	_m_norm = 1.0 / maxf(out_rms, 1e-4)
+
+
 ## Peak amplitude the generator is currently allowed to output (0..1).
 func current_peak() -> float:
 	return AudioSafety.hl_to_peak(level_hl)
@@ -90,8 +146,10 @@ func current_peak() -> float:
 func render(frames: int) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	out.resize(frames)  # zero-filled
+	if masker_on or _m_ramp > 0.0:
+		_render_masker(out)
 	if _target <= 0.0 and _ramp <= 0.0:
-		return out  # silent: nothing to synthesize
+		return out  # no tone: nothing more to synthesize
 	var target_amp := AudioSafety.hl_to_peak(level_hl)
 	var ramp_step := 1.0 / (RAMP_S * MIX_RATE)
 	var glide := 1.0 - exp(-1.0 / (LEVEL_GLIDE_S * MIX_RATE))
@@ -111,10 +169,31 @@ func render(frames: int) -> PackedVector2Array:
 			f *= 1.0 + WARBLE_DEPTH * sin(TAU * _lfo)
 			_lfo = fmod(_lfo + WARBLE_RATE_HZ * dt, 1.0)
 		var v := AudioSafety.clamp_sample(sin(TAU * _phase) * _amp * env)
-		out[i] = Vector2(0.0, v) if right else Vector2(v, 0.0)
+		out[i] = Vector2(out[i].x, v) if right else Vector2(v, out[i].y)
 		_phase = fmod(_phase + f * dt, 1.0)
 		_t_on += dt
 	return out
+
+
+## (v3) Add the masking noise into its ear's channel of out.
+func _render_masker(out: PackedVector2Array) -> void:
+	var target_gain := AudioSafety.masker_to_rms(masker_db) * _m_norm if masker_on else _m_gain
+	var ramp_step := 1.0 / (MASKER_RAMP_S * MIX_RATE)
+	var glide := 1.0 - exp(-1.0 / (LEVEL_GLIDE_S * MIX_RATE))
+	var right := masker_ear == "right"
+	var goal := 1.0 if masker_on else 0.0
+	for i in out.size():
+		_m_ramp = move_toward(_m_ramp, goal, ramp_step)
+		_m_gain += (target_gain - _m_gain) * glide
+		var x := _m_rng.randf_range(-1.0, 1.0)
+		var y := _m_b0 * (x - _m_x2) - _m_a1 * _m_y1 - _m_a2 * _m_y2
+		_m_x2 = _m_x1
+		_m_x1 = x
+		_m_y2 = _m_y1
+		_m_y1 = y
+		var env := 0.5 - 0.5 * cos(PI * _m_ramp)
+		var v := AudioSafety.clamp_masker_sample(y * _m_gain * env)
+		out[i] = Vector2(out[i].x, v) if right else Vector2(v, out[i].y)
 
 
 ## Raised-cosine gate for one pulse cycle (t in 0..PULSE_PERIOD_S).

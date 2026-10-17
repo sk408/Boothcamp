@@ -13,7 +13,11 @@ extends RefCounted
 ##   - "groove": a steady rhythm of gaps makes them press on the beat (anticipation),
 ##   - very short gaps make them trigger-happy (a guess press without hearing anything),
 ##   - very short tones are often lost (temporal integration).
-## Cross-hearing is out of scope (symmetric patient) but cross_hearing is the hook for it.
+## (v3) Cross-hearing and masking: a tone is heard when EITHER cochlea hears it
+## (ClinicRules.response_threshold). The session sets the test condition before each tone:
+## transducer (phones / inserts / bone) and the masker in the other ear. Bone has ~0 dB of
+## interaural attenuation, so unmasked bone is answered by the better cochlea; masking raises the
+## non-test cochlea; too much masking crosses back and raises the test cochlea (overmasking).
 
 ## Shift of the 50 % point below the profile threshold. A real 2-of-3 ascending search lands
 ## on or above the 50 % point (a coin flip between T and T+5 when the 50 % point sits exactly on
@@ -58,6 +62,14 @@ var fatigue_scale: float = 1.0
 ## Hook for cross-hearing (not in this slice). Callable(ear: String, freq: int, db: int) -> float:
 ## the probability that the NON-test ear hears the tone. Invalid Callable = no cross-hearing.
 var cross_hearing: Callable = Callable()
+## (v3) Test condition, set by the session before each tone.
+var transducer: StringName = &"phones"
+## Narrow-band masker in the non-test ear (dB EM); -1 = off.
+var masker_db: int = -1
+var masker_transducer: StringName = &"phones"
+## Which cochlea heard the last tone (on_tone_start): &"test", &"cross" (the Cross-Hearing
+## Ghost) or &"" when it was not heard. Truth: for reactions only, never for the player or bot.
+var last_heard_by: StringName = &""
 
 var _gaps: Array[float] = []
 
@@ -68,12 +80,32 @@ func _init(p: PatientProfile, seed_value: int = 0) -> void:
 	attention = p.attention if p != null else 1.0
 
 
-## The threshold of the ear the tone really reaches (swapped earphones flip the ears).
+## The dial level at which this tone is just audible under the current condition: the better of
+## the test cochlea and (across the head) the other one. Swapped earphones flip the ears for air.
+## Without masking, with air and a normal-sized head this is simply the ear's air threshold.
 func effective_threshold(ear: String, freq: int) -> int:
+	return int(condition(ear, freq)["threshold"])
+
+
+## (v3) ClinicRules.response_threshold() for this patient and the current condition:
+## {"threshold", "test", "cross", "by"}.
+func condition(ear: String, freq: int) -> Dictionary:
+	return condition_for(ear, freq, transducer, masker_db, masker_transducer)
+
+
+## (v3) The same for any condition (par and scoring use it; it never touches the RNG or state).
+## tr: the tone's transducer; mask: masker dB EM in the other ear (< 0 = off); mask_tr: its earphone.
+func condition_for(ear: String, freq: int, tr: StringName, mask: int, mask_tr: StringName = &"phones") -> Dictionary:
 	var real_ear := ear
-	if swapped:
+	var bone := tr == &"bone"
+	if swapped and not bone:
 		real_ear = "left" if ear == "right" else "right"
-	return profile.get_threshold(real_ear, freq)
+	var other := "left" if real_ear == "right" else "right"
+	var oe := int(round(ClinicRules.occlusion_effect(freq, mask_tr) * profile.occlusion_scale))
+	return ClinicRules.response_threshold(
+		profile.get_threshold(real_ear, freq), profile.get_bc_threshold(real_ear, freq),
+		profile.get_threshold(other, freq), profile.get_bc_threshold(other, freq),
+		bone, mask, profile.get_ia(tr), profile.get_ia(mask_tr), oe)
 
 
 ## Probability that a tone of this level is heard (0..1). penalty_db lowers the effective level
@@ -104,6 +136,7 @@ func on_tone_start(ear: String, freq: int, db: int, gap_s: float) -> Dictionary:
 		_note_gap(gap_s)
 	var p := hear_probability(ear, freq, db)
 	var heard := rng.randf() < p
+	last_heard_by = StringName(condition(ear, freq)["by"]) if heard else &""
 	var guess := false
 	if not heard and gap_s >= 0.0 and gap_s < SHORT_GAP_S:
 		guess = rng.randf() < SHORT_GAP_GUESS_P * (1.0 if instructed else 2.0)

@@ -97,3 +97,43 @@ static func rounded_rect(ci: CanvasItem, rect: Rect2, color: Color, radius: int 
 		sb.border_color = border_color
 	sb.anti_aliasing = true
 	ci.draw_style_box(sb, rect)
+
+
+## (v3) Any ASHA audiogram symbol. test: &"ac" O / X, &"ac_masked" triangle / square,
+## &"bc" < / >, &"bc_masked" [ / ] (right / left). no_response adds the down-and-outward arrow.
+## Bone symbols are drawn beside the frequency line: add symbol_offset() to the centre first.
+static func audiogram_symbol(ci: CanvasItem, center: Vector2, ear: String, test: StringName, size: float, width: float = 3.0, no_response: bool = false, color_override: Color = Color(0, 0, 0, 0)) -> void:
+	if test == &"ac" or test == &"":
+		ear_symbol(ci, center, ear, size, width, no_response, color_override)
+		return
+	var color := Palette.ear_color(ear) if color_override.a == 0.0 else color_override
+	var h := size * 0.5
+	var right := ear != "left"
+	match test:
+		&"ac_masked":
+			if right:
+				ci.draw_polyline(PackedVector2Array([center + Vector2(0, -h), center + Vector2(h * 0.95, h * 0.75), center + Vector2(-h * 0.95, h * 0.75), center + Vector2(0, -h)]), color, width, true)
+			else:
+				ci.draw_polyline(PackedVector2Array([center + Vector2(-h * 0.8, -h * 0.8), center + Vector2(h * 0.8, -h * 0.8), center + Vector2(h * 0.8, h * 0.8), center + Vector2(-h * 0.8, h * 0.8), center + Vector2(-h * 0.8, -h * 0.8)]), color, width, true)
+		&"bc":
+			var s := -1.0 if right else 1.0   # "<" points left (right ear), ">" points right (left ear)
+			ci.draw_polyline(PackedVector2Array([center + Vector2(-s * h * 0.45, -h), center + Vector2(s * h * 0.55, 0), center + Vector2(-s * h * 0.45, h)]), color, width, true)
+		&"bc_masked":
+			var s2 := 1.0 if right else -1.0  # "[" opens to the right (right ear), "]" to the left
+			ci.draw_polyline(PackedVector2Array([center + Vector2(s2 * h * 0.45, -h), center + Vector2(-s2 * h * 0.35, -h), center + Vector2(-s2 * h * 0.35, h), center + Vector2(s2 * h * 0.45, h)]), color, width, true)
+	if no_response:
+		var dir := Vector2(-1, 1) if right else Vector2(1, 1)
+		var start := center + dir.normalized() * size * 0.55
+		var end := start + dir.normalized() * size * 0.9
+		ci.draw_line(start, end, color, width, true)
+		var n := Vector2(-dir.y, dir.x).normalized()
+		var back := end - dir.normalized() * size * 0.35
+		ci.draw_colored_polygon(PackedVector2Array([end, back + n * size * 0.22, back - n * size * 0.22]), color)
+
+
+## (v3) Where a symbol sits relative to its frequency line: bone symbols beside it (right ear to
+## the left, left ear to the right), air symbols on it.
+static func symbol_offset(ear: String, test: StringName, size: float) -> Vector2:
+	if ClinicRules.test_is_bone(test):
+		return Vector2(-0.62 * size if ear != "left" else 0.62 * size, 0.0)
+	return Vector2.ZERO

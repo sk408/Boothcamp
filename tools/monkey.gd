@@ -6,6 +6,10 @@ extends Node
 ## too-short and too-long beeps. Checks every frame:
 ##   - no script errors;  - no tone left playing without a held key or mouse;
 ##   - Engine.time_scale only x8 during Hoot's turn and back to normal after it.
+## (v3) --day=2: Bonnie's Day 2 tests instead (air both ears with Hoot's turns, then bone, masked
+## bone and masked air), mashing the MASKING / ROUTE controls too (M, PgUp / PgDn, Shift+Up / Down,
+## A, B). Extra invariants: the noise dial stays in 0..100 dB EM, the masker only plays while
+## MASK is on, and no masker is left playing after a test.
 ## Prints MONKEY_RESULT {json}; exit 0 ok, 1 an invariant broke, 3 timeout.
 
 const ErrorCounter := preload("res://tools/autoplay_bot.gd").ScriptErrorCounter
@@ -13,6 +17,17 @@ const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
 const MAX_GAME_S := 1500.0
 const ACTIONS: Array[StringName] = [&"present_tone", &"louder", &"softer", &"freq_up", &"freq_down", &"store",
 	&"no_response", &"ear_right", &"ear_left", &"toggle_key_hints", &"advance_dialogue", &"ui_accept"]
+## (v3) Day 2's extra controls.
+const ACTIONS_V3: Array[StringName] = [&"toggle_mask", &"mask_louder", &"mask_softer", &"transducer_air", &"transducer_bone"]
+const MAX_GAME_S_DAY2 := 3600.0
+## (v3) Bonnie's tests in story order: [ear, coached, plan].
+const DAY2_TESTS := [
+	["right", true, {"test": "ac", "hoot_turn_after": 1}],
+	["left", false, {"test": "ac", "hoot_turn_after": 0}],
+	["right", true, {"test": "bc", "hoot_turn_after": 2}],
+	["right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2}],
+	["right", false, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0}],
+]
 
 var _screen: Node
 var _errors := ErrorCounter.new()
@@ -25,6 +40,9 @@ var _t := 0.0
 var _base_scale := 1.0
 var _problems: PackedStringArray = []
 var _stats := {"inputs": 0, "clicks": 0, "pauses": 0, "short_beeps": 0, "long_beeps": 0, "hoot_turn_frames": 0, "stores": 0}
+var _day2 := false
+var _actions: Array[StringName] = ACTIONS.duplicate()
+var _masker_on := false
 var _tone_unheld_s := 0.0
 var _tone_flagged := false
 var _done := false
@@ -38,23 +56,44 @@ func demo_start() -> void:
 	_screen = (load(AUDIOMETER_SCENE) as PackedScene).instantiate()
 	add_child(_screen)
 	Events.threshold_stored.connect(func(_e: String, _f: int, _d: int, _i: Dictionary) -> void: _stats["stores"] = int(_stats["stores"]) + 1)
-	_screen.call("demo_start")
-	await _screen.test_finished
-	_release_all()
-	_screen.call("start_test", Game.load_patient("gus"), "left", false)
-	await _screen.test_finished
-	_release_all()
+	Events.masker_changed.connect(func(_e: String, _f: int, _d: int, on: bool) -> void: _masker_on = on)
+	_day2 = Game.cli_chapter_id() == "bonnie"
+	if _day2:
+		_actions.append_array(ACTIONS_V3)
+		await _run_day2()
+	else:
+		_screen.call("demo_start")
+		await _screen.test_finished
+		_release_all()
+		_screen.call("start_test", Game.load_patient("gus"), "left", false)
+		await _screen.test_finished
+		_release_all()
 	await get_tree().process_frame
+	if _masker_on:
+		_problem("masker still playing after the visit")
 	if not is_equal_approx(Engine.time_scale, _base_scale):
 		_problem("time_scale stuck at %.2f after the visit" % Engine.time_scale)
 	_finish(0 if _problems.is_empty() and _errors.count == 0 else 1)
+
+
+## (v3) Day 2: Bonnie's tests in order on one session (CONTRACTS.md §4.2 plans).
+func _run_day2() -> void:
+	Game.begin_visit("bonnie")
+	var bonnie := Game.load_patient("bonnie")
+	for t: Array in DAY2_TESTS:
+		_screen.call("start_test", bonnie, String(t[0]), bool(t[1]), (t[2] as Dictionary).duplicate())
+		await _screen.test_finished
+		_release_all()
+		_stats["tests"] = int(_stats.get("tests", 0)) + 1
+		if _masker_on:
+			_problem("masker still playing after the %s test" % String((t[2] as Dictionary)["test"]))
 
 
 func _process(delta: float) -> void:
 	if _done or _screen == null or not is_instance_valid(_screen):
 		return
 	_t += get_process_delta_time() if not get_tree().paused else delta
-	if Game.clock > MAX_GAME_S:
+	if Game.clock > (MAX_GAME_S_DAY2 if _day2 else MAX_GAME_S):
 		_problem("timeout")
 		_finish(3)
 		return
@@ -72,6 +111,12 @@ func _process(delta: float) -> void:
 			_problem("tone on with nothing held (%.1f s)" % _tone_unheld_s)
 	else:
 		_tone_unheld_s = 0.0
+	if _day2:
+		var m := int(st.get("mask_db", 0))
+		if m < ClinicRules.MASK_MIN_DB or m > ClinicRules.MASK_MAX_DB:
+			_problem("noise dial at %d dB EM" % m)
+		if _masker_on and not bool(st.get("mask_on", false)):
+			_problem("masker playing with MASK off")
 	# releases
 	if _release_at >= 0.0 and _t >= _release_at:
 		_release_all()
@@ -93,7 +138,7 @@ func _act(st: Dictionary) -> void:
 	if roll < 0.55:
 		_follow(st)
 	elif roll < 0.8:
-		var a: StringName = ACTIONS[_rng.randi() % ACTIONS.size()]
+		var a: StringName = _actions[_rng.randi() % _actions.size()]
 		if a == &"present_tone":
 			_beep(_rng.randf_range(0.05, 3.5))
 		else:
@@ -131,6 +176,17 @@ func _follow(_st: Dictionary) -> void:
 			_tap(&"store")
 		&"no_response":
 			_tap(&"no_response")
+		&"mask_toggle":
+			_tap(&"toggle_mask")
+		&"mask_louder":
+			if _rng.randf() < 0.5:
+				_tap(&"mask_louder")
+			else:
+				_shift_key(KEY_UP)
+		&"mask_softer":
+			_tap(&"mask_softer")
+		&"transducer":
+			_tap(&"transducer_bone" if a["target"] == &"bone" else &"transducer_air")
 
 
 func _beep(dur: float) -> void:
@@ -173,6 +229,16 @@ func _key(k: Key) -> void:
 		var ev := InputEventKey.new()
 		ev.keycode = k
 		ev.physical_keycode = k
+		ev.pressed = p
+		Input.parse_input_event(ev)
+
+
+func _shift_key(k: Key) -> void:
+	for p: bool in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = k
+		ev.physical_keycode = k
+		ev.shift_pressed = true
 		ev.pressed = p
 		Input.parse_input_event(ev)
 

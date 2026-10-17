@@ -15,6 +15,17 @@ extends RefCounted
 ##   - tones 1-2 s, varied gaps, never start above 70 dB, never blast far above threshold
 ## Golf: each measurement is a hole. Par = the presentations a textbook search needs from the
 ## measurement's start level, on average, for this patient (expected_presentations()).
+##
+## (v3, Chapter 2, docs/CHAPTER2.md) Bone conduction and masking. The session keeps one results
+## SHEET per test (ClinicRules.TESTS: ac, ac_masked, bc, bc_masked); the controls pick the sheet:
+## the transducer (air phones / inserts, or the bone oscillator) and the masking switch. The vars
+## stored / retest / order point at the current sheet, so the air-only code reads unchanged.
+##   - unmasked sheets: the Hughson-Westlake dance above (bone: 250-4000 Hz, lower maximum)
+##   - masked sheets (plateau / Hood): start at the unmasked threshold with the initial masking
+##     level in the other ear; heard -> noise up 5; missed -> tone up 5; the threshold is the tone
+##     level heard through PLATEAU_STEPS noise raises in a row (15 dB of masking), at or above the
+##     initial level and below overmasking
+##   - configure(plan) sets the GOAL sheet: what "complete" means and where the coach steers.
 
 signal responded(ear: String, freq: int, db: int, tone_related: bool)
 signal technique(kind: StringName, data: Dictionary)
@@ -43,6 +54,16 @@ const TIPS: Dictionary[StringName, String] = {
 	&"not_instructed": "He's pressing for the air-con hum! Always say: press for EVERY beep.",
 	&"phones_swapped": "He's pointing at the other ear. Red = Right!",
 	&"short_gap": "Leave at least a beep's worth of quiet between beeps, or he guesses.",
+	# v3: bone conduction and masking (docs/CHAPTER2.md section 5)
+	&"mask_wrong_step": "Masked dance: heard? Noise up 5. Missed? Tone up 5. Nothing else moves!",
+	&"mask_too_low": "Start the noise at the other ear's air threshold + 10, plus occlusion for low bone.",
+	&"mask_start": "Begin the masked search at the unmasked threshold, with the noise at its starting level.",
+	&"overmasked": "Too much noise! It leaks back and drowns the test ear too. That's overmasking.",
+	&"store_no_plateau": "No plateau yet! Store once the answer survives three noise raises in a row.",
+	&"cross_hearing": "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!",
+	&"undermasked": "The Ghost answered! Not enough noise yet: heard means noise up 5.",
+	&"plateau_found": "Flat line! Same answer through 15 dB more noise: that's the true threshold. Store it!",
+	&"vibrotactile": "Loud low bone tones get FELT, not heard. A tickle is not a threshold!",
 }
 ## Positive kinds and the points they are worth (times the combo multiplier).
 const POINTS: Dictionary[StringName, int] = {&"good_start": 10, &"textbook_step": 10, &"store_ok": 50}
@@ -57,6 +78,13 @@ const TOO_LOUD_HIGH_SL := 25
 ## Inside this many dB of threshold the patient visibly strains (reaction only).
 const STRAIN_BELOW_DB := 3
 const STRAIN_ABOVE_DB := 4
+## (v3) The masker dial's level when a session starts (dB EM): low on purpose, the player sets it.
+const MASK_DIAL_START_DB := 10
+## (v3) Masked par = the textbook plateau dance on a consistent patient + this (real patients
+## wobble at threshold, which costs a run).
+const MASK_PAR_SLACK := 2
+## (v3) A masked search may start this far from the unmasked threshold.
+const MASK_START_TOLERANCE_DB := 10
 
 var patient: PatientProfile
 var sim: PatientSim
@@ -112,10 +140,102 @@ var _marathon_hit: Dictionary = {}
 var _meas_errors: Dictionary = {}   ## "ear:freq" -> technique errors in the open measurement
 var _start_ref: Dictionary = {}     ## "ear:freq" -> recommended start, fixed when the measurement opens
 
+# ---- v3: tests, transducers, masking
+## The current sheet: ClinicRules.test_id(transducer == &"bone", mask_on). Read-only outside.
+var test: StringName = &"ac"
+## The plan's goal sheet (configure()): what is_ear_complete() / required_remaining() mean and
+## where recommended_action() steers. &"ac" = the Chapter 1 air test.
+var goal_test: StringName = &"ac"
+## The air transducer (&"phones" or &"inserts"); the masking earphone is the same kind.
+var air_transducer: StringName = &"phones"
+## The transducer the tone goes through: air_transducer or &"bone".
+var transducer: StringName = &"phones"
+## Masking noise (narrow band at the test frequency) in the NON-test ear.
+var mask_on: bool = false
+## The masker dial (dB EM). Kept while masking is off (it can be preset).
+var mask_db: int = MASK_DIAL_START_DB
+## The plan given to configure() (CONTRACTS.md §4.2 v3).
+var plan: Dictionary = {}
+var _sheets: Dictionary = {}        ## test -> {stored, retest, order, open, archive}
+var _bc_freqs: Array[int] = []      ## plan "bc_freqs": required unmasked bone frequencies
+var _overmask_hit: Dictionary = {}  ## measurement key -> true once overmasking was flagged
+
 
 func _init(p: PatientProfile, seed_value: int = 0) -> void:
 	patient = p
 	sim = PatientSim.new(p, seed_value)
+	_bc_freqs = ClinicRules.BC_REQUIRED.duplicate()
+	for t: StringName in ClinicRules.TESTS:
+		_sheets[t] = {"stored": {"right": {}, "left": {}}, "retest": {"right": {}, "left": {}},
+			"order": {"right": [], "left": []}, "open": {"right": {}, "left": {}}, "archive": {"right": [], "left": []}}
+	_activate_sheet()
+
+
+## (v3) Set the test plan (CONTRACTS.md §4.2 v3). Keys (all optional):
+##   "test": StringName  goal sheet (default &"ac"); the transducer follows (bone for bc tests)
+##   "air_transducer": &"phones" | &"inserts"
+##   "bc_freqs": Array[int]  required unmasked bone frequencies (default ClinicRules.BC_REQUIRED)
+##   "mask_on": bool  start with the masker on (default: off; the player presses M)
+##   "mask_db": int  masker dial start level
+## Never call it while a tone plays.
+func configure(p: Dictionary) -> void:
+	plan = p.duplicate(true)
+	goal_test = StringName(String(plan.get("test", "ac")))
+	if not ClinicRules.TESTS.has(goal_test):
+		goal_test = &"ac"
+	var at := StringName(String(plan.get("air_transducer", String(air_transducer))))
+	if at == &"phones" or at == &"inserts":
+		air_transducer = at
+	if plan.has("bc_freqs"):
+		_bc_freqs.clear()
+		for f: Variant in plan["bc_freqs"]:
+			_bc_freqs.append(int(f))
+	transducer = &"bone" if ClinicRules.test_is_bone(goal_test) else air_transducer
+	mask_on = bool(plan.get("mask_on", false))
+	if plan.has("mask_db"):
+		mask_db = ClinicRules.clamp_mask_db(int(plan["mask_db"]))
+	if not ClinicRules.test_freqs(test_for(transducer, mask_on)).has(freq):
+		freq = ClinicRules.START_FREQ
+	db = _clamp_level(db)
+	_activate_sheet()
+
+
+## (v3) The test a transducer / masking combination records on.
+static func test_for(tr: StringName, masked: bool) -> StringName:
+	return ClinicRules.test_id(tr == &"bone", masked)
+
+
+## Point stored / retest / order / the open measurements at the sheet the controls select.
+func _activate_sheet() -> void:
+	test = test_for(transducer, mask_on)
+	var sh: Dictionary = _sheets[test]
+	stored = sh["stored"]
+	retest = sh["retest"]
+	order = sh["order"]
+	_open = sh["open"]
+	_archive = sh["archive"]
+
+
+## The sheet Dictionary of a test: {stored, retest, order, open, archive} (read-only use).
+func sheet(t: StringName) -> Dictionary:
+	return _sheets.get(t, {})
+
+
+## Measurement key for the per-measurement bookkeeping (Chapter 1 keys stay "ear:freq").
+func _mkey(e: String, f: int) -> String:
+	return "%s:%d" % [e, f] if test == &"ac" else "%s:%s:%d" % [test, e, f]
+
+
+func _top(f: int = -1) -> int:
+	return ClinicRules.max_db_for(freq if f < 0 else f, transducer)
+
+
+func _clamp_level(level: int, f: int = -1) -> int:
+	return ClinicRules.clamp_db_for(level, freq if f < 0 else f, transducer)
+
+
+static func other_ear(e: String) -> String:
+	return "left" if e == "right" else "right"
 
 
 # ---------------------------------------------------------------- controls
@@ -129,16 +249,17 @@ func set_ear(e: String) -> bool:
 
 
 func step_freq(direction: int) -> bool:
-	var i := ClinicRules.AC_FREQS.find(freq)
-	var j := clampi(i + direction, 0, ClinicRules.AC_FREQS.size() - 1)
-	return set_freq(ClinicRules.AC_FREQS[j])
+	var fs := ClinicRules.test_freqs(test)
+	var i := fs.find(freq)
+	var j := clampi(i + direction, 0, fs.size() - 1)
+	return set_freq(fs[j])
 
 
 func set_freq(f: int) -> bool:
-	if tone_on or not ClinicRules.AC_FREQS.has(f) or f == freq:
+	if tone_on or not ClinicRules.test_freqs(test).has(f) or f == freq:
 		return false
 	freq = f
-	db = ClinicRules.clamp_db(db, freq)
+	db = _clamp_level(db)
 	return true
 
 
@@ -148,7 +269,7 @@ func step_level(direction: int) -> bool:
 	if tone_on:
 		return false
 	var before := db
-	db = ClinicRules.clamp_db(db + direction * ClinicRules.LEVEL_STEP_DB, freq)
+	db = _clamp_level(db + direction * ClinicRules.LEVEL_STEP_DB)
 	return db != before
 
 
@@ -156,8 +277,63 @@ func set_level(level: int) -> bool:
 	if tone_on:
 		return false
 	var before := db
-	db = ClinicRules.clamp_db(level, freq)
+	db = _clamp_level(level)
 	return db != before
+
+
+## (v3) Switch the tone's transducer: &"phones", &"inserts" or &"bone". Moving to bone above
+## 4 kHz lands on 4 kHz; the level is clamped to the new maximum. Returns false if unchanged.
+func set_transducer(tr: StringName) -> bool:
+	if tone_on or not ClinicRules.TRANSDUCERS.has(tr) or tr == transducer:
+		return false
+	if tr != &"bone":
+		air_transducer = tr
+	transducer = tr
+	var fs := ClinicRules.test_freqs(test_for(tr, mask_on))
+	if not fs.has(freq):
+		var best := fs[0]
+		for f: int in fs:
+			if absi(f - freq) < absi(best - freq):
+				best = f
+		freq = best
+	db = _clamp_level(db)
+	_activate_sheet()
+	return true
+
+
+## (v3) Masking noise on / off (in the non-test ear). Returns false if unchanged or a tone plays.
+func set_mask(on: bool) -> bool:
+	if tone_on or on == mask_on:
+		return false
+	mask_on = on
+	_activate_sheet()
+	return true
+
+
+func toggle_mask() -> bool:
+	return set_mask(not mask_on)
+
+
+## (v3) Masker dial up (+1) or down (-1) one MASK_STEP_DB step. Works while masking is off.
+func step_mask(direction: int) -> bool:
+	if tone_on:
+		return false
+	var before := mask_db
+	mask_db = ClinicRules.clamp_mask_db(mask_db + direction * ClinicRules.MASK_STEP_DB)
+	return mask_db != before
+
+
+func set_mask_level(level: int) -> bool:
+	if tone_on:
+		return false
+	var before := mask_db
+	mask_db = ClinicRules.clamp_mask_db(level)
+	return mask_db != before
+
+
+## The ear the masking noise goes to (the non-test ear).
+func masker_ear() -> String:
+	return other_ear(ear)
 
 
 func tone_down() -> void:
@@ -168,12 +344,15 @@ func tone_down() -> void:
 	var recs := _measurement_for_write(ear, freq)
 	var first := recs.is_empty()
 	if first:
-		_start_ref["%s:%d" % [ear, freq]] = _compute_start(ear, freq)
+		_start_ref[_mkey(ear, freq)] = _compute_start(ear, freq)
 	var gap := time - last_tone_end_t if last_tone_end_t > -50.0 else -1.0
 	if recs.is_empty() and not sim.instructed and not _once.has("not_instructed"):
 		_once["not_instructed"] = true
 		_observe(&"not_instructed", {"db": db})
-	_check_step(recs)
+	if ClinicRules.test_is_masked(test):
+		_check_mask_step(recs)
+	else:
+		_check_step(recs)
 	_check_rhythm(gap)
 	tone_on = true
 	tone_start_t = time
@@ -181,11 +360,14 @@ func tone_down() -> void:
 		presentations += 1
 	else:
 		auto_presentations += 1
+	_apply_condition()
 	var decision := sim.on_tone_start(ear, freq, db, gap)
 	var rec := {
 		"i": recs.size(), "db": db, "t": time, "duration": 0.0, "responded": false, "closed": false,
 		"ascending": _any_response(recs) and int(recs[-1]["db"]) < db and not bool(recs[-1]["responded"]),
 		"heard": bool(decision["heard"]), "guess": bool(decision["guess"]), "anticipated": false,
+		# v3: the masker during this tone (-1 = off) and which cochlea heard it (truth, reactions only)
+		"mask_db": mask_db if mask_on else -1, "by": sim.last_heard_by, "test": test,
 	}
 	recs.append(rec)
 	_cur = rec
@@ -199,7 +381,7 @@ func tone_down() -> void:
 	# never counts as a blast: the coach must never walk the player into a penalty.
 	var legal_start := first and db <= ClinicRules.MAX_START_DB
 	if not legal_start and (sl >= ClinicRules.TOO_LOUD_SL_DB or (db > TOO_LOUD_HIGH_DB and sl >= TOO_LOUD_HIGH_SL)):
-		var key := "%s:%d" % [ear, freq]
+		var key := _mkey(ear, freq)
 		first = not _loud_hit.has(key)
 		_loud_hit[key] = true
 		_error(&"too_loud", {"db": db, "sl": sl, "comfort_loss": 1 if first and scoring else 0}, false)
@@ -208,10 +390,28 @@ func tone_down() -> void:
 		reaction.emit(&"straining", {"ear": ear, "db": db, "intensity": 0.6})
 	var strokes := recs.size()
 	var marathon_at := int(ceil(par_for(ear, freq) * ClinicRules.MARATHON_FACTOR)) + 1
-	if scoring and strokes == marathon_at and not _marathon_hit.has("%s:%d" % [ear, freq]):
-		_marathon_hit["%s:%d" % [ear, freq]] = true
+	if scoring and strokes == marathon_at and not _marathon_hit.has(_mkey(ear, freq)):
+		_marathon_hit[_mkey(ear, freq)] = true
 		_error(&"marathon", {"strokes": strokes}, false)
 		reaction.emit(&"bored", {"ear": ear})
+	# v3: bone and masking gags and lessons
+	if transducer == &"bone" and ClinicRules.VIBROTACTILE_DB.has(freq) and db >= int(ClinicRules.VIBROTACTILE_DB[freq]):
+		reaction.emit(&"tickle", {"ear": ear, "db": db})
+		if not _once.has("vibrotactile"):
+			_once["vibrotactile"] = true
+			_observe(&"vibrotactile", {"db": db})
+	if mask_on and ClinicRules.test_is_masked(test) and mask_db >= overmask_limit_db(ear, freq, db):
+		reaction.emit(&"overmasked", {"ear": ear, "masker_ear": masker_ear(), "mask_db": mask_db})
+		if not _overmask_hit.has(_mkey(ear, freq)):
+			_overmask_hit[_mkey(ear, freq)] = true
+			_error(&"overmasked", {"mask_db": mask_db, "limit_db": overmask_limit_db(ear, freq, db)}, false)
+
+
+## (v3) Tell the patient simulator what this tone goes through and what the other ear hears.
+func _apply_condition() -> void:
+	sim.transducer = transducer
+	sim.masker_db = mask_db if mask_on else -1
+	sim.masker_transducer = air_transducer
 
 
 func tone_up() -> void:
@@ -241,7 +441,7 @@ func tone_up() -> void:
 		_anticip_t = time + ad
 	if not _cur.is_empty() and bool(_cur["responded"]):
 		_cur["closed"] = true
-		presentation_closed.emit(_cur_ear, _cur_freq, public_record(_cur))
+		_emit_closed()
 
 
 ## Advance the session clock; fires presses, closes response windows, makes false alarms.
@@ -268,16 +468,17 @@ func store() -> Dictionary:
 	_settle_before_store()
 	var recs := measurement(ear, freq)
 	var errs: Array[StringName] = []
-	var candidate: Variant = ascending_threshold(ear, freq)
+	var masked := ClinicRules.test_is_masked(test)
+	var candidate: Variant = store_candidate(ear, freq)
 	if candidate == null:
-		errs.append(&"store_without_bracket")
+		errs.append(&"store_no_plateau" if masked else &"store_without_bracket")
 	elif int(candidate) != db:
 		errs.append(&"store_wrong_level")
 	var kind := measurement_kind(ear, freq)
 	var st: Dictionary = stored[ear]
-	if kind == &"first" and st.is_empty() and freq != ClinicRules.START_FREQ:
+	if test == &"ac" and kind == &"first" and st.is_empty() and freq != ClinicRules.START_FREQ:
 		errs.append(&"start_not_1k")
-	if kind == &"first" and (freq == 500 or freq == 250) and st.has(1000) and (retest[ear] as Dictionary).is_empty():
+	if test == &"ac" and kind == &"first" and (freq == 500 or freq == 250) and st.has(1000) and (retest[ear] as Dictionary).is_empty():
 		errs.append(&"missed_retest")
 	if kind == &"retest":
 		var diff := absi(db - int(st[1000]["stored_db"]))
@@ -295,7 +496,7 @@ func store_no_response() -> Dictionary:
 	_settle_before_store()
 	var recs := measurement(ear, freq)
 	var errs: Array[StringName] = []
-	var top := ClinicRules.max_db(freq)
+	var top := _top()
 	var maxed := false
 	for rec: Dictionary in recs:
 		if int(rec["db"]) >= top and bool(rec["closed"]) and not bool(rec["responded"]):
@@ -326,7 +527,32 @@ func trail(e: String, f: int) -> Array[Dictionary]:
 
 static func public_record(rec: Dictionary) -> Dictionary:
 	return {"i": rec["i"], "db": rec["db"], "responded": rec["responded"], "closed": rec["closed"],
-		"ascending": rec["ascending"], "duration": rec["duration"]}
+		"ascending": rec["ascending"], "duration": rec["duration"], "mask_db": int(rec.get("mask_db", -1))}
+
+
+## (v3) The level store() would accept now: the ascending threshold, or on a masked sheet the
+## plateau level once the plateau is complete (or once the safe window is full, window_full()).
+## null = nothing to store yet.
+func store_candidate(e: String, f: int) -> Variant:
+	if ClinicRules.test_is_masked(test):
+		var pl := plateau_info(e, f)
+		return int(pl["db"]) if bool(pl["found"]) or window_full(e, f) else null
+	return ascending_threshold(e, f)
+
+
+## (v3) The masked measurement at (e, f) holds a heard level with the noise at or above the
+## initial masking, and one more 5 dB noise step would overmask: the plateau cannot be finished
+## safely, so the held level is the answer (a narrow window, not a dilemma).
+func window_full(e: String, f: int) -> bool:
+	var pl := plateau_info(e, f)
+	var recs := measurement(e, f)
+	if int(pl["db"]) < 0 or recs.is_empty():
+		return false
+	var last: Dictionary = recs[-1]
+	var m := int(last.get("mask_db", -1))
+	if not bool(last["responded"]) or m < int(pl["initial"]):
+		return false
+	return m + ClinicRules.MASK_STEP_DB >= overmask_limit_db(e, f, int(pl["db"]))
 
 
 ## first / retest (1 kHz again after other frequencies) / redo (anything stored again).
@@ -334,7 +560,7 @@ func measurement_kind(e: String, f: int) -> StringName:
 	var st: Dictionary = stored[e]
 	if not st.has(f):
 		return &"first"
-	if f == ClinicRules.START_FREQ and (retest[e] as Dictionary).is_empty() and (order[e] as Array).size() >= 2:
+	if test == &"ac" and f == ClinicRules.START_FREQ and (retest[e] as Dictionary).is_empty() and (order[e] as Array).size() >= 2:
 		return &"retest"
 	return &"redo"
 
@@ -387,7 +613,8 @@ func ascending_hits(e: String, f: int, level: int) -> int:
 
 
 ## The textbook next level after these records (Hughson-Westlake), or -1 with no records.
-static func expected_next_db(recs: Array, f: int) -> int:
+## top: the maximum output (v3: bone runs out sooner); -1 = the headphone maximum at f.
+static func expected_next_db(recs: Array, f: int, top: int = -1) -> int:
 	if recs.is_empty():
 		return -1
 	var last: Dictionary = recs[-1]
@@ -399,15 +626,25 @@ static func expected_next_db(recs: Array, f: int) -> int:
 		if bool(r["responded"]):
 			any_hit = true
 	var up := ClinicRules.UP_AFTER_MISS_DB if any_hit else ClinicRules.UP_SEARCH_DB
-	return mini(lvl + up, ClinicRules.max_db(f))
+	return mini(lvl + up, ClinicRules.max_db(f) if top < 0 else top)
 
 
 ## What a textbook clinician would do next at the current ear/frequency (coach and hints).
 ## {"action": &"present" | &"softer" | &"louder" | &"store" | &"no_response" | &"wait" | &"release",
 ##  "target_db": int, "then": StringName}
+## (v3) also &"transducer" (switch to "target": &"bone" or the air transducer), &"mask_toggle"
+## (turn the masker on / off), &"mask_louder" / &"mask_softer" (towards "target_mask"); masked
+## sheets add "target_mask" to every answer.
 func recommended_action() -> Dictionary:
 	if tone_on:
 		return {"action": &"release", "target_db": db, "then": &""}
+	if test != goal_test:
+		var want_bone := ClinicRules.test_is_bone(goal_test)
+		if want_bone != (transducer == &"bone"):
+			return {"action": &"transducer", "target": &"bone" if want_bone else air_transducer, "target_db": db, "then": &""}
+		return {"action": &"mask_toggle", "target_db": db, "target_mask": initial_mask_db(), "then": &""}
+	if ClinicRules.test_is_masked(test):
+		return _recommended_masked()
 	var recs := measurement(ear, freq)
 	if recs.is_empty():
 		var start := recommended_start(ear, freq)
@@ -422,13 +659,181 @@ func recommended_action() -> Dictionary:
 		if int(cand) != db:
 			return {"action": &"louder" if int(cand) > db else &"softer", "target_db": int(cand), "then": &"store"}
 		return {"action": &"store", "target_db": int(cand), "then": &""}
-	var top := ClinicRules.max_db(freq)
+	var top := _top()
 	if int(last["db"]) >= top and not bool(last["responded"]):
 		return {"action": &"no_response", "target_db": top, "then": &""}
-	var want := expected_next_db(recs, freq)
+	var want := expected_next_db(recs, freq, top)
 	if want != db:
 		return {"action": &"louder" if want > db else &"softer", "target_db": want, "then": &"present"}
 	return {"action": &"present", "target_db": want, "then": &""}
+
+
+## The plateau dance's next move on a masked sheet (see recommended_action()).
+func _recommended_masked() -> Dictionary:
+	var recs := measurement(ear, freq)
+	var init := initial_mask_db()
+	if recs.is_empty():
+		var start := recommended_start(ear, freq)
+		if mask_db != init:
+			# the textbook begins at the initial level (more is allowed, but eats the safe window)
+			return {"action": &"mask_louder" if init > mask_db else &"mask_softer", "target_db": start, "target_mask": init, "then": &"present"}
+		if db != start:
+			return {"action": &"louder" if start > db else &"softer", "target_db": start, "target_mask": mask_db, "then": &"present"}
+		return {"action": &"present", "target_db": db, "target_mask": mask_db, "then": &""}
+	var last: Dictionary = recs[-1]
+	if not bool(last["closed"]) and not bool(last["responded"]):
+		return {"action": &"wait", "target_db": db, "target_mask": mask_db, "then": &""}
+	var pl := plateau_info(ear, freq)
+	if bool(pl["found"]):
+		var at := int(pl["db"])
+		if at != db:
+			return {"action": &"louder" if at > db else &"softer", "target_db": at, "target_mask": mask_db, "then": &"store"}
+		return {"action": &"store", "target_db": at, "target_mask": mask_db, "then": &""}
+	var top := _top()
+	if int(last["db"]) >= top and not bool(last["responded"]):
+		return {"action": &"no_response", "target_db": top, "target_mask": mask_db, "then": &""}
+	if window_full(ear, freq):
+		# one more noise step would overmask: the held level is the best answer this window allows
+		var held := int(pl["db"])
+		if held != db:
+			return {"action": &"louder" if held > db else &"softer", "target_db": held, "target_mask": mask_db, "then": &"store"}
+		return {"action": &"store", "target_db": held, "target_mask": mask_db, "then": &""}
+	var nxt := _next_masked(recs)
+	if mask_db != nxt.y:
+		return {"action": &"mask_louder" if nxt.y > mask_db else &"mask_softer", "target_db": nxt.x, "target_mask": nxt.y, "then": &"present"}
+	if db != nxt.x:
+		return {"action": &"louder" if nxt.x > db else &"softer", "target_db": nxt.x, "target_mask": nxt.y, "then": &"present"}
+	return {"action": &"present", "target_db": nxt.x, "target_mask": nxt.y, "then": &""}
+
+
+## Textbook (tone, masker) after these masked records: ClinicRules.next_mask_step(), with the
+## noise lifted to the initial level if it was below it (catching up is never a wrong step).
+func _next_masked(recs: Array) -> Vector2i:
+	var last: Dictionary = recs[-1]
+	var m := int(last.get("mask_db", -1))
+	var init := initial_mask_db()
+	var nxt := ClinicRules.next_mask_step(int(last["db"]), maxi(m, 0), bool(last["responded"]))
+	if m < init:
+		nxt = Vector2i(int(last["db"]) if bool(last["responded"]) else nxt.x, init)
+	nxt.x = mini(nxt.x, _top())
+	nxt.y = mini(nxt.y, ClinicRules.MASK_MAX_DB)
+	return nxt
+
+
+## (v3) The plateau in the open masked measurement at (e, f) (defaults: current ear / freq):
+## {"db": plateau tone level or -1, "steps": masker raises held at or above the initial level,
+##  "needed": PLATEAU_STEPS, "found": bool, "start_mask", "initial": initial masking,
+##  "points": masker dB -> lowest tone level heard with it (the plateau graph)}.
+func plateau_info(e: String = "", f: int = -1) -> Dictionary:
+	var ee := ear if e == "" else e
+	var ff := freq if f < 0 else f
+	var recs: Array = []
+	for r: Dictionary in measurement(ee, ff):
+		if bool(r["closed"]) or bool(r["responded"]):
+			recs.append(r)
+	var init := initial_mask_db(ee, ff)
+	var run := _plateau_steps(recs, init)
+	var pts := {}
+	for r: Dictionary in recs:
+		var m := int(r.get("mask_db", -1))
+		if bool(r["responded"]) and m >= 0:
+			pts[m] = mini(int(pts.get(m, 999)), int(r["db"]))
+	return {"db": int(run["db"]), "steps": int(run["steps"]), "needed": ClinicRules.PLATEAU_STEPS,
+		"found": int(run["steps"]) >= ClinicRules.PLATEAU_STEPS, "start_mask": int(run["start_mask"]),
+		"initial": init, "points": pts}
+
+
+## ClinicRules.plateau_run() counting only the raises at or above the initial masking level.
+static func _plateau_steps(recs: Array, init: int) -> Dictionary:
+	var run := ClinicRules.plateau_run(recs)
+	if int(run["db"]) < 0:
+		return run
+	var end_mask := int((recs[-1] as Dictionary).get("mask_db", -1))
+	var from := maxi(int(run["start_mask"]), init)
+	var steps := maxi(0, (end_mask - from) / ClinicRules.MASK_STEP_DB) if end_mask >= from else 0
+	return {"db": int(run["db"]), "steps": steps, "start_mask": from}
+
+
+## (v3) Initial masking (dB EM) for a masked test at (e, f): the non-test ear's best air threshold
+## + 10, plus the occlusion allowance for bone at 250-1000 Hz when that ear's middle ear looks
+## normal. The non-test air threshold comes from this visit's stamps (0 if not measured).
+func initial_mask_db(e: String = "", f: int = -1) -> int:
+	var ee := ear if e == "" else e
+	var ff := freq if f < 0 else f
+	var v := results_view()
+	var other := other_ear(ee)
+	var n_ac := ClinicRules.best_thresholds(v, other, false)
+	var ac := int(n_ac.get(ff, 0))
+	var nb: Variant = ClinicRules.nontest_bone_estimate(v, ee, ff)
+	var gap := 0 if nb == null or not n_ac.has(ff) else maxi(0, ac - int(nb))
+	return ClinicRules.initial_masking(ac, ff, test_for(transducer, true), gap, air_transducer)
+
+
+## (v3) Masker level at which overmasking starts for a tone at tone_db (default: the dial).
+## Bone: tone + IA (the tone tracks the test cochlea). Air: the test ear's bone + IA, whatever the
+## tone (masked bone where measured, else unmasked; with no bone at this frequency, the nearest
+## frequency's bone stands in, e.g. 500 for 250); with no bone at all, tone + IA.
+func overmask_limit_db(e: String = "", f: int = -1, tone_db: int = -999) -> int:
+	var ee := ear if e == "" else e
+	var ff := freq if f < 0 else f
+	var tone := db if tone_db == -999 else tone_db
+	var t := test_for(transducer, true)
+	var gap := 0
+	if not ClinicRules.test_is_bone(t):
+		var bc := ClinicRules.best_thresholds(results_view(), ee, true)
+		var nf := _nearest_freq(bc, ff)
+		if nf > 0:
+			gap = maxi(0, tone - int(bc[nf]))
+	return ClinicRules.overmask_limit(tone, t, gap, air_transducer)
+
+
+## The key of `by_freq` (freq -> value) closest to f in octaves (f itself when present); 0 if empty.
+static func _nearest_freq(by_freq: Dictionary, f: int) -> int:
+	var best := 0
+	var best_d := INF
+	for k: int in by_freq:
+		var d := absf(log(float(k) / float(f)))
+		if d < best_d - 0.0001:
+			best = k
+			best_d = d
+	return best
+
+
+## (v3) Do the rules ask for masking at (e, f) on the current transducer, from this visit's stamps?
+## Bone: the ear's air-bone gap (best air - unmasked bone, or the best bone estimate) is over 10 dB.
+## Air: the ear's air threshold (or the dial level, before it is stored) - IA >= the non-test bone.
+func masking_needed_here(e: String = "", f: int = -1) -> bool:
+	var ee := ear if e == "" else e
+	var ff := freq if f < 0 else f
+	var v := results_view()
+	if transducer == &"bone":
+		var ac := ClinicRules.best_thresholds(v, ee, false)
+		if not ac.has(ff):
+			return false
+		var bc := ClinicRules.sheet_thresholds(v, ee, &"bc")
+		var est: Variant = bc[ff] if bc.has(ff) else ClinicRules.nontest_bone_estimate(v, ee, ff)
+		return est != null and ClinicRules.bc_masking_needed(int(ac[ff]), int(est))
+	var ac2 := ClinicRules.sheet_thresholds(v, ee, &"ac")
+	var level := int(ac2[ff]) if ac2.has(ff) else db
+	var nb: Variant = ClinicRules.nontest_bone_estimate(v, ee, ff)
+	return nb != null and ClinicRules.ac_masking_needed(level, int(nb), air_transducer, ff)
+
+
+## (v3) The masking-help light for the current ear / freq / dial (ClinicRules.MASK_STATUSES).
+func mask_status() -> StringName:
+	return ClinicRules.mask_status(mask_on, masking_needed_here(), mask_db, initial_mask_db(), overmask_limit_db())
+
+
+## (v3) This visit's stamps in the results shape (§5.1 ears[e].freqs / .bc / .bc_masked /
+## .ac_masked: freq -> info), live and read-only, for the ClinicRules masking helpers.
+func results_view() -> Dictionary:
+	var ears := {}
+	for e: String in ClinicRules.EARS:
+		var d := {}
+		for t: StringName in ClinicRules.TESTS:
+			d["freqs" if t == &"ac" else String(t)] = ((_sheets[t] as Dictionary)["stored"] as Dictionary)[e]
+		ears[e] = d
+	return {"ears": ears}
 
 
 ## Presentations a textbook search needs on a perfectly consistent patient (hears iff
@@ -468,16 +873,58 @@ static func textbook_presentations(start_db: int, threshold: int, f: int) -> int
 ## result, not the lucky minimum.
 func par_for(e: String, f: int) -> int:
 	var start := recommended_start(e, f)
-	var t := patient.get_threshold(e, f)
-	var typical := expected_presentations(start - t, ClinicRules.max_db(f) - t, ClinicRules.MIN_DB - t, patient.psychometric_slope_db)
+	if ClinicRules.test_is_masked(test):
+		return maxi(1, textbook_mask_presentations(e, f, start, initial_mask_db(e, f)) + MASK_PAR_SLACK)
+	var t := response_truth(e, f)
+	var typical := expected_presentations(start - t, _top(f) - t, ClinicRules.MIN_DB - t, patient.psychometric_slope_db)
 	return maxi(1, int(round(typical)) + PAR_SLACK)
+
+
+## (v3) What an accurate tester records on the current sheet at (e, f) (the truth for scoring):
+## air: the ear's air threshold (Chapter 1); unmasked bone: the BETTER cochlea's answer (bone
+## crosses the head for free, so an unmasked bone stamp at the other cochlea's level is right);
+## masked air / bone: the test ear's own air / bone threshold.
+func response_truth(e: String, f: int) -> int:
+	match test:
+		&"bc":
+			return int(sim.condition_for(e, f, &"bone", -1, air_transducer)["threshold"])
+		&"bc_masked":
+			return patient.get_bc_threshold(e, f)
+	return patient.get_threshold(e, f)
+
+
+## (v3) Presentations of a by-the-book plateau dance on a perfectly consistent patient (hears iff
+## the tone reaches the response threshold under that masker), from (start_db, start_mask), until
+## the plateau is complete or the maximum is missed. Uses the current sheet's transducer.
+func textbook_mask_presentations(e: String, f: int, start_db: int, start_mask: int) -> int:
+	var tr := transducer
+	var top := ClinicRules.max_db_for(f, tr)
+	var tone := start_db
+	var m := start_mask
+	var recs: Array = []
+	var n := 0
+	while n < 60:
+		n += 1
+		var thr := int(sim.condition_for(e, f, tr, m, air_transducer)["threshold"])
+		var heard := tone >= thr
+		recs.append({"db": tone, "mask_db": m, "responded": heard})
+		if heard and int(_plateau_steps(recs, start_mask)["steps"]) >= ClinicRules.PLATEAU_STEPS:
+			return n
+		if not heard and tone >= top:
+			return n
+		var nx := ClinicRules.next_mask_step(tone, m, heard)
+		tone = mini(nx.x, top)
+		m = nx.y
+		if m > ClinicRules.MASK_MAX_DB:
+			return n
+	return n
 
 
 ## Where a textbook clinician starts the measurement at (e, f): 40 dB HL for the first 1 kHz of
 ## an ear; the stored 1 kHz threshold + 10 for the 1 kHz retest (never above START_DB); otherwise
 ## 10 dB above the previous stamp, clamped to 20..MAX_START_DB. Fixed once the measurement opens.
 func recommended_start(e: String, f: int) -> int:
-	var key := "%s:%d" % [e, f]
+	var key := _mkey(e, f)
 	if _start_ref.has(key):
 		return int(_start_ref[key])
 	return _compute_start(e, f)
@@ -485,18 +932,23 @@ func recommended_start(e: String, f: int) -> int:
 
 func _compute_start(e: String, f: int) -> int:
 	var st: Dictionary = stored[e]
+	if ClinicRules.test_is_masked(test):
+		# v3: a masked search starts at the unmasked threshold
+		var un: Dictionary = ((_sheets[ClinicRules.unmasked_test(test)] as Dictionary)["stored"] as Dictionary)[e]
+		if un.has(f):
+			return _clamp_level(int(un[f]["stored_db"]), f)
 	if measurement_kind(e, f) == &"retest":
-		return ClinicRules.clamp_db(mini(int(st[1000]["stored_db"]) + 10, ClinicRules.START_DB), f)
+		return _clamp_level(mini(int(st[1000]["stored_db"]) + 10, ClinicRules.START_DB), f)
 	var ord: Array = order[e]
 	if ord.is_empty():
-		return ClinicRules.clamp_db(ClinicRules.START_DB, f)
+		return _clamp_level(ClinicRules.START_DB, f)
 	var last_f := int(ord[-1])
 	var last_db := ClinicRules.START_DB
 	if last_f == ClinicRules.START_FREQ and ord.count(ClinicRules.START_FREQ) >= 2 and not (retest[e] as Dictionary).is_empty():
 		last_db = int(retest[e]["stored_db"])
 	elif st.has(last_f):
 		last_db = int(st[last_f]["stored_db"])
-	return ClinicRules.clamp_db(clampi(last_db + 10, 20, ClinicRules.MAX_START_DB), f)
+	return _clamp_level(clampi(last_db + 10, 20, ClinicRules.MAX_START_DB), f)
 
 
 static var _par_cache: Dictionary = {}
@@ -544,14 +996,23 @@ static func expected_presentations(start_off: int, top_off: int, min_off: int, s
 ## Required measurements still missing for an ear, in textbook order: 1k, (1.5k), 2k, (3k), 4k,
 ## (6k), 8k, 1k retest, (750), 500, 250. Half-octaves appear once both neighbours are stored
 ## and differ by INTEROCTAVE_DIFF_DB or more. 1000 after the highs means "1 kHz retest".
-func required_remaining(e: String) -> Array[int]:
-	var st: Dictionary = stored[e]
-	var need := ClinicRules.required_interoctaves(stored_thresholds(e))
+## (v3) t = the sheet (default: the plan's goal sheet; Chapter 1: &"ac").
+func required_remaining(e: String, t: StringName = &"") -> Array[int]:
+	var g := goal_test if t == &"" else t
+	var sh: Dictionary = _sheets[g]
+	var st: Dictionary = (sh["stored"] as Dictionary)[e]
 	var rem: Array[int] = []
+	if g != &"ac":
+		for f: int in sheet_required(e, g):
+			if not st.has(f):
+				rem.append(f)
+		return rem
+	var rt: Dictionary = (sh["retest"] as Dictionary)[e]
+	var need := ClinicRules.required_interoctaves(stored_thresholds(e, &"ac"))
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
-	if st.has(1000) and (retest[e] as Dictionary).is_empty():
+	if st.has(1000) and rt.is_empty():
 		rem.append(1000)
 	for f: int in [750, 500, 250]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
@@ -559,24 +1020,52 @@ func required_remaining(e: String) -> Array[int]:
 	return rem
 
 
-func is_ear_complete(e: String) -> bool:
-	return not (stored[e] as Dictionary).is_empty() and required_remaining(e).is_empty()
+## (v3) Every frequency a non-air sheet needs for an ear, in the recommended order: unmasked
+## bone = the plan's bc_freqs; masked sheets = where the rules call for masking (from the stamps).
+func sheet_required(e: String, t: StringName) -> Array[int]:
+	match t:
+		&"bc":
+			return _bc_freqs.duplicate()
+		&"bc_masked", &"ac_masked":
+			return ClinicRules.masked_freqs_needed(results_view(), e, t, air_transducer)
+	return []
 
 
-## Required measurements of an ear: [done, total] (the retest counts as one).
-func ear_progress(e: String) -> Array[int]:
-	var rem := required_remaining(e).size()
-	var st: Dictionary = stored[e]
-	if not st.has(1000) and (retest[e] as Dictionary).is_empty():
+## (v3) t = the sheet (default: the goal sheet). Air needs at least one stamp; a masked sheet with
+## nothing to mask is complete at once.
+func is_ear_complete(e: String, t: StringName = &"") -> bool:
+	var g := goal_test if t == &"" else t
+	if g == &"ac" or g == &"bc":
+		return not (((_sheets[g] as Dictionary)["stored"] as Dictionary)[e] as Dictionary).is_empty() and required_remaining(e, g).is_empty()
+	return required_remaining(e, g).is_empty()
+
+
+## Required measurements of an ear: [done, total] (the retest counts as one). v3: on the goal sheet.
+func ear_progress(e: String, t: StringName = &"") -> Array[int]:
+	var g := goal_test if t == &"" else t
+	var sh: Dictionary = _sheets[g]
+	var st: Dictionary = (sh["stored"] as Dictionary)[e]
+	if g != &"ac":
+		var req := sheet_required(e, g)
+		var d := 0
+		for f: int in req:
+			if st.has(f):
+				d += 1
+		return [d, req.size()]
+	var rt: Dictionary = (sh["retest"] as Dictionary)[e]
+	var rem := required_remaining(e, g).size()
+	if not st.has(1000) and rt.is_empty():
 		rem += 1  # the 1k retest is still ahead (required_remaining lists it once 1k is stored)
-	var done := st.size() + (0 if (retest[e] as Dictionary).is_empty() else 1)
+	var done := st.size() + (0 if rt.is_empty() else 1)
 	return [done, done + rem]
 
 
-func stored_thresholds(e: String) -> Dictionary:
+## freq -> stored dB of an ear on a sheet (default: the current sheet).
+func stored_thresholds(e: String, t: StringName = &"") -> Dictionary:
+	var st: Dictionary = (((_sheets[test if t == &"" else t] as Dictionary)["stored"] as Dictionary)[e] as Dictionary)
 	var out := {}
-	for f: int in stored[e]:
-		out[f] = int(stored[e][f]["stored_db"])
+	for f: int in st:
+		out[f] = int(st[f]["stored_db"])
 	return out
 
 
@@ -586,48 +1075,77 @@ func build_results() -> Dictionary:
 	var acc_n := 0
 	var strokes_total := 0
 	var par_total := 0
+	var view := results_view()
+	var tests_done: Array[String] = []
 	for e: String in ClinicRules.EARS:
-		var st: Dictionary = stored[e]
+		var ac_sheet: Dictionary = _sheets[&"ac"]
+		var st: Dictionary = (ac_sheet["stored"] as Dictionary)[e]
 		var strokes := 0
 		var par := 0
 		var fair := 0
 		var hoot_holes := 0
-		for m: Dictionary in _archive[e]:
-			if bool(m.get("auto", false)):
-				hoot_holes += 1
-				continue
-			strokes += int(m["strokes"])
-			par += int(m["par"])
-			# fair golf: a clean hole never counts over par (Gus wobbled), a slip never under
-			var d := int(m["strokes"]) - int(m["par"])
-			fair += mini(d, 0) if bool(m.get("clean", true)) else maxi(d, 0)
 		var e_acc := 0.0
 		var e_n := 0
-		for f: int in st:
-			if bool(st[f].get("by_hoot", false)):
-				continue
-			e_acc += float(st[f]["accuracy"])
-			e_n += 1
+		var birdies := 0
+		for t: StringName in ClinicRules.TESTS:
+			var sh: Dictionary = _sheets[t]
+			for m: Dictionary in (sh["archive"] as Dictionary)[e]:
+				if bool(m.get("auto", false)):
+					hoot_holes += 1
+					continue
+				strokes += int(m["strokes"])
+				par += int(m["par"])
+				# fair golf: a clean hole never counts over par (Gus wobbled), a slip never under
+				var d := int(m["strokes"]) - int(m["par"])
+				fair += mini(d, 0) if bool(m.get("clean", true)) else maxi(d, 0)
+			var sst: Dictionary = (sh["stored"] as Dictionary)[e]
+			if not sst.is_empty() and not tests_done.has(String(t)):
+				tests_done.append(String(t))
+			birdies += _count_birdies(sst)
+			for f: int in sst:
+				if bool(sst[f].get("by_hoot", false)):
+					continue
+				e_acc += float(sst[f]["accuracy"])
+				e_n += 1
 		acc_sum += e_acc
 		acc_n += e_n
 		strokes_total += strokes
 		par_total += par
-		var thr := stored_thresholds(e)
+		var thr := ClinicRules.best_thresholds(view, e, false)
+		var bone := ClinicRules.best_thresholds(view, e, true)
+		var abg := {}
+		for f: int in bone:
+			if thr.has(f):
+				abg[f] = int(thr[f]) - int(bone[f])
+		var complete_tests := {}
+		for t: StringName in ClinicRules.TESTS:
+			complete_tests[String(t)] = is_ear_complete(e, t)
 		ears[e] = {
 			"freqs": st.duplicate(true),
-			"complete": is_ear_complete(e),
-			"retest_1k": (retest[e] as Dictionary).duplicate(),
-			"order": (order[e] as Array).duplicate(),
+			"complete": is_ear_complete(e, &"ac"),
+			"retest_1k": ((ac_sheet["retest"] as Dictionary)[e] as Dictionary).duplicate(),
+			"order": ((ac_sheet["order"] as Dictionary)[e] as Array).duplicate(),
 			"strokes": strokes,
 			"par": par,
 			"golf": fair,
 			"golf_raw": strokes - par,
 			"hoot_holes": hoot_holes,
-			"birdies": _count_birdies(st),
+			"birdies": birdies,
 			"accuracy": e_acc / e_n if e_n > 0 else 0.0,
 			"shape": ClinicRules.classify_shape(thr),
 			"pta": ClinicRules.pta(thr),
 			"coached": bool(coached.get(e, false)),
+			# v3: the other sheets (freq -> info, like "freqs") and what they say
+			"bc": (((_sheets[&"bc"] as Dictionary)["stored"] as Dictionary)[e] as Dictionary).duplicate(true),
+			"bc_masked": (((_sheets[&"bc_masked"] as Dictionary)["stored"] as Dictionary)[e] as Dictionary).duplicate(true),
+			"ac_masked": (((_sheets[&"ac_masked"] as Dictionary)["stored"] as Dictionary)[e] as Dictionary).duplicate(true),
+			"complete_tests": complete_tests,
+			"best_ac": thr,
+			"best_bc": bone,
+			"abg": abg,
+			"hearing_type": ClinicRules.hearing_type(thr, bone),
+			"abg_red_flag": ClinicRules.abg_red_flag(thr, bone),
+			"carhart_notch": ClinicRules.has_carhart_notch(ClinicRules.sheet_thresholds(view, e, &"bc_masked")),
 		}
 	var accuracy := acc_sum / acc_n if acc_n > 0 else 0.0
 	var tech := float(clean_checks) / checks if checks > 0 else 0.0
@@ -652,6 +1170,8 @@ func build_results() -> Dictionary:
 		"score": score,
 		"grade": ClinicRules.grade_for_score(score),
 		"duration_s": time,
+		"tests": tests_done,
+		"air_transducer": String(air_transducer),
 	}
 
 
@@ -667,7 +1187,8 @@ static func _count_birdies(st: Dictionary) -> int:
 
 ## Throw away the presentation just made (a blip too short to hear): it never happened.
 func _void_current() -> void:
-	var recs: Array = (_open[_cur_ear] as Dictionary).get(_cur_freq, [])
+	var sh: Dictionary = _sheets.get(StringName(_cur.get("test", test)), _sheets[test])
+	var recs: Array = ((sh["open"] as Dictionary)[_cur_ear] as Dictionary).get(_cur_freq, [])
 	var i := recs.find(_cur)
 	if i >= 0:
 		recs.remove_at(i)
@@ -708,9 +1229,16 @@ func _press(kind: StringName) -> void:
 			false_hits += 1
 		if not tone_on and not again:
 			_cur["closed"] = true
-			presentation_closed.emit(_cur_ear, _cur_freq, public_record(_cur))
+			_emit_closed()
 		responded.emit(_cur_ear, _cur_freq, int(_cur["db"]), true)
 		reaction.emit(&"grooving" if kind == &"anticipated" else &"heard", {"ear": _cur_ear, "db": int(_cur["db"])})
+		if not again and bool(_cur["heard"]) and StringName(_cur.get("by", &"")) == &"cross":
+			# v3: the Cross-Hearing Ghost: the OTHER cochlea answered this one
+			reaction.emit(&"cross_heard", {"ear": _cur_ear, "via": other_ear(_cur_ear), "db": int(_cur["db"]), "masked": int(_cur.get("mask_db", -1)) >= 0})
+			var lesson := &"undermasked" if int(_cur.get("mask_db", -1)) >= 0 else &"cross_hearing"
+			if not _once.has(String(lesson)):
+				_once[String(lesson)] = true
+				_observe(lesson, {"db": int(_cur["db"])})
 		if sim.swapped and not _once.has("phones_swapped"):
 			_once["phones_swapped"] = true
 			reaction.emit(&"point_wrong_way", {"ear": _cur_ear})
@@ -733,7 +1261,23 @@ func _close_current() -> void:
 	if not bool(_cur["responded"]):
 		reaction.emit(&"missed", {"ear": _cur_ear})
 		technique.emit(&"missed", {"ear": _cur_ear, "freq": _cur_freq, "db": int(_cur["db"])})
+	_emit_closed()
+
+
+## presentation_closed for the current record, plus (v3, masked sheets) the plateau progress:
+## technique &"plateau_step" {steps, needed, db, mask_db} after a heard masked tone, and the
+## lesson &"plateau_found" once a plateau is complete.
+func _emit_closed() -> void:
 	presentation_closed.emit(_cur_ear, _cur_freq, public_record(_cur))
+	if int(_cur.get("mask_db", -1)) < 0 or StringName(_cur.get("test", &"")) != test or _cur_ear != ear or _cur_freq != freq:
+		return
+	if not bool(_cur["responded"]):
+		return
+	var pl := plateau_info(_cur_ear, _cur_freq)
+	technique.emit(&"plateau_step", {"ear": _cur_ear, "freq": _cur_freq, "steps": int(pl["steps"]), "needed": ClinicRules.PLATEAU_STEPS,
+		"db": int(_cur["db"]), "mask_db": int(_cur["mask_db"]), "found": bool(pl["found"]), "auto": not scoring})
+	if bool(pl["found"]) and int(pl["steps"]) == ClinicRules.PLATEAU_STEPS:
+		_observe(&"plateau_found", {"db": int(pl["db"]), "start_mask": int(pl["start_mask"]), "end_mask": int(_cur["mask_db"])})
 
 
 ## Storing ends the wait: a press still on its way for the last tone is dropped.
@@ -761,14 +1305,14 @@ func _check_step(recs: Array) -> void:
 	var prev: Dictionary = recs[-1]
 	var prev_db := int(prev["db"])
 	var prev_heard := bool(prev["responded"])
-	var expected := expected_next_db(recs, freq)
+	var top := _top()
+	var expected := expected_next_db(recs, freq, top)
 	var ok := db == expected
 	if not ok and not prev_heard:
 		var any_hit := false
 		for r: Dictionary in recs:
 			if bool(r["responded"]):
 				any_hit = true
-		var top := ClinicRules.max_db(freq)
 		if not any_hit:
 			for up: int in [ClinicRules.UP_AFTER_MISS_DB, ClinicRules.UP_SEARCH_DB, 2 * ClinicRules.UP_SEARCH_DB]:
 				if db == mini(prev_db + up, top):
@@ -779,6 +1323,32 @@ func _check_step(recs: Array) -> void:
 		_clean(&"textbook_step")
 	else:
 		_error(&"wrong_step", {"expected": expected, "got": db, "prev_db": prev_db, "prev_heard": prev_heard}, true)
+
+
+## (v3) The technique check of a masked presentation (the plateau dance, see the file header).
+func _check_mask_step(recs: Array) -> void:
+	if scoring:
+		checks += 1
+	var init := initial_mask_db()
+	if recs.is_empty():
+		var start := recommended_start(ear, freq)
+		if mask_db < init:
+			_error(&"mask_too_low", {"mask_db": mask_db, "initial_db": init}, true)
+		elif absi(db - start) > MASK_START_TOLERANCE_DB:
+			_error(&"mask_start", {"db": db, "start_db": start}, true)
+		else:
+			_clean(&"good_start")
+		return
+	var prev: Dictionary = recs[-1]
+	var nxt := _next_masked(recs)
+	var ok := db == nxt.x and mask_db == nxt.y
+	if not ok and not bool(prev["responded"]) and int(prev["db"]) >= _top() and db == int(prev["db"]):
+		ok = true  # confirming a miss at maximum output
+	if ok:
+		_clean(&"textbook_step")
+	else:
+		_error(&"mask_wrong_step", {"expected": nxt.x, "expected_mask": nxt.y, "got": db, "got_mask": mask_db,
+			"prev_db": int(prev["db"]), "prev_heard": bool(prev["responded"])}, true)
 
 
 func _check_rhythm(gap: float) -> void:
@@ -800,17 +1370,21 @@ func _check_rhythm(gap: float) -> void:
 
 
 func _make_info(recs: Array, errs: Array[StringName], no_response: bool, kind: StringName, candidate: Variant) -> Dictionary:
-	var true_db := patient.get_threshold(ear, freq)
+	var true_db := response_truth(ear, freq)
 	var err_db := float(db - true_db)
 	var acc := ClinicRules.accuracy_for_error(err_db)
 	if no_response:
-		acc = 1.0 if true_db > ClinicRules.max_db(freq) else 0.0
+		acc = 1.0 if true_db > _top() else 0.0
 	var strokes := recs.size()
 	var par := par_for(ear, freq)
+	var masked := ClinicRules.test_is_masked(test)
 	var responses: Array = []
 	for r: Dictionary in recs:
-		responses.append([int(r["db"]), bool(r["responded"])])
-	var clean := errs.is_empty() and int(_meas_errors.get("%s:%d" % [ear, freq], 0)) == 0
+		if masked:
+			responses.append([int(r["db"]), bool(r["responded"]), int(r.get("mask_db", -1))])
+		else:
+			responses.append([int(r["db"]), bool(r["responded"])])
+	var clean := errs.is_empty() and int(_meas_errors.get(_mkey(ear, freq), 0)) == 0
 	var golf: StringName = ClinicRules.fair_golf(strokes, par, clean) if scoring else &"hoot"
 	return {
 		"ear": ear,
@@ -831,10 +1405,15 @@ func _make_info(recs: Array, errs: Array[StringName], no_response: bool, kind: S
 		"technique_ok": errs.is_empty(),
 		"retest": kind == &"retest",
 		"redo": kind == &"redo",
-		"masked": false,
+		"masked": masked,
 		"order_index": (order[ear] as Array).size(),
 		"candidate_db": int(candidate) if candidate != null else -1,
 		"responses": responses,
+		# v3
+		"test": String(test),
+		"transducer": String(transducer),
+		"mask_db": mask_db if mask_on else -1,
+		"plateau": plateau_info(ear, freq) if masked else {},
 	}
 
 
@@ -849,7 +1428,7 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 		_observe(&"store_far_off", {"db": db})
 	var e := ear
 	var f := freq
-	(_archive[e] as Array).append({"freq": f, "strokes": int(info["strokes"]), "par": int(info["par"]), "kind": "retest" if bool(info["retest"]) else ("redo" if bool(info["redo"]) else "first"), "auto": not scoring, "clean": bool(info.get("clean", true))})
+	(_archive[e] as Array).append({"freq": f, "strokes": int(info["strokes"]), "par": int(info["par"]), "kind": "retest" if bool(info["retest"]) else ("redo" if bool(info["redo"]) else "first"), "auto": not scoring, "clean": bool(info.get("clean", true)), "test": String(test)})
 	var st: Dictionary = stored[e]
 	if bool(info["retest"]):
 		var first_db := int(st[1000]["stored_db"])
@@ -865,20 +1444,23 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 				k["retest_better"] = true
 				info["better_db"] = db
 			technique.emit(&"retest_ok", {"ear": e, "freq": f, "diff": diff, "plotted_db": mini(db, first_db)})
-	else:
+	elif test == &"ac":
 		var before := ClinicRules.required_interoctaves(stored_thresholds(e))
 		st[f] = info
 		var after := ClinicRules.required_interoctaves(stored_thresholds(e))
 		for io: int in after:
 			if not before.has(io) and not st.has(io):
 				technique.emit(&"interoctave_needed", {"ear": e, "freq": io})
+	else:
+		st[f] = info
 	(order[e] as Array).append(f)
 	(_open[e] as Dictionary).erase(f)
-	var key := "%s:%d" % [e, f]
+	var key := _mkey(e, f)
 	_loud_hit.erase(key)
 	_marathon_hit.erase(key)
 	_meas_errors.erase(key)
 	_start_ref.erase(key)
+	_overmask_hit.erase(key)
 	var golf: StringName = info["golf"]
 	var clean := bool(info.get("clean", true))
 	var bonus: int = GOLF_POINTS.get(golf, 0) if scoring and clean and not bool(info["no_response"]) else 0
@@ -891,6 +1473,8 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 	if not rem.is_empty() and set_freq(rem[0]):
 		# a textbook start for the next pitch (the retest starts just above the first 1 kHz)
 		set_level(recommended_start(e, rem[0]))
+		if mask_on and ClinicRules.test_is_masked(test):
+			set_mask_level(initial_mask_db(e, rem[0]))  # v3: and the noise at its starting level
 
 
 func _clean(kind: StringName) -> void:
@@ -918,7 +1502,7 @@ func _error(kind: StringName, data: Dictionary, counts_as_check: bool) -> void:
 		d["auto"] = true
 		technique.emit(kind, d)
 		return
-	var mk := "%s:%d" % [ear, freq]
+	var mk := _mkey(ear, freq)
 	_meas_errors[mk] = int(_meas_errors.get(mk, 0)) + 1
 	if not counts_as_check:
 		checks += 1

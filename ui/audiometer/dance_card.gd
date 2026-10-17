@@ -16,6 +16,12 @@ var climbing: bool = true:
 		if v != climbing:
 			climbing = v
 			queue_redraw()
+## (v3) The masked (plateau) dance: [HEARD -> noise +5] [MISSED -> tone +5] [3 noise ups -> STORE].
+var masked: bool = false:
+	set(v):
+		if v != masked:
+			masked = v
+			queue_redraw()
 var _pulse: Array[float] = [0.0, 0.0, 0.0]
 var _lit := -1
 var _t := 0.0
@@ -66,6 +72,12 @@ func _draw() -> void:
 		["NOTHING YET" if climbing else "MISSED", "up 10" if climbing else "up 5", Palette.LCD_TEXT, 1],
 		["2x GOING UP", "STORE", Palette.MINT, 2],
 	]
+	if masked:
+		specs = [
+			["HEARD", "noise +5", Palette.PRESS_LIME, 0],
+			["MISSED", "tone +5", Palette.LCD_TEXT, 1],
+			["3 NOISE UPS", "STORE", Palette.MINT, 2],
+		]
 	for i in 3:
 		var spec: Array = specs[i]
 		var cell := Rect2(Vector2(pad + i * (w + gap), pad), Vector2(w, h))
@@ -96,7 +108,7 @@ func _draw() -> void:
 		var bw := AoDraw.text_size(bottom, 14, AoDraw.FONT_BOLD).x
 		var bx := tx + tw * 0.5 - (bw + 14.0) * 0.5
 		if int(spec[3]) == 0:
-			UiDraw.triangle(self, Vector2(bx + 5.0, by + 1.0), 9.0, false, arrow_col)
+			UiDraw.triangle(self, Vector2(bx + 5.0, by + 1.0), 9.0, masked, arrow_col)
 		elif int(spec[3]) == 1:
 			UiDraw.triangle(self, Vector2(bx + 5.0, by), 9.0, true, Palette.SUNNY)
 		else:

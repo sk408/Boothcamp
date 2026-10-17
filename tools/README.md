@@ -18,8 +18,10 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | Headless end-to-end autoplay (the bot plays the whole level) | `tools/autoplay_check.sh` | ~5 s |
 | ...with another seed, or the swapped key style | `tools/autoplay_check.sh --seed=7 --affinity` | |
 | Headless mouse-only playthrough (real clicks and drags only, ends back on the title) | `tools/mouse_check.sh` | ~10 s |
-| Rendered autoplay with screenshots at every phase | `tools/shots.sh /abs/out/dir` | ~5 min |
-| Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` | ~10 s |
+| **(v3)** Day 2 (Bonnie: bone, masking, referral), keys or mouse only | `tools/autoplay_check.sh --day=2` / `tools/autoplay_check.sh --day=2 --mouse` | ~25 s |
+| Rendered autoplay with screenshots at every phase | `tools/shots.sh /abs/out/dir` (Day 2: add `--day=2`) | ~5 min (Day 2 ~13 min) |
+| Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` (Day 2's five tests and the masking keys: add `--day=2`) | ~10 s (Day 2 ~20 s) |
+| **(v3)** Day 2 set pieces without playing (bone placement with a wrong spot, the oscillator on Bonnie, the board's reveal, bridge and stamp on made-up results) | `tools/scene_shot.sh res://story/dev_day2.tscn /abs/out/dir "60" 30` (the scene takes its own shots) | ~2 min |
 | Play the full visit without Hoot's quick-visit turn (or force it with `--quick`) | add `--full` after `--` | |
 | Boot one scene and take timed screenshots | `tools/scene_shot.sh res://world/clinic.tscn /abs/out/dir "1,3.5"` | ~20 s |
 | Windows build: `build/BoothCamp.exe` with the PCK embedded, plus `build/BoothCamp-win64.zip` (exe, README, font licence) | `tools/export_win.sh` (add `--xz` for an .xz too) | ~1 min |
@@ -62,7 +64,7 @@ Exit codes:
 | 0 | ok |
 | 2 | stalled: no progress for 120 game seconds; a `stuck_<phase>.png` shot is taken |
 | 3 | overall timeout |
-| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired |
+| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k and masked air present |
 | 5 | script errors were logged during the run |
 | 6 | `--mouse` only: a mouse target was not found on screen |
 
@@ -70,6 +72,12 @@ Screenshots are named `NN_<name>.png`:
 - one per phase: `disclaimer`, `title`, `intro`, `history`, `otoscopy`, `instructions`, `earphones`, `audiometry_right`, `audiometry_left`, `reveal`, `evidence`, `fitting`, `results`;
 - `audiometry_<ear>_first_tone`, `audiometry_<ear>_first_store`, `audiometry_<ear>_complete`;
 - `results_final`.
+- **(v3)** Day 2 adds `bc_placement`, `masking`, `referral`, `day2_reveal`, `day2_bridge`, `day2_stamp`; audiometry
+  shots carry the test when it is not plain air: `audiometry_right_bc`, `audiometry_right_bc_masked_first_store`,
+  `audiometry_right_ac_masked_hoot_turn`, and `audiometry_right_plateau` (the first plateau found).
+
+Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `right_abg`, `right_type` and
+`plateaus_found`.
 
 `run.log` in the output directory holds the full log.
 
@@ -88,10 +96,14 @@ Screenshots are named `NN_<name>.png`:
 | `--fresh` | reset the save first |
 | `--save=user://x.json` | use another save file (`--scene=` runs default to `user://save_scene.json`, never the player's save) |
 | `--mouse` | with `--autoplay`: drive everything with real mouse events (the mouse-only path) |
+| `--day=N` / `--chapter=id` | **(v3)** start that chapter (`--day=2` = Bonnie) and treat it as unlocked for this run; with `--autoplay` the bot plays it |
+| `--unlock-all` | **(v3)** every day open for this run (the save's "Unlock all days (demo)" setting is not changed) |
 
 Scenes with a `demo_start()` for `--scene`:
 - `res://ui/audiometer/audiometer_screen.tscn`: a coached right-ear test of Gus;
 - `res://world/clinic.tscn`: a walk-in showcase.
+- `res://story/dev_day2.tscn` **(v3)**: Day 2's set pieces (see above). A dev tool: never reachable from the game.
+- `res://tools/monkey.tscn`: the stress test (`--day=2` for Day 2).
 
 ## Generators (one-off, foundation-owned)
 

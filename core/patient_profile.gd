@@ -14,6 +14,23 @@ extends Resource
 @export var thresholds_right: Dictionary[int, int] = {}
 @export var thresholds_left: Dictionary[int, int] = {}
 
+@export_group("True bone-conduction thresholds (dB HL, v3)")
+## freq (Hz) -> true bone (cochlear) threshold. Empty = the same as air (no air-bone gap, as in a
+## sensorineural loss). When given, must cover every ClinicRules.BC_FREQS entry, and never be
+## poorer than air at the same frequency.
+@export var bc_right: Dictionary[int, int] = {}
+@export var bc_left: Dictionary[int, int] = {}
+
+@export_group("Cross-hearing (v3)")
+## This head's REAL interaural attenuation (dB) per transducer: how much a sound loses crossing the
+## skull to the other cochlea. Real heads beat the conservative rule values (ClinicRules.IA_RULE_DB:
+## phones 40, inserts 55, bone 0), so the rules ask for masking a little more often than needed.
+@export var ia_phones_db: int = 60
+@export var ia_inserts_db: int = 75
+@export var ia_bone_db: int = 0
+## Scales ClinicRules.OCCLUSION_DB for this patient (1 = textbook).
+@export_range(0.0, 2.0, 0.05) var occlusion_scale: float = 1.0
+
 @export_group("Response tendencies")
 ## Presses per minute of silence with no tone at all (button-mashers are high).
 @export_range(0.0, 20.0, 0.1) var false_alarms_per_minute: float = 0.5
@@ -40,7 +57,10 @@ extends Resource
 ## True threshold for an ear and frequency. Interpolates on a log-frequency axis if the
 ## frequency is missing (so any AudiOtron frequency works).
 func get_threshold(ear: String, freq: int) -> int:
-	var t := get_thresholds(ear)
+	return _interp(get_thresholds(ear), freq)
+
+
+static func _interp(t: Dictionary[int, int], freq: int) -> int:
 	if t.has(freq):
 		return t[freq]
 	if t.is_empty():
@@ -64,6 +84,34 @@ func get_thresholds(ear: String) -> Dictionary[int, int]:
 	return thresholds_right if ear == "right" else thresholds_left
 
 
+## (v3) True bone (cochlear) threshold. Without bone data it equals air (no gap). Never poorer
+## than air (log-frequency interpolation like get_threshold()).
+func get_bc_threshold(ear: String, freq: int) -> int:
+	var t := get_bc_thresholds(ear)
+	var ac := get_threshold(ear, freq)
+	if t.is_empty():
+		return ac
+	return mini(_interp(t, freq), ac)
+
+
+func get_bc_thresholds(ear: String) -> Dictionary[int, int]:
+	return bc_right if ear == "right" else bc_left
+
+
+func has_bone_data() -> bool:
+	return not bc_right.is_empty() or not bc_left.is_empty()
+
+
+## (v3) Real IA for a transducer (&"phones", &"inserts", &"bone").
+func get_ia(transducer: StringName) -> int:
+	match transducer:
+		&"bone":
+			return ia_bone_db
+		&"inserts":
+			return ia_inserts_db
+	return ia_phones_db
+
+
 ## Problems with this profile (empty = valid). Used by tests.
 func validate() -> PackedStringArray:
 	var out := PackedStringArray()
@@ -78,6 +126,17 @@ func validate() -> PackedStringArray:
 				out.append("%s ear missing %d Hz" % [ear, f])
 			elif t[f] < ClinicRules.MIN_DB or t[f] > 120:
 				out.append("%s ear %d Hz out of range: %d" % [ear, f, t[f]])
+	for ear: String in ["right", "left"]:
+		var b := get_bc_thresholds(ear)
+		if b.is_empty():
+			continue
+		for f: int in ClinicRules.BC_FREQS:
+			if not b.has(f):
+				out.append("%s bone missing %d Hz" % [ear, f])
+			elif b[f] < ClinicRules.MIN_DB or b[f] > ClinicRules.max_db_for(f, &"bone") + 30:
+				out.append("%s bone %d Hz out of range: %d" % [ear, f, b[f]])
+			elif b[f] > get_threshold(ear, f):
+				out.append("%s bone %d Hz poorer than air" % [ear, f])
 	if reaction_time_min_s > reaction_time_max_s:
 		out.append("reaction_time_min_s > reaction_time_max_s")
 	return out

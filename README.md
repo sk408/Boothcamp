@@ -6,6 +6,12 @@ You take his history, look in his ears, explain the test, put the earphones on, 
 pure-tone air-conduction test on both ears with the AudiOtron 3000, read the audiogram, crack the
 case, and get a sneak peek of his first hearing aids. One visit takes about 10 to 15 minutes.
 
+**Day 2** brings Bonnie Bunsworth, a baker whose right ear has gone "all underwater". Hoot runs
+her air test, then you put the bone oscillator on her mastoid, find out why unmasked bone lies
+(the Cross-Hearing Ghost), mask the other ear with the plateau dance, and stamp the referral to
+the ear doctor (a conductive loss with normal bone). Day 2 opens when Day 1 is done, or straight
+away with **Unlock all days (demo)** on the title's **Days** card. Progress is saved.
+
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
@@ -36,6 +42,9 @@ options). Closing the window saves and quits.
 | **N** | No response (only after a miss at the loudest level) |
 | **R** / **L** | Right / left ear |
 | **H** | Show or hide the key hints next to every control |
+| **B** / **A** (Day 2) | Bone oscillator / air (earphones) |
+| **M** (Day 2) | Masking noise on / off (it plays in the other ear) |
+| **PgUp** / **PgDn**, or **Shift+Up** / **Shift+Down** (Day 2) | Noise louder / softer, 5 dB per tap |
 | **Esc** or **P** | Pause and options |
 
 Prefer Up = softer? Click **Up = LOUDER** on the AudiOtron (or use the pause menu) to swap the
@@ -48,7 +57,8 @@ Everything works with the mouse. Hold the big **TONE** pad to beep, right-click 
 response, click **SOFTER**, **LOUDER**, the **Hz** arrows and **STORE**, or scroll over the dB
 readout. Click the audiogram or a test-plan token to jump to that frequency. The **II** button
 pauses. In the story, click to continue, click an answer, drag the earphone cups onto Gus's ears
-and drag the evidence onto the case file.
+and drag the evidence onto the case file. On Day 2, click **AIR** / **BONE** and **MASK**, the
+noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp.
 
 ### The AudiOtron in one breath
 
@@ -87,6 +97,28 @@ pause menu to test every frequency yourself; Hoot's stamps never count for or ag
 At the end, The Daily Decibel scores accuracy, technique, efficiency and care, shows your golf
 card and the 1 kHz retest, and pays Decibucks you can spend on a comfier booth chair.
 
+### Day 2: what it teaches
+
+- **Bone conduction:** the oscillator goes on the mastoid bone behind the ear, never touching the
+  ear itself. Bone skips the ear canal and middle ear, so it measures the cochlea directly (tested
+  at 500 to 4000 Hz; the bone oscillator tops out lower than earphones).
+- **The air-bone gap:** air poorer than bone by more than 10 dB means a conductive loss. A gap of
+  15 dB or more at 500, 1000 and 2000 Hz is a red flag for a referral.
+- **Cross-hearing:** bone crosses the skull with about 0 dB of loss, so unmasked bone is heard by
+  the better cochlea. Air crosses too once the tone is 40 dB above the other ear's bone.
+- **Masking (simplified):** start the noise at the other ear's air threshold + 10, plus the
+  occlusion effect for bone at low pitches; heard = noise up 5, missed = tone up 5; three noise
+  raises with the tone still heard is the plateau. Too much noise crosses back (overmasking).
+  The masking dilemma is only mentioned.
+- **The takeaway:** a conductive loss with normal bone means an ENT referral. Bonnie's pattern
+  (with a little dip in bone at 2 kHz) is the classic picture of otosclerosis, which the doctor
+  confirms; the game never diagnoses.
+
+Symbols follow the usual audiogram conventions: O / X for air, < / > for unmasked bone,
+[ / ] for masked bone, triangle / square for masked air; bone symbols are never joined by lines.
+The masking noise is synthesized narrowband noise, quiet and capped like the beeps, and it
+always lights the NOISE box and the booth squiggles, so Day 2 is playable without sound too.
+
 ## Build from source
 
 Requires [Godot 4.7.2](https://godotengine.org) (standard build, GDScript only) and, for the
@@ -97,6 +129,7 @@ the only asset files are the Fredoka font (SIL Open Font License, `assets/fonts/
 godot --headless --path . --import                  # first time, or after adding files
 tools/run_tests.sh                                  # unit tests (exit 0 = green)
 tools/autoplay_check.sh                             # a bot plays the whole level headless
+tools/autoplay_check.sh --day=2                     # ...Day 2 (bone and masking)
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
@@ -111,9 +144,9 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
 
 ## What's next
 
-- More patients, each teaching one new idea: a noise notch (a drummer), a conductive loss with
-  bone conduction and masking (the AudiOtron already has the masking key waiting), a child who
-  needs play audiometry, and a "something's not right, refer to a doctor" case.
+- More patients, each teaching one new idea: a noise notch (a drummer), a child who needs play
+  audiometry, the masking dilemma (both ears with big gaps), and a "something's not right, refer
+  to a doctor" case. Day 2's design and rules are in `docs/CHAPTER2.md`.
 - A real fitting level: choosing a target, adjusting gain by frequency, and the follow-up visit.
 - Speech-in-noise screening and counselling choices that change how the visit ends.
 - More upgrades for the clinic, and a practice booth with random patients.

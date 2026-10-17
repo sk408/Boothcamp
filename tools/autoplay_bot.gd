@@ -6,6 +6,10 @@ extends Node
 ##    no_response, ear_right/left) and only the observable patient_responded signal, running a
 ##    proper Hughson-Westlake search (down 10 / up 5, 2 of 3 ascending), 1 kHz retest and
 ##    interoctaves. It never peeks at the patient's true thresholds while testing.
+##  - (v3) Bone and masking (Day 2, --day=2): switches the route (transducer_bone / _air), runs the
+##    same search on bone, and the plateau ("Hood") dance on masked sheets with toggle_mask and
+##    mask_louder / mask_softer: heard -> noise +5, missed -> tone +5, store after 3 noise steps
+##    with the same answer. It reads only get_state() (what the screen shows) and its own stamps.
 ##  - Screenshots at each phase and key moments; prints AUTOPLAY_RESULT {json}; quits.
 ##  - --mouse: the mouse-only path. Every beat and every audiometer control is driven with real
 ##    InputEventMouseButton / InputEventMouseMotion at the on-screen anchors (Hoot anchors, visible
@@ -63,7 +67,13 @@ const MOUSE_ANCHORS: Dictionary = {
 	&"present_tone": "tone_button", &"louder": "louder_button", &"softer": "softer_button",
 	&"freq_up": "freq_up_button", &"freq_down": "freq_down_button", &"store": "store_button",
 	&"no_response": "no_response_button", &"ear_right": "ear_right_button", &"ear_left": "ear_left_button",
+	# v3
+	&"mask_louder": "mask_louder_button", &"mask_softer": "mask_softer_button", &"toggle_mask": "mask_toggle_button",
+	&"transducer_bone": "transducer_button", &"transducer_air": "transducer_button",
 }
+## (v3) The bot's own stamps per sheet: test -> ear -> freq -> dB (for masked start levels).
+var _mine: Dictionary = {}
+var _plateaus := 0
 
 
 func _ready() -> void:
@@ -125,6 +135,8 @@ func _on_phase(phase: StringName, info: Dictionary) -> void:
 	_phase = phase
 	_phase_info = info
 	var suffix := ("_" + String(info["ear"])) if info.has("ear") else ""
+	if info.has("test") and String(info["test"]) != "ac":
+		suffix += "_" + String(info["test"])
 	_pending_phase_shot = String(phase) + suffix
 	print("BOT phase ", phase, " ", info, "  t=%.0fs" % Game.clock)
 
@@ -180,7 +192,18 @@ func _on_tone_started(ear: String, _f: int, _d: int) -> void:
 
 func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 	_progress()
-	print("BOT stored %s %d Hz at %d dB (true %d, strokes %d, %s)" % [ear, freq, db, int(info.get("true_db", -99)), int(info.get("strokes", 0)), str(info.get("golf", ""))])
+	var test := String(info.get("test", "ac"))
+	if not _mine.has(test):
+		_mine[test] = {"right": {}, "left": {}}
+	(_mine[test][ear] as Dictionary)[freq] = db
+	print("BOT stored %s %s %d Hz at %d dB (true %d, strokes %d, %s)" % [test, ear, freq, db, int(info.get("true_db", -99)), int(info.get("strokes", 0)), str(info.get("golf", ""))])
+	if test != "ac":
+		var key := "stored_%s_%s" % [test, ear]
+		if not _shot_flags.has(key):
+			_shot_flags[key] = true
+			await _wait(0.25)
+			await _shot("audiometry_%s_%s_first_store" % [ear, test])
+		return
 	if not _shot_flags.has("stored_" + ear):
 		_shot_flags["stored_" + ear] = true
 		await _wait(0.25)
@@ -239,6 +262,10 @@ func _run_audiometry(ear: String) -> void:
 		await _shot(n)
 	if String(_state().get("ear", "")) != ear:
 		await _tap(&"ear_right" if ear == "right" else &"ear_left")
+	var goal := StringName(_state().get("goal_test", &"ac"))
+	if goal != &"ac":
+		await _run_v3(ear, goal)
+		return
 	var found: Dictionary = {}   # freq -> db (first measurement)
 	var last := -1
 	var plan: Array[int] = ClinicRules.TEST_ORDER.duplicate()
@@ -302,9 +329,9 @@ func _measure(freq: int, start_db: int) -> Dictionary:
 	return r
 
 
-func _hughson_westlake(freq: int) -> Dictionary:
+func _hughson_westlake(_freq: int) -> Dictionary:
 	var level: int = _state()["db"]
-	var max_db := ClinicRules.max_db(freq)
+	var max_db := int(_state().get("max_db", ClinicRules.max_db(_freq)))  # bone runs out early
 	var hits: Dictionary = {}
 	var trials: Dictionary = {}
 	var prev_heard := true  # the first response is never "ascending"
@@ -365,6 +392,99 @@ func _goto_freq(target: int) -> bool:
 		await _tap(&"freq_up" if cur < freqs.find(target) else &"freq_down")
 		guard += 1
 	return int(_state().get("freq", -1)) == target
+
+
+# ---------------------------------------------------------------- v3: bone and masking
+
+## Bone (unmasked) or a masked sheet: whatever the screen's goal sheet still needs.
+func _run_v3(ear: String, goal: StringName) -> void:
+	var bone := ClinicRules.test_is_bone(goal)
+	var masked := ClinicRules.test_is_masked(goal)
+	var safety := 0
+	while not _ear_done.get(ear, false) and not _hoot_turn() and safety < 12:
+		safety += 1
+		await _route(bone, masked)
+		var rem: Array = _state().get("remaining", [])
+		if rem.is_empty():
+			break
+		var f: int = rem[0]
+		if not await _goto_freq(f):
+			push_warning("AutoplayBot: cannot reach %d Hz on %s" % [f, goal])
+			break
+		if masked:
+			await _plateau(ear, f, goal)
+		else:
+			await _set_level(30)
+			var r := await _hughson_westlake(f)
+			await _tap(&"no_response" if bool(r["no_response"]) else &"store")
+			await _wait(0.3)
+	if _hoot_turn() and not _shot_flags.has("hoot_turn_" + String(goal)):
+		_shot_flags["hoot_turn_" + String(goal)] = true
+		print("BOT Hoot's turn on the %s ear (%s)" % [ear, goal])
+		await _wait(3.0)
+		await _shot("audiometry_%s_%s_hoot_turn" % [ear, goal])
+	var t0 := Game.clock
+	while not _ear_done.get(ear, false) and Game.clock - t0 < 900.0:
+		await _frames(1)
+
+
+## Put the controls on the goal sheet: the right transducer, masking on or off.
+func _route(bone: bool, masked: bool) -> void:
+	var guard := 0
+	while (StringName(_state().get("transducer", &"phones")) == &"bone") != bone and guard < 4:
+		await _tap(&"transducer_bone" if bone else &"transducer_air")
+		guard += 1
+	guard = 0
+	while bool(_state().get("mask_on", false)) != masked and guard < 4:
+		await _tap(&"toggle_mask")
+		guard += 1
+
+
+func _set_mask(target: int) -> void:
+	var guard := 0
+	while int(_state().get("mask_db", target)) != target and guard < 40:
+		await _tap(&"mask_louder" if int(_state()["mask_db"]) < target else &"mask_softer")
+		guard += 1
+
+
+## The plateau dance at one frequency: start at the unmasked stamp with the initial masking the
+## screen's helper shows, heard -> noise +5, missed -> tone +5, store after PLATEAU_STEPS noise
+## raises with the same answer (or when the next raise would overmask).
+func _plateau(ear: String, freq: int, goal: StringName) -> void:
+	var unmasked := String(ClinicRules.unmasked_test(goal))
+	var start := int((_mine.get(unmasked, {}).get(ear, {}) as Dictionary).get(freq, 30))
+	var initial := int(_state().get("initial_mask_db", 30))
+	await _set_mask(initial)
+	await _set_level(start)
+	var steps := 0
+	var max_db := int(_state().get("max_db", 70))
+	for n in 40:
+		var heard := await _present()
+		var tone := int(_state()["db"])
+		var noise := int(_state()["mask_db"])
+		if heard:
+			if steps >= ClinicRules.PLATEAU_STEPS:
+				break
+			var limit := int(_state().get("overmask_limit_db", 999))
+			if noise + ClinicRules.MASK_STEP_DB >= limit:
+				break  # one more step would overmask: the best answer so far
+			steps += 1
+			await _set_mask(noise + ClinicRules.MASK_STEP_DB)
+		else:
+			steps = 0
+			if tone >= max_db:
+				await _tap(&"no_response")
+				await _wait(0.3)
+				return
+			await _set_level(tone + ClinicRules.UP_AFTER_MISS_DB)
+	if bool((_state().get("plateau", {}) as Dictionary).get("found", false)):
+		_plateaus += 1
+		if not _shot_flags.has("plateau"):
+			_shot_flags["plateau"] = true
+			await _wait(0.2)
+			await _shot("audiometry_%s_plateau" % ear)
+	await _tap(&"store")
+	await _wait(0.3)
 
 
 # ---------------------------------------------------------------- mouse-only path (--mouse)
@@ -505,6 +625,12 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 			await _drag(_anchor_center("earphone_blue"), _anchor_center("ear_target_left"))
 		&"evidence_present":
 			await _drag(_anchor_center("evidence_slope"), _anchor_center("evidence_target"))
+		&"bc_placement":
+			await _drag(_anchor_center("oscillator"), _anchor_center("mastoid_target_right"))
+		&"referral_stamp":
+			await _click(_anchor_center("referral_stamp"))
+		&"chapter_select":
+			await _click_text(String(Game.chapter(String(info.get("next", "gus"))).get("title", "Day 1")).substr(0, 12))
 		&"fitting_switch_on":
 			var fit := _find_script_node("story/games/fitting.gd")
 			var btn: Control = fit.get("_btn") as Control if fit != null else null
@@ -541,6 +667,7 @@ func _finish() -> void:
 		"technique_errors": (res.get("technique_errors", []) as Array).map(func(e: Dictionary) -> String: return "%s@%s/%s" % [e.get("kind", ""), e.get("ear", ""), str(e.get("freq", ""))])}
 	var problems: PackedStringArray = []
 	var ears: Dictionary = res.get("ears", {})
+	_check_v3(res, report, problems)
 	for ear: String in ["right", "left"]:
 		if not ears.has(ear) or not bool((ears[ear] as Dictionary).get("complete", false)):
 			problems.append("%s ear incomplete" % ear)
@@ -571,6 +698,42 @@ func _finish() -> void:
 		code = 5
 	OS.remove_logger(_errors)
 	Events.quit_requested.emit(code)
+
+
+## (v3) Bone / masked sheets: every stamp within 10 dB of the truth; on Day 2 the right ear must
+## come out conductive with the referral red flag, with masked bone at 500-4k.
+func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var ears: Dictionary = res.get("ears", {})
+	var sheets := {}
+	for ear: String in ["right", "left"]:
+		var e: Dictionary = ears.get(ear, {})
+		for key: String in ["bc", "bc_masked", "ac_masked"]:
+			var sh: Dictionary = e.get(key, {})
+			if sh.is_empty():
+				continue
+			var t := {}
+			for f: int in sh:
+				var info: Dictionary = sh[f]
+				t[str(f)] = [info["stored_db"], info["true_db"]]
+				if absi(int(info["stored_db"]) - int(info["true_db"])) > 10:
+					problems.append("%s %s %d Hz off by more than 10 dB" % [ear, key, f])
+			sheets["%s_%s" % [ear, key]] = t
+	if not sheets.is_empty():
+		report["sheets"] = sheets
+		report["plateaus_found"] = _plateaus
+	if String(_summary.get("chapter_id", "")) == "bonnie":
+		var r: Dictionary = ears.get("right", {})
+		report["right_type"] = String(r.get("hearing_type", ""))
+		report["right_abg"] = r.get("abg", {})
+		if StringName(r.get("hearing_type", &"")) != &"conductive":
+			problems.append("Bonnie's right ear should be conductive, got %s" % str(r.get("hearing_type", "")))
+		if not bool(r.get("abg_red_flag", false)):
+			problems.append("no air-bone gap red flag on Bonnie's right ear")
+		for f: int in [500, 1000, 2000, 4000]:
+			if not (r.get("bc_masked", {}) as Dictionary).has(f):
+				problems.append("right masked bone missing at %d Hz" % f)
+		if (r.get("ac_masked", {}) as Dictionary).is_empty():
+			problems.append("right masked air missing")
 
 
 func _fail(code: int, why: String) -> void:

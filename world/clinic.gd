@@ -12,6 +12,8 @@ extends Node3D
 ##   doris_enter() (coroutine), doris_react(kind), gus_look(target), set_title_mode(on),
 ##   play_birdsong(), get_head_screen_position(), take_off_glasses() / put_on_glasses(),
 ##   put_on_hearing_aids(), get_muffle().
+## (v3) patient_id (set before add_child: "bonnie" = Day 2), put_on_bone_oscillator(ear),
+##   put_on_masking_phone(ear), take_off_bone_oscillator().
 
 const Kit := preload("res://world/kit.gd")
 const Room := preload("res://world/room.gd")
@@ -62,6 +64,11 @@ var _tick := 0
 var _glasses_off := false
 var _look_lock: StringName = &""
 var _title_idle := 0.0
+## (v3) Which bean walks in: "" / "gus" = Grandpa Gus, "bonnie" = Bonnie. Set before add_child.
+## (The patient node keeps the name `gus` so every existing call keeps working.)
+var patient_id := ""
+var _bone: Node3D
+var _mask_phone: Node3D
 
 
 func _enter_tree() -> void:
@@ -76,7 +83,7 @@ func _ready() -> void:
 	_build_environment()
 	refs = Room.build(self, Game.has_upgrade("comfy_chair"))
 	gus = Bean.new()
-	gus.build(Bean.GUS)
+	gus.build(Bean.spec_for(patient_id) if patient_id != "" else Bean.GUS)
 	add_child(gus)
 	gus.position = SPOTS[&"door"]
 	doris = Bean.new()
@@ -527,6 +534,69 @@ func put_on_hearing_aids() -> void:
 		t.tween_property(aid, "scale", Vector3.ONE, 0.2)
 	Kit.burst(head, hc + Vector3(0, 0.1, 0.1), [Color("#36d6e7"), Color("#ffd23f"), Color("#fffbf2")], 24, 1.6, -0.8, 0.04, 1.0)
 	Sfx.play(&"sparkle", 1.0, -6.0)
+
+
+## (v3) The bone oscillator: a thin headband over the crown and the little vibrator box pressed on
+## the mastoid, just behind the test ear (never touching the pinna).
+func put_on_bone_oscillator(ear: String = "right") -> void:
+	take_off_bone_oscillator()
+	take_off_earphones()
+	var head: Node3D = gus.get("parts")["head"]
+	var hc: Vector3 = gus.get("parts")["head_center"]
+	var side := -1.0 if ear == "right" else 1.0
+	_bone = Node3D.new()
+	_bone.name = "BoneOscillator"
+	_bone.position = hc
+	head.add_child(_bone)
+	var band := Kit.arc_tube(_bone, 0.43, 0.02, 4, 176, 14, Color("#8d94a6"), {"outline": 0.008})
+	band.rotation.x = -0.42
+	var box := Node3D.new()
+	box.position = Vector3(0.33 * side, -0.07, -0.13)
+	_bone.add_child(box)
+	Kit.box(box, Vector3(0.07, 0.1, 0.08), Vector3.ZERO, Color("#5c6370"), {"outline": 0.01})
+	Kit.sphere(box, 0.022, Vector3(0.03 * side, 0.02, 0.03), Color("#ffd23f"), Vector3.ONE, {"unshaded": true}, 8)
+	Kit.capsule(box, 0.008, 0.3, Vector3(0, -0.18, 0), Color("#4d4d5c"), {"outline": 0.0}, 6)
+	Kit.sphere(_bone, 0.04, Vector3(-0.4 * side, 0.02, -0.12), Color("#8d94a6"), Vector3(0.6, 1.0, 1.0), {"outline": 0.008}, 10)
+	box.scale = Vector3.ONE * 0.3
+	var t := box.create_tween()
+	t.tween_property(box, "scale", Vector3(1.25, 0.8, 1.25), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(box, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	Sfx.play(&"pop", 0.8, -6.0)
+	gus.call("set_holding_button", true)
+
+
+## (v3) One earphone on the non-test ear, for the masking noise during bone tests.
+func put_on_masking_phone(ear: String = "left") -> void:
+	if _mask_phone and is_instance_valid(_mask_phone):
+		_mask_phone.queue_free()
+	var head: Node3D = gus.get("parts")["head"]
+	var hc: Vector3 = gus.get("parts")["head_center"]
+	var side := -1.0 if ear == "right" else 1.0
+	_mask_phone = Node3D.new()
+	_mask_phone.name = "MaskingPhone"
+	_mask_phone.position = hc
+	head.add_child(_mask_phone)
+	var col := Color("#e5383b") if ear == "right" else Color("#2d6cdf")
+	var cup := Node3D.new()
+	cup.position = Vector3(0.425 * side, -0.02, 0.0)
+	_mask_phone.add_child(cup)
+	var shell := Kit.cylinder(cup, 0.13, 0.14, 0.1, Vector3(0.02 * side, 0, 0), col, {"outline": 0.012}, 20)
+	shell.rotation.z = PI / 2.0
+	Kit.label(cup, "R" if ear == "right" else "L", Vector3(0.075 * side, 0, 0), 48, Color.WHITE, 0, 700).rotation.y = PI / 2.0 * side
+	var strap := Kit.arc_tube(_mask_phone, 0.41, 0.026, 90.0 - 82.0 * side, 90.0, 8, Color("#4d4d5c"), {"outline": 0.01})
+	strap.position = Vector3(0, 0, 0.04)
+	cup.scale = Vector3.ONE * 0.4
+	var t := cup.create_tween()
+	t.tween_property(cup, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Sfx.play(&"pop", 1.0, -6.0)
+
+
+func take_off_bone_oscillator() -> void:
+	for n: Node3D in [_bone, _mask_phone]:
+		if n and is_instance_valid(n):
+			n.queue_free()
+	_bone = null
+	_mask_phone = null
 
 
 # ---------------------------------------------------------------- construction

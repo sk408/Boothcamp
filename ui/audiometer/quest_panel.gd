@@ -22,6 +22,20 @@ var _hover := -1
 var _complete_t := 0.0
 
 
+## (v3) Header text: "TEST PLAN" for air, the AudiOtron sets e.g. "MASKED BONE" on Day 2.
+var title: String = "TEST PLAN":
+	set(v):
+		if v != title:
+			title = v
+			queue_redraw()
+## (v3) The sheet the tokens belong to: done tokens wear its audiogram symbol (O, <, [, triangle...).
+var test: StringName = &"ac":
+	set(v):
+		if v != test:
+			test = v
+			queue_redraw()
+
+
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_NONE
@@ -89,7 +103,7 @@ func _draw() -> void:
 	AoDraw.card(self, r, Palette.PAPER, 22)
 	var col := Palette.ear_color(ear)
 	# header: title + progress bar
-	AoDraw.text_l(self, Vector2(16, 20), "TEST PLAN", 15, Palette.INK, AoDraw.FONT_BOLD)
+	AoDraw.text_l(self, Vector2(16, 20), title, 15, Palette.INK, AoDraw.FONT_BOLD)
 	var bar := Rect2(Vector2(112, 12), Vector2(size.x - 112 - 52, 16))
 	AoDraw.rbox(self, bar, Palette.CREAM.darkened(0.06), 8, 2, Palette.INK)
 	var k := float(done_count) / maxf(1.0, float(total_count))
@@ -128,7 +142,7 @@ func _draw() -> void:
 		AoDraw.text_c(self, rc.get_center() + Vector2(0, -8), label, 15, Palette.INK, AoDraw.FONT_BOLD)
 		if done:
 			var sc := rc.get_center() + Vector2(-10, 10)
-			UiDraw.ear_symbol(self, sc, ear, 9.0, 2.0, bool(it.get("nr", false)))
+			UiDraw.audiogram_symbol(self, sc, ear, test, 9.0, 2.0, bool(it.get("nr", false)))
 			AoDraw.text_l(self, sc + Vector2(9, 0), "NR" if bool(it.get("nr", false)) else str(int(it["db"])), 12, col.darkened(0.2), AoDraw.FONT_BOLD)
 		elif cur:
 			UiDraw.triangle(self, rc.get_center() + Vector2(0, 11), 9.0, false, Palette.INK)

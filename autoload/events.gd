@@ -49,6 +49,9 @@ signal key_style_changed(style: String)
 signal comfort_changed(hearts: int, reason: String)
 ## Game emits when the coin total changes.
 signal coins_changed(total: int, delta: int)
+## (v3) Game emits from finish_visit() when a chapter (day) is completed for the first time or again.
+## newly_unlocked: chapter ids that this completion unlocked (Array of String, often empty).
+signal chapter_completed(chapter_id: String, newly_unlocked: Array)
 
 # ---------------------------------------------------------------- dialogue (story)
 
@@ -94,6 +97,13 @@ signal combo_changed(n: int, multiplier: int)
 signal ear_completed(ear: String, ear_results: Dictionary)
 ## Mirror of AudiometerScreen.test_finished for global listeners. results: CONTRACTS.md §5.1.
 signal audiometry_finished(results: Dictionary)
+## (v3) The masking noise changed: turned on/off, or its level (dB EM) or frequency moved.
+## ear = the MASKED (non-test) ear. Every masker lights an on-screen indicator (CONTRACTS.md §1.3).
+## Emitter: the AudiOtron. Listeners: world (noise squiggles on that cup), bot logs.
+signal masker_changed(ear: String, freq: int, db: int, on: bool)
+## (v3) The AudiOtron's active transducer changed (start_test or a switch): &"phones",
+## &"inserts" or &"bone". ear = the test ear.
+signal transducer_changed(transducer: StringName, ear: String)
 
 # ---------------------------------------------------------------- world (story/ui emit, world listens)
 

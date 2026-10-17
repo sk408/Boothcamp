@@ -223,3 +223,353 @@ static func classify_shape(thresholds: Dictionary) -> StringName:
 	if low - high >= 15.0:
 		return &"rising"
 	return &"flat"
+
+
+# ================================================================ v3: bone conduction + masking
+# Chapter 2 (docs/CHAPTER2.md). Sources: ASHA (2005) manual pure-tone guidelines; Hood (1960)
+# plateau masking; Studebaker (1964) / Yacullo occlusion-effect corrections; the two clinical
+# programs' published masking rules (paraphrased in research/test-content.md §1.5 and §2.3-2.4).
+# Teaching defaults: Steve reviews every number here.
+
+## Tests: the conduction route plus the masked flag. Each one is its own results "sheet".
+const TESTS: Array[StringName] = [&"ac", &"ac_masked", &"bc", &"bc_masked"]
+## Transducers. "phones" = supra-aural headphones (the AudiOtron's default), "inserts" = insert
+## earphones (a Day 2 shop upgrade), "bone" = the bone oscillator on the mastoid.
+const TRANSDUCERS: Array[StringName] = [&"phones", &"inserts", &"bone"]
+
+## Bone-conduction frequencies the oscillator can present (Hz).
+const BC_FREQS: Array[int] = [250, 500, 750, 1000, 1500, 2000, 3000, 4000]
+## Required bone frequencies, in the recommended order (250 is optional: loud low bone tones
+## can be felt instead of heard).
+const BC_REQUIRED: Array[int] = [1000, 2000, 4000, 500]
+## Bone oscillator maximum output (dB HL). It runs out much sooner than headphones.
+const BC_MAX_DB: Dictionary[int, int] = {250: 45, 500: 60, 750: 65, 1000: 70, 1500: 70, 2000: 70, 3000: 70, 4000: 65}
+## Loud low bone tones are FELT (vibrotactile), not heard. Reference for later patients.
+const VIBROTACTILE_DB: Dictionary[int, int] = {250: 30, 500: 55}
+
+## Minimum interaural attenuation the masking RULES assume (conservative, flat). The patient
+## simulator uses each patient's own, larger, real IA (PatientProfile.ia_*_db).
+const IA_RULE_DB: Dictionary[StringName, int] = {&"phones": 40, &"inserts": 55, &"bone": 0}
+## Safety pad on top of the non-test ear's AC threshold for the initial masking level.
+const MASK_SAFETY_DB := 10
+## Occlusion-effect allowance (dB) for BONE tests: covering a normal non-test ear with the masking
+## earphone makes low bone tones louder in it, so initial masking adds this. 2 kHz and up: 0.
+const OCCLUSION_DB: Dictionary[StringName, Dictionary] = {
+	&"phones": {250: 15, 500: 15, 750: 10, 1000: 10},
+	&"inserts": {250: 0, 500: 0, 750: 0, 1000: 0},   # deep insertion: negligible (teaching default)
+}
+## The covered ear only shows an occlusion effect when its own middle ear is normal (gap <= this).
+const OCCLUSION_MAX_GAP_DB := 10
+## Masker steps (dB) and the plateau: the same tone level heard on PLATEAU_STEPS consecutive
+## masker raises of MASK_STEP_DB (3 x 5 = 15 dB of masking) is the masked threshold.
+const MASK_STEP_DB := 5
+const PLATEAU_STEPS := 3
+## Narrow-band masker range (dB EM).
+const MASK_MIN_DB := 0
+const MASK_MAX_DB := 100
+## Air-bone gap: more than this = a conductive component (10 dB or less = no real gap).
+const ABG_CONDUCTIVE_DB := 10
+## Referral red flag: a gap of at least this at EACH of these frequencies.
+const ABG_RED_FLAG_DB := 15
+const ABG_RED_FLAG_FREQS: Array[int] = [500, 1000, 2000]
+## Carhart notch: bone at 2 kHz at least this much poorer than both 1 kHz and 4 kHz.
+const CARHART_FREQ := 2000
+const CARHART_MIN_DIP_DB := 10
+## Hearing types from air vs bone (classify with hearing_type()).
+const HEARING_TYPES: Array[StringName] = [&"normal", &"conductive", &"sensorineural", &"mixed", &"unknown"]
+const HEARING_TYPE_TITLES: Dictionary[StringName, String] = {
+	&"normal": "Normal hearing",
+	&"conductive": "Conductive loss",
+	&"sensorineural": "Sensorineural loss",
+	&"mixed": "Mixed loss",
+	&"unknown": "Needs bone conduction",
+}
+## Masking-help light (CONTRACTS.md §4.3 "mask_status"): grey off, amber needed / too little /
+## too much, green ok, purple impossible (masking dilemma).
+const MASK_STATUSES: Array[StringName] = [&"off", &"needed", &"under", &"ok", &"over", &"impossible"]
+
+
+static func test_id(bone: bool, masked: bool) -> StringName:
+	if bone:
+		return &"bc_masked" if masked else &"bc"
+	return &"ac_masked" if masked else &"ac"
+
+
+static func test_is_bone(test: StringName) -> bool:
+	return test == &"bc" or test == &"bc_masked"
+
+
+static func test_is_masked(test: StringName) -> bool:
+	return test == &"ac_masked" or test == &"bc_masked"
+
+
+## &"bc_masked" -> &"bc", &"ac_masked" -> &"ac".
+static func unmasked_test(test: StringName) -> StringName:
+	return &"bc" if test_is_bone(test) else &"ac"
+
+
+## The frequencies a test can use (AC: 250-8k; bone: 250-4k).
+static func test_freqs(test: StringName) -> Array[int]:
+	return BC_FREQS.duplicate() if test_is_bone(test) else AC_FREQS.duplicate()
+
+
+## Maximum output for a frequency on a transducer (bone runs out early).
+static func max_db_for(freq: int, transducer: StringName) -> int:
+	if transducer == &"bone":
+		return BC_MAX_DB.get(freq, 60)
+	return max_db(freq)
+
+
+## clamp_db() for any transducer.
+static func clamp_db_for(db: int, freq: int, transducer: StringName) -> int:
+	var snapped := int(round(db / float(LEVEL_STEP_DB))) * LEVEL_STEP_DB
+	return clampi(snapped, MIN_DB, max_db_for(freq, transducer))
+
+
+static func clamp_mask_db(db: int) -> int:
+	var snapped := int(round(db / float(MASK_STEP_DB))) * MASK_STEP_DB
+	return clampi(snapped, MASK_MIN_DB, MASK_MAX_DB)
+
+
+## Rule IA (dB) for a transducer. freq is accepted for a future frequency-specific table.
+static func ia_rule(transducer: StringName, _freq: int = 1000) -> int:
+	return IA_RULE_DB.get(transducer, 40)
+
+
+## Occlusion-effect allowance at a frequency when the masker sits on a normal ear.
+static func occlusion_effect(freq: int, masker: StringName = &"phones") -> int:
+	var table: Dictionary = OCCLUSION_DB.get(masker, OCCLUSION_DB[&"phones"])
+	return int(table.get(freq, 0))
+
+
+static func air_bone_gap(ac: int, bc: int) -> int:
+	return ac - bc
+
+
+## Gap > 10 dB: a conductive component.
+static func is_conductive_gap(gap: int) -> bool:
+	return gap > ABG_CONDUCTIVE_DB
+
+
+## Referral red flag: AC - BC >= 15 dB at 500, 1000 AND 2000 Hz (all three must be measured).
+## ac, bc: freq -> dB (use the best available, i.e. masked where measured).
+static func abg_red_flag(ac: Dictionary, bc: Dictionary) -> bool:
+	for f: int in ABG_RED_FLAG_FREQS:
+		if not ac.has(f) or not bc.has(f):
+			return false
+		if int(ac[f]) - int(bc[f]) < ABG_RED_FLAG_DB:
+			return false
+	return true
+
+
+## Type of loss from one ear's air and bone thresholds (freq -> dB; best available values).
+## normal: air 25 or better everywhere measured; conductive: a gap > 10 dB at 2+ of 500-4k with
+## bone normal (its average over those frequencies 25 or better: one 5 dB wobble or a Carhart
+## notch does not make it mixed); mixed: the same gaps with poorer bone; sensorineural: no real
+## gap. unknown: no bone at 500-4k.
+static func hearing_type(ac: Dictionary, bc: Dictionary) -> StringName:
+	var both: Array[int] = []
+	for f: int in [500, 1000, 2000, 4000]:
+		if ac.has(f) and bc.has(f):
+			both.append(f)
+	var ac_normal := not ac.is_empty()
+	for f: int in ac:
+		if int(ac[f]) > 25:
+			ac_normal = false
+	if ac_normal:
+		return &"normal"
+	if both.is_empty():
+		return &"unknown"
+	var gaps := 0
+	var bc_sum := 0
+	for f: int in both:
+		if is_conductive_gap(int(ac[f]) - int(bc[f])):
+			gaps += 1
+		bc_sum += int(bc[f])
+	var bc_normal := float(bc_sum) / both.size() <= 25.0
+	if gaps >= mini(2, both.size()):
+		return &"conductive" if bc_normal else &"mixed"
+	return &"sensorineural"
+
+
+## Carhart notch: bone at 2 kHz at least CARHART_MIN_DIP_DB poorer than both 1 kHz and 4 kHz.
+static func has_carhart_notch(bc: Dictionary) -> bool:
+	if not (bc.has(1000) and bc.has(CARHART_FREQ) and bc.has(4000)):
+		return false
+	var dip := int(bc[CARHART_FREQ])
+	return dip - int(bc[1000]) >= CARHART_MIN_DIP_DB and dip - int(bc[4000]) >= CARHART_MIN_DIP_DB
+
+
+## AC masking rule: test-ear AC level - IA >= the non-test ear's (best) BC.
+static func ac_masking_needed(test_ac: int, nontest_bc: int, transducer: StringName = &"phones", freq: int = 1000) -> bool:
+	return test_ac - ia_rule(transducer, freq) >= nontest_bc
+
+
+## BC masking rule: the test ear's air-bone gap (AC - unmasked BC) is more than 10 dB.
+static func bc_masking_needed(test_ac: int, bc_unmasked: int) -> bool:
+	return is_conductive_gap(test_ac - bc_unmasked)
+
+
+## Initial masking level (dB EM) in the non-test ear: its AC threshold + 10, plus the occlusion
+## allowance for bone tests at 250-1000 Hz when that ear has a normal middle ear.
+static func initial_masking(nontest_ac: int, freq: int, test: StringName, nontest_gap: int = 0, masker: StringName = &"phones") -> int:
+	var lvl := nontest_ac + MASK_SAFETY_DB
+	if test_is_bone(test) and nontest_gap <= OCCLUSION_MAX_GAP_DB:
+		lvl += occlusion_effect(freq, masker)
+	return clamp_mask_db(lvl)
+
+
+## Masker level at which overmasking starts: the noise crosses back (masker - IA) to the test
+## cochlea's level. Bone: tone_db + IA. Air: tone_db - the test ear's gap + IA.
+## Overmasked when mask_db >= this.
+static func overmask_limit(tone_db: int, test: StringName, test_gap: int = 0, masker: StringName = &"phones") -> int:
+	var cochlear := tone_db if test_is_bone(test) else tone_db - maxi(0, test_gap)
+	return cochlear + ia_rule(masker)
+
+
+static func is_overmasked(mask_db: int, tone_db: int, test: StringName, test_gap: int = 0, masker: StringName = &"phones") -> bool:
+	return mask_db >= overmask_limit(tone_db, test, test_gap, masker)
+
+
+## Masking dilemma: the initial masking already reaches the overmasking limit (no safe window).
+static func masking_dilemma(initial_db: int, limit_db: int) -> bool:
+	return initial_db >= limit_db or initial_db > MASK_MAX_DB
+
+
+## The masking-help light (see MASK_STATUSES).
+static func mask_status(on: bool, needed: bool, mask_db: int, initial_db: int, limit_db: int) -> StringName:
+	if not on:
+		return &"needed" if needed else &"off"
+	if masking_dilemma(initial_db, limit_db):
+		return &"impossible"
+	if mask_db < initial_db:
+		return &"under"
+	if mask_db >= limit_db:
+		return &"over"
+	return &"ok"
+
+
+## The textbook next step of the plateau dance after a masked presentation at (tone_db, mask_db):
+## heard -> same tone, masker +5; missed -> tone +5, same masker. Returns Vector2i(tone, masker).
+static func next_mask_step(tone_db: int, mask_db: int, heard: bool) -> Vector2i:
+	if heard:
+		return Vector2i(tone_db, mask_db + MASK_STEP_DB)
+	return Vector2i(tone_db + LEVEL_STEP_DB, mask_db)
+
+
+## The current plateau run in a masked measurement. records: presentations in order, each with
+## "db", "mask_db" and "responded" (only those with a verdict). The run = the latest heard level,
+## walking back over heard presentations at that SAME level, each 5 dB less masker than the next.
+## Returns {"db": level or -1, "steps": masker raises held, "start_mask": masker at the run start}.
+## Plateau found = steps >= PLATEAU_STEPS and start_mask >= the initial masking level.
+static func plateau_run(records: Array) -> Dictionary:
+	var n := records.size()
+	if n == 0 or not bool((records[n - 1] as Dictionary).get("responded", false)):
+		return {"db": -1, "steps": 0, "start_mask": -1}
+	var last: Dictionary = records[n - 1]
+	var level := int(last["db"])
+	var m := int(last.get("mask_db", -1))
+	var steps := 0
+	var i := n - 2
+	while i >= 0:
+		var r: Dictionary = records[i]
+		if not bool(r.get("responded", false)) or int(r["db"]) != level or int(r.get("mask_db", -1)) != m - MASK_STEP_DB:
+			break
+		steps += 1
+		m = int(r.get("mask_db", -1))
+		i -= 1
+	return {"db": level, "steps": steps, "start_mask": m}
+
+
+## Stored thresholds of one ear and test from a results Dictionary (§5.1): freq -> dB.
+## test &"ac" reads ears[ear].freqs; the others read ears[ear][test].
+static func sheet_thresholds(results: Dictionary, ear: String, test: StringName) -> Dictionary:
+	var e: Dictionary = (results.get("ears", {}) as Dictionary).get(ear, {})
+	var sheet: Dictionary = e.get("freqs" if test == &"ac" else String(test), {})
+	var out := {}
+	for f: int in sheet:
+		out[f] = int((sheet[f] as Dictionary).get("stored_db", 0))
+	return out
+
+
+## Best available thresholds of one ear for air (masked where measured, else unmasked) or bone.
+static func best_thresholds(results: Dictionary, ear: String, bone: bool) -> Dictionary:
+	var out := sheet_thresholds(results, ear, &"bc" if bone else &"ac")
+	var masked := sheet_thresholds(results, ear, &"bc_masked" if bone else &"ac_masked")
+	for f: int in masked:
+		out[f] = masked[f]
+	return out
+
+
+## Lowest bone threshold known for the NON-test ear at freq: its masked bone, or any unmasked bone
+## (unmasked bone is the better cochlea, so it is a safe lower bound); else its air threshold.
+## Returns null when nothing is known at freq.
+static func nontest_bone_estimate(results: Dictionary, test_ear: String, freq: int) -> Variant:
+	var other := "left" if test_ear == "right" else "right"
+	var cands: Array[int] = []
+	for src: Array in [[other, &"bc_masked"], [other, &"bc"], [test_ear, &"bc"]]:
+		var t := sheet_thresholds(results, String(src[0]), src[1])
+		if t.has(freq):
+			cands.append(int(t[freq]))
+	if cands.is_empty():
+		var ac := sheet_thresholds(results, other, &"ac")
+		return ac[freq] if ac.has(freq) else null
+	return cands.min()
+
+
+## Frequencies that need a masked measurement for one ear, from the stored results (§5.1), in the
+## recommended order. test = &"bc_masked": wherever the ear's air-bone gap (best AC - unmasked BC)
+## is > 10 dB. test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate.
+static func masked_freqs_needed(results: Dictionary, ear: String, test: StringName, phones: StringName = &"phones") -> Array[int]:
+	var out: Array[int] = []
+	if test == &"bc_masked":
+		var ac := best_thresholds(results, ear, false)
+		var bc := sheet_thresholds(results, ear, &"bc")
+		var order: Array[int] = BC_REQUIRED.duplicate()
+		for f: int in BC_FREQS:
+			if not order.has(f):
+				order.append(f)
+		for f: int in order:
+			if bc.has(f) and ac.has(f) and bc_masking_needed(int(ac[f]), int(bc[f])):
+				out.append(f)
+	elif test == &"ac_masked":
+		var ac2 := sheet_thresholds(results, ear, &"ac")
+		var order2: Array[int] = [1000, 1500, 2000, 3000, 4000, 6000, 8000, 750, 500, 250]
+		for f: int in order2:
+			if not ac2.has(f):
+				continue
+			var nb: Variant = nontest_bone_estimate(results, ear, f)
+			if nb != null and ac_masking_needed(int(ac2[f]), int(nb), phones, f):
+				out.append(f)
+	return out
+
+
+## The patient's response threshold (dial dB) for one tone, from the cross-hearing model
+## (research/test-content.md §3.1). Inputs are TRUE thresholds (the simulator's business only):
+##   t_ac / t_bc   test ear air / bone (cochlea) thresholds
+##   n_ac / n_bc   non-test ear air / bone thresholds
+##   bone          tone through the bone oscillator (else through the air transducer)
+##   mask_db       narrow-band masker (dB EM) in the non-test ear, < 0 = off
+##   ia_test       the patient's real IA for the tone's transducer (bone ~0, phones ~55-65)
+##   ia_masker     the patient's real IA for the masking earphone (crossing back = overmasking)
+##   oe            occlusion effect in the covered non-test ear (bone tests with the masker on;
+##                 ignored when that ear has a conductive gap)
+## A tone is heard when EITHER cochlea hears it:
+##   test cochlea:  threshold max(t_bc, mask - ia_masker), reached at dial + (air ? t_gap : 0)
+##   other cochlea: threshold max(n_bc, mask - n_gap), reached across the head at dial - ia_test
+##                  (+ oe for an occluded ear during bone tests)
+## Returns {"threshold": dial level, "test": via the test cochlea, "cross": via the other cochlea,
+##          "by": &"test" or &"cross" (which cochlea answers first)}.
+static func response_threshold(t_ac: int, t_bc: int, n_ac: int, n_bc: int, bone: bool, mask_db: int, ia_test: int, ia_masker: int, oe: int = 0) -> Dictionary:
+	var t_gap := maxi(0, t_ac - t_bc)
+	var n_gap := maxi(0, n_ac - n_bc)
+	var masked := mask_db >= 0
+	var t_cochlea := t_bc
+	var n_cochlea := n_bc
+	if masked:
+		t_cochlea = maxi(t_bc, mask_db - ia_masker)
+		n_cochlea = maxi(n_bc, mask_db - n_gap)
+	var via_test := t_cochlea + (0 if bone else t_gap)
+	var occl := oe if (bone and masked and n_gap <= OCCLUSION_MAX_GAP_DB) else 0
+	var via_cross := n_cochlea + ia_test - occl
+	return {"threshold": mini(via_test, via_cross), "test": via_test, "cross": via_cross, "by": &"test" if via_test <= via_cross else &"cross"}

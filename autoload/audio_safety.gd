@@ -9,7 +9,8 @@ extends RefCounted
 ##  - The "Tones" bus carries a hard limiter at -12 dBFS and Master one at -6 dBFS
 ##    (res://default_bus_layout.tres), as a second and third line of defence.
 ##  - "Too loud" gags are visual. Never play a loud sound to make a joke.
-## Any tone or noise generator MUST call hl_to_peak() (or hl_to_dbfs()) and nothing else.
+## Any tone generator MUST call hl_to_peak() (or hl_to_dbfs()) and nothing else; any masking-noise
+## generator MUST call masker_to_rms() and clamp_masker_sample() (v3).
 
 const DBFS_AT_0_HL := -75.0
 const DBFS_PER_DB_HL := 0.6
@@ -21,6 +22,11 @@ const TONES_BUS_CEILING_DB := -12.0
 const MASTER_BUS_CEILING_DB := -6.0
 ## UI sound effects are normalised to this peak (quiet and friendly).
 const SFX_PEAK_DBFS := -18.0
+
+## (v3) Narrow-band masking noise: plays this much quieter than a tone at the same dial number,
+## and its samples never exceed MASKER_CEILING_DBFS (a hiss, never a blast).
+const MASKER_OFFSET_DB := -6.0
+const MASKER_CEILING_DBFS := -24.0
 
 const TONES_BUS := &"Tones"
 const SFX_BUS := &"Sfx"
@@ -48,3 +54,20 @@ static func peak_ceiling() -> float:
 static func clamp_sample(v: float) -> float:
 	var c := peak_ceiling()
 	return clampf(v, -c, c)
+
+
+## (v3) Masker dial level (dB EM, simulated) -> target RMS amplitude (0..1) of the noise.
+## Generators must still clamp every sample with clamp_masker_sample().
+static func masker_to_rms(db_em: float) -> float:
+	var rms_db := clampf(DBFS_AT_0_HL + DBFS_PER_DB_HL * db_em + MASKER_OFFSET_DB, FLOOR_DBFS, MASKER_CEILING_DBFS)
+	return pow(10.0, rms_db / 20.0)
+
+
+static func masker_ceiling() -> float:
+	return pow(10.0, MASKER_CEILING_DBFS / 20.0)
+
+
+## Clamp a masker sample to its own (lower) ceiling, then to the global one.
+static func clamp_masker_sample(v: float) -> float:
+	var c := masker_ceiling()
+	return clamp_sample(clampf(v, -c, c))

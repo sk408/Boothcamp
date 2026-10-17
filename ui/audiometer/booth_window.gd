@@ -9,6 +9,8 @@ extends Control
 var texture: Texture2D
 var tone_glow: float = 0.0
 var tone_ear: String = "right"
+## (v3) The ear the masking noise plays into ("" = masker off): hissy squiggles on that side.
+var noise_ear: String = ""
 var _press := 0.0
 var _press_ear := "right"
 var _emote := ""
@@ -84,6 +86,22 @@ func _draw() -> void:
 			var a0 := PI - 0.7 if left_side else -0.7
 			draw_arc(c, rr, a0, a0 + 1.4, 16, Color(Palette.PAPER, tone_glow * (1.0 - k)), 6.0, true)
 			draw_arc(c, rr, a0, a0 + 1.4, 16, Color(col, tone_glow * (1.0 - k)), 3.0, true)
+	# v3: masking noise into the other ear: grey-violet static squiggles (visible without sound)
+	if noise_ear != "":
+		var ls := noise_ear == "right"
+		var nx := g.position.x + (g.size.x * 0.2 if ls else g.size.x * 0.8)
+		var ny := g.position.y + g.size.y * 0.42
+		var dir := -1.0 if ls else 1.0
+		for i in 3:
+			var pts := PackedVector2Array()
+			var off := 14.0 + 11.0 * i
+			for j in 7:
+				var yy := ny - 18.0 + j * 6.0
+				var jit := sin(_t * 23.0 + j * 1.7 + i * 2.3) * 3.0
+				pts.append(Vector2(nx + dir * (off + (4.0 if j % 2 == 0 else -2.0) + jit), yy))
+			draw_polyline(pts, Color(Palette.PAPER, 0.85), 5.0, true)
+			draw_polyline(pts, Color(Palette.PLUM, 0.8), 2.5, true)
+		AoDraw.text_c(self, Vector2(nx + dir * 26.0, ny + 30.0), "NOISE", 11, Palette.PAPER, AoDraw.FONT_BOLD, 4, Palette.PLUM)
 	# emote bubble
 	if _emote_t > 0.0 and _emote != "":
 		var a := clampf(_emote_t / 0.3, 0.0, 1.0)
@@ -93,7 +111,7 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([Vector2(-10, 14), Vector2(-22, 30), Vector2(2, 18)]), Color(Palette.PAPER, a))
 		draw_circle(Vector2.ZERO, 24.0, Color(Palette.INK, a))
 		draw_circle(Vector2.ZERO, 21.0, Color(Palette.PAPER, a))
-		var glyph := {"blast": "!!", "bored": "zzz", "groove": "~", "strain": "?", "squint": "??", "confused": "?!", "wrong": "<-", "cheer": ":)"}.get(_emote, "!") as String
+		var glyph := {"blast": "!!", "bored": "zzz", "groove": "~", "strain": "?", "squint": "??", "confused": "?!", "wrong": "<-", "cheer": ":)", "giggle": "hee", "ghost": "boo"}.get(_emote, "!") as String
 		var gc := Palette.CORAL if _emote in ["blast", "confused"] else Palette.INK
 		AoDraw.text_c(self, Vector2(0, 1), glyph, 20 if glyph.length() < 3 else 15, Color(gc, a), AoDraw.FONT_BOLD)
 		if _emote == "groove":

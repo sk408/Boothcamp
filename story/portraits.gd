@@ -1,10 +1,10 @@
 extends RefCounted
 ## Portraits: procedural 2D character portraits for the dialogue box and Hoot's bubble.
 ## Portraits.draw(ci, "Gus", center, radius, talk_open, blink)
-## Speakers: "Gus", "Hoot", "Doris", "You" (a clipboard), anything else = narrator star.
+## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "You" (a clipboard), anything else = narrator star.
 
-const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "You": Color("#d9e6ff")}
-const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
+const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "Bonnie": Color("#ffe3c2"), "You": Color("#d9e6ff")}
+const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "Bonnie": Color("#c46a1c"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
 
 const INK := Color("#2e2442")
 const SKIN := Color("#ffcf9e")
@@ -26,6 +26,8 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 			_hoot(ci, c, r, talk_open, blink)
 		"Doris":
 			_doris(ci, c, r, talk_open, blink)
+		"Bonnie":
+			_bonnie(ci, c, r, talk_open, blink)
 		"You":
 			_clipboard(ci, c, r)
 		_:
@@ -170,6 +172,42 @@ static func _doris(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink:
 	else:
 		ci.draw_arc(h + Vector2(0, hr * 0.32), hr * 0.25, 0.5, PI - 0.5, 12, Color("#d9465f"), 4.0, true)
 	ci.draw_circle(h + Vector2(hr * 0.5, -hr * 1.25), hr * 0.14, Color("#ff6f59"))
+
+
+## (v3) Bonnie Bunsworth: chestnut bun with a wooden spoon, mustard top, flour-dusted apron bib.
+static func _bonnie(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: bool) -> void:
+	_shoulders(ci, c, r, Color("#f2a541"), r * 0.42)
+	var bib := Rect2(c + Vector2(-r * 0.24, r * 0.5), Vector2(r * 0.48, r * 0.5))
+	UiDraw.rounded_rect(ci, bib, Color("#fffaf0"), 6)
+	ci.draw_circle(c + Vector2(-r * 0.08, r * 0.66), r * 0.03, Color("#e6d8bd"))
+	ci.draw_circle(c + Vector2(r * 0.1, r * 0.74), r * 0.025, Color("#e6d8bd"))
+	var h := c + Vector2(0, -r * 0.02)
+	var hr := r * 0.44
+	var hair := Color("#8a4f2a")
+	# the wooden spoon through the bun, then the bun and the hair cap
+	ci.draw_line(h + Vector2(-hr * 0.9, -hr * 1.05), h + Vector2(hr * 0.9, -hr * 1.75), INK, 7.0, true)
+	ci.draw_line(h + Vector2(-hr * 0.9, -hr * 1.05), h + Vector2(hr * 0.9, -hr * 1.75), Color("#d9a066"), 4.0, true)
+	_outlined_ellipse(ci, h + Vector2(hr * 1.0, -hr * 1.8), Vector2(hr * 0.2, hr * 0.13), Color("#d9a066"), 2.5, -0.35)
+	ci.draw_circle(h + Vector2(0, -hr * 1.3), hr * 0.5 + 3.0, INK)
+	ci.draw_circle(h + Vector2(0, -hr * 1.3), hr * 0.5, hair)
+	ci.draw_arc(h + Vector2(-hr * 0.05, -hr * 1.35), hr * 0.28, -2.6, -0.8, 10, hair.lightened(0.25), 3.0, true)
+	ci.draw_circle(h + Vector2(0, -hr * 0.3), hr * 0.98 + 3.0, INK)
+	ci.draw_circle(h + Vector2(0, -hr * 0.3), hr * 0.98, hair)
+	ci.draw_circle(h, hr + 3.0, INK)
+	ci.draw_circle(h, hr, Color("#e8b088"))
+	_ellipse(ci, h + Vector2(0, -hr * 0.78), Vector2(hr * 0.9, hr * 0.34), hair)
+	for s: float in [-1.0, 1.0]:
+		var e := h + Vector2(hr * 0.38 * s, -hr * 0.02)
+		_eye(ci, e, hr * 0.2, blink)
+		ci.draw_line(e + Vector2(hr * 0.12 * s, -hr * 0.2), e + Vector2(hr * 0.26 * s, -hr * 0.3), INK, 2.5, true)
+		_ellipse(ci, h + Vector2(hr * 0.55 * s, hr * 0.35), Vector2(hr * 0.15, hr * 0.08), Color(1, 0.45, 0.45, 0.45))
+	ci.draw_circle(h + Vector2(-hr * 0.5, hr * 0.12), hr * 0.06, Color(1, 1, 1, 0.7))  # a dab of flour
+	_ellipse(ci, h + Vector2(0, hr * 0.15), Vector2(hr * 0.12, hr * 0.1), Color("#dd9670"))
+	if talk_open:
+		_ellipse(ci, h + Vector2(0, hr * 0.52), Vector2(hr * 0.17, hr * 0.15), Color("#7a2a3a"))
+		ci.draw_arc(h + Vector2(0, hr * 0.52), hr * 0.17, 0, TAU, 16, Color("#d9465f"), 3.0, true)
+	else:
+		ci.draw_arc(h + Vector2(0, hr * 0.32), hr * 0.25, 0.5, PI - 0.5, 12, Color("#d9465f"), 4.0, true)
 
 
 static func _clipboard(ci: CanvasItem, c: Vector2, r: float) -> void:
