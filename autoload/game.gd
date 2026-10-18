@@ -414,7 +414,7 @@ func finish_visit() -> Dictionary:
 		"chapter_id": chapter_id,
 		"day": int(ch.get("day", 0)),
 		"newly_unlocked": newly,
-		"next_chapter_id": _next_after(chapter_id),
+		"next_chapter_id": _paper_next(chapter_id),
 		"first_clear": first_clear,               # (polish) this visit finished the chapter for the first time
 		"suggested_next": suggested_chapter_id(),  # (polish) the day the title now suggests ("" = all done)
 	}
@@ -544,6 +544,16 @@ func _patient_name(id: String) -> String:
 func _patient_short(id: String) -> String:
 	var p := load_patient(id)
 	return String(p.call("short_name")) if p != null and p.has_method("short_name") else id.capitalize()
+
+
+## (polish) The day the paper's Next button offers: the day after this one in order, or after the
+## last day the suggested day (Day 2 played first: Day 1 next), or "" when every day is done.
+func _paper_next(id: String) -> String:
+	var nxt := _next_after(id)
+	if nxt != "":
+		return nxt
+	var sug := suggested_chapter_id()
+	return sug if sug != id else ""
 
 
 func _next_after(id: String) -> String:

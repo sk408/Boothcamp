@@ -97,10 +97,15 @@ func test_any_order() -> void:
 	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
 	var s := Game.finish_visit()
 	assert_eq(s["chapter_id"], "bonnie")
+	assert_eq(s["next_chapter_id"], "gus", "the paper's Next goes to the suggested day after the last one")
 	assert_eq(Game.suggested_chapter_id(), "gus")
 	assert_eq(Game.next_chapter_id(), "gus")
 	Game.begin_visit("gus")
-	Game.finish_visit()
+	var s2 := Game.finish_visit()
+	assert_eq(s2["next_chapter_id"], "bonnie", "Day 1 done: Next is Day 2 (already played)")
+	Game.begin_visit("bonnie")
+	var s3 := Game.finish_visit()
+	assert_eq(s3["next_chapter_id"], "", "the last day with every day done: no Next")
 	assert_eq(Game.suggested_chapter_id(), "", "every day done: nothing suggested")
 	assert_eq(Game.next_chapter_id(), "gus", "then Play replays the last day started (none: Day 1)")
 
@@ -215,6 +220,9 @@ func test_title_day_picker() -> void:
 	assert_true(bool(day1.get_meta("suggested", false)), "Day 1 wears UP NEXT")
 	assert_false(bool(day2.get_meta("suggested", false)))
 	assert_false(day2.has_meta("locked"), "no lock state at all")
+	var hint_s: Control = title.get("_days_hint_scroll")
+	if hint_s != null:
+		assert_false(hint_s.visible, "2 days fit: no 'wheel scrolls' hint")
 	title.call("_days_back")
 	assert_eq(title.get("_state"), &"menu")
 	title.call("_on_days")
@@ -268,6 +276,9 @@ func test_title_day_grid_many_days() -> void:
 	assert_between(cols, 3, 6, "columns at %s" % vp)
 	var scroll: ScrollContainer = title.get("_days_scroll")
 	assert_eq(scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_AUTO, "11 days scroll")
+	var hint_s: Control = title.get("_days_hint_scroll")
+	if hint_s != null:
+		assert_true(hint_s.visible, "the 'wheel scrolls' hint shows when the grid scrolls")
 	# the suggested day (first not done whose requires is done) is highlighted and wears the badge
 	assert_eq(int(title.get("_hl")), 2, "fake3 is UP NEXT")
 	assert_true(bool((cards[2] as Button).get_meta("suggested", false)))

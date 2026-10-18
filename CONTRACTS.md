@@ -665,6 +665,8 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   - controls: `set_ear`, `step_freq`, `set_freq`, `step_level`, `tone_down`, `tone_up`;
   - storing: `store`, `store_no_response`;
   - queries: `ascending_threshold`, `required_remaining`, `is_ear_complete`, `stored_thresholds`, `build_results`.
+  - **(polish)** `ascending_threshold` also answers `MIN_DB` (-10) when the open measurement was heard twice at -10 dB HL:
+    nothing softer to bracket from, so a store there is by the book (`textbook_presentations` and the bot agree).
 - `PatientSim`: logistic psychometric model with attention, fatigue, false alarms, reaction time and groove.
   - `THRESHOLD_BIAS_DB` 2: the curve's 50 % point sits 2 dB below the profile threshold, so a by-the-book 2-of-3
     ascending search writes down the profile value about 80 % of the time (and 5 dB either side otherwise).
@@ -768,7 +770,7 @@ but must not rename or remove these.
   # v3
   "patient_name": "Grandpa Gus", "chapter_id": "gus", "day": 1,
   "newly_unlocked": [],                # (polish) always empty: every day is open
-  "next_chapter_id": "bonnie",         # the day after this one in order, "" after the last chapter
+  "next_chapter_id": "bonnie",         # the day after this one in order; after the last chapter the suggested day (polish), "" when all are done
   # polish
   "patient_short": "Gus",              # PatientProfile.short_name()
   "first_clear": true,                 # this visit finished the chapter for the first time

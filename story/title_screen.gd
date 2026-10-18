@@ -38,6 +38,8 @@ var _menu_buttons: Array[Button] = []
 var _day_buttons: Array[Button] = []
 var _day_cards: Array[Button] = []
 var _days_note: Label
+var _days_hint_plain: Control
+var _days_hint_scroll: Control
 var _days_scroll: ScrollContainer
 var _days_grid: GridContainer
 var _days_cols := 1
@@ -284,6 +286,9 @@ func _layout_days() -> void:
 	var scrolls := bool(g["scrolls"])
 	_days_scroll.custom_minimum_size = g["scroll_size"]
 	_days_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if scrolls else ScrollContainer.SCROLL_MODE_DISABLED
+	if _days_hint_scroll != null and _days_hint_plain != null:
+		_days_hint_scroll.visible = scrolls
+		_days_hint_plain.visible = not scrolls
 	# centred above the footer band
 	var sz := _days_card.get_combined_minimum_size()
 	_days_card.size = sz
@@ -610,10 +615,19 @@ func _build_days(root: Control) -> void:
 	foot.add_theme_constant_override("separation", 14)
 	v.add_child(foot)
 	if UiKit.show_key_hints():
-		var hr := UiKit.hint_row([["Arrows"], "+", ["Enter"], "   ", ["Esc"], "back    wheel scrolls    or click"], 15)
-		hr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		foot.add_child(hr)
+		# two versions of the hint: "wheel scrolls" only when there are more days than fit (_layout_days)
+		for scroll_hint: bool in [false, true]:
+			var hr := UiKit.hint_row([["Arrows"], "+", ["Enter"], "   ", ["Esc"],
+				"back    wheel scrolls    or click" if scroll_hint else "back    or click"], 15)
+			hr.name = "HintScroll" if scroll_hint else "HintPlain"
+			hr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			hr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			hr.visible = not scroll_hint
+			foot.add_child(hr)
+			if scroll_hint:
+				_days_hint_scroll = hr
+			else:
+				_days_hint_plain = hr
 	else:
 		var spacer := Control.new()
 		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -848,13 +862,18 @@ func _draw_logo() -> void:
 		_letter(ch, Vector2(x2, y2 + bob), 92, Palette.CORAL)
 		x2 += _font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, 92).x - 2.0
 	_logo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var tag := "Beep. Bracket. Be a hearing hero."
+	# (polish) the tagline sits beside CAMP: the taller menu card (five buttons) covers the space below
+	var tag := "Beep. Bracket.\nBe a hearing hero."
 	var tf := UiKit.font(600)
-	var tp := Vector2(64.0, y2 + 40.0)
-	var ts := tf.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 24)
-	var asc := tf.get_ascent(24)
-	UiDraw.rounded_rect(_logo, Rect2(tp + Vector2(-14.0, -asc - 5.0), Vector2(ts.x + 28.0, ts.y + 10.0)), Color(Palette.PAPER, 0.94), 20, 3, Color(Palette.INK, 0.85))
-	_logo.draw_string(tf, tp, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Palette.INK_SOFT)
+	var tfs := 22
+	var tp := Vector2(x2 + 34.0, y2 - 52.0)
+	var ts := tf.get_multiline_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs)
+	var asc := tf.get_ascent(tfs)
+	var tilt := -0.05 + sin(_t * 1.6) * 0.01
+	_logo.draw_set_transform(tp, tilt, Vector2.ONE)
+	UiDraw.rounded_rect(_logo, Rect2(Vector2(-16.0, -asc - 8.0), Vector2(ts.x + 32.0, ts.y + 14.0)), Color(Palette.PAPER, 0.94), 20, 3, Color(Palette.INK, 0.85))
+	_logo.draw_multiline_string(tf, Vector2.ZERO, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, -1, Palette.INK_SOFT)
+	_logo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _letter(ch: String, at: Vector2, px: int, fill: Color) -> void:

@@ -1164,6 +1164,13 @@ func _complete_ear(ear: String) -> void:
 	_fx.confetti(center + Vector2(0, -60), 40, 420.0)
 	# (polish) the sub-line counts THIS test's sheet only; golf over the player's own stamps
 	var sheet_st: Dictionary = (session.sheet(session.goal_test)["stored"] as Dictionary)[ear]
+	if session.goal_test == &"bc" and _plan.has("bc_freqs"):
+		# a bone test over part of the sheet (the 250 Hz bonus hole): count only its own stamps
+		var own := {}
+		for f: Variant in _plan["bc_freqs"]:
+			if sheet_st.has(int(f)):
+				own[int(f)] = sheet_st[int(f)]
+		sheet_st = own
 	var mine := 0
 	var hoot_n := 0
 	var fair := 0
