@@ -1,5 +1,6 @@
 extends TestCase
-## v3: chapters (days), unlocks, the save fields behind them, and the Chapter 2 input actions.
+## v3: chapters (days), the save fields behind them, and the Chapter 2 input actions.
+## (Polish) Every day is open from the start: "requires" only picks the suggested (UP NEXT) day.
 
 var _saved_path := ""
 var _saved_settings := {}
@@ -43,11 +44,26 @@ func test_registry() -> void:
 		assert_has(Game.PHASES, p, "v3 phase")
 
 
-func test_day2_unlocks_after_day1() -> void:
+## (polish) Steve's rule: every chapter is open from the start, in any order.
+func test_every_day_open_from_the_start() -> void:
 	Game.reset_save()
-	assert_true(Game.is_chapter_unlocked("gus"))
-	assert_false(Game.is_chapter_unlocked("bonnie"), "Day 2 locked on a fresh save")
+	for c: Dictionary in Game.chapters():
+		assert_true(Game.is_chapter_unlocked(String(c["id"])), "open: " + String(c["id"]))
+	assert_eq(Game.unlocked_chapter_ids(), ["gus", "bonnie"] as Array[String])
+	assert_eq(Game.suggested_chapter_id(), "gus", "a fresh save suggests Day 1")
 	assert_eq(Game.next_chapter_id(), "gus")
+	assert_false(Game.DEFAULT_SETTINGS.has("unlock_all_days"), "no demo unlock setting any more")
+	var went := []
+	var cb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(cb)
+	assert_true(Game.start_chapter("bonnie"), "Day 2 starts on a fresh save")
+	Events.goto_scene.disconnect(cb)
+	assert_eq(went, ["res://story/level_bonnie.tscn"])
+	assert_false(Game.start_chapter("nope"), "an unknown chapter does not start")
+
+
+func test_finishing_day1_suggests_day2() -> void:
+	Game.reset_save()
 	var got := []
 	var cb := func(id: String, newly: Array) -> void: got.append([id, newly])
 	Events.chapter_completed.connect(cb)
@@ -58,36 +74,68 @@ func test_day2_unlocks_after_day1() -> void:
 	Events.chapter_completed.disconnect(cb)
 	assert_eq(s["chapter_id"], "gus")
 	assert_eq(s["day"], 1)
-	assert_eq(s["newly_unlocked"], ["bonnie"])
+	assert_eq(s["newly_unlocked"], [], "nothing is ever locked")
+	assert_true(bool(s["first_clear"]))
 	assert_eq(s["next_chapter_id"], "bonnie")
-	assert_eq(got, [["gus", ["bonnie"]]])
+	assert_eq(s["suggested_next"], "bonnie")
+	assert_eq(got, [["gus", []]])
 	assert_true(Game.is_chapter_done("gus"))
-	assert_true(Game.is_chapter_unlocked("bonnie"))
 	assert_eq(Game.next_chapter_id(), "bonnie", "Play continues with Day 2")
-	# a replay unlocks nothing new
+	# a replay is not a first clear
 	Game.begin_visit("gus")
-	assert_eq(Game.finish_visit()["newly_unlocked"], [])
+	assert_false(bool(Game.finish_visit()["first_clear"]))
 	# saved
 	Game.progress = Game.DEFAULT_PROGRESS.duplicate(true)
 	assert_true(Game.load_game())
 	assert_true(Game.is_chapter_done("gus"), "chapters_done survives a reload")
 
 
-func test_unlock_all_days_toggle() -> void:
+## Day 2 played first (picked from the Days card): Day 1 is still the suggested day.
+func test_any_order() -> void:
 	Game.reset_save()
-	assert_has(Game.DEFAULT_SETTINGS, "unlock_all_days")
-	Game.set_setting("unlock_all_days", true)
-	assert_true(Game.is_chapter_unlocked("bonnie"), "career-fair toggle opens every day")
-	assert_eq(Game.unlocked_chapter_ids(), ["gus", "bonnie"] as Array[String])
-	Game.set_setting("unlock_all_days", false)
-	assert_false(Game.is_chapter_unlocked("bonnie"))
+	Game.begin_visit("bonnie")
+	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
+	var s := Game.finish_visit()
+	assert_eq(s["chapter_id"], "bonnie")
+	assert_eq(Game.suggested_chapter_id(), "gus")
+	assert_eq(Game.next_chapter_id(), "gus")
+	Game.begin_visit("gus")
+	Game.finish_visit()
+	assert_eq(Game.suggested_chapter_id(), "", "every day done: nothing suggested")
+	assert_eq(Game.next_chapter_id(), "gus", "then Play replays the last day started (none: Day 1)")
 
 
-func test_cli_day_opens_that_chapter() -> void:
+## The suggestion rule over any list: the first day not done whose requires is done (or empty).
+func test_suggested_from() -> void:
+	var list := [
+		{"id": "a", "requires": ""}, {"id": "b", "requires": "a"}, {"id": "c", "requires": "b"},
+		{"id": "d", "requires": "c"}, {"id": "e", "requires": "zzz"},
+	]
+	assert_eq(Game.suggested_from(list, []), "a")
+	assert_eq(Game.suggested_from(list, ["a"]), "b")
+	assert_eq(Game.suggested_from(list, ["a", "c"]), "b", "skipped ahead: still the gap")
+	assert_eq(Game.suggested_from(list, ["c"]), "a")
+	assert_eq(Game.suggested_from(list, ["a", "b", "c"]), "d")
+	assert_eq(Game.suggested_from(list, ["a", "b", "c", "d"]), "e", "an unknown requires never blocks")
+	assert_eq(Game.suggested_from(list, ["a", "b", "c", "d", "e"]), "")
+
+
+## An old save that still has the demo setting loads fine (the key is just dropped).
+func test_old_save_with_unlock_setting_loads() -> void:
+	var f := FileAccess.open(Game.save_path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": 1, "settings": {"unlock_all_days": true, "quick_visit": false}, "progress": {"coins": 12}}))
+	f.close()
+	assert_true(Game.load_game())
+	assert_false(Game.settings.has("unlock_all_days"))
+	assert_false(bool(Game.settings["quick_visit"]), "the other settings survive")
+	assert_eq(int(Game.progress["coins"]), 12)
+	assert_true(Game.is_chapter_unlocked("bonnie"))
+
+
+func test_cli_day_picks_that_chapter() -> void:
 	Game.reset_save()
 	Game.cli["day"] = "2"
 	assert_eq(Game.cli_chapter_id(), "bonnie")
-	assert_true(Game.is_chapter_unlocked("bonnie"))
 	assert_eq(Game.next_chapter_id(), "bonnie")
 
 
@@ -98,7 +146,7 @@ func test_old_save_migrates() -> void:
 	f.close()
 	assert_true(Game.load_game())
 	assert_true(Game.is_chapter_done("gus"))
-	assert_true(Game.is_chapter_unlocked("bonnie"))
+	assert_eq(Game.suggested_chapter_id(), "bonnie")
 
 
 func test_shop_registry() -> void:
@@ -134,7 +182,8 @@ func test_masking_and_transducer_keys() -> void:
 	assert_true(_has_key(&"mask_louder", KEY_PAGEUP))
 
 
-## The title's Days card (phase / beat chapter_select): locked days refuse, the demo toggle opens them.
+## The title's Days card (phase / beat chapter_select): every day open, Day 1 UP NEXT on a fresh
+## save, a card starts its day straight away.
 func test_title_day_picker() -> void:
 	Game.reset_save()
 	var beats := {}
@@ -149,30 +198,150 @@ func test_title_day_picker() -> void:
 	assert_has(beats, &"title_start")
 	title.call("_on_days")
 	await wait_frames(2)
-	Events.awaiting_input.disconnect(cb)
 	assert_has(beats, &"chapter_select")
 	var info: Dictionary = beats[&"chapter_select"][0]
-	assert_eq(info["chapters"], ["gus"], "only Day 1 open on a fresh save")
+	assert_eq(info["chapters"], ["gus", "bonnie"], "every day open on a fresh save")
 	assert_eq(info["next"], "gus")
+	assert_eq(info["suggested"], "gus")
+	var day1: Button = null
 	var day2: Button = null
 	for b: Button in title.get("_day_buttons"):
+		if String(b.get_meta("chapter", "")) == "gus":
+			day1 = b
 		if String(b.get_meta("chapter", "")) == "bonnie":
 			day2 = b
-	assert_true(day2 != null, "a Day 2 card")
-	assert_eq(String(day2.get_meta("label", "")), "Day 2: Bonnie Bunsworth  (locked)")
-	title.call("_pick_day", "bonnie", day2)
-	assert_eq(title.get("_state"), &"days", "a locked day does not start")
-	title.call("_toggle_unlock_all")
-	assert_true(Game.is_chapter_unlocked("bonnie"), "Unlock all days (demo)")
+	assert_true(day1 != null and day2 != null, "a card per day")
 	assert_eq(String(day2.get_meta("label", "")), "Day 2: Bonnie Bunsworth")
+	assert_true(bool(day1.get_meta("suggested", false)), "Day 1 wears UP NEXT")
+	assert_false(bool(day2.get_meta("suggested", false)))
+	assert_false(day2.has_meta("locked"), "no lock state at all")
 	title.call("_days_back")
 	assert_eq(title.get("_state"), &"menu")
+	title.call("_on_days")
+	await wait_frames(2)
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	title.call("_pick_day", "bonnie", day2)
+	Events.goto_scene.disconnect(gcb)
+	Events.awaiting_input.disconnect(cb)
+	assert_eq(went, ["res://story/level_bonnie.tscn"], "Day 2 starts on a fresh save")
 
 
-## (polish) A day you finished stays open even when its prerequisite is not on the save.
-func test_done_chapter_stays_unlocked() -> void:
+## (polish) The Days grid with a fake list of 11 days (never shipped): it fits the 1280x720 screen
+## above the safety footer, scrolls, moves with the arrow keys (the highlighted card scrolls into
+## view), the mouse wheel scrolls it, and cards fall back to the chapter's own face / tint keys.
+func test_title_day_grid_many_days() -> void:
 	Game.reset_save()
-	assert_false(Game.is_chapter_unlocked("bonnie"))
-	(Game.progress["chapters_done"] as Array).append("bonnie")
-	assert_true(Game.is_chapter_unlocked("bonnie"))
-	Game.reset_save()
+	Game.progress["chapters_done"] = ["fake1", "fake2"]
+	var faces := ["Gus", "Bonnie", "Hoot", "Doris", "You", ""]
+	var fake: Array = []
+	for i in 11:
+		var ch := {"id": "fake%d" % (i + 1), "day": i + 1, "title": "Day %d: Fake Patient Number %d" % [i + 1, i + 1],
+			"patient_id": "fake%d" % (i + 1), "teaches": "Pretend lesson %d" % (i + 1), "scene": "res://nope.tscn",
+			"requires": "" if i == 0 else "fake%d" % i, "face": faces[i % faces.size()]}
+		if i % 3 == 1:
+			ch["tint"] = Color("#cfe3ff")
+		elif i % 3 == 2:
+			ch["tint"] = "#ffd9c7"
+		fake.append(ch)
+	# the game's logical screen is 1280x720 at 16:9 (1920x1080 scales the same layout up 1.5x)
+	var root := Engine.get_main_loop() as SceneTree
+	var keep_size: Vector2i = root.root.size
+	root.root.size = Vector2i(1280, 720)
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	title.set("chapters_override", fake)
+	add_node(title)
+	await wait_frames(3)
+	title.call("_on_notice_ok")
+	await wait_seconds(0.4)
+	title.call("_on_days")
+	await wait_seconds(0.7)   # the card's bounce-in has settled
+	var cards: Array = title.get("_day_cards")
+	assert_eq(cards.size(), 11)
+	assert_eq((title.get("_day_buttons") as Array).size(), 12, "11 cards + Back")
+	var vp: Vector2 = title.get_viewport_rect().size
+	var card_rect: Rect2 = (title.get("_days_card") as Control).get_global_rect()
+	assert_true(card_rect.position.x >= 0.0 and card_rect.end.x <= vp.x, "fits the width: %s in %s" % [card_rect, vp])
+	assert_true(card_rect.position.y >= 0.0 and card_rect.end.y <= vp.y - 46.0, "above the safety footer: %s" % card_rect)
+	var cols := int(title.get("_days_cols"))
+	assert_between(cols, 3, 6, "columns at %s" % vp)
+	var scroll: ScrollContainer = title.get("_days_scroll")
+	assert_eq(scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_AUTO, "11 days scroll")
+	# the suggested day (first not done whose requires is done) is highlighted and wears the badge
+	assert_eq(int(title.get("_hl")), 2, "fake3 is UP NEXT")
+	assert_true(bool((cards[2] as Button).get_meta("suggested", false)))
+	assert_eq(String((cards[0] as Button).get_meta("best", "")), "", "no grade without a record")
+	# face / tint fallbacks
+	var TS: Script = title.get_script()
+	assert_eq(TS.call("card_face", fake[2]), "Hoot", "the chapter's own face key")
+	assert_eq(TS.call("card_face", {"id": "gus", "face": "Hoot"}), "Gus", "DAY_FACES wins")
+	assert_eq(TS.call("card_tint", fake[1]), Color("#cfe3ff"), "a Color tint")
+	assert_eq(TS.call("card_tint", fake[2]), Color("#ffd9c7"), "a hex tint")
+	assert_eq(TS.call("card_tint", fake[0]), Palette.CREAM, "no tint: cream")
+	assert_eq(TS.call("card_tint", {"id": "bonnie", "tint": "#000000"}), Color("#ffe3c2"), "DAY_TINTS wins")
+	# keyboard: right, down a row, then down to the last card scrolls it into view, then Back
+	await tap_action(&"ui_right")
+	assert_eq(int(title.get("_hl")), 3)
+	await tap_action(&"ui_down")
+	assert_eq(int(title.get("_hl")), mini(3 + cols, 10))
+	for i in 4:
+		await tap_action(&"ui_down")
+		if int(title.get("_hl")) == 10:
+			break
+	assert_eq(int(title.get("_hl")), 10, "down reaches the last card")
+	await wait_seconds(0.3)
+	var last: Button = cards[10]
+	var sr := scroll.get_global_rect()
+	assert_true(scroll.scroll_vertical > 0, "scrolled down")
+	assert_true(last.get_global_rect().end.y <= sr.end.y + 1.0 and last.get_global_rect().position.y >= sr.position.y - 1.0, "the highlighted card is in view")
+	await tap_action(&"ui_down")
+	assert_eq(int(title.get("_hl")), 11, "past the last row: Back")
+	await tap_action(&"ui_up")
+	assert_eq(int(title.get("_hl")), 10)
+	# back to the top with the keys, then the mouse wheel scrolls (wheel over a card reaches the scroll)
+	for i in 6:
+		await tap_action(&"ui_up")
+		if int(title.get("_hl")) < cols:
+			break
+	await wait_seconds(0.3)
+	assert_eq(scroll.scroll_vertical, 0, "top row in view")
+	var over: Vector2 = (cards[1] as Button).get_global_rect().get_center()
+	for i in 3:
+		var wheel := InputEventMouseButton.new()
+		wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		wheel.pressed = true
+		wheel.position = over
+		wheel.global_position = over
+		wheel.factor = 1.0
+		title.get_viewport().push_input(wheel)
+		var up := wheel.duplicate() as InputEventMouseButton
+		up.pressed = false
+		title.get_viewport().push_input(up)
+		await wait_frames(2)
+	assert_true(scroll.scroll_vertical > 0, "the wheel scrolls the grid")
+	await tap_action(&"ui_cancel")
+	assert_eq(title.get("_state"), &"menu", "Esc goes back")
+	root.root.size = keep_size
+
+
+## (polish) The grid's shape on common screens (logical sizes: canvas_items / expand keeps 16:9 at
+## 1280x720, so 1920x1080 is the same layout; 4:3 gets taller, ultrawide gets wider).
+func test_day_grid_geometry() -> void:
+	var TS: Script = load("res://story/title_screen.gd")
+	var footer := 46.0
+	for vp: Vector2 in [Vector2(1280, 720), Vector2(1280, 960), Vector2(1706, 720), Vector2(1280, 800)]:
+		for n: int in [1, 2, 3, 4, 7, 11, 16]:
+			var k := 1.25 if n <= 3 else 1.0
+			var g: Dictionary = TS.call("grid_geometry", vp, n, k)
+			var sz: Vector2 = g["scroll_size"]
+			var card_h: float = sz.y + float(TS.get("DAYS_CHROME_H"))
+			assert_true(sz.x + 32.0 <= vp.x - 40.0, "%d days at %s: width %.0f fits" % [n, vp, sz.x])
+			assert_true(card_h <= vp.y - footer - 10.0, "%d days at %s: height %.0f fits above the footer" % [n, vp, card_h])
+			assert_eq(int(g["rows"]), int(ceil(float(n) / int(g["cols"]))))
+			assert_eq(bool(g["scrolls"]), int(g["rows"]) > int(g["vis_rows"]))
+	var g720: Dictionary = TS.call("grid_geometry", Vector2(1280, 720), 11, 1.0)
+	assert_eq(int(g720["cols"]), 4, "11 days at 1280x720: 4 columns")
+	assert_eq(int(g720["vis_rows"]), 2, "two rows visible")
+	assert_true(bool(g720["scrolls"]), "the third row scrolls")
+	assert_eq(int((TS.call("grid_geometry", Vector2(1280, 720), 2, 1.25) as Dictionary)["cols"]), 2, "two big cards side by side")

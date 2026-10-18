@@ -257,7 +257,7 @@ func test_daily_decibel_continue_beat() -> void:
 	assert_true(done[0])
 
 
-## (polish) The visit that opens Day 2: a NEW DAY UNLOCKED! stamp, "Next: Day 2" is the big
+## (polish) The first clear of Day 1: an UP NEXT! stamp, "Next: Day 2" is the big
 ## button and the advance key takes it; the patient is called by the short name.
 func test_daily_decibel_new_day_stamp_and_short_name() -> void:
 	Game.reset_save()
@@ -267,7 +267,7 @@ func test_daily_decibel_new_day_stamp_and_short_name() -> void:
 	var summary := {"patient_id": "gus", "score": 88.0, "grade": "A", "accuracy": 0.9, "technique": 0.9, "efficiency": 0.8,
 		"care": 1.0, "comfort": 3, "medals": {}, "coins_earned": 60, "coins_total": 60, "audiometry": _results(),
 		"patient_name": "Grandpa Gus", "patient_short": "Gus", "chapter_id": "gus", "day": 1,
-		"newly_unlocked": ["bonnie"], "next_chapter_id": "bonnie"}
+		"newly_unlocked": [], "first_clear": true, "next_chapter_id": "bonnie", "suggested_next": "bonnie"}
 	var out := [""]
 	var run := func() -> void:
 		out[0] = await paper.call("show_summary", summary)
@@ -287,6 +287,33 @@ func test_daily_decibel_new_day_stamp_and_short_name() -> void:
 	await tap_action(&"advance_dialogue")
 	await wait_frames(2)
 	assert_eq(String(out[0]), "next", "the advance key goes on to Day 2")
+
+
+## (polish) A replay (not a first clear): no stamp, Back to the title stays the big button, and
+## Next: Day 2 is still offered (every day is open).
+func test_daily_decibel_replay_has_no_stamp() -> void:
+	Game.reset_save()
+	(Game.progress["chapters_done"] as Array).append("gus")
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var summary := {"patient_id": "gus", "score": 88.0, "grade": "A", "accuracy": 0.9, "technique": 0.9, "efficiency": 0.8,
+		"care": 1.0, "comfort": 3, "medals": {}, "coins_earned": 60, "coins_total": 60, "audiometry": _results(),
+		"patient_name": "Grandpa Gus", "patient_short": "Gus", "chapter_id": "gus", "day": 1,
+		"newly_unlocked": [], "first_clear": false, "next_chapter_id": "bonnie", "suggested_next": "bonnie"}
+	var run := func() -> void:
+		await paper.call("show_summary", summary)
+	run.call()
+	await wait_seconds(1.6)
+	assert_true(paper.get("_unlock_stamp") == null, "no stamp on a replay")
+	var accent := ""
+	var has_next := false
+	for b: Node in paper.find_children("*", "Button", true, false):
+		if (b as Button).theme_type_variation == &"AccentButton":
+			accent = (b as Button).text
+		if (b as Button).text.begins_with("Next: Day 2"):
+			has_next = true
+	assert_true(accent.begins_with("Back to the title"), accent)
+	assert_true(has_next, "Next: Day 2 is offered")
 
 
 func test_title_screen_beats() -> void:
@@ -404,13 +431,23 @@ func test_title_day_cards_keyboard() -> void:
 		if b.has_meta("chapter"):
 			cards.append(b)
 	assert_eq(cards.size(), Game.chapters().size(), "one card per day")
-	assert_true(bool((cards[0] as Button).get_meta("hl", false)), "Day 1 highlighted first")
-	assert_true(bool((cards[1] as Button).get_meta("locked", false)), "Day 2 locked on a fresh save")
+	assert_true(bool((cards[0] as Button).get_meta("hl", false)), "Day 1 (UP NEXT) highlighted first")
+	assert_false((cards[1] as Button).has_meta("locked"), "Day 2 is open on a fresh save (no locks)")
 	await tap_action(&"ui_right")
 	assert_eq(int(title.get("_hl")), 1, "Right moves to Day 2")
 	assert_true(bool((cards[1] as Button).get_meta("hl", false)))
 	assert_eq((cards[1] as Button).text, "", "cards keep their own labels")
-	await tap_action(&"ui_accept")
-	assert_eq(title.get("_state"), &"days", "Enter on a locked day does not start it")
+	await tap_action(&"ui_down")
+	assert_eq(int(title.get("_hl")), 2, "Down from the only row: Back")
+	await tap_action(&"ui_up")
 	await tap_action(&"ui_cancel")
 	assert_eq(title.get("_state"), &"menu", "Esc goes back")
+	title.call("_on_days")
+	await wait_frames(2)
+	await tap_action(&"ui_right")
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	await tap_action(&"ui_accept")
+	Events.goto_scene.disconnect(gcb)
+	assert_eq(went, ["res://story/level_bonnie.tscn"], "Enter on Day 2 starts it")

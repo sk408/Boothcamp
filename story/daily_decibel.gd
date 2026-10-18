@@ -73,7 +73,7 @@ var _accepting := false
 var _done := false
 var _next := "title"
 var _idle := 0.0
-## (polish) the "NEW DAY UNLOCKED!" rubber stamp on the masthead (null when nothing unlocked)
+## (polish) the "UP NEXT!" rubber stamp on the masthead (null unless this visit was a first clear)
 var _unlock_stamp: Control
 
 
@@ -145,7 +145,7 @@ func _next_day() -> void:
 
 func _has_next_day() -> bool:
 	var nid := String(_summary.get("next_chapter_id", ""))
-	return nid != "" and Game.is_chapter_unlocked(nid)
+	return nid != "" and not Game.chapter(nid).is_empty()   # every day is open (polish)
 
 
 ## (polish) What the paper calls the patient: the profile's short name ("Gus", not "Grandpa").
@@ -156,9 +156,14 @@ func _first_name() -> String:
 	return String(_summary.get("patient_name", "Gus")).split(" ")[0]
 
 
-## (polish) The next day was opened by this very visit: Next is the big button ([Space]).
+## (polish) This visit finished the day for the first time and the next day is still new: an
+## "UP NEXT!" stamp, and Next is the big button ([Space]).
 func _next_is_primary() -> bool:
-	return _has_next_day() and (_summary.get("newly_unlocked", []) as Array).has(String(_summary.get("next_chapter_id", "")))
+	if not _has_next_day():
+		return false
+	var nid := String(_summary.get("next_chapter_id", ""))
+	var first := bool(_summary.get("first_clear", (_summary.get("newly_unlocked", []) as Array).has(nid)))
+	return first and not Game.is_chapter_done(nid)
 
 
 ## "Day 2" from "Day 2: Bonnie Bunsworth".
@@ -461,7 +466,7 @@ func _build(s: Dictionary) -> void:
 		btns.add_child(nb)
 
 
-## (polish) A tilted rubber stamp on the masthead's right: NEW DAY UNLOCKED! / Day 2: Bonnie.
+## (polish) A tilted rubber stamp on the masthead's right: UP NEXT! / Day 2: Bonnie.
 ## A child of the label (not a container), so it rides along with the paper's tilt.
 func _make_unlock_stamp(mast: Label) -> Control:
 	var st := Control.new()
@@ -469,7 +474,13 @@ func _make_unlock_stamp(mast: Label) -> Control:
 	st.size = Vector2(230, 70)
 	st.rotation = -0.1
 	st.visible = false
-	var sub := String(Game.chapter(String(_summary.get("next_chapter_id", ""))).get("title", "")).replace("Bunsworth", "").strip_edges()
+	# "Day 2: Bonnie": the day and the next patient's short name
+	var nch := Game.chapter(String(_summary.get("next_chapter_id", "")))
+	var sub := String(nch.get("title", "")).get_slice(":", 0).strip_edges()
+	var pid := String(nch.get("patient_id", ""))
+	var np: Resource = Game.load_patient(pid) if ResourceLoader.exists(Game.PATIENT_DIR + pid + ".tres") else null
+	if np != null and np.has_method("short_name"):
+		sub += ": " + String(np.call("short_name"))
 	var ink := Palette.CORAL.darkened(0.15)
 	st.draw.connect(func() -> void:
 		var r := Rect2(Vector2(3, 3), st.size - Vector2(6, 6))
@@ -477,7 +488,7 @@ func _make_unlock_stamp(mast: Label) -> Control:
 		UiDraw.rounded_rect(st, r, Color(0, 0, 0, 0), 8, 4, ink)
 		UiDraw.rounded_rect(st, r.grow(-6), Color(0, 0, 0, 0), 5, 2, Color(ink, 0.6))
 		var f := UiKit.font(700)
-		var t1 := "NEW DAY UNLOCKED!"
+		var t1 := "UP NEXT!"
 		var w1 := f.get_string_size(t1, HORIZONTAL_ALIGNMENT_LEFT, -1, 21).x
 		st.draw_string(f, Vector2((st.size.x - w1) * 0.5, 33), t1, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, ink)
 		var w2 := f.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x

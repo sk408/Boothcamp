@@ -237,18 +237,21 @@ visual gags only. Every masker lights the NOISE box on the LCD and the squiggles
   (55 dB rule IA, so fewer ghosts in later days). Day 2 never needs it: without coins the paper just shows the
   ad. Buttons: "Play Bonnie again", "Next: ..." (when another day is open) and "Back to the title".
 
-## 11. Chapter select, progression, unlocks
+## 11. Chapter select and progression (polish: every day open)
 
 - `Game.CHAPTERS`: `gus` (Day 1: Grandpa Gus, `level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth,
   `level_bonnie.tscn`, requires `gus`).
-- Title: **Play** starts `Game.next_chapter_id()` (the first open day not yet done, else the last played).
-  **Days** opens the day picker (phase and beat `chapter_select`): one card per day with best grade and
-  plays; a locked day says how to open it; the toggle "Unlock all days (demo): ON/OFF"; Back / Esc.
-- Day 2 opens when Day 1 is finished (`Game.finish_visit()` adds the chapter to `progress.chapters_done`
-  and emits `Events.chapter_completed`), or with `settings.unlock_all_days` (title Days card, pause menu),
-  or `--day=2` / `--chapter=bonnie` / `--unlock-all` on the command line. Old saves where Gus was played
-  count as Day 1 done. Progress is saved in `user://save.json`.
-- After Day 1 the paper offers "Next: Day 2: Bonnie Bunsworth" (key N).
+- **Every day is open from the start, in any order** (Steve's rule: it helps testing, and players may pick any
+  day). `requires` only picks the suggested day (`Game.suggested_chapter_id()`), which wears an "UP NEXT"
+  badge. There is no "Unlock all days (demo)" setting any more; old saves that carry it load fine.
+- Title: **Play** starts `Game.next_chapter_id()` (the suggested day, else the last played) and says which
+  ("Play: Day 2") once there is progress. **Days** opens the day picker (phase and beat `chapter_select`): a
+  scrolling grid with one card per day (portrait, DAY chip, name, what it teaches, best grade, plays), sized
+  for the screen; arrows + Enter, Esc = Back, mouse click and wheel.
+- Finishing a day adds it to `progress.chapters_done` and emits `Events.chapter_completed`. The first clear
+  of Day 1 stamps "UP NEXT! Day 2: Bonnie" on the paper and makes "Next: Day 2 [Space]" the big button; a replay
+  still offers "Next: Day 2 [N]". Old saves where Gus was played count as Day 1 done. Progress is saved in
+  `user://save.json`.
 
 ## 12. Controls (keys and mouse)
 

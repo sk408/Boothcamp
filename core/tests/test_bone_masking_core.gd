@@ -436,6 +436,7 @@ static func _power_at(buf: PackedVector2Array, f: float, from: int) -> float:
 ## centred on the test frequency, louder as the dial goes up.
 func test_masker_noise_is_safe_and_narrow() -> void:
 	var g := ToneGenerator.new()
+	(g.get("_m_rng") as RandomNumberGenerator).seed = 2024   # the noise is random: keep the test steady
 	var cap := AudioSafety.masker_ceiling()
 	g.start_masker("left", 1000.0, 110.0)
 	var buf := g.render(ToneGenerator.MIX_RATE / 2)
@@ -445,7 +446,13 @@ func test_masker_noise_is_safe_and_narrow() -> void:
 	assert_eq(pk.y, 0.0, "nothing in the right ear")
 	assert_true(absf(buf[0].x) < cap * 0.05, "ramped in, no click")
 	# narrow band: far more energy at 1 kHz than three octaves away
-	assert_true(_power_at(buf, 1000.0, 4000) > 20.0 * _power_at(buf, 8000.0, 4000), "centred on 1 kHz")
+	# (polish) averaged over a few bins: one Goertzel bin of noise scatters a lot
+	var p_in := 0.0
+	var p_out := 0.0
+	for d: float in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+		p_in += _power_at(buf, 1000.0 + d, 4000)
+		p_out += _power_at(buf, 8000.0 + d, 4000)
+	assert_true(p_in > 20.0 * p_out, "centred on 1 kHz (%f vs %f)" % [p_in, p_out])
 	# louder dial, more noise (well under the cap)
 	var lo := ToneGenerator.new()
 	lo.start_masker("left", 1000.0, 20.0)

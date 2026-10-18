@@ -76,10 +76,12 @@ const MOUSE_ANCHORS: Dictionary = {
 var _mine: Dictionary = {}
 var _plateaus := 0
 ## (v3, integrator) --via-days: start the level from the title's Days card instead of Play, with
-## real input (mouse clicks with --mouse, else ui_* key actions). --pick=<chapter id> picks the card
-## (default Game.next_chapter_id()); --try-locked=<id> first presses that card and expects it to
-## refuse; --toggle-unlock presses "Unlock all days (demo)" first; --expect-days=gus,bonnie checks
-## the unlocked list. The result gets a "days" report and problems for any failed expectation.
+## real input (mouse clicks with --mouse, scrolling the grid with the wheel when the card is out
+## of view; else ui_* key actions). --pick=<chapter id> picks the card (default
+## Game.next_chapter_id()); --expect-days=gus,bonnie checks the listed (all open) days;
+## (polish) --expect-suggested=<id> checks which card wears the UP NEXT badge. Every day is open,
+## so any --pick works on any save. The result gets a "days" report and problems for any failed
+## expectation.
 var _via_days := false
 var _days_opened := false
 var _days_report: Dictionary = {}
@@ -648,7 +650,7 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 		&"referral_stamp":
 			await _click(_anchor_center("referral_stamp"))
 		&"chapter_select":
-			await _click_text(String(Game.chapter(String(info.get("next", "gus"))).get("title", "Day 1")).substr(0, 12))
+			await _press_days_button(_days_button(String(Game.chapter(String(info.get("next", "gus"))).get("title", "Day 1"))))
 		&"fitting_switch_on":
 			var fit := _find_script_node("story/games/fitting.gd")
 			var btn: Control = fit.get("_btn") as Control if fit != null else null
@@ -705,6 +707,7 @@ func _press_days_button(b: Button) -> void:
 		_days_problems.append("days: button missing")
 		return
 	if _mouse:
+		await _wheel_into_view(b)
 		await _click(b.get_global_rect().get_center())
 		return
 	# the highlight a player sees: a card glows (meta "hl"), a plain button reads "> text <"
@@ -717,40 +720,57 @@ func _press_days_button(b: Button) -> void:
 	await _tap(&"ui_accept")
 
 
+## (polish) A card below (or above) the Days grid's scroll window: roll the mouse wheel over the
+## grid, like a player, until the whole card is in view.
+func _wheel_into_view(b: Control) -> void:
+	var sc: ScrollContainer = null
+	var p := b.get_parent()
+	while p != null:
+		if p is ScrollContainer:
+			sc = p
+			break
+		p = p.get_parent()
+	if sc == null:
+		return
+	for i in 40:
+		var vr := sc.get_global_rect()
+		var br := b.get_global_rect()
+		if br.position.y >= vr.position.y - 1.0 and br.end.y <= vr.end.y + 1.0:
+			return
+		var down := br.end.y > vr.end.y
+		var at := vr.get_center()
+		_mouse_move(at)
+		for pressed: bool in [true, false]:
+			var ev := InputEventMouseButton.new()
+			var w := _to_window(at)
+			ev.position = w
+			ev.global_position = w
+			ev.button_index = MOUSE_BUTTON_WHEEL_DOWN if down else MOUSE_BUTTON_WHEEL_UP
+			ev.pressed = pressed
+			ev.factor = 1.0
+			Input.parse_input_event(ev)
+		await _frames(2)
+	_mouse_misses.append("days card out of view: " + String(b.get_meta("label", "")))
+
+
 func _pick_via_days(info: Dictionary) -> void:
 	var unlocked: Array = info.get("chapters", [])
 	_days_report["unlocked"] = unlocked.duplicate()
 	var expect := String(Game.cli_value("expect-days", ""))
 	if expect != "" and ",".join(PackedStringArray(unlocked.map(func(x: Variant) -> String: return String(x)))) != expect:
 		_days_problems.append("days: unlocked %s, expected %s" % [str(unlocked), expect])
-	var locked_id := String(Game.cli_value("try-locked", ""))
-	if locked_id != "":
-		var ch := Game.chapter(locked_id)
-		var card := _days_button(String(ch.get("title", "?")))
-		_days_report["locked_label"] = String(card.get_meta("label", "")) if card != null else ""
-		if card == null or not bool(card.get_meta("locked", false)):
-			_days_problems.append("days: %s should show as locked" % locked_id)
-		var before := int(_resolved.get(&"chapter_select", 0))
-		await _press_days_button(card)
-		await _wait(0.8)
-		var refused := int(_resolved.get(&"chapter_select", 0)) == before and Game.is_chapter_unlocked(locked_id) == false
-		_days_report["locked_refused"] = refused
-		if not refused:
-			_days_problems.append("days: the locked %s card started a level" % locked_id)
-		await _shot("days_locked_refused")
-	if Game.cli_flag("toggle-unlock"):
-		await _press_days_button(_days_button("Unlock all days"))
-		await _wait(0.5)
-		_days_report["toggled"] = bool(Game.settings.get("unlock_all_days", false))
-		_days_report["unlocked_after_toggle"] = Game.unlocked_chapter_ids()
-		if not bool(Game.settings.get("unlock_all_days", false)):
-			_days_problems.append("days: the demo toggle did not switch on")
-		await _shot("days_toggled")
+	# (polish) every day is open: the suggested day wears the UP NEXT badge
+	_days_report["suggested"] = String(info.get("suggested", ""))
+	var want_sug := String(Game.cli_value("expect-suggested", ""))
+	if want_sug != "" and String(info.get("suggested", "")) != want_sug:
+		_days_problems.append("days: suggested %s, expected %s" % [info.get("suggested", ""), want_sug])
+	if want_sug != "":
+		var sc := _days_button(String(Game.chapter(want_sug).get("title", "?")))
+		if sc == null or not bool(sc.get_meta("suggested", false)):
+			_days_problems.append("days: the %s card has no UP NEXT badge" % want_sug)
 	var pick := String(Game.cli_value("pick", info.get("next", "gus")))
 	_days_report["picked"] = pick
 	var card2 := _days_button(String(Game.chapter(pick).get("title", "?")))
-	if card2 != null and bool(card2.get_meta("locked", false)):
-		_days_problems.append("days: %s is still locked" % pick)
 	await _press_days_button(card2)
 
 
