@@ -59,6 +59,23 @@ Bonnie's bean (`world/characters/bean.gd`, `BONNIE`): face style `&"bonnie"` (la
 flour smudge), hair bun with a wooden spoon, teal reading glasses perched on top of her head (the
 running "lost glasses" gag), apron, croissant basket. New face eyes `&"spiral"` (dizzy).
 
+## Speech (Day 3: Mike)
+
+Patient id `mike` builds `Bean.MIKE` (`spec_for("mike")`). Every key is explicit (build() merges onto
+GUS). Face style `&"mike"` (stubble dots, a chin dimple, a cocky brow), a dark quiff, sunglasses
+pushed up on his head (`parts["glasses"]`, `&"shades"`), a cherry bowling shirt with a lime hi-vis
+vest (`parts["vest"]`, silver bands, a "MIKE" name patch, camp collar), a foam neck brace
+(`parts["neck_brace"]`, "just in case") and a clipboard of forms in both hands (`parts["clipboard"]`,
+`detach_clipboard()`, `Bean.build_clipboard(parent)`). No walker, no mustache. Lip sync speaker: "Mike".
+
+| Method | Notes |
+|---|---|
+| `put_down_clipboard()` | Mike lays his clipboard face up on the desk (`sit()` does it too). |
+| `hold_response_button(on)` | Speech answers are spoken: `false` hides the response button that `put_on_earphones()` hands him. |
+| `peek_in()` (coroutine) | After `walk_out()`: the door bursts open and he pops back just inside it ("GLAZED?!"). `walk_out()` takes him out again. |
+
+Tests: `test_day3_mike_extras` in `world/tests/test_clinic.gd`.
+
 ## Notes
 
 - `set_world_saturation(v)` muffles at the sound sources, never with bus effects. Below 1.0 the
@@ -75,6 +92,8 @@ running "lost glasses" gag), apron, croissant basket. New face eyes `&"spiral"` 
      `world/tests` and `story/tests` removed, so it is not caused by those tests. Run the suite under
      `timeout` and treat "summary printed, then timeout" as an engine exit hang, not a test failure.
   The three rendered full autoplay runs all exited cleanly.
+  **Update (speech thread):** the cause is the engine mixing a freed generator stream; see
+  `core/INTEGRATION_NOTES.md` for the fix and the matching change request for `ToneGenerator`.
 - The otoscope sits in a charging cradle on the desk (`room.gd`).
 - Tests: `world/tests/test_clinic.gd` (API, every reaction, walk/sit/ear projection with right ear on
   the screen's left, muffle amount with no bus-effect changes, story extras, every SHOTS entry).

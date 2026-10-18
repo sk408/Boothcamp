@@ -17,6 +17,8 @@ const PHASES: Array[StringName] = [
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
 	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
 	&"chapter_select", &"bc_placement", &"masking", &"referral",
+	# Speech (Days 3-5): go through the word list with the patient, then the SPEECH screen
+	&"familiarize", &"speech",
 	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
 	&"tymp", &"decision",
 ]
@@ -32,6 +34,9 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_gus.tscn", "requires": ""},
 	{"id": "bonnie", "day": 2, "title": "Day 2: Bonnie Bunsworth", "patient_id": "bonnie", "teaches": "Bone conduction + masking",
 		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
+	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
+	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech recognition threshold",
+		"scene": "res://story/level_mike.tscn", "requires": "bonnie", "face": "Mike", "tint": Color("#fff0a6")},
 	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
 	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
 	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",

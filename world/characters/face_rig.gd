@@ -8,8 +8,8 @@ extends SubViewport
 ##   mouth: &"smile" &"grin" &"flat" &"frown" &"o" &"yawn" &"wavy" &"talk" &"oops" &"tongue"
 ##   look:  Vector2 pupil offset (-1..1)
 ##   blush, sweat, tear: bool
-## style: &"gus", &"doris", &"owl" or (v3) &"bonnie" (layout and colours differ; Bonnie has
-## lashes, freckles and a dab of flour on one cheek).
+## style: &"gus", &"doris", &"owl", (v3) &"bonnie" or (Speech) &"mike" (layout and colours differ;
+## Bonnie has lashes, freckles and a dab of flour on one cheek; Mike has stubble and a chin dimple).
 ## Layout: texture covers face_size metres of the head, centred on face_offset (see the shader).
 
 const SIZE := 256
@@ -56,6 +56,12 @@ func _init(face_style: StringName = &"gus") -> void:
 			eye_r = 23.0
 			mouth_y = 180.0
 			mouth_w = 31.0
+		&"mike":
+			eye_y = 106.0
+			eye_dx = 42.0
+			eye_r = 22.0
+			mouth_y = 184.0
+			mouth_w = 35.0
 
 
 func _ready() -> void:
@@ -118,6 +124,8 @@ func _paint() -> void:
 			_ellipse(c, Vector2(128 + (eye_dx + 22) * side, eye_y + 40), Vector2(17, 9), Color(1.0, 0.45, 0.45, a))
 	if style == &"bonnie":
 		_paint_bonnie_extras(c, eyes)
+	elif style == &"mike":
+		_paint_mike_extras(c)
 	var mouth: StringName = state.get("mouth", &"smile")
 	if talk_open and mouth != &"yawn":
 		mouth = &"talk"
@@ -220,6 +228,8 @@ func _lid_color() -> Color:
 			return Color("#ffd6b0")
 		&"bonnie":
 			return Color("#e8b088")
+		&"mike":
+			return Color("#d9a07a")
 	return Color("#ffcf9e")
 
 
@@ -238,6 +248,21 @@ func _paint_bonnie_extras(c: Control, eyes: StringName) -> void:
 	# flour on her right cheek (the texture's left)
 	_ellipse(c, Vector2(128 - eye_dx - 18, eye_y + 56), Vector2(11, 5), Color(1, 1, 1, 0.95))
 	_ellipse(c, Vector2(128 - eye_dx - 4, eye_y + 62), Vector2(4, 3), Color(1, 1, 1, 0.9))
+
+
+## (Speech) Mike: a five-o'clock shadow along the jaw and a little chin dimple.
+func _paint_mike_extras(c: Control) -> void:
+	var stubble := Color("#5a3d2b", 0.42)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	for i in 70:
+		var a := rng.randf_range(0.2, PI - 0.2)
+		var rr := rng.randf_range(0.82, 1.0)
+		var p := Vector2(128, mouth_y - 22) + Vector2(cos(a) * 74.0 * rr, sin(a) * 60.0 * rr)
+		if absf(p.x - 128.0) < 42.0 and absf(p.y - mouth_y - 4.0) < 16.0:
+			continue  # keep the mouth clear
+		c.draw_circle(p, 1.9, stubble)
+	c.draw_arc(Vector2(128, mouth_y + 44), 6.0, 0.4, PI - 0.4, 8, Color("#8a5a3e", 0.7), 3.0, true)
 
 
 func _paint_mouth(c: Control, mouth: StringName) -> void:

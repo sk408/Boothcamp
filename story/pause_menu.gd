@@ -36,7 +36,7 @@ func _ready() -> void:
 	_root.visible = false
 	Events.scene_changed.connect(func(_p: String, _n: Node) -> void: _update_corner())
 	Events.phase_changed.connect(func(p: StringName, _i: Dictionary) -> void:
-		_in_audiometry = p == &"audiometry"
+		_in_audiometry = p == &"audiometry" or p == &"speech"   # (Speech) the SPEECH screen too
 		_update_corner())
 	Events.scene_changed.connect(func(_p: String, _n: Node) -> void: _in_audiometry = false)
 	Events.key_style_changed.connect(func(_s: String) -> void: _refresh())
@@ -116,11 +116,13 @@ func _on_title() -> bool:
 func _update_corner() -> void:
 	if _corner == null:
 		return
-	# hidden on the title (it has Options) and while the AudiOtron is up (it has its own
+	# hidden on the title (it has Options) and while the AudiOtron or the SPEECH screen is up (they have their own
 	# pause button; Esc / P still pause there). Stage.audiometer also covers the standalone
 	# --scene demo, where no story phase is announced.
 	var ao_up := Stage.audiometer != null and is_instance_valid(Stage.audiometer)
-	_corner.visible = not _open and not _on_title() and not _in_audiometry and not ao_up
+	# (Speech) the SPEECH screen has its own "II" pill and never registers as Stage.audiometer
+	var speech_up := get_tree().get_first_node_in_group("speech_screen") != null
+	_corner.visible = not _open and not _on_title() and not _in_audiometry and not ao_up and not speech_up
 
 
 ## The AudiOtron can appear without a phase or scene change (standalone demo, tests), so

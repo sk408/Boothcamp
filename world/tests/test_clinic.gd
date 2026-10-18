@@ -178,3 +178,47 @@ func test_day2_bonnie_extras() -> void:
 	await c.call("give_croissant")
 	await c.call("walk_out")
 	assert_false((c.call("get_patient") as Node3D).visible, "Bonnie left through the door")
+
+
+## (Speech) Day 3 with Mike: his spec (vest, neck brace, shades, quiff, clipboard, own face), the
+## clipboard goes on the desk when he sits, no response button while he answers out loud, every
+## reaction is safe on him (incl. the quiff's hair blast), and the "GLAZED?!" peek after he leaves.
+func test_day3_mike_extras() -> void:
+	Engine.time_scale = 4.0
+	Game.begin_visit("mike")
+	var c: Node3D = (load(CLINIC) as PackedScene).instantiate()
+	c.set("patient_id", "mike")
+	add_node(c)
+	await wait_frames(2)
+	for m: String in ["put_down_clipboard", "hold_response_button", "peek_in", "walk_out", "patient_name"]:
+		assert_has_method(c, m)
+	assert_eq(String(c.call("patient_name")), "Mike")
+	var p: Node3D = c.call("get_patient")
+	var cfg: Dictionary = p.get("cfg")
+	assert_eq(cfg["face"], &"mike", "his own face style")
+	assert_false(bool(cfg["walker"]), "no walker (build() merges onto Gus)")
+	assert_false(bool(cfg["mustache"]), "no mustache")
+	var parts: Dictionary = p.get("parts")
+	for k: String in ["vest", "neck_brace", "glasses", "quiff", "clipboard", "tuft_r", "tuft_l"]:
+		assert_true(parts.has(k), "Mike has %s" % k)
+	assert_false(parts.has("bow") or parts.has("walker") or parts.has("basket"), "none of Gus's or Bonnie's props")
+	assert_eq(p.find_child("Glasses", true, false).get_parent(), parts["head"], "shades on his head")
+	await c.call("walk_in")
+	await c.call("sit")
+	await wait_seconds(0.5)
+	assert_true(c.get("_clipboard") != null, "the clipboard is on the desk")
+	assert_false((p.get("parts") as Dictionary).has("clipboard"), "and out of his hands")
+	c.call("put_on_earphones", true)
+	assert_true(bool(p.get("holding_button")), "earphones hand him the button (beeps)")
+	c.call("hold_response_button", false)
+	assert_false(bool(p.get("holding_button")), "speech answers are spoken: no button")
+	for k: StringName in c.get("REACTIONS"):
+		c.call("play_patient_reaction", k, {"ear": "left", "intensity": 1.0, "db": 85})
+		await wait_frames(2)
+	c.call("take_off_earphones")
+	await c.call("walk_out")
+	assert_false(p.visible, "Mike left")
+	await c.call("peek_in")
+	assert_true(p.visible, "and pops back in at the door")
+	await c.call("walk_out")
+	assert_false(p.visible, "then leaves for the donuts")
