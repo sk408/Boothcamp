@@ -5,6 +5,7 @@ extends Node
 ## (Hoot's textbook run); no audiometry runs here.
 ##   tools/scene_shot.sh res://story/dev_day3.tscn /abs/dir "1" 40   (shots come from the script)
 ## Add -- --part=world (or board, paper, title) after the quit time to shoot one part (default: all).
+## The paper part also shoots a C paper: a misscored right ear that Hoot rechecked (dev_day3_paper_c).
 
 const Hud := preload("res://story/hud.gd")
 const MikeBoard := preload("res://story/games/mike_board.gd")
@@ -139,6 +140,25 @@ func _paper() -> void:
 	await _wait(2.5)
 	await _shot("dev_day3_paper")
 	paper.queue_free()
+	# a C: the player's right ear stored at its bracket but misscored (misses scored as repeated), and
+	# Hoot's recheck on the record
+	var c_res := _merged()
+	var sp: Dictionary = c_res["speech"]
+	var right: Dictionary = (sp["srt"] as Dictionary)["right"]
+	sp["recheck"] = {"srt": {"right": right.duplicate(true)}}
+	right["by_hoot"] = false
+	right["errors"] = [&"misscored", &"misscored"]
+	sp["technique_errors"] = [{"kind": "misscored", "scored": true, "said_kind": "half"}, {"kind": "misscored", "scored": true, "said_kind": "wrong"}]
+	var c_summary := summary.duplicate(true)
+	c_summary["audiometry"] = c_res
+	c_summary["grade"] = "C"
+	c_summary["score"] = 64.0
+	var paper_c: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_child(paper_c)
+	paper_c.call_deferred("show_summary", c_summary)
+	await _wait(2.5)
+	await _shot("dev_day3_paper_c")
+	paper_c.queue_free()
 
 
 ## The title's Days grid (every day is open).

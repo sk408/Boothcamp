@@ -642,6 +642,66 @@ func test_daily_decibel_c_grade_names_the_slip() -> void:
 	assert_eq(String(paper.call("speech_c_subhead", aud)), String(heads["SPEECH_C_CLEAN"]), "no slips: the long-road line")
 
 
+## The paper after a misscored right ear that Hoot rechecked: no golf name for the slip, the C
+## subhead says which way the scores went, Hoot's recheck has its note, and the legend says which
+## way a poor gap points.
+func test_daily_decibel_after_a_misscored_ear() -> void:
+	var aud := _merged()
+	var sp: Dictionary = aud["speech"]
+	var hoots: Dictionary = ((sp["srt"] as Dictionary)["right"] as Dictionary).duplicate(true)
+	var right: Dictionary = (sp["srt"] as Dictionary)["right"]
+	right["by_hoot"] = false
+	right["errors"] = [&"misscored"]
+	right["golf"] = "par"
+	assert_true(SpeechScreen.is_bracketed(right), "stored at its bracket: only the misscore is wrong")
+	sp["technique_errors"] = [{"kind": "misscored", "scored": true, "said_kind": "half"}, {"kind": "misscored", "scored": true, "said_kind": "wrong"}]
+	sp["recheck"] = {"srt": {"right": hoots}}
+	var summary := _summary(aud)
+	summary["grade"] = "C"
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var run := func() -> void:
+		await paper.call("show_summary", summary)
+	run.call()
+	await wait_seconds(1.0)
+	var k: Dictionary = (load("res://story/daily_decibel.gd") as GDScript).get_script_constant_map()
+	assert_true(_find_label(paper, "1 slip") != null, "the golf cell names the slip")
+	assert_true(_find_label(paper, "par") == null, "no par for a misscored ear")
+	var generous := String((k["SPEECH_C_MISSCORED"] as Dictionary)["generous"])
+	assert_true(_find_label(paper, generous) != null, "the C subhead says which way: misses scored as repeated")
+	var note := String(paper.call("recheck_note", sp))
+	assert_true(note.begins_with("Hoot's recheck: SRT %d dB" % int(hoots["stored_db"])), note)
+	assert_true(_find_label(paper, note) != null, "Hoot's recheck on the paper")
+	var legend := String(paper.call("agreement_legend"))
+	assert_true(legend.contains("better than beeps point to a non-organic loss") and legend.contains("instructions, language, word recognition"), legend)
+	assert_true(_find_label(paper, legend) != null, "the legend says which way a poor gap points")
+	var b := _last(&"results_continue")
+	(b["solver"] as Callable).call()
+	await wait_frames(2)
+	sp["technique_errors"] = [{"kind": "misscored", "scored": false}, {"kind": "misscored", "scored": false}, {"kind": "misscored", "scored": true}]
+	assert_eq(String(paper.call("speech_c_subhead", aud)), String((k["SPEECH_C_MISSCORED"] as Dictionary)["strict"]), "whole words scored as misses")
+	sp["technique_errors"] = [{"kind": "misscored", "scored": false}, {"kind": "misscored", "scored": true}]
+	assert_eq(String(paper.call("speech_c_subhead", aud)), String((k["SPEECH_C_SUBHEADS"] as Dictionary)["misscored"]), "a tie: the plain line")
+	sp["technique_errors"] = [{"kind": "misscored"}]
+	assert_eq(String(paper.call("speech_c_subhead", aud)), String((k["SPEECH_C_SUBHEADS"] as Dictionary)["misscored"]), "no direction on record")
+	assert_eq(String(paper.call("recheck_note", {"srt": {}})), "", "no recheck: no note")
+
+
+## A misscore in the session's technique errors keeps which way it went (the paper's C subhead).
+func test_misscore_error_keeps_its_direction() -> void:
+	var s := SpeechSession.new(_mike(), 5)
+	s.configure({"test": "srt", "tones": SpeechSession.tone_results_from(_mike())})
+	s.begin("right")
+	var tr := s.present()
+	assert_false(tr.is_empty())
+	var truth := bool(s.current.get("correct", false))
+	s.score(not truth)
+	var e: Dictionary = s.errors.back()
+	assert_eq(String(e["kind"]), "misscored")
+	assert_eq(e.get("scored", null), not truth, "the player's score")
+	assert_true(e.has("said_kind"), "what was said")
+
+
 # ---------------------------------------------------------------- smoke: the first beats
 
 ## The level from the start up to the instructions choice, every beat solved like the bot does.

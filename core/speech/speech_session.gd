@@ -650,7 +650,12 @@ func _error(kind: StringName, data: Dictionary, _counts_as_check: bool, message:
 	var list: Array = _meas_errors.get(mk, [])
 	list.append(kind)
 	_meas_errors[mk] = list
-	errors.append({"kind": String(kind), "ear": ear, "freq": -1, "test": String(test), "db": db, "message": d["message"]})
+	var entry := {"kind": String(kind), "ear": ear, "freq": -1, "test": String(test), "db": db, "message": d["message"]}
+	# a misscore keeps which way it went: the player's score and what was said (the paper names it)
+	for k: String in ["scored", "said_kind"]:
+		if data.has(k):
+			entry[k] = data[k]
+	errors.append(entry)
 	if combo > 0:
 		combo = 0
 		combo_changed.emit(0, 1)

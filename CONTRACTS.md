@@ -1124,8 +1124,9 @@ for neither). The tone-only numbers stay under `"tone_scores"`. Story passes it 
   "srt": {"right": {...sheet...}, "left": {...}}, "wrs": {}, "sin": {},
   "pta": {"right": 71.7, "left": 73.3}, "tests": ["srt"], "scored_sheets": 2,
   "presentations": 24, "hoot_presentations": 6, "max_combo": 18, "points": 900, "checks": 50, "clean_checks": 49,
-  "technique_errors": [{kind, ear, freq: -1, test, db, message}],
-  "accuracy": 0.9, "technique": 0.98, "efficiency": 0.92, "score": 93.1, "grade": "A"
+  "technique_errors": [{kind, ear, freq: -1, test, db, message}],   # a misscored entry adds scored, said_kind
+  "accuracy": 0.9, "technique": 0.98, "efficiency": 0.92, "score": 93.1, "grade": "A",
+  "recheck": {"srt": {"right": {...Hoot's sheet...}}}   # Day 3 only, when Hoot reran the right ear (never graded)
 }
 sheet (SRT) = {ear, test: "srt", list_id, stored_db, true_db, error_db, accuracy, candidate_db,
   bracketed (candidate_db != NO_SRT and stored_db == candidate_db: the UI and story praise only these), pta, pta_method,

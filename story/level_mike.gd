@@ -507,10 +507,12 @@ func _speech() -> void:
 			r = await screen.test_finished
 		else:
 			r = await _fallback_speech(ear, plan)
-		results = r
+		results = with_recheck(r)
 		Game.set_audiometry_results(results)
 		if ear == "right" and not _srt_shows_mismatch(srt_sheet("right")):
 			await _recheck_right()
+			results = with_recheck(results)
+			Game.set_audiometry_results(results)
 		hud.call("complete_step", &"srt_r" if ear == "right" else &"srt_l")
 	if screen != null:
 		screen.queue_free()
@@ -532,6 +534,18 @@ func _speech() -> void:
 		await _say("Hoot", "Words worse than beeps? Think instructions, language, word scores or a sloping loss.")
 	else:
 		await _say("Hoot", "%s His is %d dB apart. Let's look closer." % [within, absi(diff)])
+
+
+## The visit results with Hoot's recheck on the record when he ran one (speech.recheck {srt: {right}},
+## §9.5): the paper notes it; the sheets and the grade stay the player's.
+func with_recheck(r: Dictionary) -> Dictionary:
+	if recheck.is_empty() or not (r.get("speech", null) is Dictionary):
+		return r
+	var out := r.duplicate()
+	var sp: Dictionary = (out["speech"] as Dictionary).duplicate()
+	sp["recheck"] = {"srt": {"right": recheck.duplicate(true)}}
+	out["speech"] = sp
+	return out
 
 
 ## The right SRT can carry the board only when it shows the mismatch for real: poor agreement,

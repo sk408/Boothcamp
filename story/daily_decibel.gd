@@ -94,6 +94,12 @@ const SPEECH_C_SUBHEADS: Dictionary = {
 	"speech_marathon": "A marathon of words. Bracket quickly and store: patients tire.",
 }
 const SPEECH_C_CLEAN := "Clean steps, but a long road. Bracket quickly, then store the softest level."
+## (Speech) A C whose top slip is misscoring: which way the scores went (the errors' "scored": the
+## player's score), when one way wins; a tie keeps SPEECH_C_SUBHEADS' line.
+const SPEECH_C_MISSCORED: Dictionary = {
+	"generous": "Some misses were scored as repeated. Half a word, a wrong word or silence: all misses.",
+	"strict": "Some whole words were scored as misses. Said back in full, a word is a hit.",
+}
 
 var _paper: PanelContainer
 var _coins_label: Label
@@ -697,7 +703,12 @@ func _speech_column(c2: VBoxContainer, sp: Dictionary) -> void:
 	c2.add_child(UiKit.label("SPORTS: THE WORD GOLF CARD", 16, Palette.INK, 700))
 	c2.add_child(UiKit.label("SRT per ear vs the PTA from the beeps. Words vs par; brown = Hoot's.", 14, Palette.INK_SOFT, 500))
 	c2.add_child(_speech_card(sp))
-	var al := UiKit.label("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor: recheck and refer." % [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)], 14, Palette.INK, 600)
+	var note := recheck_note(sp)
+	if note != "":
+		var rn := UiKit.label(note, 14, Palette.INK, 600)
+		rn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		c2.add_child(rn)
+	var al := UiKit.label(agreement_legend(), 14, Palette.INK, 600)
 	al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	c2.add_child(al)
 	var half := 0
@@ -736,9 +747,13 @@ func _speech_card(sp: Dictionary) -> Control:
 		grid.add_child(_speech_cell("-" if is_nan(pta) else "%d dB" % roundi(pta), "beeps", Color(Palette.INK, 0.45)))
 		grid.add_child(_speech_cell(String(ag).to_upper() if ag != &"" else "-", "%d dB apart" % absi(int(sh.get("diff", 0))), AGREE_COLORS.get(ag, Color(Palette.INK, 0.3))))
 		grid.add_child(_speech_cell("%d / %d" % [strokes, int(sh.get("par", 0))], ("+%d by Hoot" % hoot_n) if hoot_n > 0 else "words / par", Color(Palette.INK, 0.45)))
+		var slips := (sh.get("errors", []) as Array).size()
 		if not bool(sh.get("by_hoot", false)) and not SpeechScreen.is_bracketed(sh):
 			# no golf for an SRT stored off its bracket ("par" would praise it)
 			grid.add_child(_speech_cell("no bracket", "", Color(Palette.INK, 0.3)))
+		elif not bool(sh.get("by_hoot", false)) and slips > 0:
+			# a slip on this ear (a misscore, a wrong step): no golf name either, like the screen's "Oops!"
+			grid.add_child(_speech_cell("%d slip%s" % [slips, "" if slips == 1 else "s"], "no golf", Color(Palette.INK, 0.3)))
 		else:
 			grid.add_child(_speech_cell(String(golf).replace("_", " ").replace("double ", "2x ").replace("triple ", "3x ") if golf != &"" else "-", "", GOLF_COLORS.get(golf, Color(Palette.INK, 0.3))))
 	return grid
@@ -755,7 +770,46 @@ static func speech_c_subhead(aud: Dictionary) -> String:
 	for k: String in SPEECH_C_SUBHEADS:
 		if int(counts.get(k, 0)) > int(counts.get(best, 0)):
 			best = k
+	if best == "misscored":
+		var way := misscore_way(aud)
+		if way != "":
+			return String(SPEECH_C_MISSCORED[way])
 	return String(SPEECH_C_SUBHEADS[best]) if best != "" else SPEECH_C_CLEAN
+
+
+## (Speech) Which way the misscores went: "generous" (misses scored as repeated), "strict" (whole
+## words scored as misses), "" for a tie or no direction on record.
+static func misscore_way(aud: Dictionary) -> String:
+	var generous := 0
+	var strict := 0
+	for e: Variant in ((aud.get("speech", {}) as Dictionary).get("technique_errors", []) as Array):
+		var d := e as Dictionary
+		if String(d.get("kind", "")) != "misscored" or not (d.get("scored", null) is bool):
+			continue
+		if bool(d["scored"]):
+			generous += 1
+		else:
+			strict += 1
+	if generous == strict:
+		return ""
+	return "generous" if generous > strict else "strict"
+
+
+## (Speech) Hoot's recheck on the paper when he reran the right ear (speech.recheck, never graded).
+static func recheck_note(sp: Dictionary) -> String:
+	var re: Dictionary = ((sp.get("recheck", {}) as Dictionary).get("srt", {}) as Dictionary).get("right", {})
+	if re.is_empty():
+		return ""
+	var ag := String(re.get("agreement", ""))
+	return "Hoot's recheck: SRT %d dB on the right, by the book%s. Not graded." % [int(re.get("stored_db", 0)),
+		(" (%s agreement)" % ag) if ag != "" else ""]
+
+
+## (Speech) The agreement legend, with which way a poor gap points.
+static func agreement_legend() -> String:
+	return ("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor: recheck and refer. Words better than beeps point to a " \
+		+ "non-organic loss; words worse, to instructions, language, word recognition or a sloping loss.") \
+		% [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)]
 
 
 func _speech_cell(main: String, small: String, col: Color) -> PanelContainer:
