@@ -68,14 +68,13 @@ the voice ceiling.
 The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
 Requests for the integrator and the title owner:
 
-- **Day picker faces and tints.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker,
-  e.g. `"Rocco"`) and `tint` (the card colour). `title_screen.gd` still reads only `DAY_FACES` /
-  `DAY_TINTS` keyed by chapter id, so Days 6 to 9 show the default cream card and no portrait. Either read
-  `chapter.get("face")` / `chapter.get("tint")` as a fallback, or add `rocco`, `marina`, `dash`, `ginger` to
-  both tables. `Portraits` already draws every case speaker (it falls back to `CasePortraits`).
-- **Day picker overflow.** Six cards (Days 1, 2, 6 to 9) plus the speech days to come will not fit one
-  column at 720p. A scrolling list, two columns, or a "Case Files" cabinet card that opens the cases would
-  all work. The day numbers 3 to 5 are left for speech audiometry.
+- **Day picker (agreed with the main thread, which owns `title_screen.gd`).** Each case chapter in
+  `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and `tint` (the card colour). The chapter
+  select rework falls back to those keys when `DAY_FACES` / `DAY_TINTS` has no entry, and lays out any number of
+  chapters in a scrolling grid. Until it lands, Days 6 to 9 show the default cream card with no portrait.
+  `Portraits` already draws every case speaker (it falls back to `CasePortraits`).
+- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 9) both append to `Game.CHAPTERS`
+  and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`). Keep both blocks, speech first.
 - **No locks.** `requires` on the case chapters is a "suggested next" badge only; every day stays open.
 - **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` lists right-ear masked rows only. Marina's masked tests are
   on her LEFT ear, so her masked holes are not scored. Please add `["bc_masked", "L  ]", "left"]` and
