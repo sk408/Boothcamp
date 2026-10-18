@@ -40,7 +40,7 @@ const BONNIE := {
 	"hair": Color("#8a4f2a"), "hair_style": &"bun", "mustache": false, "brows": false,
 	"glasses": &"perched", "glasses_color": Color("#2fb3a3"), "walker": false, "prop": &"basket", "apron": true,
 }
-## (Speech) Day 3: Mike "Totally Deaf" Lenders, 41, forklift driver. A hi-vis vest over a cherry
+## (Speech) Day 3: Mike Lenders, 41, forklift driver. A hi-vis vest over a cherry
 ## bowling shirt, a foam neck brace "just in case", sunglasses pushed up on his head, a slick
 ## quiff, a little stubble, and a clipboard of forms from his cousin Vinnie.
 const MIKE := {
@@ -437,7 +437,11 @@ func _build_quiff(neck: Node3D, hc: Vector3) -> void:
 	neck.add_child(cap)
 	Kit.sphere(cap, 0.34, Vector3(0, 0.13, -0.07), cfg["hair"], Vector3(1.07, 0.74, 1.0), {}, 20)
 	for side: int in [-1, 1]:
-		Kit.box(cap, Vector3(0.05, 0.13, 0.08), Vector3(0.335 * side, 0.02, 0.06), cfg["hair"], {"outline": 0.008})
+		# thin tapered sideburns from the hairline down in front of the ear, flattened onto the skull
+		# (a box read as a floating block in 3/4 views)
+		var burn := Kit.cylinder(cap, 0.028, 0.01, 0.13, Vector3(0.345 * side, 0.035, 0.075), cfg["hair"], {"outline": 0.0}, 10)
+		burn.scale = Vector3(0.45, 1.0, 1.0)
+		burn.rotation.x = -0.3
 	var q := Node3D.new()
 	q.name = "Quiff"
 	q.position = hc + Vector3(0, 0.33, 0.06)

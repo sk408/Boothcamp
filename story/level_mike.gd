@@ -1,8 +1,8 @@
 extends Node
-## LevelMike (Speech): Day 3, "SRT". Mike "Totally Deaf" Lenders, 41, forklift driver, who says he
-## can't hear ANYTHING. Design: docs/CHAPTER3.md; contracts: CONTRACTS.md §3.1 and §9.8. Every
-## blocking beat emits Events.awaiting_input with a solver. The game never calls him a liar:
-## it records the facts, stays kind and refers him on.
+## LevelMike (Speech): Day 3, "SRT" (speech recognition threshold). Mike Lenders, 41, forklift
+## driver, who says he can't hear ANYTHING. Design: docs/CHAPTER3.md; contracts: CONTRACTS.md §3.1
+## and §9.8. Every blocking beat emits Events.awaiting_input with a solver. The game never calls
+## him a liar: it records the facts, stays kind and refers him on (doctor included).
 ##   world:  res://world/clinic.tscn with patient_id = "mike" (§6 + the Speech extras)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn (Hoot runs both tone ears)
 ##           res://ui/speech/speech_screen.tscn start_test(patient, ear, coached, plan) (§9.7)
@@ -26,10 +26,9 @@ const PATIENT_ID := "mike"
 const LIST_ID := "spondee_a"
 const FAMILIAR_WORDS := 12
 const UNKNOWN_WORD := "windmill"
-## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit).
-const LEFT_SOLO_WORDS := 4
-## Hoot's "the tell" tip: a word repeated this far (dB) below the ear's PTA.
-const TELL_GAP_DB := 30
+## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
+## reach the bracket on Mike's numbers: six hits from 85 down to 35, the first miss, then up 5.
+const LEFT_SOLO_WORDS := 8
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
 const STEP_LABELS: Dictionary = {
@@ -68,7 +67,11 @@ var results: Dictionary = {}
 ## Familiarisation: the word ids used, and the ones dropped.
 var words: Array[String] = []
 var dropped: Array[String] = []
-var _tell_said := false
+## Hoot's by-the-book rerun of the right ear when the player's SRT can't show the mismatch
+## ({} when none): the board uses it; the player's own sheet stays in results for the grade.
+var recheck: Dictionary = {}
+## Hoot's coffee whisper has been on screen: from then on a low (ascending) SRT start is smart.
+var _whisper_seen := false
 var _session: SpeechSession   # only when the SPEECH screen is missing (Hoot's fallback run)
 
 
@@ -83,7 +86,6 @@ func _ready() -> void:
 	hud.call("set_steps", STEPS, STEP_LABELS, "MIKE LENDERS' VISIT", {&"srt_r": Palette.RIGHT_RED, &"srt_l": Palette.LEFT_BLUE})
 	dialogue = DialogueBox.new()
 	add_child(dialogue)
-	Events.speech_response.connect(_on_speech_response)
 	Events.level_started.emit(PATIENT_ID)
 	_run.call_deferred()
 
@@ -154,6 +156,7 @@ func _intro() -> void:
 	await _say("Hoot", "...And the neck brace?")
 	await _say("Mike", "Just in case.")
 	await _say("Hoot", "(whispering) Would you like a coffee, Mike?")
+	_whisper_seen = true
 	_react(&"nod")
 	await _say("Mike", "Two sugars, thanks.")
 	_react(&"startle")
@@ -247,7 +250,7 @@ func _instructions() -> void:
 			await _say("Hoot", "Too strict! Careful answers hide the faint ones. Try again.")
 		else:
 			_react(&"cheer")
-			await _say("Mike", "CUPCAKE! RAINBOW! I LOVE this test!")
+			await _say("Mike", "RAINBOW! LIGHTHOUSE! I LOVE this test!")
 			await _say("Hoot", "Loud isn't the point! We need every word he hears, even faint ones.")
 		opts.remove_at(c)
 	Game.record_medal("instructions", "gold" if tries == 1 else ("silver" if tries == 2 else "bronze"))
@@ -290,10 +293,11 @@ func _tones() -> void:
 	add_child(screen)
 	var cam: Camera3D = clinic.call("get_main_camera")
 	cam.current = false
-	await _tone_test("right", {"test": "ac", "hoot_turn_after": 0,
-		"intro": "Beeps first. I'll run them; watch how Mike answers.",
+	# a few-second montage per ear (as on Day 2): the beeps aren't today's lesson
+	await _tone_test("right", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
+		"intro": "Beeps first. I'll run them; watch the stamps fly in.",
 		"hoot_turn_text": "My turn! Right ear at 8x. Watch the dance card!"})
-	await _tone_test("left", {"test": "ac", "hoot_turn_after": 0,
+	await _tone_test("left", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Left ear, Hoot speed!",
 		"hoot_turn_text": "Left ear at 8x. Same dance, other ear!"})
 	screen.queue_free()
@@ -303,9 +307,26 @@ func _tones() -> void:
 	clinic.call("focus_camera", &"face", 0.6)
 	var avg := (ear_pta("right") + ear_pta("left")) * 0.5
 	var about := SpeechRules.snap5(avg) if not is_nan(avg) else 70
-	await _say("Hoot", "About %d dB in both ears. Severe, on paper. Yet he heard my whisper..." % about)
+	# the degree from the game's own scale (ClinicRules), for the number Hoot says
+	var degree := ClinicRules.degree_name(float(about))
+	await _say("Hoot", "About %d dB in both ears. %s, on paper. Yet he heard my whisper..." % [about, _cap(degree)])
+	await _say("Hoot", pta_line())
 	_react(&"nod")
-	await _say("Mike", "Severe! Write that down. In big letters.")
+	if degree.begins_with("moderately "):
+		await _say("Mike", "Severe! Write that down. In big letters. Skip the 'moderately'.")
+	else:
+		await _say("Mike", "%s! Write that down. In big letters." % _cap(degree))
+
+
+## Hoot's PTA definition, true to the average the speech tests use (SpeechRules.pta_method).
+func pta_line() -> String:
+	var best_two := false
+	if not tones.is_empty():
+		for e: String in ["right", "left"]:
+			best_two = best_two or SpeechRules.pta_method(ClinicRules.best_thresholds(tones, e, false)) == "best two"
+	if best_two:
+		return "That's his PTA, pure-tone average: his best two beeps of 500, 1000 and 2000 Hz, averaged."
+	return "That's his PTA, pure-tone average: his beeps at 500, 1000 and 2000 Hz, averaged."
 
 
 static func _cap(s: String) -> String:
@@ -325,7 +346,7 @@ func ear_pta(ear: String) -> float:
 func _familiarize() -> Control:
 	_phase(&"familiarize")
 	hud.call("set_step", &"words")
-	await _say("Hoot", "Spondees: two-part words like cup-cake. Easy to guess, so they find the softest level fast.")
+	await _say("Hoot", "Spondees: two-part words, equal stress on both parts, like rain-bow. Chosen because they're equally easy to hear.")
 	var opts: Array[String] = ["Yes: go through the words together first.", "No: straight into the test."]
 	var c: int = await dialogue.choose("Go through the word list with Mike first?", opts, 0)
 	var said_yes := c == 0
@@ -380,13 +401,16 @@ func speech_plan(ear: String) -> Dictionary:
 	var plan := {"test": "srt", "tones": tones, "list": LIST_ID, "words": words.duplicate(), "transducer": String(_air_transducer())}
 	if not dropped.is_empty():
 		plan["exclude"] = dropped.duplicate()
+	# once the coffee whisper has been on screen, starting low and coming up is smart, not a slip
+	plan["low_start_ok"] = _whisper_seen
 	var start := SpeechRules.srt_start(ear_pta(ear))
 	if ear == "right":
 		plan["intro"] = "Start at his PTA plus 15: %d dB. He should repeat that easily." % start
+	elif quick_visit():
+		plan["intro"] = "Left ear, yours for %d words! PTA plus 15 is %d dB." % [LEFT_SOLO_WORDS, start]
+		plan["hoot_turn_after"] = LEFT_SOLO_WORDS
 	else:
 		plan["intro"] = "Left ear, your turn! PTA plus 15 is %d dB." % start
-		if quick_visit():
-			plan["hoot_turn_after"] = LEFT_SOLO_WORDS
 	return plan
 
 
@@ -394,6 +418,7 @@ func _speech() -> void:
 	clinic.call("focus_camera", &"face", 0.6)
 	# words are answered out loud: no response button today
 	clinic.call("hold_response_button", false)
+	await _say("Hoot", "SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more.")
 	await _say("Hoot", "Now the words. He repeats each one; you score what he SAID.")
 	await _say("Hoot", "Got it: down 10. Missed: up 5. Same dance as the beeps!")
 	var cam: Camera3D = clinic.call("get_main_camera")
@@ -404,6 +429,7 @@ func _speech() -> void:
 		cam.current = false
 	else:
 		push_warning("LevelMike: no SPEECH screen (%s); Hoot runs the words himself" % SPEECH_SCENE)
+	recheck = {}
 	for ear: String in ["right", "left"]:
 		hud.call("set_step", &"srt_r" if ear == "right" else &"srt_l")
 		_phase(&"speech", {"ear": ear, "test": "srt"})
@@ -416,6 +442,8 @@ func _speech() -> void:
 			r = await _fallback_speech(ear, plan)
 		results = r
 		Game.set_audiometry_results(results)
+		if ear == "right" and not _srt_shows_mismatch(srt_sheet("right")):
+			await _recheck_right()
 		hud.call("complete_step", &"srt_r" if ear == "right" else &"srt_l")
 	if screen != null:
 		screen.queue_free()
@@ -423,16 +451,70 @@ func _speech() -> void:
 	cam.current = true
 	clinic.call("take_off_earphones")
 	clinic.call("focus_camera", &"face", 0.6)
-	var sheet := srt_sheet("right")
-	var agreement := StringName(String(sheet.get("agreement", "")))
+	var sheet := board_sheet()
 	var diff := int(sheet.get("diff", 0))   # SRT - PTA: below zero, his words beat his beeps
-	var gap := absi(diff)
-	if agreement == &"poor":
-		await _say("Hoot", "SRT should sit within 6 dB of the PTA. His is %d dB %s. Poor agreement!" % [gap, "better" if diff < 0 else "worse"])
+	var within := "SRT should sit within %d dB of the PTA." % SpeechRules.AGREE_GOOD_DB
+	var poor := StringName(String(sheet.get("agreement", ""))) == &"poor"
+	if poor and diff < 0:
+		await _say("Hoot", "%s His is %d dB better. Poor agreement!" % [within, -diff])
 		_react(&"confused")
 		await _say("Mike", "Poor? Poor is bad, right? Bad is good for my form... I mean, oh no.")
+	elif poor:
+		# words WORSE than beeps point elsewhere (never at his story)
+		await _say("Hoot", "%s His is %d dB worse. Poor agreement!" % [within, diff])
+		await _say("Hoot", "Words worse than beeps? Think instructions, language, word scores or a sloping loss.")
 	else:
-		await _say("Hoot", "SRT should sit within 6 dB of the PTA. His is %d dB apart. Let's look closer." % gap)
+		await _say("Hoot", "%s His is %d dB apart. Let's look closer." % [within, absi(diff)])
+
+
+## The right SRT can carry the board only when it shows the mismatch for real: poor agreement,
+## words BETTER than beeps, and the stored level is the bracketed SRT (candidate == stored).
+static func _srt_shows_mismatch(sheet: Dictionary) -> bool:
+	return StringName(String(sheet.get("agreement", ""))) == &"poor" and int(sheet.get("diff", 0)) < 0 \
+		and SpeechScreen.is_bracketed(sheet)
+
+
+## Hoot says why he reruns the right ear, true to the player's sheet (18 words max).
+static func recheck_line(sheet: Dictionary) -> String:
+	if not SpeechScreen.is_bracketed(sheet):
+		var cand := int(sheet.get("candidate_db", SpeechRules.NO_SRT))
+		if cand != SpeechRules.NO_SRT and cand != int(sheet.get("stored_db", cand)):
+			return "The bracket said %d dB, not that one. I'll recheck the right ear by the book." % cand
+		return "That SRT didn't get a full bracket. I'll recheck the right ear by the book."
+	for k: Variant in sheet.get("errors", []):
+		if String(k) == "misscored":
+			return "Some scores didn't match what he said. I'll recheck the right ear by the book."
+	return "Let's be sure of that one. I'll recheck the right ear by the book."
+
+
+## The player's right SRT can't carry the board: Hoot says why, then reruns the ear.
+func _recheck_right() -> void:
+	await _say("Hoot", recheck_line(srt_sheet("right")))
+	await rerun_right()
+
+
+## Hoot reruns the right ear by the book on a FRESH session (the SPEECH screen's plan
+## fresh_session, else SpeechSession directly) into `recheck`: the board uses his sheet, while
+## the player's own sheet stays in results for the grade.
+func rerun_right() -> void:
+	var plan := speech_plan("right")
+	plan.erase("intro")
+	plan["hoot_turn_after"] = 0
+	plan["fresh_session"] = true
+	plan["hoot_turn_text"] = "Right ear again, by the book, at 8x. Watch the ladder!"
+	plan["done_title"] = "HOOT'S RECHECK"
+	recheck = {}
+	if screen != null:
+		# Hoot runs it whatever the quick-visit setting (as for the tones); then the setting is back
+		screen.set("quick_visit", true)
+		screen.call("start_test", patient, "right", false, plan)
+		var r: Dictionary = await screen.test_finished
+		screen.set("quick_visit", quick_visit())
+		recheck = ((r.get("speech", {}) as Dictionary).get("srt", {}) as Dictionary).get("right", {})
+	if recheck.is_empty():
+		var s := SpeechSession.new(patient, Game.rng.randi())
+		s.configure(plan)
+		recheck = hoot_runs_ear(s, "right")
 
 
 ## No SPEECH screen in this build: Hoot runs the ear by the textbook through SpeechSession
@@ -474,22 +556,19 @@ func srt_sheet(ear: String) -> Dictionary:
 	return (sp.get("srt", {}) as Dictionary).get(ear, {})
 
 
-## "The tell": Mike repeats a word far below his own beeps (once per visit).
-func _on_speech_response(ear: String, test: StringName, db: int, answer: Dictionary) -> void:
-	if _tell_said or test != &"srt" or StringName(String(answer.get("kind", ""))) != &"correct":
-		return
-	var pta := ear_pta(ear)
-	if is_nan(pta) or pta - float(db) < float(TELL_GAP_DB):
-		return
-	_tell_said = true
-	Hoot.say("He's repeating words %d dB below his beeps. Hmm!" % SpeechRules.snap5(pta - float(db)), Hoot.HIGH, "speech_response", "speech_tell")
+## The SRT the board and Hoot's verdict use: his recheck when he ran one, else the player's right ear.
+func board_sheet() -> Dictionary:
+	return recheck if not recheck.is_empty() else srt_sheet("right")
 
 
 # ---------------------------------------------------------------- 9. evidence: OBJECTION!
 
-## The claim card and the three clues, with this visit's real numbers.
+## The claim card and the three clues, with this visit's real numbers (board_sheet(): Hoot's
+## recheck when he ran one). The measurement is always the best clue; the coffee and canals
+## captions stay neutral (their "why" explains after a wrong pick).
 func objection_cards() -> Array:
-	var sheet := srt_sheet("right")
+	var sheet := board_sheet()
+	var by_hoot := not recheck.is_empty()
 	var srt := int(sheet.get("stored_db", 30))
 	var pta := float(sheet.get("pta", ear_pta("right")))
 	if is_nan(pta):
@@ -497,23 +576,36 @@ func objection_cards() -> Array:
 	var pta_i := roundi(pta)
 	var agreement := String(sheet.get("agreement", "poor"))
 	var gap := absi(srt - pta_i)
+	var verdict := "Words and beeps line up."
+	if srt < pta_i:
+		verdict = "Words came back %d dB softer than his beeps." % gap
+	elif srt > pta_i:
+		verdict = "Words needed %d dB more than his beeps." % gap
 	var claim := {
 		"quote": "I can't hear ANYTHING", "who": "Mike Lenders, 41, forklift driver", "speaker": "Mike",
-		"verdict": ("Words came back %d dB softer than his beeps." % gap) if srt < pta_i else ("Words needed %d dB more than his beeps." % gap),
-		"note": "%s agreement: recheck, and record the facts kindly." % agreement.capitalize(),
+		"verdict": verdict, "note": claim_note(agreement, srt - pta_i),
 	}
 	var clues: Array[Dictionary] = [
 		{"id": "coffee", "title": "Answered a whispered coffee offer", "best": false,
-			"sub": "\"Two sugars, thanks.\" Funny, but a whisper in a room isn't a measurement.",
+			"sub": "\"Two sugars, thanks.\" Hoot whispered it at the desk.",
 			"why": "Good spot! But a whisper isn't calibrated. Which clue is a real measurement?"},
-		{"id": "srt_pta", "title": "SRT %d vs PTA %d" % [srt, pta_i], "best": true,
-			"sub": "Right ear: words at %d dB, beeps at %d. %s agreement." % [srt, pta_i, agreement.capitalize()],
+		{"id": "srt_pta", "title": ("Hoot's recheck: SRT %d vs PTA %d" if by_hoot else "SRT %d vs PTA %d") % [srt, pta_i], "best": true,
+			"sub": "%s: words at %d dB, beeps at %d. %s agreement." % ["Right ear, rerun by the book" if by_hoot else "Right ear", srt, pta_i, agreement.capitalize()],
 			"why": ""},
 		{"id": "canals", "title": "Canals clear", "best": false,
-			"sub": "Nothing blocking the sound. But clear canals are normal for most real losses too.",
+			"sub": "Otoscopy, both ears: clear canals, normal-looking eardrums.",
 			"why": "Clear canals fit lots of real losses. Which clue measures his hearing?"},
 	]
 	return [claim, clues]
+
+
+## The claim card's last line, by agreement and direction (diff = SRT - PTA).
+static func claim_note(agreement: String, diff: int) -> String:
+	if agreement == "poor" and diff < 0:
+		return "Poor agreement: words beat beeps. Record the facts kindly."
+	if agreement == "poor":
+		return "Poor agreement: words worse. Check instructions, language."
+	return "%s agreement: recheck, and record the facts kindly." % agreement.capitalize()
 
 
 func _evidence(b: Control) -> void:
@@ -532,30 +624,26 @@ func _evidence(b: Control) -> void:
 	var first := picks[0] if not picks.is_empty() else "srt_pta"
 	Game.record_medal("evidence", "gold" if first == "srt_pta" else ("silver" if first == "coffee" else "bronze"))
 	await _wait(1.0)
-	var sheet := srt_sheet("right")
-	var words_beeps := "Real measurements! Words at %d dB, beeps at %d." % [int(sheet.get("stored_db", 30)), roundi(float(sheet.get("pta", 72.0)))]
-	if String(sheet.get("agreement", "poor")) == "poor":
+	var sheet := board_sheet()
+	var lead := "My recheck, by the book!" if not recheck.is_empty() else "Real measurements!"
+	var words_beeps := "%s Words at %d dB, beeps at %d." % [lead, int(sheet.get("stored_db", 30)), roundi(float(sheet.get("pta", 72.0)))]
+	if _srt_shows_mismatch(sheet):
 		await _say("Hoot", words_beeps + " The two tests disagree.")
 	else:
+		# (only if even Hoot's recheck can't show it) never pretend the numbers settle the claim
 		await _say("Hoot", words_beeps)
-		var cand := int(sheet.get("candidate_db", SpeechRules.NO_SRT))
-		if cand == SpeechRules.NO_SRT:
-			await _say("Hoot", "They agree on paper, but that SRT went in before a bracket.")
-		elif cand != int(sheet.get("stored_db", cand)):
-			await _say("Hoot", "They agree on paper, but the bracket found %d dB, not that one." % cand)
-		else:
-			await _say("Hoot", "They agree on paper. Still, Mike's story doesn't add up, so we recheck.")
+		await _say("Hoot", "On paper that doesn't settle it. His story still doesn't add up, so we recheck.")
 	await _say("Hoot", "We don't know WHY yet. And we don't guess.")
 	hud.call("complete_step", &"case")
 
 
-# ---------------------------------------------------------------- 10. referral: recheck + objective tests
+# ---------------------------------------------------------------- 10. referral: recheck + objective tests + his doctor
 
 func _referral(b: Control) -> void:
 	_phase(&"referral")
 	hud.call("set_step", &"next")
 	b.call("set_referral_mode", true)
-	var good := "Re-instruct, retest, refer for objective tests."
+	var good := "Re-instruct, retest, objective tests, tell his doctor."
 	var opts: Array[String] = ["Fit strong hearing aids today.", good, "Call him a fibber."]
 	var tries := 0
 	while true:
@@ -564,14 +652,15 @@ func _referral(b: Control) -> void:
 		if opts[c] == good:
 			break
 		if opts[c].begins_with("Fit"):
-			await _say("Hoot", "Not on results we can't trust. Aids need reliable thresholds first.")
+			await _say("Hoot", "Not on results we can't trust. And a sudden loss sees a doctor before any hearing aid.")
 		else:
 			clinic.call("hoot_emote", &"gasp")
 			await _say("Hoot", "Never accuse! Non-organic loss has many causes. Stay kind and record the facts.")
 		opts.remove_at(c)
 	Game.record_medal("referral", "gold" if tries == 1 else ("silver" if tries == 2 else "bronze"))
 	clinic.call("hoot_emote", &"nod")
-	await _say("Hoot", "Re-instruct, retest, and refer for objective tests that don't need his answers. Stamp it!")
+	# the sudden-loss red flag from the case history is closed here
+	await _say("Hoot", "Re-instruct, retest, objective tests that don't need his answers, and his doctor hears about the sudden loss today.")
 	await b.call("run_stamp")
 	_shot("stamp")
 	hud.call("complete_step", &"next")
@@ -590,10 +679,12 @@ func _payoff(b: Control) -> void:
 	await _say("Mike", "Objective tests? The kind where I don't have to answer anything?")
 	await _say("Hoot", "Exactly. Tiny sounds, tiny sensors. Your ears do all the talking.")
 	_react(&"wince")
-	await _say("Mike", "...Okay. Cousin Vinnie said if I acted deaf, I'd get paid leave. My ears are fine.")
+	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. My ears are fine.")
 	clinic.call("hoot_emote", &"nod")
 	await _say("Hoot", "Thank you for telling us, Mike. That took guts.")
-	await _say("Hoot", "Honest ears earn honest results. And SRT keeps everyone honest, including us.")
+	# the main path must not teach "non-organic = faking"
+	await _say("Hoot", "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse.")
+	await _say("Hoot", "We'll still finish the objective tests and send your results to your doctor.")
 	await _say("Mike", "The neck brace goes back to Vinnie too.")
 	clinic.call("focus_camera", &"door", 1.6)
 	_shot("goodbye", 1.6)

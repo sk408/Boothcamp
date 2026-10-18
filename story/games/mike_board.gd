@@ -6,7 +6,7 @@ extends Control
 ##     strongest clue onto the claim (or click it, then the claim; or 1-3 + Enter). The right one
 ##     slams a big OBJECTION! across the claim with a screen shake; the others get a kind Hoot tip.
 ##  3. The referral: the clues step aside for the dialogue choices, then RECHECK + OBJECTIVE TESTS
-##     is stamped across the claim card.
+##     + DOCTOR TODAY is stamped across the claim card (the sudden-loss red flag is closed too).
 ## Story-internal:
 ##   var b := MikeBoard.new(); hud.add_game(b)
 ##   await b.run_cards(items)            # SpeechMaterial items; the cards flip in (no input)
@@ -120,7 +120,7 @@ func _ready() -> void:
 	_objection.name = "Objection"
 	_objection.visible = false
 	add_child(_objection)
-	_stamp_btn = UiKit.button("  STAMP: RECHECK + OBJECTIVE TESTS  ", &"AccentButton", Vector2(0, 64))
+	_stamp_btn = UiKit.button("  STAMP: RECHECK + OBJECTIVE TESTS + DOCTOR  ", &"AccentButton", Vector2(0, 64))
 	_stamp_btn.visible = false
 	_stamp_btn.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_stamp_btn.offset_top = -96
@@ -772,13 +772,16 @@ func _draw_stamp() -> void:
 	var f := UiKit.font(700)
 	var s1 := "RECHECK +"
 	var s2 := "OBJECTIVE TESTS"
+	var s3 := "+ DOCTOR TODAY"
 	var w1 := f.get_string_size(s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 50).x
 	var w2 := f.get_string_size(s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
-	var bw := maxf(w1, w2) + 48.0
-	var box := Rect2(Vector2(-bw * 0.5, -62), Vector2(bw, 122))
+	var w3 := f.get_string_size(s3, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+	var bw := maxf(w1, maxf(w2, w3)) + 48.0
+	var box := Rect2(Vector2(-bw * 0.5, -80), Vector2(bw, 160))
 	_fx.draw_rect(box, Color(Palette.PAPER, 0.8 * alpha))
 	_fx.draw_rect(box, col, false, 7.0)
 	_fx.draw_rect(box.grow(-9.0), col, false, 2.5)
-	_fx.draw_string(f, Vector2(-w1 * 0.5, -8), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 50, col)
-	_fx.draw_string(f, Vector2(-w2 * 0.5, 40), s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, col)
+	_fx.draw_string(f, Vector2(-w1 * 0.5, -26), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 50, col)
+	_fx.draw_string(f, Vector2(-w2 * 0.5, 22), s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, col)
+	_fx.draw_string(f, Vector2(-w3 * 0.5, 62), s3, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, col)
 	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
