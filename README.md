@@ -11,9 +11,9 @@ her right ear by air (Hoot coaches the first beep and runs the rest), watch Hoot
 normal left ear, put the bone oscillator on her mastoid, find out why unmasked bone lies (the
 Cross-Hearing Ghost), mask the other ear with the plateau dance for bone and then for air, and
 stamp the referral to the ear doctor (a conductive loss with normal bone). About 15 minutes.
-Day 2 opens when Day 1 is done (The Daily Decibel stamps NEW DAY UNLOCKED! and **Next: Day 2**
-goes straight on), or right away with **Unlock all days (demo)** on the title's **Days** card.
-Progress is saved.
+Every day is open from the start: pick one on the title's **Days** card, in any order. The
+suggested day wears an **UP NEXT** ribbon, and after Day 1 The Daily Decibel stamps UP NEXT! and
+**Next: Day 2** goes straight on. Progress is saved.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
@@ -61,7 +61,9 @@ response, click **SOFTER**, **LOUDER**, the **Hz** arrows and **STORE**, or scro
 readout. Click the audiogram or a test-plan token to jump to that frequency. The **II** button
 pauses. In the story, click to continue, click an answer, drag the earphone cups onto Gus's ears
 and drag the evidence onto the case file. On Day 2, click the **AIR | BONE** switch and **NOISE**, the
-noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp.
+noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp. On
+the title's **Days** card, click a day; the mouse wheel scrolls the grid when there are more days
+than fit.
 
 ### The AudiOtron in one breath
 
@@ -117,7 +119,9 @@ paper sells insert earphones).
 
 - **Bone conduction:** the oscillator goes on the mastoid bone behind the ear, never touching the
   ear itself. Bone skips the ear canal and middle ear, so it measures the cochlea directly (tested
-  at 500 to 4000 Hz; the bone oscillator tops out lower than earphones).
+  at 500 to 4000 Hz; the bone oscillator tops out lower than earphones). An optional **bonus
+  hole** tests bone at 250 Hz too: a loud low buzz there can be felt rather than heard, which is
+  why many clinics skip it.
 - **The air-bone gap:** air poorer than bone by more than 10 dB means a conductive loss. A gap of
   15 dB or more at 500, 1000 and 2000 Hz is a red flag for a referral.
 - **Cross-hearing:** bone crosses the skull with about 0 dB of loss, so unmasked bone is heard by
@@ -156,6 +160,7 @@ tools/run_tests.sh                                  # unit tests (exit 0 = green
 tools/autoplay_check.sh                             # a bot plays the whole level headless
 tools/autoplay_check.sh --day=2                     # ...Day 2 (bone and masking)
 tools/autoplay_check.sh --day=2 --upgrades=insert_earphones   # ...Day 2 with inserts
+tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Days card
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
