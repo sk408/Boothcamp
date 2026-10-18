@@ -7,8 +7,8 @@ extends RefCounted
 ## The three calls a case ends with, in the stamp tray's order. Which one is right:
 ##   fit    no red flag and no asymmetry, and a loss that hearing aids can help (+ counselling and
 ##          hearing protection)
-##   refer  any red flag or asymmetry that is not an emergency: a doctor promptly, before any
-##          fitting (not same-day)
+##   refer  any red flag or asymmetry that is not an emergency: a doctor soon (days to about two
+##          weeks), before any fitting (not same-day)
 ##   today  sudden hearing loss (came on over SUDDEN_ONSET_MAX_H hours or less, within the last
 ##          SUDDEN_REFER_TODAY_DAYS days) not explained by wax or the middle ear; it overrides refer.
 ##          A sudden loss longer ago than that is an urgent refer.

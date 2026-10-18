@@ -558,14 +558,24 @@ func _patient_short(id: String) -> String:
 	return String(p.call("short_name")) if p != null and p.has_method("short_name") else id.capitalize()
 
 
-## (polish) The day the paper's Next button offers: the day after this one in order, or after the
-## last day the suggested day (Day 2 played first: Day 1 next), or "" when every day is done.
+## (polish) The day the paper's Next button offers: the suggested day when it comes earlier in order
+## than this one (a later day played first: Day 2 or Day 6 first goes back to Day 1), else the day
+## after this one in order, after the last day the suggested day, or "" when every day is done.
 func _paper_next(id: String) -> String:
+	var sug := suggested_chapter_id()
+	if sug != "" and sug != id and _chapter_index(sug) < _chapter_index(id):
+		return sug    # a later day played first: Next goes back to the day the title suggests
 	var nxt := _next_after(id)
 	if nxt != "":
 		return nxt
-	var sug := suggested_chapter_id()
 	return sug if sug != id else ""
+
+
+func _chapter_index(id: String) -> int:
+	for i in CHAPTERS.size():
+		if String(CHAPTERS[i]["id"]) == id:
+			return i
+	return CHAPTERS.size()
 
 
 func _next_after(id: String) -> String:

@@ -770,7 +770,7 @@ but must not rename or remove these.
   # v3
   "patient_name": "Grandpa Gus", "chapter_id": "gus", "day": 1,
   "newly_unlocked": [],                # (polish) always empty: every day is open
-  "next_chapter_id": "bonnie",         # the day after this one in order; after the last chapter the suggested day (polish), "" when all are done
+  "next_chapter_id": "bonnie",         # the suggested day when it comes earlier in order than this one (a later day played first); else the day after this one in order; after the last chapter the suggested day (polish), "" when all are done
   # polish
   "patient_short": "Gus",              # PatientProfile.short_name()
   "first_clear": true,                 # this visit finished the chapter for the first time
@@ -869,7 +869,7 @@ New kinds go through `world/INTEGRATION_NOTES.md`.
 | `--unlock-all` **(v3)** | **(polish)** accepted and ignored: every chapter is always open |
 | `--keep-save` **(v3, integrator)** | with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 with the same `--save=`) |
 | `--upgrades=a,b` **(polish)** | own these shop items for this run (e.g. `insert_earphones`), after the save reset |
-| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
+| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days must be on the grid, in that order; other days may sit between or after them), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
 
 ### §7.2 What the bot relies on (must keep working)
 

@@ -23,7 +23,8 @@ static func name_color(speaker: String) -> Color:
 static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: bool = false, blink: bool = false, frame: bool = true) -> void:
 	if frame:
 		ci.draw_circle(c, r + 5.0, INK)
-		ci.draw_circle(c, r, BG.get(who, CasePortraits.bg(who) if CasePortraits.has(who) else Color("#fff3dc")))
+		var bg: Color = BG[who] if BG.has(who) else (CasePortraits.bg(who) if CasePortraits.has(who) else Color("#fff3dc"))
+		ci.draw_circle(c, r, bg)
 	match who:
 		"Gus":
 			_gus(ci, c, r, talk_open, blink)

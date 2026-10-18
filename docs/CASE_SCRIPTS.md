@@ -81,22 +81,23 @@ After the tests (said when the measured bone ear agrees with the case; otherwise
 Cards from the chart: *Dip at 4k, better at 8k (noise notch)*; *Left and right ears match* (if symmetric); *Bone matches air: no gap*
 
 ### The call
-- **FIT** (right): No red flags, and he misses words in noisy pubs: hearing aids help. Earplugs every gig!
+- **FIT** (right): No red flags and a real need: aids help, though noisy pubs stay tricky. Earplugs every gig!
 - **REFER**: Careful is good! But no red flags: ears match, no pain, no spins, nothing sudden.
 - **DOCTOR TODAY**: Nothing sudden: it crept up over thirty years of drumming. Not an emergency.
 
 **Present the evidence: why is it safe to fit Rocco today?**
-- Proof cards (tags): no_red_flags, symmetric, both_ears. Right: Exactly! Nothing on the red-flag list, and ears that match: fitting is the right call.
+- Proof cards (tags): no_red_flags, symmetric, both_ears. Right: Exactly! History, exam and chart all clear, and ears that match: fitting is the right call.
 - Wrong card (default): True, but it doesn't prove he's safe to fit. Look for the red-flag check!
   - noise_years: That's why he has a loss, not why it's safe to fit. Find the red-flag check!
   - noise_trouble: That's why he WANTS hearing aids. What shows it's safe to fit them?
   - notch: That's the pattern, not the safety check. Find the red-flag check!
-  - ear_clear: True, the exam looks clean. Which clue clears pain, dizziness and sudden change?
-  - tymp_a: True, the exam looks clean. Which clue clears pain, dizziness and sudden change?
-  - snhl: True, the exam looks clean. Which clue clears pain, dizziness and sudden change?
+  - ear_clear: True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?
+  - tymp_a: True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?
+  - snhl: True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?
 
 ### Payoff
 - **Hoot:** Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too.
+- **Hoot:** A full fitting also checks words in each ear.
 - *(hearing aids)*
 - *(patient: cheer)*
 - **Rocco:** Whoa. I can hear the hi-hat AND my bandmates' terrible jokes!
@@ -137,14 +138,14 @@ Always on the notes: *Left ear: full, low roar, good days and bad days*
 | R1: Does your hearing change from day to day? | 2 | Yes! Some days the left is fine. Then a spell comes and it's underwater again. | Hearing comes and goes | Hearing that comes and goes. Remember that one! |
 | R1: Do you get seasick on boats? | 0 | Never! I once ate a fish pie in a force nine gale. |  | Shipshape answer, but not a clue. Ask about her ears! |
 | R1: Any noise in the ear? | 1 | A low roar, like the engine room. It gets louder before a spell. | Low roar in the left ear, louder before a spell |  |
-| R2: Any pain, drainage, dizziness, or sudden change? | 2 | No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring. / Last one ten days ago. Steady today, and no sudden drop this week. | Room-spinning spells for hours |  |
+| R2: Any pain, drainage, dizziness, or sudden change? | 2 | No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring. / Last one ten days ago. Steady today, and no new drop since. | Room-spinning spells for hours |  |
 | R2: Have you had a cold or a blocked nose lately? | 1 | Not a sniffle all year. Sea air! | No cold or blocked nose | Good: a cold can clog the middle ear and muffle hearing for a while. |
 | R2: What's the best sea shanty? | 0 | Anything with a chorus. Ten verses minimum. |  | Shipshape answer, but not a clue. Ask about her ears! |
 
-Red-flag sweep (if skipped): **Hoot:** Always check the red flags: pain, drainage, dizziness, sudden change. Any of those? **Marina:** No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring. / Last one ten days ago. Steady today, and no sudden drop this week.
+Red-flag sweep (if skipped): **Hoot:** Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only. **Marina:** No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring. / Last one ten days ago. Steady today, and no new drop since.
 
 Red-flag card: *Dizziness: YES, spinning spells. / One ear only: YES = see a doctor.*
-; extra card: *Last spell 10 days ago; no sudden drop in 3 days*
+; extra card: *Last spell 10 days ago; hearing comes back between spells*
 
 - **Marina:** Oh! I brought my hearing test from my spring sea medical. It's on file.
 - **Hoot:** Brilliant! Old results are gold. We'll compare them with today's.
@@ -198,7 +199,7 @@ Cards from the chart: *Left ear only* (if asymmetric); *Hearing comes and goes*;
 ### The call
 - **FIT**: Drop anchor! Dizziness is a red flag. Doctor first; hearing aids may help later, between spells.
 - **REFER** (right): Spins, a full roaring ear, hearing with tides: set course for the ear doctor!
-- **DOCTOR TODAY**: Spells for months, none today, no sudden drop in three days. Soon, not today.
+- **DOCTOR TODAY**: Her hearing dips with spells and comes back. No new drop that's stayed down. Soon, not today.
 
 **Present the evidence: why does Marina need a doctor first?**
 - Proof cards (tags): spinning, left_only, fluctuating, changed, left_full, roar. Right: Exactly! Dizziness and a one-sided, changing loss: a doctor looks first.
@@ -212,7 +213,8 @@ Cards from the chart: *Left ear only* (if asymmetric); *Hearing comes and goes*;
 ### Payoff
 - *(boat)*
 - **Hoot:** Today's chart and the spring one, side by side, sailing to the ear doctor.
-- **Hoot:** Hearing suddenly worse? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!
+- **Hoot:** I'll ask for an ear doctor appointment this week, not someday.
+- **Hoot:** Hearing drops and doesn't come back? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!
 - **Marina:** Aye. And then maybe something for the hearing?
 - **Hoot:** Exactly. Hearing aids can help between spells, once the doctor has had a look.
 - *(patient: cheer)*
@@ -251,7 +253,7 @@ Always on the notes: *Right ear went overnight, yesterday morning*
 | R2: Have you tried cleaning it out? | 1 | I tried a cotton bud. Nothing came out. Pretty sure it's wax though. | Tried a cotton bud: nothing came out | Never poke in there! And 'probably wax' is a guess. We'll look. |
 | R2: Can I get a free pizza? | 0 | Only if it arrives cold. Mine never do. Which is why we must HURRY. |  | Tasty, but not a clue. Ask about his ear! |
 
-Red-flag sweep (if skipped): **Hoot:** Always ask about red flags: pain, drainage, dizziness. **Dash:** No pain, no drips. A bit wobbly yesterday, fine now. Just the whoosh.
+Red-flag sweep (if skipped): **Hoot:** Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only. **Dash:** No pain, no drips. A bit wobbly yesterday, fine now. Just the whoosh.
 
 Red-flag card: *Sudden, one ear, yesterday: YES. Dizzy too. / See a doctor. How soon? You decide.*
 ; extra card: *Wobbly yesterday: dizziness*
@@ -275,7 +277,7 @@ Tip: medium (average-sized canal). Right: type A, peak -5 daPa, 0.8 mL, canal 1.
 Question: **Dash says it's wax. Does the tymp agree?**
 - (right) No: a normal peak and a normal canal volume.
 - Yes: it's flat, like a wax plug.: Hoot: A wax plug gives a flat line and a small canal volume. His peak is normal.
-- A tymp can't tell.: Hoot: It can! A wax plug flattens the curve and shrinks the canal volume.
+- A tymp can't tell.: Hoot: It can spot a full plug: flat line, tiny canal volume. Partial wax still needs the otoscope.
 
 - **Hoot:** Type A both sides: no fluid, no wax plug. The bone test shows if it's deeper.
 
@@ -312,10 +314,10 @@ Cards from the chart: *Right ear down, bone too: inner ear or nerve*; *Left ear 
 
 ### The call
 - **FIT**: Hold the pizza! A brand-new sudden loss needs a doctor first, and today.
-- **REFER**: A routine referral could take weeks. A sudden loss can't wait: TODAY.
+- **REFER**: A normal referral means days or weeks. A sudden loss can't wait: TODAY.
 - **DOCTOR TODAY** (right): Hot delivery! Sudden sensorineural loss is urgent: treatment works best early. Doctor TODAY!
 
-**Present the evidence: why TODAY and not next month?**
+**Present the evidence: why TODAY and not in a few days?**
 - Proof cards (tags): sudden, onset, first_time, one_ear_snhl, dizzy. Right: Exactly! Sudden, one ear, inner ear or nerve: the doctor sees him today.
   - dizzy: Yes! Dizzy with a sudden loss: another red flag. Today.
 - Wrong card (default): True, but that wouldn't make it a rush. What makes it urgent?
@@ -419,10 +421,10 @@ After the tests (said when the measured bone ear agrees with the case; otherwise
 - **Chip:** Hey, that's MY look!
 - **Hoot:** Worse in the middle, better at both ends: a cookie bite! These often run in families.
 - **Ginger:** So that's why Chip and I get along.
-- **Hoot:** And it matches her chart from nine years ago. Stable.
+- **Hoot:** And her right ear matches her chart from nine years ago. Stable.
 - **Hoot:** The middle pitches carry lots of speech, so words drop out of voices.
 
-Cards from the chart: *Worst in the middle pitches (cookie bite)*; *Left and right ears match* (if symmetric); *Bone matches air: no gap*; *Same bite as nine years ago: stable*
+Cards from the chart: *Worst in the middle pitches (cookie bite)*; *Left and right ears match* (if symmetric); *Bone matches air: no gap*; *Right ear matches nine years ago: stable*
 
 ### The call
 - **FIT** (right): Sweet call! Stable for years, ears match, no red flags: hearing aids tuned for the middle pitches.
@@ -430,17 +432,18 @@ Cards from the chart: *Worst in the middle pitches (cookie bite)*; *Left and rig
 - **DOCTOR TODAY**: Since SCHOOL? That's the opposite of sudden! No emergency here.
 
 Present the evidence: **Her dad and grandma have it too. Why is it still safe to fit her?**
-- Proof cards (tags): no_red_flags, symmetric, both_ears, stable, stable_chart. Right: Exactly! Stable, matching ears, no red flags: fitting is the right call.
+- Proof cards (tags): no_red_flags, symmetric, both_ears, stable, stable_chart. Right: Exactly! History, exam and chart all clear, stable and matching: fitting is the right call.
 - Wrong card (default): True, but it doesn't show she's safe to fit. Look for the red-flag check!
   - family: That's family history, not a red flag. What shows it's safe?
-  - ear_clear: True, the exam looks clean. Which clue clears pain, dizziness and sudden change?
-  - tymp_a: True, the exam looks clean. Which clue clears pain, dizziness and sudden change?
-  - snhl: True, the exam looks clean. Which clue clears pain, dizziness and sudden change?
+  - ear_clear: True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?
+  - tymp_a: True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?
+  - snhl: True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?
   - voices_drop: That's what's wrong, not why it's safe. Look for the red-flag check!
   - cookie: That's what's wrong, not why it's safe. Look for the red-flag check!
 
 ### Payoff
 - **Hoot:** Hearing aids tuned for the middle pitches: right where her bite is.
+- **Hoot:** A full fitting also checks words in each ear.
 - *(hearing aids)*
 - *(patient: cheer)*
 - **Ginger:** Oh! I can hear the back row. Even the hecklers!

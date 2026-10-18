@@ -92,6 +92,20 @@ func test_finishing_day1_suggests_day2() -> void:
 	assert_true(Game.is_chapter_done("gus"), "chapters_done survives a reload")
 
 
+## Merge safety: CHAPTERS stay in day order (unique ids, unique and strictly increasing days), so a bad
+## merge of two chapter blocks can't put Day 6 before Day 3.
+func test_chapters_in_day_order() -> void:
+	var last_day := 0
+	var ids := {}
+	for c: Dictionary in Game.chapters():
+		var id := String(c["id"])
+		var day := int(c["day"])
+		assert_false(ids.has(id), "chapter id %s appears once" % id)
+		ids[id] = true
+		assert_true(day > last_day, "%s (Day %d) comes after Day %d" % [id, day, last_day])
+		last_day = day
+
+
 ## Day 2 played first (picked from the Days card): Day 1 is still the suggested day.
 func test_any_order() -> void:
 	Game.reset_save()
@@ -101,7 +115,7 @@ func test_any_order() -> void:
 	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
 	var s := Game.finish_visit()
 	assert_eq(s["chapter_id"], "bonnie")
-	assert_eq(s["next_chapter_id"], "gus" if last == "bonnie" else ids[2], "the paper's Next: the following day")
+	assert_eq(s["next_chapter_id"], "gus", "the paper's Next goes back to the suggested day (Day 1)")
 	assert_eq(Game.suggested_chapter_id(), "gus")
 	assert_eq(Game.next_chapter_id(), "gus")
 	if last != "bonnie":
@@ -232,7 +246,9 @@ func test_title_day_picker() -> void:
 	assert_false(day2.has_meta("locked"), "no lock state at all")
 	var hint_s: Control = title.get("_days_hint_scroll")
 	if hint_s != null:
-		assert_false(hint_s.visible, "the shipped days fit: no 'wheel scrolls' hint")
+		var g: Dictionary = (title.get_script() as Script).call("grid_geometry", title.get_viewport_rect().size,
+			Game.chapters().size(), float(title.call("_card_scale")))
+		assert_eq(hint_s.visible, bool(g["scrolls"]), "the 'wheel scrolls' hint shows only when the grid scrolls")
 	title.call("_days_back")
 	assert_eq(title.get("_state"), &"menu")
 	title.call("_on_days")

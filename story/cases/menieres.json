@@ -38,7 +38,7 @@
 			"options": [
 				["Any pain, drainage, dizziness, or sudden change?", 2, [
 					"No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring.",
-					"Last one ten days ago. Steady today, and no sudden drop this week."
+					"Last one ten days ago. Steady today, and no new drop since."
 				], "Room-spinning spells for hours", "spinning"],
 				["Have you had a cold or a blocked nose lately?", 1, "Not a sniffle all year. Sea air!", "No cold or blocked nose", "no_cold", "Good: a cold can clog the middle ear and muffle hearing for a while."],
 				["What's the best sea shanty?", 0, "Anything with a chorus. Ten verses minimum.", "", ""]
@@ -48,16 +48,16 @@
 	"joke_line": "Shipshape answer, but not a clue. Ask about her ears!",
 	"red_flags": {
 		"tag": "spinning",
-		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden change. Any of those?",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
 		"answer": [
 			"No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring.",
-			"Last one ten days ago. Steady today, and no sudden drop this week."
+			"Last one ten days ago. Steady today, and no new drop since."
 		],
 		"clue": "Room-spinning spells for hours",
 		"card": "Dizziness: YES, spinning spells.\nOne ear only: YES = see a doctor.",
 		"card_kind": "flag",
 		"extra_clues": [
-			{"tag": "last_spell", "text": "Last spell 10 days ago; no sudden drop in 3 days"}
+			{"tag": "last_spell", "text": "Last spell 10 days ago; hearing comes back between spells"}
 		]
 	},
 	"after_history": [
@@ -143,7 +143,7 @@
 		"lines": {
 			"refer": "Spins, a full roaring ear, hearing with tides: set course for the ear doctor!",
 			"fit": "Drop anchor! Dizziness is a red flag. Doctor first; hearing aids may help later, between spells.",
-			"today": "Spells for months, none today, no sudden drop in three days. Soon, not today."
+			"today": "Her hearing dips with spells and comes back. No new drop that's stayed down. Soon, not today."
 		}
 	},
 	"clue_pick": {
@@ -163,7 +163,8 @@
 	"payoff": [
 		{"do": "boat"},
 		["Hoot", "Today's chart and the spring one, side by side, sailing to the ear doctor."],
-		["Hoot", "Hearing suddenly worse? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!"],
+		["Hoot", "I'll ask for an ear doctor appointment this week, not someday."],
+		["Hoot", "Hearing drops and doesn't come back? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!"],
 		["Marina", "Aye. And then maybe something for the hearing?"],
 		["Hoot", "Exactly. Hearing aids can help between spells, once the doctor has had a look."],
 		{"react": "cheer"},

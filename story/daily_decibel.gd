@@ -56,7 +56,8 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
 }
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"]]
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
+	["bc_masked", "L  ]", "left"], ["ac_masked", "L  □", "left"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),

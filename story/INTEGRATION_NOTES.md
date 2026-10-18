@@ -72,9 +72,9 @@ Requests for the integrator and the title owner:
   `CasePortraits`).
 - **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 9) both append to `Game.CHAPTERS`
   and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`). Keep both blocks, speech first.
-- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` lists right-ear masked rows only. Marina's masked tests are
-  on her LEFT ear, so her masked holes are not scored. Please add `["bc_masked", "L  ]", "left"]` and
-  `["ac_masked", "L  X+", "left"]` (or whatever symbols you prefer).
+- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` now has left-ear masked rows too (Marina's masked tests are on her
+  LEFT ear): `["bc_masked", "L  ]", "left"]` and `["ac_masked", "L  □", "left"]` (the ASHA square). Additive,
+  added in the cases PR at the integrator's request.
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.

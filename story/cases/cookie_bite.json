@@ -123,7 +123,7 @@
 			["Chip", "Hey, that's MY look!"],
 			["Hoot", "Worse in the middle, better at both ends: a cookie bite! These often run in families."],
 			["Ginger", "So that's why Chip and I get along."],
-			["Hoot", "And it matches her chart from nine years ago. Stable."]
+			["Hoot", "And her right ear matches her chart from nine years ago. Stable."]
 		]
 	},
 	"evidence": {
@@ -137,7 +137,7 @@
 		{"tag": "cookie", "text": "Worst in the middle pitches (cookie bite)"},
 		{"tag": "symmetric", "text": "Left and right ears match", "when": "symmetric"},
 		{"tag": "snhl", "text": "Bone matches air: no gap"},
-		{"tag": "stable_chart", "text": "Same bite as nine years ago: stable"}
+		{"tag": "stable_chart", "text": "Right ear matches nine years ago: stable"}
 	],
 	"decision": {
 		"prompt": "Make the call for Ginger:",
@@ -155,16 +155,17 @@
 		"wrong_line": "True, but it doesn't show she's safe to fit. Look for the red-flag check!",
 		"wrong_lines": {
 			"family": "That's family history, not a red flag. What shows it's safe?",
-			"ear_clear": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
-			"tymp_a": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
-			"snhl": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
+			"ear_clear": "True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?",
+			"tymp_a": "True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?",
+			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?",
 			"voices_drop": "That's what's wrong, not why it's safe. Look for the red-flag check!",
 			"cookie": "That's what's wrong, not why it's safe. Look for the red-flag check!"
 		},
-		"right_line": "Exactly! Stable, matching ears, no red flags: fitting is the right call."
+		"right_line": "Exactly! History, exam and chart all clear, stable and matching: fitting is the right call."
 	},
 	"payoff": [
 		["Hoot", "Hearing aids tuned for the middle pitches: right where her bite is."],
+		["Hoot", "A full fitting also checks words in each ear."],
 		{"do": "hearing_aids"},
 		{"react": "cheer"},
 		["Ginger", "Oh! I can hear the back row. Even the hecklers!"],

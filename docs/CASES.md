@@ -84,7 +84,8 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
   500, 1k and 2k, so masked bone runs there and lands on the air values (no real gap).
 - Masked air: the rule (left air - 40 >= the right cochlea's bone estimate) asks for it at 250 and 1k, each exactly
   on the line, so a 5 dB wobble can drop one; the runner follows the stamped values. It confirms 50 / 45.
-- Last spell ten days ago; steady today; no sudden drop in the last three days. Tinnitus: left, a low roar, louder
+- Last spell ten days ago; steady today; her hearing comes back between spells, with no new drop that has stayed
+  down (the pattern, not a clock, keeps her off DOCTOR TODAY). Tinnitus: left, a low roar, louder
   before a spell. Fullness: left. No cold. Tympanograms: A both (tip medium).
 
 ### 2.3 Dash (sudden sensorineural loss, right)
@@ -215,21 +216,23 @@ Now: where did the masked bone land?"). No title, line or card names the answer 
 
 The rule (`CaseRules.DECISIONS`): **fit** = no red flag and no asymmetry, and a loss hearing aids can help (+
 counselling, hearing protection). **refer** = any red flag or asymmetry that is not an emergency: a doctor
-promptly, before any fitting (not same-day). **today** = sudden hearing loss (came on over 72 hours or less, within
+soon (days to about two weeks), before any fitting (not same-day). **today** = sudden hearing loss (came on over 72 hours or less, within
 the last 30 days) not explained by wax or the middle ear; it overrides refer. A sudden loss longer ago than that is
 an urgent refer.
 
 | Case | Proof cards (any one) | Tempting wrong cards, with their own replies |
 |---|---|---|
-| Rocco: why is it safe to fit? | No pain, drainage, dizziness or sudden change; Both ears match; Both ears, about the same | the noise years, "lost in noisy pubs" (why he wants aids, not why it's safe), the notch, the exam cards |
-| Marina: why a doctor first? | Room-spinning spells; Left ear only; Hearing comes and goes; Low pitches 25 dB worse than spring; her full roaring left ear; the roar | "Last spell 10 days ago; no sudden drop in 3 days" (that's why it's not TODAY), the normal exam cards, no cold |
+| Rocco: why is it safe to fit? | No pain, drainage, dizziness or sudden change; Both ears match; Both ears, about the same | the noise years, "lost in noisy pubs" (why he wants aids, not why it's safe), the notch, the exam and chart cards (credited: they clear wax, drainage, deformity and an air-bone gap, then Hoot asks which clue clears pain, dizziness and sudden change) |
+| Marina: why a doctor first? | Room-spinning spells; Left ear only; Hearing comes and goes; Low pitches 25 dB worse than spring; her full roaring left ear; the roar | "Last spell 10 days ago; hearing comes back between spells" (that's why it's not TODAY), the normal exam cards, no cold |
 | Dash: why TODAY? | Right ear went overnight; Pop, then whooshing 30 hours ago; First time ever; Right ear down, bone too; Wobbly yesterday (its own line: dizzy with a sudden loss is another red flag) | no wax, type A (they rule out a plug, not the rush), the cotton bud, no pain, his good left ear |
-| Ginger: her dad and grandma have it too; why is it still safe to fit? | No pain, drainage, dizziness or sudden change; Both ears match; Both ears, about the same; Found at school, the same ever since; Same bite as nine years ago | the family card ("That's family history, not a red flag"), the exam cards, the complaint and the shape |
+| Ginger: her dad and grandma have it too; why is it still safe to fit? | No pain, drainage, dizziness or sudden change; Both ears match; Both ears, about the same; Found at school, the same ever since; Right ear matches nine years ago | the family card ("That's family history, not a red flag"), the exam and chart cards (credited, as for Rocco), the complaint and the shape |
 
-Counselling that ships: Rocco, aids often make ringing less noticeable; the damage so far is permanent, more is
+Counselling that ships: every FIT, "A full fitting also checks words in each ear" (word scores per case can follow
+once the speech days are on main). Rocco, aids help though noisy pubs stay tricky; aids often make ringing less
+noticeable; the damage so far is permanent, more is
 preventable; earplugs at every gig and rehearsal; musicians' earplugs; on stage aids out, earplugs in; a yearly
-test. Marina, the safety net ("Hearing suddenly worse? Doctor that day. Weakness, numbness, double vision or
-slurred speech? Emergency!"); aids may help between spells once a doctor has looked; her first mate takes the wheel
+test. Marina, an ear doctor appointment this week, not someday; the safety net ("Hearing drops and doesn't come
+back? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!"); aids may help between spells once a doctor has looked; her first mate takes the wheel
 until a doctor clears her. Dash, same day to an ENT, audiogram sent ahead ("No ear doctor free today? Then the
 emergency department. Same day, either way."); face droop, numbness, slurred speech or double vision mean the ER now; "Sooner is better. Doctors still treat after three days, but today beats tomorrow." Ginger,
 aids tuned for the middle pitches; offer a routine genetic counselling referral alongside (not before) the fitting;
@@ -239,7 +242,7 @@ a yearly test, since some family patterns slowly change.
 
 | Rule | Value |
 |---|---|
-| Decisions | see section 7 |
+| Decisions | see section 7; refer = soon, days to about two weeks; today = the same day |
 | Red flags (US FDA prescription hearing aid labeling, 21 CFR 801.422, since October 2022: advise a doctor, preferably an ear specialist, before fitting) | a visible deformity of the ear, from birth or injury; fluid, pus or blood from the ear in the last 6 months; ear pain or discomfort; a lot of wax, or something in the canal; dizziness, recent or long-standing; sudden, quickly worsening or fluctuating hearing loss in the last 6 months; hearing loss or ringing in only one ear, or a clear difference between the ears; an air-bone gap of 15 dB or more at 500, 1000 and 2000 Hz. The 2022 OTC rule removed the old requirement that adults get a medical evaluation or sign a waiver before buying; the red flags remain dispenser guidance and good practice. Under-18s still see a doctor first, and some states still require referral. |
 | Asymmetry (the measurable "difference between the ears") | 15 dB or more between the ears at two or more neighbouring test frequencies (`is_asymmetric`) |
 | Sudden loss | 30 dB or more at 3+ neighbouring frequencies, coming on over 72 hours or less (`SUDDEN_ONSET_MAX_H`: the definition, not a deadline). Same-day referral: an ENT, or the emergency department if no ENT can see them today, with the audiogram. Treatment works best when it starts early, but doctors still treat for weeks, so a late patient still goes TODAY. |
@@ -259,9 +262,9 @@ a yearly test, since some family patterns slowly change.
 
 1. Rocco: a 4k notch to 65-70 dB, 2k at 40-45, PTA 26.7 / 30 but a 2-4k average of 53.3 / 58.3, and trouble
    following talk in a noisy pub: a clear "fit", or "fit or monitor"? (The game says fit, plus earplugs.)
-2. Marina: REFER (soon) rather than DOCTOR TODAY, since her last spell was ten days ago, she is steady today and
-   she reports no sudden drop in the last three days? Is "fluctuating loss" being a red flag (2022 list) the right
-   framing for players?
+2. Marina: REFER (soon: an ear doctor this week) rather than DOCTOR TODAY, since her hearing dips with spells and
+   comes back, her last spell was ten days ago, she is steady today and she has no new drop that has stayed down?
+   Is "fluctuating loss" being a red flag (2022 list) the right framing for players?
 3. Dash: "same day: an ENT, or the emergency department if no ENT can see him today; send the audiogram"?
 4. Ginger: FIT today for a known, stable, symmetric hereditary cookie bite in an adult, with a routine
    genetic-counselling referral offered alongside the fitting and a yearly audiogram? And the asymmetry rule (15 dB

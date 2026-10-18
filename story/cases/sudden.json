@@ -46,7 +46,7 @@
 	"joke_line": "Tasty, but not a clue. Ask about his ear!",
 	"red_flags": {
 		"tag": "red_flag_check",
-		"ask_line": "Always ask about red flags: pain, drainage, dizziness.",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
 		"answer": "No pain, no drips. A bit wobbly yesterday, fine now. Just the whoosh.",
 		"clue": "No pain or drainage",
 		"card": "Sudden, one ear, yesterday: YES. Dizzy too.\nSee a doctor. How soon? You decide.",
@@ -83,7 +83,7 @@
 			"options": [
 				["No: a normal peak and a normal canal volume.", true, ""],
 				["Yes: it's flat, like a wax plug.", false, "A wax plug gives a flat line and a small canal volume. His peak is normal."],
-				["A tymp can't tell.", false, "It can! A wax plug flattens the curve and shrinks the canal volume."]
+				["A tymp can't tell.", false, "It can spot a full plug: flat line, tiny canal volume. Partial wax still needs the otoscope."]
 			]
 		},
 		"clue": "Tymp: type A both ears (no fluid, no wax plug)",
@@ -137,11 +137,11 @@
 		"lines": {
 			"today": "Hot delivery! Sudden sensorineural loss is urgent: treatment works best early. Doctor TODAY!",
 			"fit": "Hold the pizza! A brand-new sudden loss needs a doctor first, and today.",
-			"refer": "A routine referral could take weeks. A sudden loss can't wait: TODAY."
+			"refer": "A normal referral means days or weeks. A sudden loss can't wait: TODAY."
 		}
 	},
 	"clue_pick": {
-		"prompt": "Present the evidence: why TODAY and not next month?",
+		"prompt": "Present the evidence: why TODAY and not in a few days?",
 		"answers": ["sudden", "onset", "first_time", "one_ear_snhl", "dizzy"],
 		"wrong_line": "True, but that wouldn't make it a rush. What makes it urgent?",
 		"wrong_lines": {

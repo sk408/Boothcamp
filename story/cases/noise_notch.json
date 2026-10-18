@@ -121,7 +121,7 @@
 		"prompt": "Make the call for Rocco:",
 		"answer": "fit",
 		"lines": {
-			"fit": "No red flags, and he misses words in noisy pubs: hearing aids help. Earplugs every gig!",
+			"fit": "No red flags and a real need: aids help, though noisy pubs stay tricky. Earplugs every gig!",
 			"refer": "Careful is good! But no red flags: ears match, no pain, no spins, nothing sudden.",
 			"today": "Nothing sudden: it crept up over thirty years of drumming. Not an emergency."
 		}
@@ -134,14 +134,15 @@
 			"noise_years": "That's why he has a loss, not why it's safe to fit. Find the red-flag check!",
 			"noise_trouble": "That's why he WANTS hearing aids. What shows it's safe to fit them?",
 			"notch": "That's the pattern, not the safety check. Find the red-flag check!",
-			"ear_clear": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
-			"tymp_a": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
-			"snhl": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?"
+			"ear_clear": "True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?",
+			"tymp_a": "True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?",
+			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?"
 		},
-		"right_line": "Exactly! Nothing on the red-flag list, and ears that match: fitting is the right call."
+		"right_line": "Exactly! History, exam and chart all clear, and ears that match: fitting is the right call."
 	},
 	"payoff": [
 		["Hoot", "Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too."],
+		["Hoot", "A full fitting also checks words in each ear."],
 		{"do": "hearing_aids"},
 		{"react": "cheer"},
 		["Rocco", "Whoa. I can hear the hi-hat AND my bandmates' terrible jokes!"],

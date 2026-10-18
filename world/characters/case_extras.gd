@@ -4,7 +4,7 @@ extends Node3D
 ##   headband     a sweatband (colour "headband"), the drummer's
 ##   drumsticks   two sticks poking out of a cardigan pocket
 ##   captain_cap  a ferry captain's white peaked cap with a gold badge
-##   cap          a baseball cap (colour "cap")
+##   cap          a baseball cap (colour "cap") with a pizza-slice badge
 ##   pizza_box    a pizza courier's insulated delivery bag, worn on the back
 ##   spiky_hair   a short spiky crest in the "hair" colour (counts as a hat)
 ##   puppet       a chocolate-chip cookie hand puppet on the left hand; its felt mouth flaps whenever
@@ -144,8 +144,20 @@ func _cap(hc: Vector3, col: Color) -> Node3D:
 	var brim := Kit.sphere(n, 0.22, Vector3(0, 0.22, 0.34), col.darkened(0.12), Vector3(1.0, 0.12, 0.85), {"outline": 0.006}, 16)
 	brim.rotation.x = 0.12
 	Kit.sphere(n, 0.035, Vector3(0, 0.44, 0.0), col.darkened(0.25), Vector3.ONE, {"outline": 0.005}, 8)
-	Kit.label(n, "SS", Vector3(0, 0.26, 0.355), 40, Color.WHITE, 6, 700).rotation.x = -0.35
+	_pizza_badge(n)
 	return n
+
+
+## Speedy Slice's badge on the cap's front: a pizza slice, point down, crust on top, three pepperoni.
+func _pizza_badge(cap: Node3D) -> void:
+	var pm := PrismMesh.new()
+	pm.size = Vector3(0.1, 0.1, 0.012)
+	var slice := Kit.mesh(cap, pm, Vector3(0, 0.31, 0.318), Kit.toon(Color("#ffd23f"), {"outline": 0.004}))
+	slice.rotation = Vector3(-0.7, 0.0, PI)   # point down, leaning back with the crown
+	# in the slice's own frame the point is +y and the crust edge is at y = -0.05
+	Kit.box(slice, Vector3(0.112, 0.018, 0.018), Vector3(0, -0.052, 0), Color("#d9822b"), {"outline": 0.003})
+	for p: Vector2 in [Vector2(-0.016, -0.024), Vector2(0.016, -0.018), Vector2(0.0, 0.012)]:
+		Kit.sphere(slice, 0.01, Vector3(p.x, p.y, 0.007), Color("#c0392b"), Vector3(1.0, 1.0, 0.35), {"outline": 0.0}, 8)
 
 
 ## A crest of short spikes along the top of the head, front to back.
