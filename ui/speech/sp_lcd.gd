@@ -190,7 +190,11 @@ func _draw_info(a: Rect2) -> void:
 	# start chip: PTA + 15
 	var start := int(view.get("start_db", 40))
 	var at_start := int(view["db"]) == start and not bool(view.get("started", false))
-	var stxt := "START = PTA + 15 = %d" % start if not is_nan(pta) else "START: no PTA yet"
+	# the PTA rounded to the dial's 5 dB steps, so the sum on the chip adds up (PTA 72 -> 70 + 15 = 85)
+	var base := SpeechRules.snap5(pta) if not is_nan(pta) else 0
+	var stxt := "START: no PTA yet"
+	if not is_nan(pta):
+		stxt = "START = %d + 15 = %d" % [base, start] if base + SpeechRules.SRT_START_ABOVE_PTA_DB == start else "START = %d dB" % start
 	var sw := minf(a.size.x, AoDraw.text_size(stxt, 12, AoDraw.FONT_BOLD).x + 22.0)
 	var sr := Rect2(Vector2(x0 - 2.0, y0 + 92.0), Vector2(sw, 22.0))
 	if at_start:
