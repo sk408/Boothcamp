@@ -7,13 +7,24 @@ pure-tone air-conduction test on both ears with the AudiOtron 3000, read the aud
 case, and get a sneak peek of his first hearing aids. One visit takes about 10 to 15 minutes.
 
 **Day 2** brings Bonnie Bunsworth, a baker whose right ear has gone "all underwater". It opens with
-**Hoot's masking movie**, a 90-second cartoon (skip it with Esc, or one scene at a time with Space;
-replay it from the pause menu or the title's **Hoot's Movies** button). You test her right ear by
-air (Hoot coaches the first beep and runs the rest), watch Hoot's montage of her normal left ear,
-put the bone oscillator on her BETTER (left) mastoid and test her bone there first, then move it to
-her right mastoid for one tone and meet the Cross-Hearing Ghost (her left cochlea answers), mask the
-left ear with the plateau dance for bone and then for air, and stamp the referral to the ear doctor
-(a conductive loss with normal bone). About 14 minutes. Every day is open from the start: pick one
+**Hoot's masking movie** ("The Cross-Hearing Ghost"), a 95-second cartoon in ten scenes: two snail
+cochleas in one head, the skull wall that eats at least 40 dB of an earphone beep, the bone buzzer
+that shakes both sides, the Ghost (the better cochlea answering for the poorer ear), the "shhh" in
+the other ear, too little and too much of it, and the plateau. Space, Enter or a click work like
+the dialogue box (finish the caption, then the next caption, then the next scene), Esc skips it, P
+pauses. **Replay it** any time from the pause menu ("Watch Hoot's masking movie", Day 2) or the
+title's **Hoot's Movies** button (also under Options). It counts as watched once it reaches the
+plateau scene; skip it earlier and it plays again next visit. A 12-second recap card plays when the
+masking phase starts.
+
+You test her right ear by air (Hoot coaches the first beep and runs the rest), watch Hoot's montage
+of her normal left ear, then **bone, better ear first**: the oscillator goes on her LEFT mastoid
+and you test her bone there, unmasked (`>` marks). Unmasked bone is heard by the better cochlea
+wherever the buzzer sits, so this is both ears' bone baseline. Hoot then moves it to her right
+mastoid for ONE unmasked tone, and her left cochlea answers for the right ear: the Cross-Hearing
+Ghost. Her right air is more than 10 dB poorer than that unmasked bone, so the right bone must be
+masked: noise in the left ear, the plateau dance for bone (`[` marks) and then for air, and the
+referral stamp to the ear doctor (a conductive loss with normal bone). About 15 minutes. Every day is open from the start: pick one
 on the title's **Days** card, in any order. The suggested day wears an **UP NEXT** ribbon, and after
 Day 1 The Daily Decibel stamps UP NEXT! and **Next: Day 2** goes straight on. Progress is saved.
 
@@ -128,14 +139,17 @@ paper sells insert earphones).
   15 dB or more at 500, 1000 and 2000 Hz is a red flag for a referral.
 - **Cross-hearing:** bone crosses the skull with about 0 dB of loss, so unmasked bone is heard by
   the better cochlea, wherever the oscillator sits: that is why bone goes on the better ear first.
-  Air crosses too once the tone is 40 dB above the other ear's bone.
-- **Masking (simplified):** start the noise at the other ear's air threshold + 10, plus the
-  occlusion effect for bone at low pitches (a covered ear hears bone louder); heard = noise up 5,
-  missed = tone up 5; the tone heard at the same level through three noise raises is the
-  plateau. Too much noise crosses back (overmasking). Then masked air: her right air minus about
-  40 dB (supra-aural phones) could still reach her left cochlea, so air gets masked too. With the
-  insert earphones (about 55 dB lost crossing the head) it often cannot, and no masked air is
-  needed. The masking dilemma is only mentioned.
+  Air crosses too once the tone is at least 40 dB above the other ear's bone (on-ear phones; real
+  heads lose 40 to 80 dB, so 40 is the safe rule).
+- **When to mask bone:** the test ear's air more than 10 dB poorer than the unmasked bone. Hoot
+  says it with her numbers ("Right air 50, unmasked bone 5: a gap over 10 dB").
+- **Masking (simplified):** the noise goes in the OTHER (non-test) ear. Start it at that ear's air
+  threshold + 10, plus the occlusion effect for bone at low pitches (a covered ear hears bone
+  louder); heard = noise up 5, missed = tone up 5; the tone heard at the same level through three
+  noise raises (15 dB) is the plateau. Too much noise crosses back (overmasking). Then masked air:
+  on-ear phones lose at least 40 dB crossing the head, so her right air minus 40 could still reach
+  her left cochlea (its BONE threshold), and air gets masked too. With the insert earphones (at
+  least 55 dB lost) it cannot, and no masked air is needed. The masking dilemma is only mentioned.
 - **The takeaway:** a conductive loss with normal bone means an ENT referral. Bonnie's pattern
   is the classic picture of otosclerosis: extra bone grows around the stapes (the stirrup bone),
   so it cannot vibrate freely. Her bone line has a small dip at 2 kHz, the **Carhart notch**: a
