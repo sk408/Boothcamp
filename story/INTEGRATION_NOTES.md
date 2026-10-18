@@ -79,6 +79,12 @@ Requests for the integrator and the title owner:
 - **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` lists right-ear masked rows only. Marina's masked tests are
   on her LEFT ear, so her masked holes are not scored. Please add `["bc_masked", "L  ]", "left"]` and
   `["ac_masked", "L  X+", "left"]` (or whatever symbols you prefer).
+- **Daily Decibel width (affects Day 1 too).** The button column grows with the "Next: <chapter title>" text, and the
+  bottom row is already about 1220 px wide without it. "Next: Day 7: Captain Marina Gale  [N]" pushes the paper off
+  the right edge (seen in the Day 6 screenshots); "Next: Day 2: Bonnie Bunsworth  [N]" on Day 1 is nearly as long.
+  Suggested fix in `daily_decibel.gd`: give the column a fixed width and set `clip_text = true` with
+  `text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS` on the Next button, or label it "Next: Day %d  [N]".
+  The pause corner button also covers the end of "Weather: 100% chance of beeps".
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
   `"Do-over"`) and `medal_beats`; when present they win over the per-chapter tables. Already wired, listed
   here so it isn't undone at merge.

@@ -321,7 +321,8 @@ func _history() -> void:
 		await _say_all(speaker, rf["answer"])
 	clinic.call("hoot_emote", &"nod")
 	hud.call("add_clue", String(rf["card"]), String(rf.get("card_kind", "clue")))
-	_add_clue(String(rf["tag"]), String(rf["clue"]), String(rf.get("card_kind", "clue")), "flag")
+	# the case-file card can differ from the HUD summary: Dash's "No pain or drainage" is not itself a flag
+	_add_clue(String(rf["tag"]), String(rf["clue"]), String(rf.get("clue_kind", rf.get("card_kind", "clue"))), "flag")
 	for ex: Variant in rf.get("extra_clues", []):
 		var exd: Dictionary = ex
 		_add_clue(String(exd.get("tag", "")), String(exd["text"]), String(exd.get("kind", "clue")), "flag")

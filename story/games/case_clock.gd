@@ -10,7 +10,7 @@ extends Control
 ##   k.hours()           # hours since onset right now
 
 const UiKit := preload("res://story/ui_kit.gd")
-const BOX := Rect2(1064, 8, 204, 74)
+const BOX := Rect2(1008, 8, 204, 74)   # ends 10 px left of the pause menu's corner button (x 1222)
 
 var onset_h := 0.0
 var _real_s := 0.0

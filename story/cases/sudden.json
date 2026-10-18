@@ -51,6 +51,7 @@
 		"clue": "No pain or drainage",
 		"card": "Sudden, one ear, yesterday: YES. Dizzy too.\nSee a doctor. How soon? You decide.",
 		"card_kind": "flag",
+		"clue_kind": "clue",
 		"extra_clues": [
 			{"tag": "dizzy", "text": "Wobbly yesterday: dizziness", "kind": "flag"}
 		]
