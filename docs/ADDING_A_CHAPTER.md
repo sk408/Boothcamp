@@ -112,9 +112,8 @@ need to edit the shared stage or player: everything below lives in your chapter'
      const SETS: Array[StringName] = [&"drum"]
 
      func _set_drum() -> void:   # a pure function of t: no tweens, nodes or RNG
-     	var wob := sin(t * 9.0) * 12.0 * _k(1.0, 2.0)
-     	s._head_open(1.0)
-     	s.draw_circle(Vector2(300, 300) + Vector2(wob, 0), 40.0, Stage2D.SKULL)
+     	var wob := sin(t * 9.0) * 12.0 * _k(1.0, 2.0)   # starts wobbling between 1 and 2 s
+     	s._circ(Vector2(440, 250) + Vector2(wob, 0), 70.0, Stage2D.SKULL)   # the eardrum, chunky ink outline
      	s._chip(String(params.get("word", "wobble!")), Vector2(440, 80), Stage2D.GOLD, 26, Stage2D.INK, _pop(0.5))
      ```
      The stage hands every set it does not know to this script, inside its own `_draw()`: you get the same `t`,

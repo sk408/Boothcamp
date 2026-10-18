@@ -14,8 +14,9 @@ extends Node
 ## each icon, and the fallback for an unknown set: explainer_card_*), --reduced-motion (the setting
 ## on, for this run only), --extra-movie=res://path/movie.gd[,...] (register more movie files for
 ## this run, e.g. res://tests/fixtures/fake_movie.gd with its own sets script; then --movie=<its id>),
-## --list (only the "Hoot's Movies" list with five made-up movies: shoot it (explainer_movie_list),
-## Down x4 (explainer_movie_list_down, scrolled), Enter plays the fifth, Esc, the list back
+## --list (only the "Hoot's Movies" list with five made-up movies on two days; the Day 2 menu lists
+## Day 2's: masking and three fakes): shoot it (explainer_movie_list), Down x4
+## (explainer_movie_list_down), Enter plays the last row, Esc, the list back
 ## (explainer_movie_list_back); prints EXPLAINER_LIST {...}).
 ## Add --speed=2 to halve the wait.
 ## The first shot of a scene is named explainer_<id>_<NN>_<scene> (CONTRACTS.md §7.3); extra ones
