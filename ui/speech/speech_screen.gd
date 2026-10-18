@@ -632,7 +632,8 @@ func _toggle_mask() -> void:
 	_refresh()
 
 
-## Speech noise in the other ear at level - 20 while MASK is on (SpeechVoice only, never loud).
+## Speech noise in the other ear at session.mask_level() (level - 20, plus that ear's air-bone gap)
+## while MASK is on (SpeechVoice only, never loud).
 func _sync_noise() -> void:
 	if session == null:
 		return

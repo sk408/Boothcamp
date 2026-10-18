@@ -71,7 +71,7 @@ var ear: String = "right"
 ## The level dial (dB HL).
 var db: int = 50
 var transducer: StringName = &"phones"
-## Speech noise in the other ear (it tracks the level: level - 20).
+## Speech noise in the other ear (it tracks the level: level - 20, plus the other ear's air-bone gap).
 var mask_on: bool = false
 var list_id: String = "spondee_a"
 ## The AudiOtron's results (§5.1) this visit: the PTA and the masking rule come from them.
@@ -175,8 +175,10 @@ func recommended_start(e: String = "") -> int:
 	return SpeechRules.srt_start(pta_for(ear if e == "" else e))
 
 
+## Speech noise in the other ear (dB EM; -1 = off): level - 20 plus that ear's largest air-bone gap
+## from the tone results (0 without bone results: the air-only stand-in).
 func mask_level() -> int:
-	return SpeechRules.speech_mask_level(db) if mask_on else -1
+	return SpeechRules.speech_mask_level(db, SpeechRules.nontest_largest_abg(tone_results, ear)) if mask_on else -1
 
 
 func masking_needed_here(level: int = -999) -> bool:

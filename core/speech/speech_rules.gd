@@ -245,21 +245,42 @@ static func srt_pta_diff(srt: int, pta: float) -> int:
 
 const SPEECH_IA_DB: Dictionary[StringName, int] = {&"phones": 40, &"inserts": 55}
 const SPEECH_MASK_BELOW_DB := 20   ## speech noise at the presentation level minus 20 (rule of thumb)
+## The air-bone gap that lifts the speech noise is the non-test ear's largest over these.
+const SPEECH_ABG_FREQS: Array[int] = [500, 1000, 2000, 4000]
 
 
 ## Does speech at `level` in the test ear risk crossing to the other ear? `nontest_best` is the
 ## other ear's best bone threshold (or best air when no bone was measured) over 500-4000 Hz.
+## Without bone results the rule uses air only: a temporary stand-in (docs/SPEECH.md §3).
 static func speech_masking_needed(level: int, nontest_best: float, transducer: StringName = &"phones") -> bool:
 	if is_nan(nontest_best):
 		return false
 	return float(level - int(SPEECH_IA_DB.get(transducer, 40))) >= nontest_best
 
 
-static func speech_mask_level(level: int) -> int:
-	return clampi(level - SPEECH_MASK_BELOW_DB, ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+## Speech noise (dB EM) for the other ear: the presentation level minus 20, plus the non-test ear's
+## largest air-bone gap (`nontest_abg`, nontest_largest_abg(); 0 = no gap, or no bone measured),
+## since a gap there needs that much more noise to reach its cochlea. Clamped to the masker's range.
+## Without bone results the rule uses air only (no gap): a temporary stand-in.
+static func speech_mask_level(level: int, nontest_abg: int = 0) -> int:
+	return clampi(level - SPEECH_MASK_BELOW_DB + maxi(0, nontest_abg), ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+
+
+## The other ear's largest air-bone gap (best air minus best bone, masked where measured) over
+## SPEECH_ABG_FREQS, from tone results §5.1. 0 when no bone was measured there (or no gap).
+static func nontest_largest_abg(tone_results: Dictionary, test_ear: String) -> int:
+	var other := "left" if test_ear == "right" else "right"
+	var ac := ClinicRules.best_thresholds(tone_results, other, false)
+	var bc := ClinicRules.best_thresholds(tone_results, other, true)
+	var gap := 0
+	for f: int in SPEECH_ABG_FREQS:
+		if ac.has(f) and bc.has(f):
+			gap = maxi(gap, ClinicRules.air_bone_gap(int(ac[f]), int(bc[f])))
+	return gap
 
 
 ## The other ear's best bone (bone sheets) or else best air over 500-4000 Hz, from tone results §5.1.
+## (The air-only fallback is a temporary stand-in until the speech days measure bone.)
 static func nontest_best_threshold(tone_results: Dictionary, test_ear: String) -> float:
 	var other := "left" if test_ear == "right" else "right"
 	var best := INF
