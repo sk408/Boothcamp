@@ -105,6 +105,24 @@ signal masker_changed(ear: String, freq: int, db: int, on: bool)
 ## &"inserts" or &"bone". ear = the test ear.
 signal transducer_changed(transducer: StringName, ear: String)
 
+# ---------------------------------------------------------------- speech (Days 3-5, the SPEECH screen emits; CONTRACTS.md §9)
+
+## The SPEECH screen began testing one ear. test: &"srt" (later &"wrs", &"sin"). It is NOT the
+## AudiOtron: it never emits audiometry_started and never registers as Stage.audiometer.
+signal speech_started(patient_id: String, ear: String, test: StringName, coached: bool)
+## A word began playing (the TALK lamp). item = {id, text, ...} from SpeechMaterial; db = dial level.
+signal speech_presented(ear: String, test: StringName, db: int, item: Dictionary)
+## The patient's answer appeared. answer = {said, kind: &"correct" | &"half" | &"wrong" | &"silence"}.
+signal speech_response(ear: String, test: StringName, db: int, answer: Dictionary)
+## The player scored the word. correct = what the player clicked; right = whether that matched.
+signal speech_scored(ear: String, test: StringName, db: int, correct: bool, right: bool)
+## A measurement was stored. sheet: CONTRACTS.md §9.5.
+signal speech_stored(ear: String, test: StringName, sheet: Dictionary)
+## Any change of the SPEECH screen's controls or progress. state shape: CONTRACTS.md §9.4.
+signal speech_state_changed(state: Dictionary)
+## Mirror of SpeechScreen.test_finished. results: the merged visit results (§9.5).
+signal speech_finished(results: Dictionary)
+
 # ---------------------------------------------------------------- world (story/ui emit, world listens)
 
 ## Ask the visible patient to react. kinds: CONTRACTS.md §6.2 (Clinic.REACTIONS).

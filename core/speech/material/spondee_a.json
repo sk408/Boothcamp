@@ -1,0 +1,25 @@
+{
+	"id": "spondee_a",
+	"title": "Spondee list A",
+	"kind": "spondee",
+	"original": true,
+	"note": "Written for Booth Camp. Everyday two-part words, not taken from any published speech test.",
+	"items": [
+		{"id": "cupcake", "text": "cupcake", "parts": ["cup", "cake"], "mishears": ["pup cake", "cup... lake?"]},
+		{"id": "rainbow", "text": "rainbow", "parts": ["rain", "bow"], "mishears": ["train toe", "rain... crow?"]},
+		{"id": "snowman", "text": "snowman", "parts": ["snow", "man"], "mishears": ["slow man", "snow pan"]},
+		{"id": "popcorn", "text": "popcorn", "parts": ["pop", "corn"], "mishears": ["hop corn", "top horn"]},
+		{"id": "moonlight", "text": "moonlight", "parts": ["moon", "light"], "mishears": ["spoon fight", "moon bite"]},
+		{"id": "goldfish", "text": "goldfish", "parts": ["gold", "fish"], "mishears": ["cold dish", "old fish"]},
+		{"id": "bathtub", "text": "bathtub", "parts": ["bath", "tub"], "mishears": ["half tub", "bath club"]},
+		{"id": "doorbell", "text": "doorbell", "parts": ["door", "bell"], "mishears": ["four bells", "more smell"]},
+		{"id": "seashell", "text": "seashell", "parts": ["sea", "shell"], "mishears": ["tea shell", "free smell"]},
+		{"id": "milkshake", "text": "milkshake", "parts": ["milk", "shake"], "mishears": ["silk snake", "milk cake"]},
+		{"id": "raincoat", "text": "raincoat", "parts": ["rain", "coat"], "mishears": ["train goat", "rain boat"]},
+		{"id": "windmill", "text": "windmill", "parts": ["wind", "mill"], "mishears": ["wind... bill?", "pinwheel"]},
+		{"id": "beehive", "text": "beehive", "parts": ["bee", "hive"], "mishears": ["free five", "bee dive"]},
+		{"id": "hairbrush", "text": "hairbrush", "parts": ["hair", "brush"], "mishears": ["bear rush", "hair crush"]},
+		{"id": "teapot", "text": "teapot", "parts": ["tea", "pot"], "mishears": ["key spot", "tea dot"]},
+		{"id": "sandbox", "text": "sandbox", "parts": ["sand", "box"], "mishears": ["hand socks", "band box"]}
+	]
+}

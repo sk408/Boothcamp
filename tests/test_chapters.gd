@@ -28,9 +28,13 @@ func after_each() -> void:
 
 
 func test_registry() -> void:
-	assert_eq(Game.chapters().size(), 2)
+	# Days 1-2, then the speech days (3+); later chapters may add more
+	assert_true(Game.chapters().size() >= 3)
 	var d1 := Game.chapter_for_day(1)
 	var d2 := Game.chapter_for_day(2)
+	var d3 := Game.chapter_for_day(3)
+	assert_eq(d3["id"], "mike")
+	assert_eq(d3["requires"], "bonnie", "speech follows Day 2 (the suggested order)")
 	assert_eq(d1["id"], "gus")
 	assert_eq(d2["id"], "bonnie")
 	assert_eq(d1["title"], "Day 1: Grandpa Gus")
@@ -41,6 +45,8 @@ func test_registry() -> void:
 	assert_eq(Game.chapter_for_patient("bonnie")["day"], 2)
 	for p: StringName in [&"chapter_select", &"bc_placement", &"masking", &"referral"]:
 		assert_has(Game.PHASES, p, "v3 phase")
+	for p: StringName in [&"familiarize", &"speech"]:
+		assert_has(Game.PHASES, p, "speech phase")
 
 
 func test_day2_unlocks_after_day1() -> void:
@@ -78,7 +84,10 @@ func test_unlock_all_days_toggle() -> void:
 	assert_has(Game.DEFAULT_SETTINGS, "unlock_all_days")
 	Game.set_setting("unlock_all_days", true)
 	assert_true(Game.is_chapter_unlocked("bonnie"), "career-fair toggle opens every day")
-	assert_eq(Game.unlocked_chapter_ids(), ["gus", "bonnie"] as Array[String])
+	var all: Array[String] = []
+	for c: Dictionary in Game.chapters():
+		all.append(String(c["id"]))
+	assert_eq(Game.unlocked_chapter_ids(), all)
 	Game.set_setting("unlock_all_days", false)
 	assert_false(Game.is_chapter_unlocked("bonnie"))
 

@@ -50,6 +50,18 @@ extends Resource
 ## Tinnitus pitch (Hz) or 0 for none. Near this frequency, steady tones are confused.
 @export var tinnitus_hz: int = 0
 
+@export_group("Speech (Days 3-5, CONTRACTS.md §9.1)")
+## Speech truth for SpeechSim. Every key is optional; anything missing comes from the audiogram.
+##   "srt": {"right": 30, "left": 30}            true SRT (dB HL)
+##   "srt_offset": {"right": 0, "left": 0}       added to the PTA-based SRT when "srt" is missing
+##   "half_words": 0.15                          share of SRT misses given as half a word
+##   "wrs_max": {"right": 96, "left": 60}        word score (%) once speech is loud enough
+##   "rollover": {"left": {"after": 70, "drop_per_10db": 12}}   scores fall above this level
+##   "neural": {"left": true}                    words smear at random, whatever the audiogram
+##   "snr_loss": 6.0                             speech-in-babble SNR loss (dB)
+##   "directional_benefit": 4.0                  dB directional microphones win back
+@export var speech: Dictionary = {}
+
 @export_group("Story")
 @export var tags: PackedStringArray = []
 ## "he", "she" or "they": fills the {he} {He} {his} {His} {him} tokens in coach and tip texts.
@@ -57,6 +69,9 @@ extends Resource
 ## What Hoot and the speech bubbles call the patient ("Gus"). Empty = first word of display_name.
 @export var nickname: String = ""
 
+
+## (Speech, §9.1) The keys `speech` may hold.
+const SPEECH_KEYS: PackedStringArray = ["srt", "srt_offset", "half_words", "wrs_max", "rollover", "neural", "snr_loss", "directional_benefit"]
 
 const _PRONOUNS := {
 	"he": {"he": "he", "He": "He", "his": "his", "His": "His", "him": "him"},
@@ -146,6 +161,17 @@ func get_ia(transducer: StringName) -> int:
 	return ia_phones_db
 
 
+## (Speech, §9.1) One speech value: speech[key][ear] when an ear is given and the value is a
+## per-ear dictionary, else speech[key]; `default_value` when missing.
+func speech_value(key: String, ear: String = "", default_value: Variant = null) -> Variant:
+	if not speech.has(key):
+		return default_value
+	var v: Variant = speech[key]
+	if ear != "" and v is Dictionary:
+		return (v as Dictionary).get(ear, default_value)
+	return v
+
+
 ## Problems with this profile (empty = valid). Used by tests.
 func validate() -> PackedStringArray:
 	var out := PackedStringArray()
@@ -173,4 +199,12 @@ func validate() -> PackedStringArray:
 				out.append("%s bone %d Hz poorer than air" % [ear, f])
 	if reaction_time_min_s > reaction_time_max_s:
 		out.append("reaction_time_min_s > reaction_time_max_s")
+	for k: Variant in speech:
+		if not SPEECH_KEYS.has(String(k)):
+			out.append("unknown speech key %s" % k)
+	var srt: Variant = speech.get("srt", {})
+	if srt is Dictionary:
+		for e: Variant in srt:
+			if not ClinicRules.EARS.has(String(e)) or int(srt[e]) < ClinicRules.MIN_DB or int(srt[e]) > 120:
+				out.append("speech srt %s out of range" % e)
 	return out

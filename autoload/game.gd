@@ -17,6 +17,8 @@ const PHASES: Array[StringName] = [
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
 	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
 	&"chapter_select", &"bc_placement", &"masking", &"referral",
+	# Speech (Days 3-5): go through the word list with the patient, then the SPEECH screen
+	&"familiarize", &"speech",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -27,6 +29,9 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_gus.tscn", "requires": ""},
 	{"id": "bonnie", "day": 2, "title": "Day 2: Bonnie Bunsworth", "patient_id": "bonnie", "teaches": "Bone conduction + masking",
 		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
+	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
+	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech reception (SRT)",
+		"scene": "res://story/level_mike.tscn", "requires": "bonnie"},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
