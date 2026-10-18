@@ -181,7 +181,7 @@ func test_coached_bone_route_lesson() -> void:
 	assert_eq(screen.session.recommended_action()["action"], &"transducer")
 	var line: Array = screen._coach_text(screen.session.recommended_action())
 	assert_true(String(line[0]).begins_with("Bone time!"), String(line[0]))
-	assert_eq(String(line[1]), "transducer_button")
+	assert_eq(String(line[1]), "transducer_bone_button")
 	screen.session.set_transducer(&"bone")
 	assert_eq(screen.get_state()["test"], &"bc")
 	# once bone stamps exist, a coached bone plan does not repeat the lesson
@@ -261,8 +261,9 @@ func test_noise_curtain_leak_and_lcd() -> void:
 	assert_eq(left_card.audiogram.masker_view, {})
 
 
-## An unmasked bone beep heard by the LEFT cochlea flies the Cross-Hearing Ghost (the player's
-## turn); the plateau's end pops FLAT LINE!.
+## An unmasked bone beep heard by the LEFT cochlea: before any bone mark only a "boo?" chip; once
+## a bone mark sits next to the air mark the Cross-Hearing Ghost flies (the player's turn); the
+## plateau's end pops FLAT LINE!.
 func test_ghost_and_flat_line() -> void:
 	var screen := _screen()
 	await wait_frames(2)
@@ -278,8 +279,15 @@ func test_ghost_and_flat_line() -> void:
 	_tick(s, 2.0)
 	assert_true(screen._fx._ghost.is_empty())
 	_present(screen)
+	assert_true(screen._fx._ghost.is_empty(), "no bone mark yet: only a small boo? chip")
+	# one bone stamp, then the same beep again: now the Ghost flies with bone vs air
+	_play(screen, "right", 1)
+	s.set_freq(1000)
+	s.set_level(30)
+	_tick(s, 2.0)
+	_present(screen)
 	assert_false(screen._fx._ghost.is_empty(), "the Ghost flies")
-	assert_eq(String(screen._fx._ghost["text"]), "BOO!")
+	assert_true(String(screen._fx._ghost["text"]).ends_with("BOO!"), String(screen._fx._ghost.get("text", "")))
 	assert_true(String(screen._fx._ghost["sub"]).contains("LEFT"))
 	assert_true(screen._fx.busy())
 	await wait_seconds(2.3)

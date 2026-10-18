@@ -59,7 +59,7 @@ const TIPS: Dictionary[StringName, String] = {
 	&"mask_wrong_step": "Masked dance: heard? Noise up 5. Missed? Tone up 5. Nothing else moves!",
 	&"mask_too_low": "Start the noise at the other ear's air threshold + 10, plus occlusion for low bone.",
 	&"mask_start": "Begin the masked search at the unmasked threshold, with the noise at its starting level.",
-	&"overmasked": "Too much noise! It leaks back and drowns the test ear too. That's overmasking.",
+	&"overmasked": "Past the safe limit! This much noise could cross back and mask the test ear too.",
 	&"store_no_plateau": "No plateau yet! Store once the answer survives three noise raises in a row.",
 	&"cross_hearing": "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!",
 	&"undermasked": "The Ghost answered! Not enough noise yet: heard means noise up 5.",
@@ -86,12 +86,14 @@ const MASK_DIAL_START_DB := 10
 const MASK_PAR_SLACK := 2
 ## (v3) A masked search may start this far from the unmasked threshold.
 const MASK_START_TOLERANCE_DB := 10
-## (v3) Plateau grace for accuracy. A plateau needs the same level heard four times in a row (at the
-## start level and after 3 noise raises); right at threshold a real patient answers about 3 times in
-## 4, so a by-the-book plateau lands 5 dB above the cochlear threshold about two times in three, and
-## after a wobble one more step up. That is the method, not a slip: a masked stamp above the truth
-## gets this much extra room before the usual test-retest tolerance (true_db unchanged).
-const MASKED_GRACE_DB := 5
+## (v3) Plateau grace for accuracy: a masked stamp ABOVE the truth gets this much extra room before
+## the usual test-retest tolerance (true_db unchanged). (Polish) 0: the simulator now calibrates
+## masked answers instead (PatientSim.MASKED_BIAS_DB), so a by-the-book plateau lands on the
+## profile threshold most of the time and masked stamps are scored like unmasked ones.
+const MASKED_GRACE_DB := 0
+## (Polish) Hoot's montage (instant_measure): varied silent gaps and tone lengths, never a rhythm.
+const INSTANT_GAPS: Array[float] = [0.9, 1.6, 1.2, 2.0, 1.0, 1.8, 1.4, 2.2]
+const INSTANT_DURATIONS: Array[float] = [1.3, 1.6, 1.2, 1.5, 1.7, 1.4]
 
 var patient: PatientProfile
 var sim: PatientSim
@@ -166,6 +168,9 @@ var plan: Dictionary = {}
 var _sheets: Dictionary = {}        ## test -> {stored, retest, order, open, archive}
 var _bc_freqs: Array[int] = []      ## plan "bc_freqs": required unmasked bone frequencies
 var _overmask_hit: Dictionary = {}  ## measurement key -> true once overmasking was flagged
+## (Polish) Ears whose 1 kHz air retest is not required (Day 2: Hoot skips it, Day 1 taught it).
+var retest_waived: Dictionary = {}
+var _instant_n := 0
 
 
 func _init(p: PatientProfile, seed_value: int = 0) -> void:
@@ -485,7 +490,7 @@ func store() -> Dictionary:
 	var st: Dictionary = stored[ear]
 	if test == &"ac" and kind == &"first" and st.is_empty() and freq != ClinicRules.START_FREQ:
 		errs.append(&"start_not_1k")
-	if test == &"ac" and kind == &"first" and (freq == 500 or freq == 250) and st.has(1000) and (retest[ear] as Dictionary).is_empty():
+	if test == &"ac" and kind == &"first" and (freq == 500 or freq == 250) and st.has(1000) and (retest[ear] as Dictionary).is_empty() and not retest_waived.has(ear):
 		errs.append(&"missed_retest")
 	if kind == &"retest":
 		var diff := absi(db - int(st[1000]["stored_db"]))
@@ -514,6 +519,50 @@ func store_no_response() -> Dictionary:
 	var info := _make_info(recs, errs, true, measurement_kind(ear, freq), null)
 	_finish_store(info, errs)
 	return info
+
+
+## (Polish) Hoot's montage ("I did her left while you chatted"): the whole textbook measurement at
+## (e, f) on the current sheet in no time. It follows recommended_action() like Hoot's x8 turn,
+## and the patient simulator answers every tone (varied gaps and lengths, no audio, no clock for
+## the player), then the threshold is stored. Only while scoring is off (Hoot's holes, never the
+## player's). Returns the store info, {} if nothing was stored.
+func instant_measure(e: String, f: int) -> Dictionary:
+	if tone_on or scoring:
+		return {}
+	set_ear(e)
+	if freq != f and not set_freq(f):
+		return {}
+	var guard := 0
+	while guard < 80:
+		guard += 1
+		var a := recommended_action()
+		match a["action"]:
+			&"store":
+				return store()
+			&"no_response":
+				return store_no_response()
+			&"louder", &"softer":
+				set_level(int(a["target_db"]))
+			&"mask_louder", &"mask_softer":
+				set_mask_level(int(a.get("target_mask", mask_db)))
+			&"transducer":
+				set_transducer(StringName(a.get("target", &"bone")))
+			&"mask_toggle":
+				toggle_mask()
+			&"wait":
+				advance(0.25)
+			&"present":
+				advance(INSTANT_GAPS[_instant_n % INSTANT_GAPS.size()])
+				tone_down()
+				advance(INSTANT_DURATIONS[_instant_n % INSTANT_DURATIONS.size()])
+				tone_up()
+				advance(ClinicRules.RESPONSE_WINDOW_S + 0.05)
+				_instant_n += 1
+			_:
+				return {}
+		if freq != f or ear != e:
+			return {}
+	return {}
 
 
 # ---------------------------------------------------------------- queries
@@ -567,7 +616,7 @@ func measurement_kind(e: String, f: int) -> StringName:
 	var st: Dictionary = stored[e]
 	if not st.has(f):
 		return &"first"
-	if test == &"ac" and f == ClinicRules.START_FREQ and (retest[e] as Dictionary).is_empty() and (order[e] as Array).size() >= 2:
+	if test == &"ac" and f == ClinicRules.START_FREQ and (retest[e] as Dictionary).is_empty() and (order[e] as Array).size() >= 2 and not retest_waived.has(e):
 		return &"retest"
 	return &"redo"
 
@@ -891,12 +940,20 @@ func par_for(e: String, f: int) -> int:
 ## air: the ear's air threshold (Chapter 1); unmasked bone: the BETTER cochlea's answer (bone
 ## crosses the head for free, so an unmasked bone stamp at the other cochlea's level is right);
 ## masked air / bone: the test ear's own air / bone threshold.
+## (Polish) Unmasked air uses the cross-hearing model too (a dead ear's "shadow curve" is what an
+## accurate unmasked tester records), always for the ear asked for: Day 1's swapped-earphones gag
+## still scores against the requested ear. For Gus and Bonnie this is the ear's own air threshold.
 func response_truth(e: String, f: int) -> int:
 	match test:
 		&"bc":
 			return int(sim.condition_for(e, f, &"bone", -1, air_transducer)["threshold"])
 		&"bc_masked":
 			return patient.get_bc_threshold(e, f)
+		&"ac":
+			var o := other_ear(e)
+			var ia := patient.get_ia(air_transducer)
+			return int(ClinicRules.response_threshold(patient.get_threshold(e, f), patient.get_bc_threshold(e, f),
+				patient.get_threshold(o, f), patient.get_bc_threshold(o, f), false, -1, ia, ia, 0)["threshold"])
 	return patient.get_threshold(e, f)
 
 
@@ -1019,7 +1076,7 @@ func required_remaining(e: String, t: StringName = &"") -> Array[int]:
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
-	if st.has(1000) and rt.is_empty():
+	if st.has(1000) and rt.is_empty() and not retest_waived.has(e):
 		rem.append(1000)
 	for f: int in [750, 500, 250]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
@@ -1061,7 +1118,7 @@ func ear_progress(e: String, t: StringName = &"") -> Array[int]:
 		return [d, req.size()]
 	var rt: Dictionary = (sh["retest"] as Dictionary)[e]
 	var rem := required_remaining(e, g).size()
-	if not st.has(1000) and rt.is_empty():
+	if not st.has(1000) and rt.is_empty() and not retest_waived.has(e):
 		rem += 1  # the 1k retest is still ahead (required_remaining lists it once 1k is stored)
 	var done := st.size() + (0 if rt.is_empty() else 1)
 	return [done, done + rem]

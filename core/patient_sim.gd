@@ -25,6 +25,17 @@ extends RefCounted
 ## point sits 2 dB lower: a by-the-book search then finds the profile value ~80 % of the time,
 ## and 5 dB either side (normal test-retest) otherwise. (Integrator, CONTRACTS.md §4.8.)
 const THRESHOLD_BIAS_DB := 2.0
+## (Polish) The same kind of calibration for masked tones (masker on). A plateau needs FOUR "yes"
+## answers in a row at one level (the start and 3 noise raises), not 2 of 3. With the unmasked
+## curve a by-the-book plateau landed 5 dB above the profile threshold about 6 times in 10, so
+## masked air came out poorer than unmasked air. Under noise the patient is steadier: the 50 %
+## point sits MASKED_BIAS_DB below the threshold, the curve is steeper (MASKED_SLOPE_SCALE) and
+## there are no lapses. A textbook plateau then lands on the profile value ~80 % of the time
+## (masked air matches the unmasked stamp ~85 %), checked in core/tests. Not central masking,
+## which is not modelled.
+const MASKED_BIAS_DB := 4.0
+const MASKED_SLOPE_SCALE := 0.7
+const MASKED_LAPSE_SCALE := 0.0
 ## Inattention only matters within this many dB above threshold: loud tones are always noticed.
 const NEAR_RANGE_DB := 12.0
 ## How much of (1 - attention) turns into missed tones right at threshold.
@@ -70,6 +81,10 @@ var masker_transducer: StringName = &"phones"
 ## Which cochlea heard the last tone (on_tone_start): &"test", &"cross" (the Cross-Hearing
 ## Ghost) or &"" when it was not heard. Truth: for reactions only, never for the player or bot.
 var last_heard_by: StringName = &""
+## (Polish) The masked calibration (see MASKED_BIAS_DB); vars so tests can compare settings.
+var masked_bias_db: float = MASKED_BIAS_DB
+var masked_slope_scale: float = MASKED_SLOPE_SCALE
+var masked_lapse_scale: float = MASKED_LAPSE_SCALE
 
 var _gaps: Array[float] = []
 
@@ -114,9 +129,13 @@ func hear_probability(ear: String, freq: int, db: int, penalty_db: float = 0.0) 
 	var thr := float(effective_threshold(ear, freq))
 	var level := float(db) - penalty_db
 	var slope := maxf(0.5, profile.psychometric_slope_db)
-	var p := 1.0 / (1.0 + exp(-(level - thr + THRESHOLD_BIAS_DB) / slope))
+	var masked := masker_db >= 0
+	var bias := masked_bias_db if masked else THRESHOLD_BIAS_DB
+	if masked:
+		slope *= masked_slope_scale
+	var p := 1.0 / (1.0 + exp(-(level - thr + bias) / slope))
 	var near := clampf(1.0 - (level - thr) / NEAR_RANGE_DB, 0.0, 1.0)
-	var lapse := (1.0 - attention) * LAPSE_SCALE * near
+	var lapse := (1.0 - attention) * (masked_lapse_scale if masked else LAPSE_SCALE) * near
 	p *= 1.0 - lapse
 	if cross_hearing.is_valid():
 		p = maxf(p, float(cross_hearing.call(ear, freq, db)))

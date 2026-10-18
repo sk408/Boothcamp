@@ -167,3 +167,12 @@ func test_title_day_picker() -> void:
 	assert_eq(String(day2.get_meta("label", "")), "Day 2: Bonnie Bunsworth")
 	title.call("_days_back")
 	assert_eq(title.get("_state"), &"menu")
+
+
+## (polish) A day you finished stays open even when its prerequisite is not on the save.
+func test_done_chapter_stays_unlocked() -> void:
+	Game.reset_save()
+	assert_false(Game.is_chapter_unlocked("bonnie"))
+	(Game.progress["chapters_done"] as Array).append("bonnie")
+	assert_true(Game.is_chapter_unlocked("bonnie"))
+	Game.reset_save()

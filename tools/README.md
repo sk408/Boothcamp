@@ -23,6 +23,7 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` (Day 2's five tests and the masking keys: add `--day=2`) | ~10 s (Day 2 ~20 s) |
 | **(v3)** Day 2 set pieces without playing (bone placement with a wrong spot, the oscillator on Bonnie, the board's reveal, bridge and stamp on made-up results) | `tools/scene_shot.sh res://story/dev_day2.tscn /abs/out/dir "60" 30` (the scene takes its own shots) | ~2 min |
 | Play the full visit without Hoot's quick-visit turn (or force it with `--quick`) | add `--full` after `--` | |
+| **(polish)** Own shop items for the run (Day 2 with insert earphones: no masked air needed, the level skips it) | `tools/autoplay_check.sh --day=2 --upgrades=insert_earphones` | ~25 s |
 | Boot one scene and take timed screenshots | `tools/scene_shot.sh res://world/clinic.tscn /abs/out/dir "1,3.5"` | ~20 s |
 | Windows build: `build/BoothCamp.exe` with the PCK embedded, plus `build/BoothCamp-win64.zip` (exe, README, font licence) | `tools/export_win.sh` (add `--xz` for an .xz too) | ~1 min |
 | Audio-safety movie: record both ears (Movie Maker AVI) and check routing, levels and the -12 dBFS ceiling per tone | `tools/movie_check.sh /abs/out/dir` | ~5 min |
@@ -67,8 +68,8 @@ Exit codes:
 | 0 | ok |
 | 2 | stalled: no progress for 120 game seconds; a `stuck_<phase>.png` shot is taken |
 | 3 | overall timeout |
-| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k and masked air present |
-| 5 | script errors were logged during the run |
+| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k, and masked air at every frequency the rules ask for with this air transducer (none with inserts; a masked air stamp where none was needed is a problem too) |
+| 5 | script errors (or, since the polish pass, engine errors and `push_error()`) were logged during the run |
 | 6 | `--mouse` only: a mouse target was not found on screen |
 
 Screenshots are named `NN_<name>.png`:

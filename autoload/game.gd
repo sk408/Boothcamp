@@ -102,6 +102,11 @@ func _ready() -> void:
 		reset_save()
 	else:
 		load_game()
+	# --upgrades=insert_earphones (polish, dev/test runs): own these shop items for this run
+	if cli.has("upgrades"):
+		for id: String in String(cli["upgrades"]).split(",", false):
+			if SHOP_ITEMS.has(id) and not has_upgrade(id):
+				(progress["upgrades"] as Array).append(id)
 	if cli_flag("affinity"):
 		_cli_style_keep = String(settings.get("key_style", "otosuite"))
 		settings["key_style"] = "affinity"
@@ -404,6 +409,7 @@ func finish_visit() -> Dictionary:
 		"audiometry": res,
 		# v3
 		"patient_name": _patient_name(id),
+		"patient_short": _patient_short(id),  # (polish) "Gus", "Bonnie": PatientProfile.short_name()
 		"chapter_id": chapter_id,
 		"day": int(ch.get("day", 0)),
 		"newly_unlocked": newly,
@@ -474,6 +480,8 @@ func is_chapter_unlocked(id: String) -> bool:
 		return false
 	if bool(settings.get("unlock_all_days", false)) or cli_flag("unlock-all") or cli_chapter_id() == id:
 		return true
+	if is_chapter_done(id):
+		return true  # (polish) a day you finished stays open even if its prerequisite was reset
 	var req := String(c.get("requires", ""))
 	return req == "" or is_chapter_done(req)
 
@@ -514,6 +522,11 @@ func next_chapter_id() -> String:
 func _patient_name(id: String) -> String:
 	var p := load_patient(id)
 	return String(p.get("display_name")) if p != null else id
+
+
+func _patient_short(id: String) -> String:
+	var p := load_patient(id)
+	return String(p.call("short_name")) if p != null and p.has_method("short_name") else id.capitalize()
 
 
 func _next_after(id: String) -> String:

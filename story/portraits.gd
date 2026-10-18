@@ -210,7 +210,11 @@ static func _bonnie(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink
 		for k in 3:
 			ci.draw_circle(h + Vector2(hr * (0.42 + 0.1 * k) * s, hr * (0.22 + 0.05 * (k % 2))), maxf(1.2, hr * 0.03), Color("#b0703f"))
 		_eye(ci, e, hr * 0.2, blink)
-		ci.draw_line(e + Vector2(hr * 0.12 * s, -hr * 0.2), e + Vector2(hr * 0.26 * s, -hr * 0.3), INK, 2.5, true)
+		# (polish) lashes flick up and OUT from the outer corner, and a soft arched brow above:
+		# the old single stroke read as a cross eyebrow
+		ci.draw_line(e + Vector2(hr * 0.17 * s, -hr * 0.1), e + Vector2(hr * 0.3 * s, -hr * 0.2), INK, 2.5, true)
+		ci.draw_line(e + Vector2(hr * 0.1 * s, -hr * 0.17), e + Vector2(hr * 0.19 * s, -hr * 0.29), INK, 2.0, true)
+		ci.draw_arc(e + Vector2(0, hr * 0.02), hr * 0.36, -PI * 0.78, -PI * 0.22, 10, hair.darkened(0.2), 3.0, true)
 		_ellipse(ci, h + Vector2(hr * 0.55 * s, hr * 0.35), Vector2(hr * 0.15, hr * 0.08), Color(1, 0.45, 0.45, 0.45))
 	ci.draw_circle(h + Vector2(-hr * 0.5, hr * 0.12), hr * 0.06, Color(1, 1, 1, 0.7))  # a dab of flour
 	_ellipse(ci, h + Vector2(0, hr * 0.15), Vector2(hr * 0.12, hr * 0.1), Color("#dd9670"))

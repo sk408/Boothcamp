@@ -27,7 +27,7 @@ extends Control
 ##                needed here", the masking assistant) and a legend pill appears
 ##   show_gap     the air-bone gap as a bridge: posts from bone up to air with the gap in dB where
 ##                it is over 10 dB (dashed and amber while the bone is unmasked: "suspicious";
-##                solid orange on masked bone), a deck joining the bone marks
+##                solid orange on masked bone), a short cap on each post (bone marks are never joined)
 ##   masker_view  {} or {"freq", "db", "role": &"noise" | &"leak", "hot": bool}: on the masked
 ##                ear's chart a purple noise curtain down to the masker level "[35]"; on the test
 ##                ear's chart the noise leaking back (masker - rule IA), coral when it overmasks
@@ -82,6 +82,13 @@ var masker_view: Dictionary = {}:
 	set(v):
 		if v != masker_view:
 			masker_view = v
+			queue_redraw()
+## (Polish) ear -> alpha 0..1: fade one ear's line and symbols (the Day 2 board's bridge dims the
+## left ear so the eye compares right air with right bone). {} = both at full strength.
+var dim: Dictionary = {}:
+	set(v):
+		if v != dim:
+			dim = v
 			queue_redraw()
 var cursor_freq: int = 1000
 var cursor_db: int = 40
@@ -510,7 +517,8 @@ func _draw_ear(e: String) -> void:
 	_draw_layers(e)
 	if pts.is_empty():
 		return
-	var col := Palette.ear_color(e)
+	var fade_e := float(dim.get(e, 1.0))
+	var col := Color(Palette.ear_color(e), fade_e)
 	var masked_ac := _layer(&"ac_masked", e)
 	# ink splats under freshly stamped symbols
 	for f: int in pts:
@@ -563,8 +571,8 @@ func _draw_ear(e: String) -> void:
 		if blink >= 0.0:
 			_draw_halo(c, blink)
 		var a := 1.0 if blink < 0.0 else 0.3 + 0.7 * blink
-		UiDraw.ear_symbol(self, c + Vector2(1.5, 2.0), e, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a))
-		UiDraw.ear_symbol(self, c, e, s, 4.0, bool(p["no_response"]), Color(col, a))
+		UiDraw.ear_symbol(self, c + Vector2(1.5, 2.0), e, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a * fade_e))
+		UiDraw.ear_symbol(self, c, e, s, 4.0, bool(p["no_response"]), Color(col, a * fade_e))
 
 
 ## (v3) Masked air, unmasked bone and masked bone symbols (no connecting lines for bone).
@@ -572,7 +580,8 @@ func _draw_layers(e: String) -> void:
 	var masked_bc := _layer(&"bc_masked", e)
 	for test: StringName in [&"bc", &"bc_masked", &"ac_masked"]:
 		var pts := _layer(test, e)
-		var col := Palette.ear_color(e)
+		var fade_l := float(dim.get(e, 1.0))
+		var col := Color(Palette.ear_color(e), fade_l)
 		for f: int in pts:
 			if test == &"bc" and masked_bc.has(f):
 				continue  # masked bone replaces unmasked bone at that frequency
@@ -590,8 +599,8 @@ func _draw_layers(e: String) -> void:
 			if blink >= 0.0:
 				_draw_halo(c, blink)
 			var a := 1.0 if blink < 0.0 else 0.3 + 0.7 * blink
-			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a))
-			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]), Color(col, a))
+			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a * fade_l))
+			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]), Color(col, a * fade_l))
 
 
 # ---------------------------------------------------------------- v3 overlays (builder A)
@@ -652,8 +661,6 @@ func _draw_gap(e: String) -> void:
 	var air: Dictionary = points.get(e, {})
 	var fl: Array = bone.keys()
 	fl.sort()
-	var deck := PackedVector2Array()
-	var deck_masked := true
 	for f: int in fl:
 		if not air.has(f) or bool((air[f] as Dictionary)["no_response"]):
 			continue
@@ -680,15 +687,8 @@ func _draw_gap(e: String) -> void:
 		var tr := Rect2(Vector2(x + 6.0, (top.y + bot.y) * 0.5 - 9.0), Vector2(tw, 18.0))
 		AoDraw.rbox(self, tr, Palette.SELECT_ORANGE if masked else Color(Palette.PAPER, 0.95), 8, 0 if masked else 2, col)
 		AoDraw.text_c(self, tr.get_center(), tag, 11, Palette.PAPER if masked else Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
-		deck.append(Vector2(x, db_to_y(b_db) + 10.0))
-		deck_masked = deck_masked and masked
-	if deck.size() >= 2:
-		var col2 := Color(Palette.SELECT_ORANGE, 0.75 if deck_masked else 0.35)
-		for i in deck.size() - 1:
-			if deck_masked:
-				draw_line(deck[i], deck[i + 1], col2, 3.0, true)
-			else:
-				AoDraw.dashed(self, deck[i], deck[i + 1], col2, 2.0, 6.0, 5.0)
+		# (polish) a short cap per post, never a line along the bone marks (bone is never joined)
+		draw_line(top + Vector2(-9.0, 0), top + Vector2(9.0, 0), Color(col, 0.9), 3.0, true)
 
 
 ## The masked ear's chart: a purple noise curtain at the test frequency down to the masker level.

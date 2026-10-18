@@ -257,6 +257,38 @@ func test_daily_decibel_continue_beat() -> void:
 	assert_true(done[0])
 
 
+## (polish) The visit that opens Day 2: a NEW DAY UNLOCKED! stamp, "Next: Day 2" is the big
+## button and the advance key takes it; the patient is called by the short name.
+func test_daily_decibel_new_day_stamp_and_short_name() -> void:
+	Game.reset_save()
+	(Game.progress["chapters_done"] as Array).append("gus")
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var summary := {"patient_id": "gus", "score": 88.0, "grade": "A", "accuracy": 0.9, "technique": 0.9, "efficiency": 0.8,
+		"care": 1.0, "comfort": 3, "medals": {}, "coins_earned": 60, "coins_total": 60, "audiometry": _results(),
+		"patient_name": "Grandpa Gus", "patient_short": "Gus", "chapter_id": "gus", "day": 1,
+		"newly_unlocked": ["bonnie"], "next_chapter_id": "bonnie"}
+	var out := [""]
+	var run := func() -> void:
+		out[0] = await paper.call("show_summary", summary)
+	run.call()
+	await wait_seconds(1.6)
+	var stamp: Control = paper.get("_unlock_stamp")
+	assert_true(stamp != null and stamp.visible, "the unlock stamp shows")
+	var texts: Array[String] = []
+	var next_btn: Button = null
+	for b: Node in paper.find_children("*", "Button", true, false):
+		texts.append((b as Button).text)
+		if (b as Button).text.begins_with("Next: Day 2"):
+			next_btn = b
+	assert_true(next_btn != null, "Next: Day 2 button: %s" % str(texts))
+	assert_eq(next_btn.theme_type_variation, &"AccentButton", "Next is the big button")
+	assert_true(texts.any(func(t: String) -> bool: return t.begins_with("Play Gus again")), "short name: %s" % str(texts))
+	await tap_action(&"advance_dialogue")
+	await wait_frames(2)
+	assert_eq(String(out[0]), "next", "the advance key goes on to Day 2")
+
+
 func test_title_screen_beats() -> void:
 	var t: Node = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
 	add_node(t)

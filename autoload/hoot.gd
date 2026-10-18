@@ -90,6 +90,16 @@ func dismiss(tip_id: int) -> void:
 			_queue.remove_at(i)
 
 
+## (Polish) Remove every tip (current or queued) that points at this anchor, e.g. a "Store it!"
+## that would otherwise pop up after the player already stored.
+func dismiss_target(target: String) -> void:
+	for i in range(_queue.size() - 1, -1, -1):
+		if String(_queue[i]["target"]) == target:
+			_queue.remove_at(i)
+	if not _current.is_empty() and String(_current["target"]) == target:
+		dismiss(int(_current["id"]))
+
+
 func dismiss_current() -> void:
 	if not _current.is_empty():
 		dismiss(int(_current["id"]))

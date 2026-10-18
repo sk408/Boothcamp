@@ -327,7 +327,7 @@ func _build() -> void:
 	var speed := UiKit.button("Normal", &"", Vector2(160, 36))
 	speed.pressed.connect(func() -> void: _cycle_speed(1))
 	_add_row("speed", "Text speed", speed)
-	for pair: Array in [["quick_visit", "Quick visit (Hoot helps with ear 2)"], ["show_key_hints", "Show key hints"], ["reduced_motion", "Reduced motion"], ["no_startle", "Gentle gags (no startle)"], ["fullscreen", "Fullscreen (F11)"], ["unlock_all_days", "Unlock all days (demo)"]]:
+	for pair: Array in [["quick_visit", "Quick visit (Hoot runs the repeats)"], ["show_key_hints", "Show key hints"], ["reduced_motion", "Reduced motion"], ["no_startle", "Gentle gags (no startle)"], ["fullscreen", "Fullscreen (F11)"], ["unlock_all_days", "Unlock all days (demo)"]]:
 		var cb := CheckButton.new()
 		cb.focus_mode = Control.FOCUS_NONE
 		var key: String = pair[0]

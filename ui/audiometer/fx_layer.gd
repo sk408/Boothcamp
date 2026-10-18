@@ -167,7 +167,7 @@ func _process(delta: float) -> void:
 		if gk >= 0.42 and not bool(_ghost["said"]):
 			_ghost["said"] = true
 			var to: Vector2 = _ghost["to"]
-			callout(String(_ghost["text"]), _ghost["at"], Color("#efeaf7"), 44, String(_ghost["sub"]), 5.0, 1.5)
+			callout(String(_ghost["text"]), _ghost["at"], Color("#efeaf7"), 44 if String(_ghost["text"]).length() <= 6 else 32, String(_ghost["sub"]), 5.0, 1.5)
 			stars(to, 8, Palette.PLUM.lightened(0.4))
 		if gk >= 1.0:
 			_ghost = {}

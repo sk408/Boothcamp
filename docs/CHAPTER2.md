@@ -123,7 +123,7 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | AC masking rule | "Air needs masking too: 50 minus 40 reaches her left bone. I'll run it!" |
 | Toll bridge | "That gap is the toll bridge: air pays a toll at the middle ear. Bone drives past." |
 | Type of loss | "Conductive loss! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." |
-| Carhart | "See bone dip at 2k? A Carhart notch: a classic clue for otosclerosis." |
+| Carhart | **(polish)** "See the bone dip at 2k? A Carhart notch: a stiff middle ear fakes a small bone dip. Her cochlea is fine!" |
 | Dilemma (mention only) | "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!" |
 | Takeaway | "Conductive loss with normal bone: refer to ENT. Often very treatable! Stamp it!" |
 
@@ -193,7 +193,7 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 | Full window | heard with the noise at or above the initial level and one more step would overmask: store the held level (a narrow window, no plateau error) | session `window_full` |
 | Masking dilemma | initial masking already at the overmasking limit (mention only) | `masking_dilemma` |
 | Type of loss | normal (air <= 25); conductive (gap > 10 at 2+ of 500-4k, bone average <= 25); mixed (same gaps, poorer bone); sensorineural (no real gap) | `hearing_type` |
-| Carhart notch | bone at 2k at least 10 poorer than both 1k and 4k | `has_carhart_notch` |
+| Carhart notch | **(polish)** bone at 2k at least 10 poorer than the better of 500 and 4k (1k stands in when 500 is missing), at least 5 poorer than 4k (a notch, not a slope) and no better than 1k (the bottom of the dip) | `has_carhart_notch` |
 | Masker range | 0-100 dB EM, 5 dB steps, starts at 10 when switched on | `MASK_MIN_DB`, `MASK_MAX_DB`, `MASK_STEP_DB` |
 
 The simulator (`ClinicRules.response_threshold`, `PatientSim.condition_for`) models all of it: a tone is
@@ -254,8 +254,8 @@ visual gags only. Every masker lights the NOISE box on the LCD and the squiggles
 
 | Action | Keys (default style) | Mouse |
 |---|---|---|
-| bone / air | B (or 8) / A (or 6) | ROUTE button (toggles) |
-| masking on / off | M | MASK button |
+| bone / air | B (or 8) / A (or 6) | **(polish)** the AIR \| BONE switch (two segments; AIR reads INSERT with inserts) |
+| masking on / off | M | **(polish)** the NOISE button (ON / OFF with a lamp) |
 | masking level | PgUp / PgDn, Shift+Up / Shift+Down | NOISE up / down buttons |
 | tone, level, frequency, store, no response | as Day 1 | as Day 1 |
 
@@ -283,4 +283,26 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 3. The plateau needs 3 raises with a response at the same tone level; a single lapse restarts it, so the
    stored masked threshold is often 5 dB above the truth (rarely 15: two unlucky lapses in a row, e.g.
    autoplay seed 4 at 250 Hz). Keep (realistic) or make the sim steadier near threshold?
+   **(polish: answered)** steadier under masking (§15): masked stamps now land on the truth most of the time.
 4. Insert earphones as a Day 2 shop item (55 dB rule IA): good hook for later days?
+
+## 15. Polish pass (after the fun, audiology and bug reviews)
+
+- **Pacing.** Right air: Hoot coaches one beep, then runs the rest with no 1 kHz retest
+  (`skip_hoot_retest`). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
+  visit off the player tests everything. The bone and masking sheets are always the player's.
+- **Masked air after masked bone.** Clinics often mask air first; the level says so in one line. With the
+  insert earphones (55 dB rule IA) Bonnie's right air cannot reach her left cochlea, so the level skips
+  masked air with two Hoot lines, and the AudiOtron finishes an empty goal sheet at once (no soft-lock).
+  `tools/autoplay_check.sh --day=2 --upgrades=insert_earphones` checks that path.
+- **Scoring.** `MASKED_GRACE_DB` is 0. The simulator is calibrated instead (`MASKED_BIAS_DB` 4, slope x0.7, no
+  lapses under masking), so a by-the-book plateau search writes down the profile value about 70-80 % of the
+  time and masked air agrees with unmasked air (answers open question 3). This is a gameplay calibration,
+  not a claim about central masking. The unmasked air truth is the shadow curve (whichever cochlea hears).
+- **Ghost timing.** The big "Bone 10, air 50? BOO!" Ghost waits until a bone mark sits next to an air mark;
+  the first unmasked bone beep gets a small "boo?". The overmasking callout says the noise "could leak into
+  the test ear". A one-time tip names the shadow chase, and the plateau tip then says why pros trust it.
+- **Otosclerosis.** After the referral stamp: extra bone grows around the stapes so it cannot vibrate freely;
+  the ENT confirms; surgery or hearing aids, both can work well. The Carhart line says the cochlea is fine.
+- **Board.** The bridge is drawn per frequency: planks under the bone marks, pillars down to the air marks
+  labelled "toll N dB", the river only between gaps, the bone car hopping plank to plank.

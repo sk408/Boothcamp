@@ -32,8 +32,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   feedback squeal, never a loud sound), bun, and the mastoid. Note: CHAPTER2.md section 6 puts the
   unicorn on the top of the head; it moved to the forehead so the top could be the glasses gag.
 - **Board** (`story/games/day2_board.gd`, story-internal): `run_reveal(results)`, `show_gap()` (the
-  toll bridge: plank deck along the masked bone marks, stone pillars down to the air marks with a dB
-  sign each, a toll booth with a bobbing barrier, and a little dog-bone car driving the deck),
+  toll bridge, polish: one plank per frequency just under each masked bone mark, stone pillars down to
+  the air marks labelled "toll N dB", the river only between gaps (per-segment quads, no self-crossing
+  polygon), the left ear faded to 25 %, a toll booth with a bobbing barrier, and a little dog-bone car
+  hopping plank to plank),
   `set_compact(on)` (shrinks the chart to the top so dialogue choices fit below), `show_type(text)`,
   `show_carhart()` (ring on the 2 kHz bone mark + label), `run_stamp()`. Anchors `reveal_audiogram`,
   `abg_bridge`, `referral_stamp`.

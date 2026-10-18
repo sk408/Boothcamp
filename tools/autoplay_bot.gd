@@ -31,7 +31,8 @@ class ScriptErrorCounter extends Logger:
 	var _m := Mutex.new()
 
 	func _log_error(function: String, file: String, line: int, code: String, rationale: String, _n: bool, error_type: int, _bt: Array[ScriptBacktrace]) -> void:
-		if error_type != Logger.ERROR_TYPE_SCRIPT:
+		# script errors, plus engine errors and push_error() (polish): warnings stay out
+		if error_type != Logger.ERROR_TYPE_SCRIPT and error_type != Logger.ERROR_TYPE_ERROR:
 			return
 		_m.lock()
 		count += 1
@@ -69,7 +70,7 @@ const MOUSE_ANCHORS: Dictionary = {
 	&"no_response": "no_response_button", &"ear_right": "ear_right_button", &"ear_left": "ear_left_button",
 	# v3
 	&"mask_louder": "mask_louder_button", &"mask_softer": "mask_softer_button", &"toggle_mask": "mask_toggle_button",
-	&"transducer_bone": "transducer_button", &"transducer_air": "transducer_button",
+	&"transducer_bone": "transducer_bone_button", &"transducer_air": "transducer_air_button",
 }
 ## (v3) The bot's own stamps per sheet: test -> ear -> freq -> dB (for masked start levels).
 var _mine: Dictionary = {}
@@ -841,8 +842,16 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 		for f: int in [500, 1000, 2000, 4000]:
 			if not (r.get("bc_masked", {}) as Dictionary).has(f):
 				problems.append("right masked bone missing at %d Hz" % f)
-		if (r.get("ac_masked", {}) as Dictionary).is_empty():
-			problems.append("right masked air missing")
+		# masked air only where the rules ask for it with this air transducer (inserts: often none)
+		var tr := &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
+		var need := ClinicRules.masked_freqs_needed(res, "right", &"ac_masked", tr)
+		report["air_transducer"] = String(tr)
+		report["masked_air_needed"] = need
+		for f: int in need:
+			if not (r.get("ac_masked", {}) as Dictionary).has(f):
+				problems.append("right masked air missing at %d Hz" % f)
+		if need.is_empty() and not (r.get("ac_masked", {}) as Dictionary).is_empty():
+			problems.append("right masked air stamped where no masking was needed")
 
 
 func _fail(code: int, why: String) -> void:

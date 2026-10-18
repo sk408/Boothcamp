@@ -241,6 +241,12 @@ func _on_quit() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event.is_pressed():
 		_idle = 0.0
+	# (polish) Esc on the Days card means Back (before the pause menu turns it into Options)
+	if _state == &"days" and event.is_action_pressed(&"ui_cancel") and not event.is_echo():
+		var pm := get_tree().get_first_node_in_group("pause_menu")
+		if pm == null or not bool(pm.call("is_open")):
+			_days_back()
+			get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -299,20 +305,24 @@ func _build() -> void:
 	root.add_child(_logo)
 
 	_menu_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
-	_menu_card.position = Vector2(92, 326)
+	_menu_card.position = Vector2(92, 284)  # (polish) five buttons + stats fit above the footer
 	_menu_card.custom_minimum_size = Vector2(380, 0)
 	root.add_child(_menu_card)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
+	v.add_theme_constant_override("separation", 6)
 	_menu_card.add_child(v)
-	var specs: Array = [["Play", _on_start], ["Days", _on_days], ["Options", _on_options]]
+	# (polish) once you have played, Play says which day it starts
+	var play_txt := "Play"
+	if _has_progress():
+		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Options", _on_options]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
 	specs.append(["Quit", _on_quit])
 	for spec: Array in specs:
-		var b := UiKit.button(spec[0], &"", Vector2(340, 58))
+		var b := UiKit.button(spec[0], &"", Vector2(340, 48))
 		b.set_meta("label", spec[0])
-		b.add_theme_font_size_override("font_size", 26)
+		b.add_theme_font_size_override("font_size", 24)
 		b.pressed.connect(spec[1])
 		var idx := _buttons.size()
 		b.mouse_entered.connect(func() -> void:
@@ -327,7 +337,7 @@ func _build() -> void:
 		v.add_child(hr)
 	var stats := _stats_text()
 	if stats != "":
-		var sl := UiKit.label(stats, 16, Palette.INK_SOFT, 500)
+		var sl := UiKit.label(stats, 15, Palette.INK_SOFT, 500)
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		sl.custom_minimum_size = Vector2(340, 0)

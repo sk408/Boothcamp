@@ -274,6 +274,11 @@ func _air_transducer() -> StringName:
 	return &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
 
 
+## Quick visit as the AudiOtron sees it (the setting, or --quick / --full): Hoot takes turns.
+func _quick() -> bool:
+	return screen != null and bool(screen.get("quick_visit"))
+
+
 func _test(ear: String, coached: bool, plan: Dictionary) -> Dictionary:
 	plan["air_transducer"] = _air_transducer()
 	_phase(&"audiometry", {"ear": ear, "test": String(plan.get("test", "ac"))})
@@ -287,10 +292,16 @@ func _test(ear: String, coached: bool, plan: Dictionary) -> Dictionary:
 func _air() -> void:
 	var cam := _open_screen()
 	hud.call("set_step", &"air")
-	await _test("right", true, {"test": "ac", "hoot_turn_after": 1,
-		"intro": "Air first, like yesterday. Stamp 1k, then I'll whizz through the rest!"})
-	await _test("left", false, {"test": "ac", "hoot_turn_after": 0,
-		"intro": "Left ear: I'll run it at top speed. Watch the stamps fly!"})
+	# a career-fair player may start here (Unlock all days): no "like yesterday"
+	var veteran := Game.is_chapter_done("gus")
+	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "skip_hoot_retest": true, "done_title": "RIGHT AIR DONE!",
+		"intro": "Air first, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
+			else "New trainee? Air first: I'll coach your first beep, then whizz through the rest!",
+		"intro_full": "Air first: her whole right ear is yours. I'll coach the first beep."})
+	# quick visit: the left ear is a few-second montage (Hoot "did it while you chatted")
+	await _test("left", false, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true, "done_title": "LEFT AIR DONE!",
+		"intro": "I did her left while you chatted. Normal! Watch the stamps fly in.",
+		"intro_full": "Left ear: all yours this time! Same dance as the right."})
 	hud.call("complete_step", &"air")
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
@@ -331,7 +342,8 @@ func _bone_placement() -> void:
 func _bone() -> void:
 	var cam := _open_screen()
 	await _test("right", true, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true,
-		"hoot_turn_after": 2, "intro": "Bone time! %s = bone. Same dance: down 10, up 5. Start at 1k." % Game.key_label(&"transducer_bone")})
+		"hoot_turn_after": 2, "done_title": "BONE DONE!",
+		"intro": "Bone time! %s = bone. Same dance: down 10, up 5. Start at 1k." % Game.key_label(&"transducer_bone")})
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
 	var bone := ClinicRules.sheet_thresholds(results, "right", &"bc")
@@ -368,21 +380,42 @@ func _masking() -> void:
 	Game.record_medal("masking", medal)
 	clinic.call("put_on_masking_phone", "left")
 	_react(&"nod")
-	await _say("Hoot", "Start noise: her left air threshold plus 10, plus extra for occlusion on low tones.")
-	await _say("Hoot", "Heard? Noise up 5. Missed? Tone up 5. Three noise steps, same answer: plateau!")
+	# (polish) one hook, no rule dump: the coach teaches the numbers step by step on the AudiOtron
+	await _say("Hoot", "I'll walk you through it. Trick: if more noise makes her answer vanish, it was the Ghost.")
 	var cam := _open_screen()
-	await _test("right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2,
-		"intro": "%s = masking on. %s / %s move the noise. Find the flat line!" % [Game.key_label(&"toggle_mask"), Game.key_label(&"mask_louder"), Game.key_label(&"mask_softer")]})
-	await _say("Hoot", "Air needs masking too: 50 minus 40 reaches her left bone. I'll run it!")
-	clinic.call("take_off_bone_oscillator")
-	clinic.call("put_on_earphones", true)
-	await _test("right", false, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
-		"intro": "Masked air, Hoot speed. Same plateau dance, noise in the left ear."})
+	await _test("right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2, "done_title": "GHOST BUSTED!",
+		"intro": "Noise in her LEFT ear, bone on her right. Find the flat line!"})
+	await _masked_air()
 	screen.queue_free()
 	screen = null
 	cam.current = true
 	clinic.call("take_off_earphones")
 	hud.call("complete_step", &"mask")
+
+
+## Masked air, only where the rules ask for it with THIS air transducer: supra-aural phones lose
+## about 40 dB crossing the head (rule of thumb), insert earphones about 55, so with inserts (the
+## Day 2 shop upgrade) Bonnie's right air usually cannot reach her left cochlea at all.
+func _masked_air() -> void:
+	var tr := _air_transducer()
+	var ia := ClinicRules.ia_rule(tr)
+	var need := ClinicRules.masked_freqs_needed(results, "right", &"ac_masked", tr)
+	var air := ClinicRules.sheet_thresholds(results, "right", &"ac")
+	if need.is_empty():
+		var top := 0
+		for f: int in air:
+			top = maxi(top, int(air[f]))
+		await _say("Hoot", "Inserts! About %d dB is lost crossing her head. %d minus %d can't reach her left ear." % [ia, top, ia])
+		await _say("Hoot", "No Ghost on air: no masked air needed today. That's what the upgrade buys you!")
+		return
+	var a0 := int(air.get(need[0], 50))
+	await _say("Hoot", "Air leaks too! %d dB minus about %d lost crossing her head could reach her left ear." % [a0, ia])
+	await _say("Hoot", "(Clinics often mask air first. Today the Ghost couldn't wait!)")
+	clinic.call("take_off_bone_oscillator")
+	clinic.call("put_on_earphones", true)
+	await _test("right", not _quick(), {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0, "done_title": "MASKED AIR DONE!",
+		"intro": "Masked air, Hoot speed. Same plateau dance, noise in the left ear.",
+		"intro_full": "Masked air is yours: the same plateau dance, through the earphones."})
 
 
 # ---------------------------------------------------------------- 10. reveal: the toll bridge
@@ -423,28 +456,40 @@ func _evidence(b: Control) -> void:
 	var opts: Array[String] = ["Sensorineural: the inner ear itself.", "Conductive: blocked before the inner ear.", "Mixed: a bit of both."]
 	var answer := {&"sensorineural": 0, &"conductive": 1, &"mixed": 2}.get(kind, 1) as int
 	b.call("set_compact", true)   # the choices go under the shrunken chart
+	# (polish) the answer follows the player's own chart, so the hints must too
+	var wrong := {
+		&"conductive": {0: "Then bone would be down too. Her bone is near normal! Look again.",
+			2: "Mixed needs poor bone AND a gap. Her bone is near normal."},
+		&"mixed": {0: "Look at the gap: on your chart air sits well below bone.",
+			1: "Check the bone: on your chart it's poorer than 25 dB too."},
+		&"sensorineural": {1: "Conductive needs a gap. On your chart air and bone sit together.",
+			2: "Mixed needs a gap too. On your chart air and bone sit together."},
+	}
 	var tries := 0
 	while true:
 		tries += 1
 		var c: int = await dialogue.choose("What type of loss is Bonnie's right ear?", opts, answer)
 		if c == answer:
 			break
-		if c == 0:
-			await _say("Hoot", "Then bone would be down too. Her bone is near normal! Look again.")
-		elif c == 2:
-			await _say("Hoot", "Mixed needs poor bone AND a gap. Her bone is near normal.")
-		else:
-			await _say("Hoot", "Close! Compare bone with normal, then compare air with bone.")
+		await _say("Hoot", String((wrong.get(kind, {}) as Dictionary).get(c, "Close! Compare bone with normal, then compare air with bone.")))
 	Game.record_medal("evidence", "gold" if tries == 1 else ("silver" if tries == 2 else "bronze"))
 	var title := String(ClinicRules.HEARING_TYPE_TITLES.get(kind, "Conductive loss"))
 	b.call("show_type", title)
 	Sfx.play(&"ding", 1.2, -6.0)
 	_shot("type", 0.3)
-	await _say("Hoot", "%s! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." % title)
+	match kind:
+		&"mixed":
+			await _say("Hoot", "%s on your chart: a gap AND bone poorer than 25 dB." % title)
+		&"sensorineural":
+			await _say("Hoot", "%s on your chart: no real gap, air and bone down together." % title)
+		_:
+			await _say("Hoot", "%s! A gap over 10 dB, bone near normal. 15 or more at 500, 1k AND 2k: a red flag." % title)
+	if kind != &"conductive":
+		await _say("Hoot", "Hmm, your masked bone came out poor. Overmasked? A real clinic would recheck: her real pattern is conductive.")
 	if bool(ear.get("carhart_notch", false)):
 		b.call("show_carhart")
 		_shot("carhart", 0.5)
-		await _say("Hoot", "See bone dip at 2k? A Carhart notch: a classic clue for otosclerosis.")
+		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: a stiff middle ear fakes a small bone dip. Her cochlea is fine!")
 	else:
 		await _say("Hoot", "Young, one ear, family history, normal eardrum: a doctor may suspect otosclerosis.")
 	await _say("Hoot", "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!")
@@ -464,17 +509,21 @@ func _referral(b: Control) -> void:
 			break
 		medal = "silver" if medal == "gold" else "bronze"
 		if opts[c].begins_with("Hearing"):
-			await _say("Hoot", "Aids may help later. A conductive loss with normal bone sees a doctor first.")
+			await _say("Hoot", "Aids may help later. An air-bone gap like this sees a doctor first.")
 		else:
 			_react(&"confused")
-			await _say("Hoot", "Five years of sourdough ears? A one-sided conductive loss needs a doctor now.")
+			await _say("Hoot", "Five years of sourdough ears? A one-sided gap like this needs a doctor now.")
 		opts.remove_at(c)
 	Game.record_medal("referral", medal)
 	b.call("set_compact", false)
-	await _say("Hoot", "Conductive loss with normal bone: refer to ENT. Often very treatable! Stamp it!")
+	await _say("Hoot", "An air-bone gap like this: refer to an ENT doctor. Often very treatable! Stamp it!")
 	await b.call("run_stamp")
 	_shot("stamp", 0.1)
 	_react(&"cheer")
+	# (polish) what otosclerosis is and what happens next; the ENT confirms, the game never diagnoses
+	await _say("Hoot", "If it's otosclerosis: extra bone grows around the stapes, the tiny stirrup bone, so it can't vibrate freely.")
+	await _say("Bonnie", "A tiny stirrup! Like the nozzle on my piping bag, gone stiff?")
+	await _say("Hoot", "Exactly! The ENT checks it. Then you and the doctor choose: surgery to free it, or hearing aids. Both can work well.")
 	await _say("Bonnie", "A doctor for my ear, then back to my buns. Deal! Croissant for the road?")
 	await _payoff(b)
 	hud.call("complete_step", &"refer")
