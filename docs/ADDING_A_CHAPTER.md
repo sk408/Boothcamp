@@ -37,7 +37,11 @@ so branches don't collide.
 - One `PatientProfile` per case in `core/patients/`, case data (history answers, otoscopy finding, tymp type,
   red flags, correct decision and why) in `story/cases/<case_id>.json`, and one shared case runner
   `story/level_case.gd` that plays any case from its JSON.
-- Conductive cases (wax, fluid, otosclerosis-like) use the v3 bone-conduction fields from chapter 2.
+- Conductive cases (Day 10 wax, Day 11 fluid) carry `bc_right` / `bc_left` (the v3 bone-conduction fields from
+  chapter 2); otosclerosis stays Bonnie's (Day 2).
+- Optional case keys pick the look in the ear (`otoscopy.view`: clear, wax, fluid), cards that show only when the
+  chart says so (`findings[].when`: symmetric, asymmetric, conductive, abg_flag), and a `retest` block that brings the
+  patient back after treatment with their own `<id>_after.tres` truth (Day 10). `CONTRACTS.md` §11 lists every key.
 - Clinical wording for every case is reviewed by Steve before release.
 
 ## Registering the chapter: one `Game.CHAPTERS` entry

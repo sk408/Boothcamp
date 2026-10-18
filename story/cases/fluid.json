@@ -1,0 +1,196 @@
+{
+	"id": "fluid",
+	"patient_id": "skye",
+	"speaker": "Skye",
+	"case_title": "SKYE TAILWIND'S CASE",
+	"look": {
+		"face": "doris", "skin": "#7a4a2e", "skin_shade": "#5e3822", "nose": "#6d4128",
+		"cardigan": "#0f766e", "pants": "#0f766e", "shirt": "#ffffff", "accent": "#ff7a59", "shoes": "#1b1b1b",
+		"hair": "#1b1210", "hair_style": "bun", "mustache": false, "brows": false,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["pillbox_hat", "neck_scarf"],
+		"portrait_bg": "#ffe4ef", "name_color": "#0f766e", "pillbox_hat": "#0f766e", "neck_scarf": "#ff7a59"
+	},
+	"voice": {"f0": 226.0, "wobble": 0.06, "roll": 0.68, "vowels": ["e", "a", "i", "e", "o", "a"]},
+	"intro": [
+		["Skye", "Ding-dong! Good morning, this is Skye, your senior cabin crew. Please return your owl to the upright position."],
+		{"hoot": "wing_up"},
+		["Hoot", "Upright and ready! Welcome aboard, Skye. What's the trouble?"],
+		{"react": "confused"},
+		["Skye", "My left ear's been underwater for weeks. A passenger asked for chicken or pasta. I heard 'kitchen or pastor'."],
+		["Skye", "I fly long-haul on Friday! Can you just pop a hearing aid in and wave me off?"],
+		{"hoot": "gasp"},
+		["Hoot", "Hold the trolley! Let's find out what's in that ear first."]
+	],
+	"always_clues": [
+		{"tag": "left_underwater", "text": "Left ear muffled, 'underwater', for weeks"},
+		{"tag": "flies_friday", "text": "Flies long-haul on Friday"}
+	],
+	"history": [
+		{
+			"prompt": "Ask Skye a question:",
+			"options": [
+				["Did it start with a cold?", 2, "Three weeks ago, a real stinker, and I flew with it. The cold left. The blocked ear stayed.", "Blocked since a cold and a flight, 3 weeks", "after_cold", "A cold plus a landing is hard on the little tube that evens out ear pressure."],
+				["Does it crackle or pop?", 1, "Crackles when I swallow, like bubble wrap. But it never quite pops.", "Crackles when she swallows; never pops", "crackle"],
+				["Peanuts or pretzels?", 0, "Pretzels. Always pretzels. I keep a stash in my apron. Want one, owl?", "", ""]
+			]
+		},
+		{
+			"prompt": "Next question:",
+			"options": [
+				["Any pain, drainage, dizziness, or sudden change?", 2, "An ache with the cold, gone now. No drips, no spins. It crept in as the cold cleared.", "No pain now, no drainage or dizziness", "red_flag_check"],
+				["Have you had ear trouble before?", 1, "As a kid! I had tiny tubes in my eardrums. Nothing since.", "Ear tubes as a child; nothing since", "tubes_as_kid", "Middle-ear trouble as a kid. Worth telling the doctor!"],
+				["Can you do the safety demo?", 0, "Exits here, here and here. In the event of a water landing... my left ear got there first.", "", ""]
+			]
+		}
+	],
+	"joke_line": "Smooth flying, but not a clue. Ask about her ear!",
+	"red_flags": {
+		"tag": "red_flag_check",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
+		"answer": "An ache with the cold, gone now. No drips, no spins. It crept in as the cold cleared.",
+		"clue": "No pain now, no drainage or dizziness",
+		"card": "One ear only: YES. Pain, drainage, dizziness, sudden: none.\nSee a doctor. How soon? You decide.",
+		"card_kind": "flag",
+		"clue_kind": "clue"
+	},
+	"after_history": [
+		["Skye", "Watch, I'll just pop it. Hnnnngh!"],
+		{"react": "straining"},
+		["Skye", "...Nope. Still underwater."],
+		["Hoot", "Gently! Forcing it can hurt. Let's look inside instead."]
+	],
+	"otoscopy": {
+		"ear": "left",
+		"view": "fluid",
+		"caption": "Skye's LEFT ear: an average-sized canal, no wax... and a dull, amber eardrum.",
+		"lines": [
+			["Hoot", "No wax. But the drum is dull and amber, with bubbles behind it. No cone of light."],
+			["Skye", "Bubbles? Like the fizzy water in first class?"],
+			["Hoot", "Something like that. Let's see if the tymp agrees."]
+		],
+		"clue": "Left eardrum dull and amber, with bubbles",
+		"tag": "amber_drum"
+	},
+	"tymp": {
+		"tip": "medium",
+		"canal": "average-sized",
+		"right": {"type": "A", "peak_daPa": -15, "peak_ml": 0.7, "ecv_ml": 1.2},
+		"left": {"type": "B", "peak_daPa": 0, "peak_ml": 0.05, "ecv_ml": 1.1},
+		"quiz": {
+			"prompt": "Skye says it just needs a good pop. What does the tymp say?",
+			"options": [
+				["Fluid behind the drum: flat, normal volume.", true, ""],
+				["Just pressure: a peak moved left.", false, "That would be type C: a peak moved left. Hers has no peak at all."],
+				["A wax plug blocking the probe.", false, "A plug makes the canal volume tiny. Hers is a normal 1.1, like her right."]
+			]
+		},
+		"clue": "Tymp left: flat, normal canal volume",
+		"tag": "tymp_fluid",
+		"after": [
+			["Hoot", "Flat, but a normal canal volume: the probe reaches the drum. It just won't move."]
+		]
+	},
+	"instructions": [
+		["Hoot", "Tell her: press for every beep, even faint ones. Not for the crackles!"],
+		["Skye", "Beeps only. Cabin crew, prepare for hearing test!"]
+	],
+	"audiometry": [
+		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "montage": true, "intro": "Better ear first. Hoot's montage on the right: fasten your seatbelts!"},
+		{"ear": "left", "test": "ac", "hoot_turn_after": 2, "intro": "Left ear's yours: the underwater side. Start at 1k."},
+		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "intro": "Bone at Hoot speed. Does her inner ear hear fine?",
+			"before": [["Hoot", "Bone buzzer on her left. Bone skips the middle ear. Watch for the Ghost!"]]}
+	],
+	"after_audiometry": [
+		["Hoot", "Masked bone's in. Let's see where her left ear's marks landed."]
+	],
+	"reveal": {
+		"pattern": "gap",
+		"plug": "fluid",
+		"ear": "left",
+		"title": "BONE FINE, AIR BUBBLING",
+		"ask": [
+			["Hoot", "Here's Skye's chart. Look at her left ear's bone, then its air."]
+		],
+		"lines": [
+			["Hoot", "Bone near normal, air about 25 dB worse: an air-bone gap, full of bubbles."],
+			["Skye", "So my ear's a fish tank?"],
+			["Hoot", "A tiny one. The tymp and the drum point to fluid behind it."]
+		]
+	},
+	"evidence": {
+		"prompt": "Where is Skye's sound getting stuck?",
+		"options": ["Outer ear: the canal.", "Middle ear: behind the eardrum.", "Inner ear: the cochlea."],
+		"answer": 1,
+		"wrong": ["No wax, and a normal canal volume. Look behind the eardrum.", "", "Then bone would be down too. Her masked bone is near normal."],
+		"right": "Middle ear: the canal is clear, the tymp is flat, and bone is fine."
+	},
+	"findings": [
+		{"tag": "gap", "text": "Left: bone normal, air down: a gap", "when": "conductive"},
+		{"tag": "left_only", "text": "Left ear only: a clear difference", "when": "asymmetric", "kind": "flag"},
+		{"tag": "abg_flag", "text": "Gap of 15+ dB at 500, 1k and 2k", "when": "abg_flag", "kind": "flag"}
+	],
+	"decision": {
+		"prompt": "Make the call for Skye:",
+		"answer": "refer",
+		"lines": {
+			"refer": "Fluid behind one eardrum in a grown-up: a doctor this week, before Friday's flight.",
+			"fit": "No hearing aids for a puddle! A doctor first: it often clears.",
+			"today": "Bone's normal and no spinning: middle ear, not inner ear. Soon, not today."
+		}
+	},
+	"clue_pick": {
+		"prompt": "Present the evidence: why this week, and not TODAY?",
+		"answers": ["tymp_fluid", "amber_drum", "gap"],
+		"decoys": ["flies_friday", "after_cold"],
+		"wrong_line": "True, but that doesn't show where the trouble is. Look again!",
+		"wrong_lines": {
+			"flies_friday": "That's HER deadline, not a medical emergency. What shows it's the middle ear?",
+			"after_cold": "Careful: a cold can come before an inner-ear loss too. What proves it's the middle ear?",
+			"abg_flag": "That gap sends her to a doctor. Mixed losses have gaps too. What shows the inner ear's fine?",
+			"left_only": "One ear sends her to a doctor. What says it can wait a few days?",
+			"red_flag_check": "Good news, but not the proof. What shows where the trouble is?",
+			"left_underwater": "That's what she feels. What shows where it's coming from?",
+			"crackle": "A hint, not proof. Which test shows it's the middle ear?",
+			"tubes_as_kid": "Worth telling the doctor. Which test shows it's the middle ear today?"
+		},
+		"right_lines": {
+			"tymp_fluid": "Yes! Flat with a normal volume: fluid behind the drum. Middle ear: soon, not today.",
+			"amber_drum": "Yes! You can almost see the fluid. Middle ear: a doctor this week, not today.",
+			"gap": "Yes! Bone is normal, so the inner ear's fine. Not a sudden inner-ear loss."
+		},
+		"right_line": "Exactly! It's the middle ear: a doctor this week, before she flies. Not today."
+	},
+	"payoff": [
+		{"do": "plane"},
+		["Hoot", "Referral cleared for take-off: an ear doctor this week."],
+		["Hoot", "In grown-ups, fluid on one side gets a doctor's look, back of the nose too."],
+		["Hoot", "It often clears by itself. If not, the doctor has ways to drain it."],
+		["Skye", "And Friday's flight?"],
+		["Hoot", "Ask the doctor before you fly. Landing with a blocked ear can really hurt."],
+		["Hoot", "Pain, fever, drips, dizziness, or hearing getting worse? See a doctor that day."],
+		["Hoot", "Once it clears, we retest. Still down then? Then we talk hearing aids."],
+		{"react": "cheer"},
+		["Skye", "Ding-dong! Cabin crew, doors to doctor. Thank you for flying Booth Camp!"]
+	],
+	"paper": {
+		"headlines": {
+			"S": "FLUID SPOTTED BEFORE TAKEOFF; OWL AWARDS TRAINEE PILOT WINGS",
+			"A": "SKYE SENT TO DOCTOR BEFORE FRIDAY FLIGHT; PRETZELS FOR EVERYONE",
+			"B": "MIDDLE EAR CHECKED IN; TRAINEE STOWS TRAY TABLE",
+			"C": "SOME BEEPS LOST IN TURBULENCE, CONFIRMS OWL",
+			"Do-over": "FLIGHT DELAYED: TRAINEE REQUESTS A SECOND BOARDING"
+		},
+		"subheads": {
+			"S": "Amber drum, flat tymp with a normal canal volume, normal bone: middle ear. A doctor this week.",
+			"A": "Bone normal and a flat tymp: a doctor this week, not today.",
+			"B": "The gap showed up; a few stamps hit turbulence.",
+			"C": "A flat tymp with a normal canal volume points behind the eardrum.",
+			"Do-over": "Check the canal volume: tiny means blocked, normal means behind the drum."
+		},
+		"wrong_first": {
+			"fit": {"headline": "TRAINEE OFFERS HEARING AID TO A FISH TANK; OWL DECLINES", "subhead": "Fluid behind the eardrum: a doctor first, and it often clears."},
+			"today": {"headline": "PRETZEL EMERGENCY DECLARED; DOCTOR SAYS THIS WEEK IS FINE", "subhead": "Normal bone meant the middle ear: a doctor soon, before the flight, not today."}
+		}
+	}
+}

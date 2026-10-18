@@ -179,6 +179,10 @@
 			"B": "Sent to the doctor today; a few stamps wandered.",
 			"C": "Sudden plus sensorineural means doctor today.",
 			"Do-over": "Remember: sudden hearing loss is urgent, even after three days. Dash made his appointment anyway."
+		},
+		"wrong_first": {
+			"fit": {"headline": "TRAINEE OFFERS PIZZA BOSS HEARING AIDS; OWL DROPS HIS SLICE", "subhead": "A brand-new sudden loss goes to a doctor today, not a fitting."},
+			"refer": {"headline": "DASH BOOKED FOR NEXT WEEK; OWL PHONES AHEAD ANYWAY", "subhead": "Sudden sensorineural loss can't wait for a routine referral."}
 		}
 	}
 }

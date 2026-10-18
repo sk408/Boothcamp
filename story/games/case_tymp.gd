@@ -9,8 +9,10 @@ extends Control
 ##   g.show_tips(&"medium")              # the ear-tip tray (the patient's right size, for the gag)
 ##   await g.try_tip(&"small")           # the leak / too-big / pop gag; returns true when it seals
 ##   await g.measure("right", data)      # the sweep: the curve draws itself, the readouts fill in
-##   g.reveal_type("right")              # the type badge (after the quiz)
-## data: {"type", "peak_daPa", "peak_ml", "ecv_ml"} as in a case file.
+##   g.reveal_type("right")              # the type badge (after the quiz); a flat (B) ear also gets
+##                                       # a ribbon reading its canal volume ("... = BLOCKED")
+## data: {"type", "peak_daPa", "peak_ml", "ecv_ml"} as in a case file. ecv_ml (the canal volume) also
+## gives the readout's chip (CaseRules.ecv_band: TINY / LOW / NORMAL / LARGE).
 ## Anchor: "tymp_screen".
 
 const UiKit := preload("res://story/ui_kit.gd")
@@ -25,9 +27,18 @@ const LCD_GRID := Color("#2f4652")
 const LCD_TEXT := Color("#d7f5ee")
 const BODY := Color("#ffd166")
 const TIP_COLORS: Dictionary = {&"small": Color("#7bdff2"), &"medium": Color("#b2f7ef"), &"large": Color("#f7d6e0")}
+## Canal volume bands (CaseRules.ecv_band): the chip's word and colour, and what a flat line means with it.
+const ECV_WORDS: Dictionary = {&"tiny": "TINY", &"low": "LOW", &"normal": "NORMAL", &"large": "LARGE"}
+const ECV_COLORS: Dictionary = {&"tiny": Palette.CORAL, &"low": Palette.SELECT_ORANGE, &"normal": Palette.MINT, &"large": Palette.SKY}
+const FLAT_READINGS: Dictionary = {
+	&"tiny": "FLAT + TINY CANAL = BLOCKED", &"low": "FLAT + LOW CANAL = LOOK AGAIN",
+	&"normal": "FLAT + NORMAL CANAL = FLUID?", &"large": "FLAT + BIG CANAL = HOLE?",
+}
+const RIBBON_GAP := 40.0          # px between stacked ribbons (both ears flat)
 
 var _curves: Dictionary = {}      # ear -> {"data": Dictionary, "k": 0..1 drawn so far}
 var _revealed: Dictionary = {}    # ear -> true once the type badge is shown
+var _ribbons: Dictionary = {}     # ear -> {"row": stack slot, "k": 0..1 popped in}: flat ears, after the quiz
 var _tips_visible := false
 var _right_tip: StringName = &"medium"
 var _tip: StringName = &""        # the tip on the probe
@@ -113,6 +124,23 @@ func measure(ear: String, data: Dictionary) -> void:
 func reveal_type(ear: String) -> void:
 	_revealed[ear] = true
 	Sfx.play(&"stamp", 1.4, -10.0)
+	_pop_ribbon(ear)
+
+
+## A flat (type B) ear's ribbon: what the flat line means with this canal volume. Only from
+## reveal_type, so it never gives the quiz away. A second flat ear stacks under the first.
+func _pop_ribbon(ear: String) -> void:
+	if _ribbons.has(ear) or not _curves.has(ear):
+		return
+	var d: Dictionary = (_curves[ear] as Dictionary)["data"]
+	if String(d.get("type", "")) != "B" or not d.has("ecv_ml"):
+		return
+	var row := _ribbons.size()
+	_ribbons[ear] = {"row": row, "k": 0.0}
+	var t := create_tween()
+	t.tween_interval(0.15 + 0.2 * row)    # just after the stamp; the second ribbon a beat later
+	t.tween_callback(func() -> void: Sfx.play(&"pop", 1.2 - 0.1 * row, -8.0))
+	t.tween_method(func(k: float) -> void: (_ribbons[ear] as Dictionary)["k"] = k, 0.0, 1.0, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func is_sealed() -> bool:
@@ -143,6 +171,9 @@ func _draw_device() -> void:
 	UiDraw.rounded_rect(c, Rect2(DEVICE.position + Vector2(0, 8), DEVICE.size), Color(Palette.INK, 0.2), 30)
 	UiDraw.rounded_rect(c, DEVICE, BODY, 30, 4, Palette.INK)
 	c.draw_string(f, DEVICE.position + Vector2(30, 20), "TYMP-O-MATIC", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK)
+	# the printed canal-volume norm, above the screen's right end (the readout chips are read against it)
+	var norm := "Adult canal: about %.1f-%.1f mL" % [CaseRules.TYMP_ADULT_ECV.x, CaseRules.TYMP_ADULT_ECV.y]
+	c.draw_string(fr, Vector2(SCREEN.end.x - 240, DEVICE.position.y + 20), norm, HORIZONTAL_ALIGNMENT_RIGHT, 220, 12, Palette.INK_SOFT)
 	# the screen
 	UiDraw.rounded_rect(c, SCREEN, LCD, 14, 4, Palette.INK)
 	var plot := _plot()
@@ -169,6 +200,7 @@ func _draw_device() -> void:
 	if _curves.is_empty():
 		var msg := "Seal the ear to begin" if not _sealed else "Sealed! Sweeping..."
 		c.draw_string(f, Vector2(plot.position.x, plot.get_center().y), msg, HORIZONTAL_ALIGNMENT_CENTER, plot.size.x, 22, Color(LCD_TEXT, 0.55 + 0.25 * sin(_t * 4.0)))
+	_draw_ribbons()
 	# right-hand side: readouts, or the tip tray
 	var side := Rect2(Vector2(SCREEN.end.x + 16, SCREEN.position.y), Vector2(DEVICE.end.x - SCREEN.end.x - 40, SCREEN.size.y))
 	if _tips_visible:
@@ -218,6 +250,8 @@ func _draw_readouts(side: Rect2) -> void:
 			var d: Dictionary = (_curves[ear] as Dictionary)["data"]
 			var flat := String(d.get("type", "")) == "B"
 			c.draw_string(fr, box.position + Vector2(10, 45), "Canal vol  %.1f mL" % float(d.get("ecv_ml", 1.2)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Palette.INK)
+			if d.has("ecv_ml"):
+				_draw_ecv_chip(box, CaseRules.ecv_band(float(d["ecv_ml"])))
 			c.draw_string(fr, box.position + Vector2(10, 64), "Peak at  %s" % ("none" if flat else "%+d daPa" % int(d.get("peak_daPa", 0))), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Palette.INK)
 			c.draw_string(fr, box.position + Vector2(10, 83), "Peak  %s" % ("flat" if flat else "%.1f mL" % float(d.get("peak_ml", 0))), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Palette.INK)
 			var ty := String(d.get("type", "?")) if _revealed.has(ear) else "?"
@@ -230,6 +264,64 @@ func _draw_readouts(side: Rect2) -> void:
 		else:
 			c.draw_string(fr, box.position + Vector2(10, 62), "waiting...", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Palette.INK_SOFT)
 		y += 114
+
+
+## The canal-volume chip, right-aligned in an ear's readout header: "canal [NORMAL]". (The "Canal vol"
+## row has no room left of the type badge, so it sits on the header bar just above it.)
+func _draw_ecv_chip(box: Rect2, band: StringName) -> void:
+	var c := _canvas
+	var f := UiKit.font(700)
+	var word := ECV_WORDS.get(band, "?") as String
+	var col: Color = ECV_COLORS.get(band, Palette.PAPER)
+	var w := f.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 14
+	var chip := Rect2(Vector2(box.end.x - 8 - w, box.position.y + 4), Vector2(w, 18))
+	UiDraw.rounded_rect(c, chip, col, 9, 2, Palette.INK)
+	c.draw_string(f, chip.position + Vector2(7, 13), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Palette.INK)
+	c.draw_string(UiKit.font(600), Vector2(chip.position.x - 64, box.position.y + 18), "canal", HORIZONTAL_ALIGNMENT_RIGHT, 60, 12, Palette.PAPER)
+
+
+## The flat ears' ribbons, stacked in the plot's empty top-left (clear of the "normal" box label and
+## of the other ear's peak). Each pops in from reveal_type.
+func _draw_ribbons() -> void:
+	var plot := _plot()
+	for ear: String in _ribbons:
+		var rb: Dictionary = _ribbons[ear]
+		var k := float(rb["k"])
+		if k <= 0.0:
+			continue
+		var d: Dictionary = (_curves[ear] as Dictionary)["data"]
+		var top_left := plot.position + Vector2(22, 52 + RIBBON_GAP * int(rb["row"]))
+		_draw_ribbon(ear, CaseRules.ecv_band(float(d["ecv_ml"])), top_left, k)
+
+
+## One swallowtail ribbon: the ear's R / L tag, then the reading, in the canal chip's colour.
+## k: the pop (0..1, overshoots a little).
+func _draw_ribbon(ear: String, band: StringName, top_left: Vector2, k: float) -> void:
+	var c := _canvas
+	var f := UiKit.font(700)
+	var txt := FLAT_READINGS.get(band, "") as String
+	var col: Color = ECV_COLORS.get(band, Palette.PAPER)
+	var dims := Vector2(f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 46, 26)
+	var sc := lerpf(0.8 if Juice._reduced() else 0.3, 1.0, k)
+	c.draw_set_transform(top_left + dims * 0.5, -0.02, Vector2.ONE * sc)
+	var r := Rect2(-dims * 0.5, dims)
+	var hw := dims.x * 0.5
+	UiDraw.rounded_rect(c, Rect2(r.position + Vector2(0, 4), r.size), Color(Palette.INK, 0.2), 8)
+	# the forked ends, tucked behind the band and a little lower
+	for dir: float in [-1.0, 1.0]:
+		var tail := PackedVector2Array([Vector2(dir * (hw - 10), -6), Vector2(dir * (hw + 14), -6),
+			Vector2(dir * (hw + 6), 7), Vector2(dir * (hw + 14), 20), Vector2(dir * (hw - 10), 20)])
+		c.draw_colored_polygon(tail, col.darkened(0.3))
+		tail.append(tail[0])
+		c.draw_polyline(tail, Palette.INK, 3.0, true)
+	UiDraw.rounded_rect(c, r, col, 8, 3, Palette.INK)
+	var tag := Vector2(r.position.x + 17, 0)
+	var lbl := "R" if ear == "right" else "L"
+	c.draw_circle(tag, 10.0, Palette.ear_color(ear))
+	c.draw_arc(tag, 10.0, 0, TAU, 20, Palette.INK, 2.5, true)
+	c.draw_string(f, tag + Vector2(-f.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x * 0.5, 5), lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Palette.PAPER)
+	c.draw_string(f, Vector2(r.position.x + 34, 5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Palette.INK)
+	c.draw_set_transform(Vector2.ZERO)
 
 
 func _draw_tips(side: Rect2) -> void:

@@ -38,7 +38,7 @@
 			"options": [
 				["Any pain, drainage, dizziness, or sudden change?", 2, [
 					"No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring.",
-					"Last one ten days ago. Steady today, and no new drop since."
+					"Last one ten days ago. Good days since, and no new drop."
 				], "Room-spinning spells for hours", "spinning"],
 				["Have you had a cold or a blocked nose lately?", 1, "Not a sniffle all year. Sea air!", "No cold or blocked nose", "no_cold", "Good: a cold can clog the middle ear and muffle hearing for a while."],
 				["What's the best sea shanty?", 0, "Anything with a chorus. Ten verses minimum.", "", ""]
@@ -51,13 +51,13 @@
 		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
 		"answer": [
 			"No pain, no drips. But the room SPINS: two or three hours at a time, four times since spring.",
-			"Last one ten days ago. Steady today, and no new drop since."
+			"Last one ten days ago. Good days since, and no new drop."
 		],
 		"clue": "Room-spinning spells for hours",
 		"card": "Dizziness: YES, spinning spells.\nOne ear only: YES = see a doctor.",
 		"card_kind": "flag",
 		"extra_clues": [
-			{"tag": "last_spell", "text": "Last spell 10 days ago; hearing comes back between spells"}
+			{"tag": "last_spell", "text": "Last spell 10 days ago; good days since"}
 		]
 	},
 	"after_history": [
@@ -95,7 +95,8 @@
 	},
 	"instructions": [
 		["Hoot", "Tell her: press for every beep, even faint ones. Not for the roar!"],
-		["Marina", "Beeps yes, engine room no. Aye aye!"]
+		["Marina", "Beeps yes, engine room no. Aye aye!"],
+		["Hoot", "Tip: with a roaring ear, pulsed beeps stand out better. Most audiometers can pulse them."]
 	],
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. I'll zip through the right!"},
@@ -184,6 +185,10 @@
 			"B": "The rising pattern showed; a few stamps drifted.",
 			"C": "Watch the low pitches, and compare with old results.",
 			"Do-over": "Spinning plus one ear: always a doctor first."
+		},
+		"wrong_first": {
+			"fit": {"headline": "TRAINEE NEARLY FITS A SPINNING CAPTAIN; OWL GRABS THE WHEEL", "subhead": "Dizziness and a one-sided, changing loss: a doctor looks first."},
+			"today": {"headline": "MARINA RUSHED TO DOCTOR; HER HEARING HAD ALREADY COME BACK", "subhead": "Her hearing dips with spells and returns: soon, not today."}
 		}
 	}
 }

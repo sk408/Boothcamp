@@ -10,10 +10,12 @@ extends Node
 ##   world:  res://world/clinic.tscn with patient_id + patient_spec (the case's look and extras)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn start_test(patient, ear, coached, plan)
 ##   global: Game (visit, medals, flags), Events (phases, awaiting_input), Hoot
+## A case with a "retest" block (Day 10's wax) brings the patient back after treatment: a second,
+## unscored visit with a fresh chart over the first one's (_retest).
 ## Which case: the current chapter's "case"; else --case=<id>; else the first registered case.
 
 const Hud := preload("res://story/hud.gd")
-const Otoscopy := preload("res://story/games/otoscopy.gd")
+const CaseOtoscopy := preload("res://story/games/case_otoscopy.gd")
 const CaseData := preload("res://story/case_data.gd")
 const CaseBoard := preload("res://story/games/case_board.gd")
 const CaseTymp := preload("res://story/games/case_tymp.gd")
@@ -30,7 +32,7 @@ const LEVEL_SCENE := "res://story/level_case.tscn"
 const STEPS: Array[StringName] = [&"chat", &"peek", &"tymp", &"beeps", &"reveal", &"pattern", &"call"]
 const STEP_LABELS: Dictionary = {
 	&"chat": "Chat", &"peek": "Peek", &"tymp": "Tymp", &"beeps": "Beeps", &"reveal": "Reveal",
-	&"pattern": "Pattern", &"call": "The call",
+	&"pattern": "Pattern", &"call": "The call", &"retest": "Retest",
 }
 ## The Daily Decibel's medal row for every case.
 const MEDAL_BEATS: Array = [["history", "Chat"], ["tymp", "Tymp"], ["evidence", "Pattern"], ["decision", "Call"]]
@@ -43,6 +45,13 @@ const TYPE_ANSWERS: Dictionary = {&"sensorineural": 0, &"conductive": 1, &"mixed
 const BORROW_BONE_DB := 10
 ## Hoot's one-time briefing, the first time a player opens any case.
 const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
+## The runner's own lines (case_scripts.py prints them too: keep the two in step).
+## After masked bone, when no ear needed masked air (built from the stamps).
+const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bone needed masking today!"
+## When a conditional finding reads differently on the chart than in the story (wandering stamps).
+const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
+## The retest's chart when its measured type is not the story's.
+const RETEST_NEUTRAL := "Much better with the plug out. A few stamps wandered: in clinic, we'd recheck those."
 
 var case_id := ""
 var case_data: Dictionary = {}
@@ -58,6 +67,8 @@ var props: Control
 ## Every clue the player has gathered, for the case file: {tag, text, kind, src}.
 var clues: Array[Dictionary] = []
 var _walk_done := true
+## Wax fills the canal (the otoscope's "wax" view): air goes through headphones, never a foam insert.
+var _canal_blocked := false
 
 
 ## The case this level should play.
@@ -76,10 +87,10 @@ func _ready() -> void:
 	case_data = CaseData.load_case(case_id)
 	var problems := CaseData.validate(case_data) if not case_data.is_empty() else PackedStringArray(["no case file"])
 	if not problems.is_empty():
+		# a broken case never half-plays: back to the title
 		push_error("LevelCase %s: %s" % [case_id, "; ".join(problems)])
-		if case_data.is_empty():
-			Events.goto_scene.emit.call_deferred(TITLE_SCENE)
-			return
+		Events.goto_scene.emit.call_deferred(TITLE_SCENE)
+		return
 	speaker = String(case_data["speaker"])
 	if case_data.get("voice", null) is Dictionary:
 		Voice.register(speaker, case_data["voice"])
@@ -97,7 +108,10 @@ func _ready() -> void:
 	add_child(clinic)
 	hud = Hud.new()
 	add_child(hud)
-	hud.call("set_steps", STEPS, STEP_LABELS, String(case_data["case_title"]))
+	var steps: Array[StringName] = STEPS.duplicate()
+	if case_data.has("retest"):
+		steps.append(&"retest")
+	hud.call("set_steps", steps, STEP_LABELS, String(case_data["case_title"]))
 	dialogue = DialogueBox.new()
 	add_child(dialogue)
 	if case_data.has("sudden_clock"):
@@ -220,13 +234,18 @@ func _do(what: String) -> void:
 			_shot("hearing_aids", 0.4)
 			await _wait(1.2)
 			clinic.call("focus_camera", &"desk", 0.6)
-		"letter", "phone", "boat":
-			if props == null:
-				props = CaseProps.new()
-				hud.call("add_game", props)
+		"letter", "phone", "boat", "wax_jar", "plane":
 			if what != "phone":
 				_shot(what, 0.6)
-			await props.call("play", what)
+			await _props().call("play", what)
+
+
+## The payoff props layer, made on first use.
+func _props() -> Control:
+	if props == null:
+		props = CaseProps.new()
+		hud.call("add_game", props)
+	return props
 
 
 ## Add a clue to the case file (a later clue with the same tag replaces the earlier one).
@@ -244,14 +263,16 @@ func _add_clue(tag: String, text: String, kind: String, src: String) -> void:
 func _run() -> void:
 	await _intro()
 	await _history()
-	await _otoscopy()
+	await _otoscopy(case_data["otoscopy"])
 	await _tymp()
-	await _instructions()
-	await _audiometry()
+	await _instructions(case_data["instructions"])
+	await _audiometry(case_data["audiometry"])
 	var board: Control = await _reveal()
 	await _evidence(board)
 	await _decision(board)
 	await _payoff(board)
+	if case_data.has("retest"):
+		await _retest()
 	await _results()
 
 
@@ -334,21 +355,28 @@ func _history() -> void:
 
 # ---------------------------------------------------------------- 3. otoscopy (a quick look)
 
-func _otoscopy() -> void:
-	_phase(&"otoscopy")
-	hud.call("set_step", &"peek")
-	var oto: Dictionary = case_data["otoscopy"]
+## A look in the ear: the case's otoscopy section, or the retest's (first_pass false: no step pill,
+## and no card unless the section has a clue). A "wax" view blocks the canal for the air tests.
+func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
+	_phase(&"otoscopy", {} if first_pass else {"retest": true})
+	if first_pass:
+		hud.call("set_step", &"peek")
 	await clinic.call("focus_camera", &"otoscope", 0.8)
-	var g := Otoscopy.new()
+	var view := String(oto.get("view", "clear"))
+	_canal_blocked = view == "wax"
+	var g := CaseOtoscopy.new()
 	hud.call("add_game", g)
-	await g.show_clear(String(oto.get("ear", "right")), String(oto.get("caption", "")))
-	_shot("otoscopy")
+	await g.show_view(String(oto.get("ear", "right")), view, String(oto.get("caption", "")))
+	_shot("otoscopy" if first_pass else "retest_otoscopy")
 	await _play(oto.get("lines", []))
-	hud.call("add_clue", String(oto["clue"]))
-	_add_clue(String(oto["tag"]), String(oto["clue"]), "clue", "look")
+	if String(oto.get("clue", "")) != "":
+		var kind := String(oto.get("kind", "clue"))
+		hud.call("add_clue", String(oto["clue"]), kind)
+		_add_clue(String(oto.get("tag", "")), String(oto["clue"]), kind, "look")
 	g.queue_free()
 	clinic.call("focus_camera", &"desk", 0.6)
-	hud.call("complete_step", &"peek")
+	if first_pass:
+		hud.call("complete_step", &"peek")
 
 
 # ---------------------------------------------------------------- 4. the tympanometer
@@ -357,7 +385,7 @@ func _tymp() -> void:
 	_phase(&"tymp")
 	hud.call("set_step", &"tymp")
 	var ty: Dictionary = case_data["tymp"]
-	clinic.call("focus_camera", &"ear_right", 0.8)
+	clinic.call("focus_camera", _look_shot(), 0.8)
 	var g := CaseTymp.new()
 	hud.call("add_game", g)
 	await _say("Hoot", "The Tymp-O-Matic! It checks how well the eardrum moves. First, a snug ear tip.")
@@ -410,6 +438,33 @@ func _tymp() -> void:
 	await t.finished
 	g.queue_free()
 	hud.call("complete_step", &"tymp")
+
+
+## The camera on the ear the otoscope looked in.
+func _look_shot() -> StringName:
+	return StringName("ear_" + String((case_data["otoscopy"] as Dictionary).get("ear", "right")))
+
+
+## The retest's tymp: the visit's tip seals at once, both ears sweep, the types show. No quiz, no
+## medal. spec: {tip?, right, left, after?}.
+func _tymp_recheck(spec: Dictionary) -> void:
+	_phase(&"tymp", {"retest": true})
+	clinic.call("focus_camera", _look_shot(), 0.8)
+	var g := CaseTymp.new()
+	hud.call("add_game", g)
+	var tip := StringName(String(spec.get("tip", (case_data["tymp"] as Dictionary)["tip"])))
+	g.call("show_tips", tip)
+	await g.call("try_tip", tip)
+	await g.call("measure", "right", spec["right"])
+	await g.call("measure", "left", spec["left"])
+	for ear: String in ["right", "left"]:
+		g.call("reveal_type", ear)
+	_shot("retest_tymp", 0.4)
+	await _play(spec.get("after", []))
+	var t := g.create_tween()
+	t.tween_property(g, "modulate:a", 0.0, 0.3)
+	await t.finished
+	g.queue_free()
 
 
 ## The case's own tymp question: {"prompt", "options": [[text, right, Hoot's line when wrong]]}.
@@ -468,12 +523,19 @@ func _tymp_type_quiz(g: Control, type_r: StringName, type_l: StringName) -> int:
 
 # ---------------------------------------------------------------- 5. instructions + earphones
 
-func _instructions() -> void:
-	_phase(&"instructions")
-	hud.call("set_step", &"beeps")
+## The instructions (the case's, or the retest's: first_pass false), then into the booth.
+func _instructions(lines: Variant, first_pass: bool = true) -> void:
+	_phase(&"instructions", {} if first_pass else {"retest": true})
+	if first_pass:
+		hud.call("set_step", &"beeps")
 	clinic.call("focus_camera", &"desk", 0.8)
-	await _play(case_data["instructions"])
-	Game.set_visit_flag("instructed", true)
+	await _play(lines)
+	if first_pass:
+		Game.set_visit_flag("instructed", true)
+	await _seat_with_earphones()
+
+
+func _seat_with_earphones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
@@ -499,13 +561,19 @@ func _close_screen(cam: Camera3D) -> void:
 	cam.current = true
 
 
+## Headphones, or foam inserts once the upgrade is owned. Never an insert into a canal full of wax.
+## The masking rules read the same transducer.
 func _air_transducer() -> StringName:
+	if _canal_blocked:
+		return &"phones"
 	return &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
 
 
-func _test(ear: String, plan: Dictionary) -> Dictionary:
+func _test(ear: String, plan: Dictionary, info: Dictionary = {}) -> Dictionary:
 	plan["air_transducer"] = _air_transducer()
-	_phase(&"audiometry", {"ear": ear, "test": String(plan.get("test", "ac"))})
+	var phase_info := {"ear": ear, "test": String(plan.get("test", "ac"))}
+	phase_info.merge(info)
+	_phase(&"audiometry", phase_info)
 	# the player's own tests are not coached (they learned on Days 1-2); Hoot's run at once
 	screen.call("start_test", patient, ear, false, plan)
 	var r: Dictionary = await screen.test_finished
@@ -522,62 +590,105 @@ func _aside(cam: Camera3D, lines: Variant, shot: StringName = &"face") -> void:
 	_open_screen()
 
 
-func _audiometry() -> void:
+## A test step's plan for the AudiOtron: the test, Hoot's turn, an intro that fits, and any PLAN_KEYS
+## (Hoot's montage) passed straight through.
+func _plan_from(pd: Dictionary) -> Dictionary:
+	var plan := {"test": String(pd["test"]), "hoot_turn_after": int(pd.get("hoot_turn_after", 0))}
+	# an intro for a Hoot-speed test ("Left at Hoot speed!") only fits when Hoot really runs it:
+	# with Quick visit off the player runs everything and the screen says its own line
+	if pd.has("intro") and (_quick() or int(plan["hoot_turn_after"]) > 0):
+		plan["intro"] = String(pd["intro"])
+	for k: String in CaseData.PLAN_KEYS:
+		if pd.has(k):
+			plan[k] = bool(pd[k])
+	return plan
+
+
+## The case's test plan, then whatever masking the stamps ask for: masked bone on each bone-tested
+## ear, then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
+## no case lines, no step pill).
+func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	var cam := _open_screen()
-	var main_ear := ""
-	for p: Variant in case_data["audiometry"]:
+	var info := {} if first_pass else {"retest": true}
+	var bc_ears: Array[String] = []
+	var ac_ears: Array[String] = []
+	var oscillator_on := ""
+	for p: Variant in steps:
 		var pd: Dictionary = p
 		var ear := String(pd["ear"])
-		var plan := {"test": String(pd["test"]), "hoot_turn_after": int(pd.get("hoot_turn_after", 0))}
-		# an intro for a Hoot-speed test ("Left at Hoot speed!") only fits when Hoot really runs it:
-		# with Quick visit off the player runs everything and the screen says its own line
-		if pd.has("intro") and (_quick() or int(plan["hoot_turn_after"]) > 0):
-			plan["intro"] = String(pd["intro"])
+		var plan := _plan_from(pd)
 		if plan["test"] == "bc":
-			main_ear = ear
+			if not bc_ears.has(ear):
+				bc_ears.append(ear)
 			plan["bc_freqs"] = ClinicRules.BC_REQUIRED
 			plan["masking_controls"] = true
 			_close_screen(cam)
 			clinic.call("focus_camera", StringName("ear_" + ear), 0.6)
 			clinic.call("put_on_bone_oscillator", ear)
+			oscillator_on = ear
 			await _wait(0.5)
 			await _play(pd.get("before", []))
 			_open_screen()
-		elif pd.has("before"):
-			await _aside(cam, pd["before"])
-		await _test(ear, plan)
-	if main_ear != "":
-		var other := "left" if main_ear == "right" else "right"
-		if not ClinicRules.masked_freqs_needed(results, main_ear, &"bc_masked").is_empty():
+		else:
+			if not ac_ears.has(ear):
+				ac_ears.append(ear)
+			if pd.has("before"):
+				await _aside(cam, pd["before"])
+		await _test(ear, plan, info)
+	var masked_bone := false
+	var masked_air := false
+	if first_pass:
+		for ear: String in bc_ears:
+			if ClinicRules.masked_freqs_needed(results, ear, &"bc_masked").is_empty():
+				continue
+			var other := "left" if ear == "right" else "right"
 			_close_screen(cam)
+			if oscillator_on != ear:
+				clinic.call("put_on_bone_oscillator", ear)
+				oscillator_on = ear
 			clinic.call("focus_camera", &"face", 0.5)
 			clinic.call("put_on_masking_phone", other)
 			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
 				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
 			_open_screen()
-			await _test(main_ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 0,
+			await _test(ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 0,
 				"intro": ("Masked bone at Hoot speed: the shhh goes in the %s ear." if _quick()
 					else "Masked bone: the shhh goes in the %s ear.") % other})
-		if not ClinicRules.masked_freqs_needed(results, main_ear, &"ac_masked", _air_transducer()).is_empty():
+			masked_bone = true
+		for ear: String in ac_ears:
+			if ClinicRules.masked_freqs_needed(results, ear, &"ac_masked", _air_transducer()).is_empty():
+				continue
+			var other := "left" if ear == "right" else "right"
 			_close_screen(cam)
-			clinic.call("take_off_bone_oscillator")
-			clinic.call("put_on_earphones", true)
-			await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
+			if not masked_air:
+				clinic.call("take_off_bone_oscillator")
+				oscillator_on = ""
+				clinic.call("put_on_earphones", true)
+				await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
 			_open_screen()
-			await _test(main_ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
+			await _test(ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
 				"intro": "Masked air: same plateau dance, noise in the %s ear." % other})
-	_borrow_bone()
+			masked_air = true
+		_borrow_bone()
 	screen.queue_free()
 	screen = null
 	cam.current = true
 	clinic.call("take_off_bone_oscillator")
 	clinic.call("take_off_earphones")
 	clinic.call("focus_camera", &"face", 0.4)
+	if not first_pass:
+		return
 	hud.call("complete_step", &"beeps")
+	if masked_bone and not masked_air:
+		await _say("Hoot", NO_MASKED_AIR)
 	# the case's line describes the true chart ("bone sits with the air: no gap"); if the player's
-	# stamps left a gap on the bone ear, it would contradict the screen, so say a neutral line
-	var measured: StringName = ((results.get("ears", {}) as Dictionary).get(main_ear, {}) as Dictionary).get("hearing_type", &"unknown")
-	if main_ear == "" or measured == CaseData.truth_type(patient, main_ear):
+	# stamps left a different type on a bone ear, it would contradict the screen, so say a neutral line
+	var agrees := true
+	for ear: String in bc_ears:
+		var measured: StringName = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
+		if measured != CaseData.truth_type(patient, ear):
+			agrees = false
+	if agrees:
 		await _play(case_data.get("after_audiometry", []))
 	else:
 		await _say("Hoot", "Bone's in. Let's lay it over the air and see what it says.")
@@ -626,16 +737,26 @@ func _reveal() -> Control:
 	if clock_widget != null:
 		clock_widget.move_to_front()
 	clinic.call("focus_camera", &"desk", 0.0)
-	_walk_done = false
-	var go := func() -> void:
-		await clinic.call("walk_to", &"desk", 2.4)
-		_walk_done = true
-	go.call()
+	_walk_to_desk()
 	await b.run_reveal(results)
 	_shot("reveal")
 	await _play((case_data["reveal"] as Dictionary).get("ask", [["Hoot", "Here's the chart, trainee. What shape do you see?"]]))
 	hud.call("complete_step", &"reveal")
 	return b
+
+
+## The patient strolls to the desk while the chart draws (await _until_walked() before using them).
+func _walk_to_desk() -> void:
+	_walk_done = false
+	var go := func() -> void:
+		await clinic.call("walk_to", &"desk", 2.4)
+		_walk_done = true
+	go.call()
+
+
+func _until_walked() -> void:
+	while not _walk_done:
+		await _wait(0.2)
 
 
 # ---------------------------------------------------------------- 8. evidence: name it, then it comes alive
@@ -688,12 +809,13 @@ func _evidence(b: Control) -> void:
 		b.call("show_type", String(ClinicRules.HEARING_TYPE_TITLES.get(kind, "Sensorineural loss")))
 	if String(ev.get("right", "")) != "":
 		await _say("Hoot", String(ev["right"]))
-	_add_findings()
+	await _add_findings()
 	hud.call("complete_step", &"pattern")
 
 
-## The reveal's cards for the case file. A finding with "when": "symmetric" / "asymmetric" only
-## appears when the measured air says so (the truth table when an ear has no air).
+## The reveal's cards for the case file. A finding's "when" (finding_shows) is read on the measured
+## chart. If any conditional finding reads differently on the truth tables, a few stamps wandered:
+## Hoot says so once (MISMATCH), since the case's lines tell the true story.
 func _add_findings() -> void:
 	var right := ClinicRules.best_thresholds(results, "right", false)
 	var left := ClinicRules.best_thresholds(results, "left", false)
@@ -701,16 +823,49 @@ func _add_findings() -> void:
 		right = CaseData.truth(patient, "right")
 		left = CaseData.truth(patient, "left")
 	var asym := CaseRules.is_asymmetric(right, left)
+	var truth_asym := CaseRules.is_asymmetric(CaseData.truth(patient, "right"), CaseData.truth(patient, "left"))
+	var ear := _case_ear()
+	var wandered := false
 	for f: Variant in case_data["findings"]:
 		var fd: Dictionary = f
-		match String(fd.get("when", "")):
-			"symmetric":
-				if asym:
-					continue
-			"asymmetric":
-				if not asym:
-					continue
-		_add_clue(String(fd["tag"]), String(fd["text"]), "clue", String(fd.get("src", "test")))
+		var when := String(fd.get("when", ""))
+		var shows := finding_shows(when, results, patient, ear, asym)
+		if shows != finding_shows(when, {}, patient, ear, truth_asym):
+			wandered = true
+		if shows:
+			_add_clue(String(fd["tag"]), String(fd["text"]), String(fd.get("kind", "clue")), String(fd.get("src", "test")))
+	if wandered:
+		clinic.call("hoot_emote", &"nod")
+		await _say("Hoot", MISMATCH)
+
+
+## Whether a finding with this "when" shows: "" always; "symmetric" / "asymmetric" by asym (the
+## chart's, or the truth's); "conductive" when the case ear types conductive on the chart (the truth
+## type when the chart can't tell); "abg_flag" when the ear's own air and bone show the air-bone-gap
+## red flag (the truth when the ear has no bone). res = {} reads the truth.
+static func finding_shows(when: String, res: Dictionary, p: PatientProfile, ear: String, asym: bool) -> bool:
+	match when:
+		"symmetric":
+			return not asym
+		"asymmetric":
+			return asym
+		"conductive":
+			var measured: StringName = ((res.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
+			if measured == &"unknown":
+				measured = CaseData.truth_type(p, ear)
+			return measured == &"conductive"
+		"abg_flag":
+			var bone := ClinicRules.best_thresholds(res, ear, true)
+			if not bone.is_empty():
+				return ClinicRules.abg_red_flag(ClinicRules.best_thresholds(res, ear, false), bone)
+			if p == null:
+				return false
+			var air := CaseData.truth(p, ear)
+			var truth_bone := {}
+			for f: int in air:
+				truth_bone[f] = p.get_bc_threshold(ear, f)
+			return ClinicRules.abg_red_flag(air, truth_bone)
+	return true
 
 
 # ---------------------------------------------------------------- 9. the call: stamp it, then prove it
@@ -806,8 +961,7 @@ func _decision(b: Control) -> void:
 func _payoff(b: Control) -> void:
 	await b.call("fade_out")
 	b.queue_free()
-	while not _walk_done:   # the patient strolled to the desk during the reveal
-		await _wait(0.2)
+	await _until_walked()   # the patient strolled to the desk during the reveal
 	await clinic.call("focus_camera", &"desk", 0.5)
 	await _play(case_data["payoff"])
 	if props != null:
@@ -817,15 +971,132 @@ func _payoff(b: Control) -> void:
 	await clinic.call("walk_out")
 
 
-# ---------------------------------------------------------------- 11. results
+# ---------------------------------------------------------------- 11. the retest (after treatment)
+
+## Days later the patient comes back treated: a look, a tymp recheck, a prediction, then air on a
+## fresh AudiOtron, and the new chart flies up over the first one's. A victory lap: no medal, and the
+## first visit's results stay the scored set. The retest's truth is its own patient file
+## (retest.patient_id, e.g. barnaby_after), loaded without a second begin_visit.
+func _retest() -> void:
+	var rt: Dictionary = case_data["retest"]
+	var first_results := results.duplicate(true)
+	var first_patient := patient
+	_phase(&"retest")
+	hud.call("set_step", &"retest")
+	clinic.call("focus_camera", &"door", 0.0)
+	await _props().call("play", "later", String(rt.get("card", "LATER")))
+	_shot("retest_later")
+	get_tree().create_timer(1.4, false).timeout.connect(func() -> void: clinic.call("focus_camera", &"desk", 2.2))
+	await clinic.call("walk_in")
+	_react(&"wave")
+	await _play(rt.get("intro", []))
+	patient = Game.load_patient(String(rt["patient_id"])) as PatientProfile
+	_canal_blocked = false
+	if rt.get("otoscopy", null) is Dictionary:
+		await _otoscopy(rt["otoscopy"], false)
+	if rt.get("tymp", null) is Dictionary:
+		await _tymp_recheck(rt["tymp"])
+	await _play(rt.get("before", []))
+	await _instructions(rt.get("instructions", []), false)
+	await _audiometry(rt["audiometry"], false)
+	var rv: Dictionary = rt["reveal"]
+	var ear := String(rv["ear"])
+	var shown := merge_retest(first_results, results, CaseData.plan_ears(rt["audiometry"], "ac"))
+	var measured: StringName = ((shown["ears"] as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
+	_phase(&"reveal", {"retest": true})
+	var b := CaseBoard.new()
+	b.setup(retest_board_case(case_data, rt, first_results))
+	hud.call("add_game", b)
+	clinic.call("focus_camera", &"desk", 0.0)
+	_walk_to_desk()
+	await b.run_reveal(shown)
+	await b.show_pattern()
+	_shot("retest_chart", 0.3)
+	var truth := CaseData.truth_type(patient, ear)
+	b.call("show_type", String(ClinicRules.HEARING_TYPE_TITLES.get(truth, "")))
+	if measured == truth:
+		await _play(rv.get("lines", []))
+	else:
+		await _say("Hoot", RETEST_NEUTRAL)
+	await b.call("fade_out")
+	b.queue_free()
+	await _until_walked()
+	await clinic.call("focus_camera", &"desk", 0.5)
+	await _play(rt.get("payoff", []))
+	clinic.call("focus_camera", &"door", 1.6)
+	_shot("retest_goodbye", 1.6)
+	await clinic.call("walk_out")
+	results = first_results
+	patient = first_patient
+	Game.set_audiometry_results(first_results)   # the score is the first visit's
+	Game.set_visit_flag("retested", true)
+	Game.set_visit_flag("retest_type", String(measured))
+	hud.call("complete_step", &"retest")
+
+
+## The chart the retest board shows: a deep copy of the first visit's results with each retested ear
+## replaced by a copy of the retest's. Neither input changes.
+static func merge_retest(first: Dictionary, second: Dictionary, ears: PackedStringArray) -> Dictionary:
+	var out := first.duplicate(true)
+	if not out.get("ears", null) is Dictionary:
+		out["ears"] = {}
+	var second_ears: Dictionary = second.get("ears", {})
+	for ear: String in ears:
+		if second_ears.has(ear):
+			(out["ears"] as Dictionary)[ear] = (second_ears[ear] as Dictionary).duplicate(true)
+	return out
+
+
+## The retest board's case: the "retest" pattern, with the first visit's measured air on the retest
+## ear dashed behind today's chart (the reveal's label, e.g. "WITH WAX").
+static func retest_board_case(c: Dictionary, rt: Dictionary, first_results: Dictionary) -> Dictionary:
+	var rv: Dictionary = rt.get("reveal", {})
+	var ear := String(rv.get("ear", "right"))
+	var before := ClinicRules.best_thresholds(first_results, ear, false)
+	var prev := {}
+	for f: int in before:
+		prev[str(f)] = int(before[f])
+	return {
+		"speaker": String(c.get("speaker", "Patient")),
+		"case_title": String(c.get("case_title", "")),
+		"reveal": {"pattern": "retest", "ear": ear, "title": String(rv.get("title", "")),
+			"previous": {"ear": ear, "label": String(rv.get("label", "BEFORE")), "thresholds": prev}},
+	}
+
+
+# ---------------------------------------------------------------- 12. results
+
+## The paper's headlines and subheads for a visit: the case's own, except that a wrong first stamp
+## takes over every graded headline (S to C; Do-over keeps its own): the case's paper.wrong_first
+## entry, or a generic one. Works on copies (CaseData caches the case dict).
+static func paper_for(c: Dictionary, decision_first: String) -> Dictionary:
+	var paper: Dictionary = c.get("paper", {})
+	var headlines: Dictionary = (paper.get("headlines", {}) as Dictionary).duplicate()
+	var subheads: Dictionary = (paper.get("subheads", {}) as Dictionary).duplicate()
+	var answer := String((c.get("decision", {}) as Dictionary).get("answer", ""))
+	if decision_first != "" and decision_first != answer:
+		var wf: Dictionary = (paper.get("wrong_first", {}) as Dictionary).get(decision_first, {})
+		var head := String(wf.get("headline", ""))
+		var sub := String(wf.get("subhead", ""))
+		if head == "":
+			var said := String(CaseRules.DECISION_STAMPS.get(StringName(decision_first), decision_first.to_upper()))
+			var right := String(CaseRules.DECISION_STAMPS.get(StringName(answer), answer.to_upper()))
+			head = "FIRST STAMP SAID %s; OWL STEERS TO %s" % [said, right]
+			sub = "First stamp: %s. The right call: %s." % [said, right]
+		for g: String in ["S", "A", "B", "C"]:
+			headlines[g] = head
+			if sub != "":
+				subheads[g] = sub
+	return {"headlines": headlines, "subheads": subheads}
+
 
 func _results() -> void:
 	_phase(&"results")
 	var summary := Game.finish_visit()
-	var paper_data: Dictionary = case_data.get("paper", {})
+	var paper_data := paper_for(case_data, String(Game.get_visit_flag("decision_first", "")))
 	summary["case_id"] = case_id
-	summary["headlines"] = paper_data.get("headlines", {})
-	summary["subheads"] = paper_data.get("subheads", {})
+	summary["headlines"] = paper_data["headlines"]
+	summary["subheads"] = paper_data["subheads"]
 	summary["medal_beats"] = MEDAL_BEATS
 	Events.level_finished.emit(summary)
 	var paper: Node = (load(RESULTS_SCENE) as PackedScene).instantiate()

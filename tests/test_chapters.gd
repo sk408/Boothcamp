@@ -132,6 +132,16 @@ func test_any_order() -> void:
 	assert_eq(s3["next_chapter_id"], "", "the last day with every day done: no Next")
 	assert_eq(Game.suggested_chapter_id(), "", "every day done: nothing suggested")
 	assert_eq(Game.next_chapter_id(), "gus", "then Play replays the last day started (none: Day 1)")
+	# a case day first: Next goes back to Day 1; after Day 1, Next is the next suggested day (Day 2)
+	if ids.has("rocco"):
+		Game.reset_save()
+		Game.begin_visit("rocco")
+		assert_eq(Game.finish_visit()["next_chapter_id"], "gus", "Day 6 played first: Next is Day 1")
+		Game.reset_save()
+		Game.begin_visit("gus")
+		Game.finish_visit()
+		Game.begin_visit("rocco")
+		assert_eq(Game.finish_visit()["next_chapter_id"], "bonnie", "Day 6 after Day 1: Next is Day 2, the suggested day")
 
 
 ## The suggestion rule over any list: the first day not done whose requires is done (or empty).

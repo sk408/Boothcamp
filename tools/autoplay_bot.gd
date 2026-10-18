@@ -18,6 +18,7 @@ extends Node
 ## Exit codes: 0 ok, 2 stalled, 3 overall timeout, 4 results failed sanity checks,
 ##             5 script errors were logged during the run, 6 a mouse target was not found.
 
+const CaseData := preload("res://story/case_data.gd")
 const BEAT_DELAY_S := 0.6       ## game seconds before solving a beat (lets things settle)
 const STALL_TIMEOUT_S := 120.0  ## game seconds without progress -> exit 2
 const MAX_RUN_S := 3000.0       ## game seconds overall -> exit 3
@@ -78,7 +79,8 @@ var _plateaus := 0
 ## (v3, integrator) --via-days: start the level from the title's Days card instead of Play, with
 ## real input (mouse clicks with --mouse, scrolling the grid with the wheel when the card is out
 ## of view; else ui_* key actions). --pick=<chapter id> picks the card (default
-## Game.next_chapter_id()); --expect-days=gus,bonnie checks the listed (all open) days;
+## Game.next_chapter_id()); --expect-days=gus,bonnie checks that the listed days are on the grid,
+## open and in this order (other days may sit between or after them);
 ## (polish) --expect-suggested=<id> checks which card wears the UP NEXT badge. Every day is open,
 ## so any --pick works on any save. The result gets a "days" report and problems for any failed
 ## expectation.
@@ -150,6 +152,8 @@ func _on_phase(phase: StringName, info: Dictionary) -> void:
 	var suffix := ("_" + String(info["ear"])) if info.has("ear") else ""
 	if info.has("test") and String(info["test"]) != "ac":
 		suffix += "_" + String(info["test"])
+	if bool(info.get("retest", false)):
+		suffix += "_retest"   # a case's retest repeats phases: keep the first visit's shots
 	_pending_phase_shot = String(phase) + suffix
 	print("BOT phase ", phase, " ", info, "  t=%.0fs" % Game.clock)
 
@@ -884,6 +888,41 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 				problems.append("right masked air missing at %d Hz" % f)
 		if need.is_empty() and not (r.get("ac_masked", {}) as Dictionary).is_empty():
 			problems.append("right masked air stamped where no masking was needed")
+	var case_id := String(Game.chapter(String(_summary.get("chapter_id", ""))).get("case", ""))
+	if case_id != "":
+		_check_conductive_case(case_id, res, report, problems)
+
+
+## (cases) A conductive case (Days 10 and 11): the case ear comes out conductive with the air-bone
+## gap red flag and masked bone at 500-4k, and masked air sits exactly where the rules ask on each
+## ear (none for wax and fluid). The transducer is headphones while the canal is full of wax.
+func _check_conductive_case(case_id: String, res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var c := CaseData.load_case(case_id)
+	var ear := String((c.get("reveal", {}) as Dictionary).get("ear", "right"))
+	var p := Game.load_patient(String(c.get("patient_id", ""))) as PatientProfile
+	if (ear != "right" and ear != "left") or CaseData.truth_type(p, ear) != &"conductive":
+		return
+	var ears: Dictionary = res.get("ears", {})
+	var e: Dictionary = ears.get(ear, {})
+	report["case_ear_type"] = String(e.get("hearing_type", ""))
+	if StringName(e.get("hearing_type", &"")) != &"conductive":
+		problems.append("%s: the %s ear should be conductive, got %s" % [case_id, ear, str(e.get("hearing_type", ""))])
+	if not bool(e.get("abg_red_flag", false)):
+		problems.append("%s: no air-bone gap red flag on the %s ear" % [case_id, ear])
+	for f: int in [500, 1000, 2000, 4000]:
+		if not (e.get("bc_masked", {}) as Dictionary).has(f):
+			problems.append("%s: %s masked bone missing at %d Hz" % [case_id, ear, f])
+	var wax := String((c.get("otoscopy", {}) as Dictionary).get("view", "clear")) == "wax"
+	var tr := &"inserts" if Game.has_upgrade("insert_earphones") and not wax else &"phones"
+	report["air_transducer"] = String(tr)
+	for chk: String in ["right", "left"]:
+		var need := ClinicRules.masked_freqs_needed(res, chk, &"ac_masked", tr)
+		var stamped: Dictionary = (ears.get(chk, {}) as Dictionary).get("ac_masked", {})
+		for f: int in need:
+			if not stamped.has(f):
+				problems.append("%s: %s masked air missing at %d Hz" % [case_id, chk, f])
+		if need.is_empty() and not stamped.is_empty():
+			problems.append("%s: %s masked air stamped where no masking was needed" % [case_id, chk])
 
 
 func _fail(code: int, why: String) -> void:

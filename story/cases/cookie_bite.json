@@ -188,6 +188,10 @@
 			"B": "The bite showed up; a few stamps missed their cue.",
 			"C": "Look for the dip between 1k and 2k.",
 			"Do-over": "Cookie bites sit in the middle pitches. Family history alone isn't a red flag."
+		},
+		"wrong_first": {
+			"refer": {"headline": "VENTRILOQUIST REFERRED FOR FAMILY HISTORY; CHIP OBJECTS", "subhead": "Family history isn't a red flag: stable and symmetric, she can be fitted."},
+			"today": {"headline": "GINGER RUSHED TO DOCTOR; CHIP ASKS 'FOR WHAT?'", "subhead": "Stable for years is the opposite of sudden."}
 		}
 	}
 }

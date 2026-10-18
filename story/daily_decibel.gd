@@ -55,9 +55,9 @@ const MEDAL_BEATS: Array[Array] = [["history", "Chat"], ["otoscopy", "Peek"], ["
 const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
 }
-## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
-	["bc_masked", "L  ]", "left"], ["ac_masked", "L  □", "left"]]
+## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, ear] (_row_tag draws the
+## row's audiogram symbol).
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "right"], ["ac_masked", "right"], ["bc_masked", "left"], ["ac_masked", "left"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),
@@ -615,12 +615,12 @@ func _golf_card(res: Dictionary) -> Control:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.custom_minimum_size = Vector2(44, 0)
 		grid.add_child(l)
-	var rows: Array[Array] = [["freqs", "R  O", "right"], ["freqs", "L  X", "left"]]
+	var rows: Array[Array] = [["freqs", "right"], ["freqs", "left"]]
 	for extra: Array in GOLF_EXTRA_ROWS:
-		if not ((ears.get(String(extra[2]), {}) as Dictionary).get(String(extra[0]), {}) as Dictionary).is_empty():
+		if not ((ears.get(String(extra[1]), {}) as Dictionary).get(String(extra[0]), {}) as Dictionary).is_empty():
 			rows.append(extra)
 	for row: Array in rows:
-		var e := String(row[2])
+		var e := String(row[1])
 		var fl: Dictionary = (ears.get(e, {}) as Dictionary).get(String(row[0]), {})
 		grid.add_child(_row_tag(e, StringName(String(row[0]))))
 		for f in freqs:
