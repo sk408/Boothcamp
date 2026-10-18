@@ -295,14 +295,6 @@ func _set_wall() -> void:
 		_zzz(LEFTY_AT + Vector2(-6, -104))
 	else:
 		_text("!", LEFTY_AT + Vector2(-26, -122 - 8.0 * _pop(cross)), 38, Palette.LEFT_BLUE, 700, 7)
-	# the toll sign, and the inserts tag up in the corner
-	var sign_k := _pop(1.2, 0.4)
-	if sign_k > 0.01:
-		_toll_sign(SIGN_AT, ["-%d dB" % ia, "on-ear phones: at least"], sign_k, _ring(1.2, 0.18, 9.0, 2.5), Palette.PAPER)
-	var ins_k := _pop(2.0)
-	if ins_k > 0.01:
-		_dashed_curve(INSERTS_AT + Vector2(-70, 14), Vector2(600, 196), SIGN_AT + Vector2(80, -4), Palette.INK_SOFT, _k(2.0, 2.5))
-		_chip("inserts: -%d dB or more" % int(params.get("inserts_ia", 55)), INSERTS_AT, Palette.SKY, 17, INK, ins_k)
 	# Lefty's own threshold: what a crossed beep must reach
 	_chip("Lefty hears from %d dB" % lefty_hears, LEFTY_HEARS_AT, Palette.LEFT_TINT, 15, INK, _pop(1.8))
 	# the level meter on the cup
@@ -335,7 +327,8 @@ func _set_wall() -> void:
 			for d in 9:
 				var u := sk * d / 8.0
 				draw_circle(_cubic(mouth, SKULL_C1, SKULL_C2, wall_in, u), 3.5, Color(Palette.CORAL, 0.25 + 0.4 * d / 8.0), true, -1.0, true)
-			_note(_cubic(mouth, SKULL_C1, SKULL_C2, wall_in, sk), big * 0.9, Palette.RIGHT_RED, sin(t * 14.0) * 0.15, str(lv))
+			# its level tag only over Righty: near the wall it would sit on the toll sign
+			_note(_cubic(mouth, SKULL_C1, SKULL_C2, wall_in, sk), big * 0.9, Palette.RIGHT_RED, sin(t * 14.0) * 0.15, str(lv) if sk < 0.5 else "")
 		var hit := t0 + into + skull
 		if i < shots.size() - 1:
 			# a soft one: squish and bonk on the wall; a faint wisp on the other side, too soft for Lefty
@@ -351,7 +344,8 @@ func _set_wall() -> void:
 					var wp := Vector2(WALL_X + 40 + 8.0 * w, SQUEEZE_Y - 26.0 * w)
 					_note(wp, 0.5, Color(Palette.RIGHT_RED, 0.65 * (1.0 - w)), 0.0)
 					draw_circle(wp + Vector2(-8, 14), 9.0 * (1.0 - w) + 2.0, Color(Palette.PAPER.darkened(0.1), 1.0 - w), true, -1.0, true)
-					_text("%d - %d: fizzle!" % [lv, ia], wp + Vector2(58, 26), 17, Color(INK, 1.0 - w), 700, 5, Color(Palette.PAPER, 1.0 - w))
+					# under the snails, clear of Lefty's face and the wall
+					_text("%d - %d: fizzle!" % [lv, ia], Vector2(WALL_X + 90, SQUEEZE_Y + 70), 17, Color(INK, 1.0 - w), 700, 5, Color(Palette.PAPER, 1.0 - w))
 		else:
 			# the LOUD one squeezes through under the sign, 40 dB smaller: a big countdown chip
 			var sq_k := _k(hit, hit + squeeze)
@@ -369,13 +363,22 @@ func _set_wall() -> void:
 			var to := LEFTY_AT + Vector2(-64, -58)
 			if t >= hit + squeeze and t < cross + 0.2:
 				var np := from.lerp(to, fly) + Vector2(0, -sin(fly * PI) * 30.0)
-				_note(np, 0.95, Palette.RIGHT_RED, sin(t * 10.0) * 0.2, str(out))
+				_note(np, 0.95, Palette.RIGHT_RED, sin(t * 10.0) * 0.2)   # its number is the countdown chip
 			if t > cross:
 				_chip("%d - %d = %d" % [lv, ia, out], MATH_AT, Palette.SUNNY, 24, INK, _pop(cross, 0.4), sin(t * 3.0) * 0.02 * _motion)
 				_text("%d is above his %d!" % [out, lefty_hears], MATH_AT + Vector2(0, 38), 15, INK, 700, 5, Palette.PAPER, 0.5, _pop(cross + 0.5))
+	# the toll sign (on top: a skull-shake note passes BEHIND it), and the inserts tag up in the corner
+	var sign_k := _pop(1.2, 0.4)
+	if sign_k > 0.01:
+		_toll_sign(SIGN_AT, ["-%d dB" % ia, "on-ear phones: at least"], sign_k, _ring(1.2, 0.18, 9.0, 2.5), Palette.PAPER)
+	var ins_k := _pop(2.0)
+	if ins_k > 0.01:
+		_dashed_curve(INSERTS_AT + Vector2(-70, 14), Vector2(600, 196), SIGN_AT + Vector2(80, -4), Palette.INK_SOFT, _k(2.0, 2.5))
+		_chip("inserts: -%d dB or more" % int(params.get("inserts_ia", 55)), INSERTS_AT, Palette.SKY, 17, INK, ins_k)
 	if t > cross + 0.6:
-		_chip("cross-hearing!", CALLOUT_AT, Palette.SUNNY, 22, INK, _pop(cross + 0.6), sin(t * 3.0) * 0.03 * _motion)
+		# the burst first, so its stars fly out from BEHIND the words
 		_sparkles(CALLOUT_AT, cross + 0.6, 10, 110.0, Palette.SUNNY)
+		_chip("cross-hearing!", CALLOUT_AT, Palette.SUNNY, 22, INK, _pop(cross + 0.6), sin(t * 3.0) * 0.03 * _motion)
 	_name_tag("RIGHTY", RIGHTY_AT, Palette.RIGHT_RED, 1.0)
 	_name_tag("LEFTY", LEFTY_AT, Palette.LEFT_BLUE, 1.0)
 
