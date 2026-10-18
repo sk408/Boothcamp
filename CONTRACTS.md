@@ -1013,6 +1013,8 @@ noise). Additions are marked **(Speech)** where they touch earlier sections. Day
 | `core/speech/**` | speech thread | `SpeechRules`, `SpeechMaterial`, `SpeechSim`, `SpeechSession`, `SpeechVoice`, `material/*.json` |
 | `ui/speech/**` | speech thread | `SpeechScreen` (`speech_screen.tscn`) and its widgets |
 | `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | the Day 3 level and its board |
+| `core/patients/mike.tres` | speech thread | Mike Lenders (new file): his claimed audiogram, `speech` (SRT 30 both ears), tags |
+| `core/INTEGRATION_NOTES.md` | speech thread | notes for the integrator (new file) |
 
 **Shared-file changes (Speech).** Mostly additions. The lines that change in place are Mike or speech branches that
 leave every other day as it was, plus one removed rule:
@@ -1025,14 +1027,19 @@ leave every other day as it was, plus one removed rule:
   so every existing patient behaves as before; `SPEECH_KEYS`, `speech_value()` and its validation),
   `project.godot` / `tools/setup_input_map.gd` (`speech_correct`, `speech_incorrect`, the project-wide WAV import
   default, §9.6), `story/voice.gd`, `world/clinic.gd` (Mike), `tools/autoplay_bot.gd` (the generic mouse route and
-  the speech sanity checks), `world/tests/test_clinic.gd`, and the new `tests/test_contracts_speech.gd`.
-- Changed in place, other days unchanged: `story/daily_decibel.gd` (column 2 and the weather line branch on the
-  speech results), `world/characters/bean.gd` (the shirt block moves inside a `vest` branch for Mike),
+  the speech sanity checks), `world/tests/test_clinic.gd`, `story/INTEGRATION_NOTES.md`, `ui/INTEGRATION_NOTES.md`
+  and `world/INTEGRATION_NOTES.md` (speech sections appended), `tools/analyze_movie_audio.py` (the `--speech`
+  mode), and the new `tests/test_contracts_speech.gd`.
+- Changed in place, other days unchanged: `story/daily_decibel.gd` (column 2, the weather line and the C subhead
+  branch on the speech results: `speech_c_subhead()` names the slip on a speech day's C; other days keep their
+  subhead tables), `world/characters/bean.gd` (the shirt block moves inside a `vest` branch for Mike),
   `world/characters/face_rig.gd` (Mike's face; one comment reworded), `story/portraits.gd` and
   `tests/test_chapters.gd` (their tables gain Mike; the header comment changes), `story/pause_menu.gd` and
   `story/hud.gd` (the speech phase hides the pause corner and the tracker, like the audiometry phase), `story/dialogue_box.gd` (Mike's display name "Mike
   Lenders"), `story/tests/test_story.gd` (Mike in the voice-bank check; a new Day 3 card test), `export_presets.cfg` (the material JSON in,
   `story/dev_day3.*` out), `tools/scene_shot.sh` (positional parsing, so `--` and options can come anywhere),
+  `tools/monkey.gd` and `tools/movie_check.sh` / `tools/movie_ac.gd` (a `--day=3` mode each; a day they don't
+  play is refused with a message and exit 2 instead of running Day 1; Days 1 and 2 run exactly as before),
   `tools/README.md` (Day 3 in the commands and exit codes), `README.md` (Day 3 and speech in the overview; the
   "not in this slice" speech-in-noise bullet goes) and `docs/ADDING_A_CHAPTER.md` (recordings are WAV only).
 
