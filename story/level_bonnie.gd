@@ -26,6 +26,7 @@ const PATIENT_ID := "bonnie"
 ## (v4) Hoot's masking movie (story/explainers/, CONTRACTS.md §3.4): plays before Bonnie knocks.
 const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const MOVIE_ID := "masking"
+const RECAP_ID := "masking_recap"   ## (polish) the one-card short version, at the masking phase
 ## (v4) The one-tone Ghost demo: 1 kHz, 5 dB above her measured LEFT bone (never above 30).
 const DEMO_FREQ := 1000
 const DEMO_MAX_DB := 30
@@ -146,8 +147,23 @@ func _movie() -> void:
 	add_child(player)
 	var r: Dictionary = await player.call("play", MOVIE_ID, "day_start")
 	player.queue_free()
-	_movie_watched = not bool(r.get("skipped", false))
+	_movie_watched = bool(r.get("watched", not bool(r.get("skipped", false))))
 	Game.set_visit_flag("movie_watched", _movie_watched)
+	if bool(r.get("skipped", false)):
+		# (polish) Esc is "pause" everywhere else: say where the movie lives (and it plays again next
+		# visit until it reaches its plateau scene)
+		await _say("Hoot", "Skipped! Rewatch it any time: pause menu, \"Watch %s\"." % Movies.title(MOVIE_ID))
+
+
+## (polish) When the masking phase opens, about 8 minutes after the movie: the short version (one
+## card, about 12 s, Esc skips it), so the steps are fresh right before the AudiOtron needs them.
+func _recap() -> void:
+	if not Movies.has(RECAP_ID):
+		return
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", RECAP_ID, "recap")
+	player.queue_free()
 
 
 # ---------------------------------------------------------------- 1. intro
@@ -355,7 +371,8 @@ func _bone_placement() -> void:
 	hud.call("set_step", &"bone")
 	clinic.call("take_off_earphones")
 	clinic.call("focus_camera", &"ear_left", 0.8)
-	await _say("Hoot", "Meet the bone buzzer! Better ear first: her LEFT. It sits behind the ear, on the mastoid.")
+	await _say("Hoot", "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway.")
+	await _say("Hoot", "So: her LEFT. It sits behind the ear, on the bony mastoid.")
 	var g := BonePlacement.new()
 	g.setup("left")
 	hud.call("add_game", g)
@@ -373,7 +390,7 @@ func _bone_placement() -> void:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
 	if _found_glasses:
 		await _say("Bonnie", "And you found my glasses! They were on my HEAD? All morning?")
-	await _say("Hoot", "Snug on the mastoid, not touching the ear. Bone tones go 500 to 4000 Hz.")
+	await _say("Hoot", "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up.")
 
 
 ## Both placements share one medal: every slip of the visit counts (0 gold, 1 silver, more bronze).
@@ -388,7 +405,8 @@ func _record_placement() -> void:
 ## (v4) Unmasked bone on her left mastoid, coached (">" marks). Then the rule of the day.
 func _bone() -> void:
 	var cam := _open_screen()
-	await _test("left", true, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true,
+	# (polish) the route buttons (AIR | BONE) without the masking group: no noise before it is taught
+	await _test("left", true, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true, "masking_deck": false,
 		"hoot_turn_after": 1, "done_title": "LEFT BONE DONE!",
 		"intro": "Bone time, left ear! %s = bone. Same dance: down 10, up 5. Start at 1k." % Game.key_label(&"transducer_bone")})
 	await _bonus_hole("left")
@@ -414,7 +432,7 @@ func _ghost_demo() -> void:
 	var air := ClinicRules.sheet_thresholds(results, "right", &"ac")
 	var a1 := int(air.get(DEMO_FREQ, 50))
 	await _say("Hoot", "Her right air needs %d. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." % a1)
-	await _say("Hoot", "Let's test that. Swap the buzzer to her RIGHT mastoid: the poorer ear.")
+	await _say("Hoot", "Watch what happens if we try anyway: swap the buzzer to her RIGHT mastoid.")
 	clinic.call("take_off_bone_oscillator")
 	clinic.call("focus_camera", &"ear_right", 0.8)
 	var g := BonePlacement.new()
@@ -434,9 +452,11 @@ func _ghost_demo() -> void:
 	var left_bone := ClinicRules.sheet_thresholds(results, "left", &"bc")
 	var db := clampi(int(left_bone.get(DEMO_FREQ, 5)) + ClinicRules.LEVEL_STEP_DB, 0, DEMO_MAX_DB)
 	_ghost_seen = false
-	var watch := func(kind: StringName, _data: Dictionary) -> void:
+	var heard := {"db": db}
+	var watch := func(kind: StringName, data: Dictionary) -> void:
 		if kind == &"cross_heard":
 			_ghost_seen = true
+			heard["db"] = int(data.get("db", db))
 	Events.patient_reaction.connect(watch)
 	var cam := _open_screen()
 	await _test("right", false, {"test": "bc", "bc_freqs": [DEMO_FREQ], "masking_controls": false, "hoot_turn_after": 99,
@@ -446,12 +466,24 @@ func _ghost_demo() -> void:
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
 	Game.set_visit_flag("ghost_demo_seen", _ghost_seen)
+	var lb := int(left_bone.get(DEMO_FREQ, 5))
 	if _ghost_seen:
 		_react(&"startle")
-		await _say("Hoot", "BOO! Same answer as her left bone. Was that her right cochlea, or the LEFT one? Can't tell!")
+		if int(heard["db"]) <= lb + ClinicRules.LEVEL_STEP_DB:
+			await _say("Hoot", "BOO! Same answer as her left bone. Was that her right cochlea, or the LEFT one? Can't tell!")
+		else:
+			# (polish) the first beep was missed: she answered a step or two higher, still near her left bone
+			await _say("Hoot", "Heard at %d, near her left bone. Her right cochlea, or the LEFT one? Can't tell!" % int(heard["db"]))
 		await _say("Bonnie", "A ghost in my skull?! I KNEW that oven was haunted.")
 	else:
 		await _say("Hoot", "She missed it? Even the Ghost naps. But it CAN answer, so we mask anyway.")
+	# (polish, audiology review) the rule a clinician uses next time, with the player's own numbers
+	var ub: Variant = ClinicRules.unmasked_bone(results, DEMO_FREQ)
+	var ubi := int(ub) if ub != null else lb
+	if ClinicRules.bc_masking_needed(a1, ubi):
+		await _say("Hoot", "Right air %d, unmasked bone %d: a gap over 10 dB. Any gap over 10? Mask the bone!" % [a1, ubi])
+	else:
+		await _say("Hoot", "The rule: air more than 10 dB poorer than unmasked bone? Mask the bone!")
 	await _say("Hoot", "That's the Ghost's trick. Only masking the left ear can tell us the right cochlea's truth.")
 	hud.call("complete_step", &"bone")
 
@@ -465,7 +497,7 @@ func _bonus_hole(ear: String = "left") -> void:
 	if c != 0:
 		await _say("Hoot", "Fair! Many clinics skip 250 Hz bone: a loud low buzz gets felt, not heard.")
 		return
-	await _test(ear, false, {"test": "bc", "bc_freqs": [250], "masking_controls": true, "hoot_turn_after": 99,
+	await _test(ear, false, {"test": "bc", "bc_freqs": [250], "masking_controls": true, "masking_deck": false, "hoot_turn_after": 99,
 		"start_db": 40, "done_title": "BONUS HOLE!",
 		"intro": "250 Hz, starting at 40. Watch her face on the first buzz!"})
 
@@ -495,6 +527,7 @@ func _masking() -> void:
 	_react(&"nod")
 	# (polish) one hook, no rule dump: the coach teaches the numbers step by step on the AudiOtron
 	await _say("Hoot", "I'll walk you through it. Trick: if more noise makes her answer vanish, it was the Ghost.")
+	await _recap()
 	var cam := _open_screen()
 	await _test("right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2, "done_title": "GHOST BUSTED!",
 		"intro": "Noise in her LEFT ear, bone on her right. Find the flat line!"})
@@ -507,28 +540,37 @@ func _masking() -> void:
 
 
 ## Masked air, only where the rules ask for it with THIS air transducer: supra-aural phones lose
-## about 40 dB crossing the head (rule of thumb), insert earphones about 55, so with inserts (the
-## Day 2 shop upgrade) Bonnie's right air usually cannot reach her left cochlea at all.
+## at least 40 dB crossing the head (the safe rule; real heads lose about 40-80, hers 60), insert
+## earphones at least 55, so with inserts (the Day 2 shop upgrade) Bonnie's right air cannot reach
+## her left cochlea (its bone threshold) at all.
 func _masked_air() -> void:
 	var tr := _air_transducer()
 	var ia := ClinicRules.ia_rule(tr)
 	var need := ClinicRules.masked_freqs_needed(results, "right", &"ac_masked", tr)
 	var air := ClinicRules.sheet_thresholds(results, "right", &"ac")
+	# (polish, audiology review) the comparison that matters is the other ear's BONE (its cochlea),
+	# and the rule's IA is the safe minimum ("at least"), not the typical loss
 	if need.is_empty():
 		var top := 0
 		for f: int in air:
 			top = maxi(top, int(air[f]))
-		await _say("Hoot", "Inserts! About %d dB is lost crossing her head. %d minus %d can't reach her left ear." % [ia, top, ia])
-		await _say("Hoot", "No Ghost on air: no masked air needed today. That's what the upgrade buys you!")
+		await _say("Hoot", "Inserts! At least %d dB lost crossing her head: %d minus %d is below her left bone." % [ia, top, ia])
+		await _say("Hoot", "It can't reach her left cochlea: no masked air today. That's what the upgrade buys you!")
 		return
 	var a0 := int(air.get(need[0], 50))
-	await _say("Hoot", "Air leaks too! %d dB minus about %d lost crossing her head could reach her left ear." % [a0, ia])
-	await _say("Hoot", "(Clinics often mask air first. Today the Ghost couldn't wait!)")
+	var nb: Variant = ClinicRules.nontest_bone_estimate(results, "right", need[0])
+	var lbone := int(nb) if nb != null else 5
+	await _say("Hoot", "Air leaks too! %d minus %d: up to %d dB crosses. Her left BONE hears %d." % [a0, ia, a0 - ia, lbone])
+	await _say("Hoot", "It could reach her left cochlea. Clinics often mask air first; today the Ghost couldn't wait!")
 	clinic.call("take_off_bone_oscillator")
 	clinic.call("put_on_earphones", true)
 	await _test("right", not _quick(), {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0, "done_title": "MASKED AIR DONE!",
 		"intro": "Masked air, Hoot speed. Same plateau dance, noise in the left ear.",
 		"intro_full": "Masked air is yours: the same plateau dance, through the earphones."})
+	# masked air came out like unmasked air: her real head loses more than the rule's 40
+	var m_air := ClinicRules.sheet_thresholds(results, "right", &"ac_masked")
+	if m_air.has(need[0]) and absi(int(m_air[need[0]]) - a0) <= ClinicRules.LEVEL_STEP_DB:
+		await _say("Hoot", "Masked air matches unmasked: her head loses more than %d. We assume %d to play safe." % [ia, ia])
 
 
 # ---------------------------------------------------------------- 10. reveal: the toll bridge

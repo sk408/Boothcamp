@@ -90,7 +90,7 @@ func _day2() -> void:
 			# (v4) the Ghost demo: one tone 5 dB above her measured left bone, as level_bonnie plays it
 			var lb := ClinicRules.sheet_thresholds(screen.call("get_results"), "left", &"bc")
 			var ddb := int(lb.get(1000, 5)) + ClinicRules.LEVEL_STEP_DB
-			plan["demo_tone"] = {"freq": 1000, "db": ddb, "title": "Bone %d? BOO!" % ddb}
+			plan["demo_tone"] = {"freq": 1000, "db": ddb, "title": "Bone %d? BOO!" % ddb, "idle_s": 3.0}
 		if String(plan["test"]) == "bc":
 			clinic.call("put_on_bone_oscillator", String(p[0]))
 		elif String(plan["test"]) == "bc_masked":

@@ -301,7 +301,7 @@ func _draw_legend(c: Control) -> void:
 	items.append(["left", &"ac", "Left air"])
 	# (v4) the better ear's bone is tested first, unmasked: ">" (left bone)
 	if results.is_empty() or _has_sheet("bc", "left"):
-		items.append(["left", &"bc", "Left bone"])
+		items.append(["left", &"bc", "Left bone, unmasked"])
 	var total := 0.0
 	for it: Array in items:
 		total += 44.0 + f.get_string_size(String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x

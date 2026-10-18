@@ -151,6 +151,10 @@ var _music_ducked := false
 var _plan: Dictionary = {}
 ## Masking / route controls are live (Day 2 plans).
 var _masking_ui := false
+## (polish) The MASKING group (noise down / on-off / up, M, PgUp / PgDn) is shown: plan "masking_deck"
+## (default true). False keeps only the AIR | BONE route (unmasked bone, before masking is taught).
+var _mask_deck := false
+const MASK_DECK_BUTTONS: Array[String] = ["mask_softer_button", "mask_toggle_button", "mask_louder_button"]
 ## Quick visit: player stamps before Hoot's turn on this test (plan "hoot_turn_after").
 var _solo_limit := QUICK_SOLO_HOLES
 var _masker_key: Array = []
@@ -169,7 +173,8 @@ var _mask_tapped := false
 ## (v4) Plan "demo_tone" (CONTRACTS.md §4.2 v4): the one-tone Cross-Hearing Ghost demo. {} = off.
 ## The dial is preset; TONE is the only live control (it beckons; every other deck button is dimmed
 ## and wiggles with a "just TONE" tip); the first verdict ends the test (a miss: up 5, again, at
-## most DEMO_MAX_TONES); Hoot presses TONE after "idle_s" without a press; nothing is stored and
+## most DEMO_MAX_TONES); (polish) "idle_s" after Hoot's tip has typed out TONE wiggles ("Hold Space!"),
+## after twice that Hoot presses TONE himself; nothing is stored and
 ## scoring is off. The look: a "GHOST TEST" badge on the test ear's card, the quest panel says one
 ## beep and nothing stored, the poorer ear's unknown bone shows as "?" ranges (unmasked bone up to
 ## its air), and a cross-heard answer flies the Ghost onto the better ear's bone mark, lingering.
@@ -179,6 +184,7 @@ var _demo_idle := 0.0
 var _demo_done := false
 var _demo_ghost := false           ## the demo tone was answered by the other cochlea
 var _demo_heard_db := -1
+var _demo_nudged := false          ## (polish) TONE already wiggled "Hold Space!" in this wait
 const DEMO_MAX_TONES := 3
 const DEMO_IDLE_S := 6.0
 const DEMO_HOLD_S := 1.3
@@ -212,7 +218,7 @@ func _enter_tree() -> void:
 	Stage.register_audiometer(self)
 	# the booth stays quiet for the beeps: no music while the AudiOtron is up
 	if Sfx.has_method("music_duck"):
-		Sfx.music_duck(true)
+		Sfx.music_duck(true, "audiotron:%d" % get_instance_id())
 		_music_ducked = true
 
 
@@ -226,7 +232,8 @@ func _exit_tree() -> void:
 	for id: String in ANCHORS + MASK_BUTTONS:
 		Hoot.unregister_anchor(id)
 	if _music_ducked:
-		Sfx.music_duck(false)
+		Sfx.music_duck(false, "audiotron:%d" % get_instance_id())
+		_music_ducked = false
 
 
 func _ready() -> void:
@@ -327,6 +334,7 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_plan = plan.duplicate(true)
 	session.configure(_plan)
 	_masking_ui = bool(_plan.get("masking_controls", session.goal_test != &"ac"))
+	_mask_deck = _masking_ui and bool(_plan.get("masking_deck", true))
 	# (v4) the Ghost demo: one tone, no deck, no coach, no score
 	_demo = (_plan.get("demo_tone", {}) as Dictionary).duplicate()
 	_demo_tones = 0
@@ -334,14 +342,16 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_demo_done = false
 	_demo_ghost = false
 	_demo_heard_db = -1
+	_demo_nudged = false
 	_apply_demo_locks(false)
 	if not _demo.is_empty():
 		_masking_ui = false
+		_mask_deck = false
 		session.scoring = false
 	_solo_limit = int(_plan.get("hoot_turn_after", QUICK_SOLO_HOLES))
 	_auto_done_ears.erase(ear)
 	for id: String in MASK_BUTTONS:
-		(_buttons[id] as AoButton).visible = _masking_ui
+		(_buttons[id] as AoButton).visible = _mask_deck if MASK_DECK_BUTTONS.has(id) else _masking_ui
 	_layout()
 	session.coached[ear] = coached
 	session.ear = ear
@@ -382,7 +392,9 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 		_apply_demo_locks(true)
 		_ff_banner.visible = true
 		_ff_banner.queue_redraw()
-		Hoot.say(intro if intro != "" else "ONE beep: hold %s." % _k(&"present_tone"), Hoot.HIGH, "tone_button", "", 0.0)
+		var tip := intro if intro != "" else "ONE beep: hold %s." % _k(&"present_tone")
+		Hoot.say(tip, Hoot.HIGH, "tone_button", "", 0.0)
+		_demo_wait_after(tip)
 		_refresh()
 		return
 	if session.goal_test != &"ac" and session.is_ear_complete(ear):
@@ -421,7 +433,7 @@ func get_state() -> Dictionary:
 			"stored": {"right": {}, "left": {}}, "remaining": [], "ear_complete": false, "combo": 0, "presentations": 0,
 			"points": 0, "multiplier": 1, "trail": [], "strokes": 0, "par": 0, "candidate_db": -1, "stimulus": ToneGenerator.STIMULUS_NAMES[_stim],
 			"hoot_turn": false, "quick_visit": quick_visit,
-			"test": &"ac", "goal_test": &"ac", "transducer": &"phones", "air_transducer": &"phones", "masking_controls": false,
+			"test": &"ac", "goal_test": &"ac", "transducer": &"phones", "air_transducer": &"phones", "masking_controls": false, "masking_deck": false,
 			"mask_on": false, "mask_db": 0, "mask_ear": "left", "mask_status": &"off", "initial_mask_db": 0, "overmask_limit_db": 0,
 			"plateau": {}, "stored_tests": {}, "demo": false}
 	var cand: Variant = session.store_candidate(session.ear, session.freq)
@@ -462,6 +474,7 @@ func get_state() -> Dictionary:
 		"transducer": session.transducer,
 		"air_transducer": session.air_transducer,
 		"masking_controls": _masking_ui,
+		"masking_deck": _mask_deck,                    # (polish) the MASKING group is shown (plan masking_deck)
 		"mask_on": session.mask_on,
 		"mask_db": session.mask_db,
 		"mask_ear": session.masker_ear(),
@@ -497,13 +510,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		_buttons["tone_button"].show_press(false)
 		_hold_remove("key")
 	# v3: the masker pair first (Shift+Up also matches plain "louder")
-	elif _masking_ui and event.is_action_pressed(&"mask_louder", true):
+	elif _mask_deck and event.is_action_pressed(&"mask_louder", true):
 		_buttons["mask_louder_button"].flash_press()
 		_mask_level(1)
-	elif _masking_ui and event.is_action_pressed(&"mask_softer", true):
+	elif _mask_deck and event.is_action_pressed(&"mask_softer", true):
 		_buttons["mask_softer_button"].flash_press()
 		_mask_level(-1)
-	elif _masking_ui and event.is_action_pressed(&"toggle_mask"):
+	elif _mask_deck and event.is_action_pressed(&"toggle_mask"):
 		_buttons["mask_toggle_button"].flash_press()
 		_toggle_mask()
 	elif _masking_ui and event.is_action_pressed(&"transducer_bone"):
@@ -566,6 +579,7 @@ func _tone_down() -> void:
 		return
 	session.tone_down()
 	_demo_idle = 0.0
+	_demo_nudged = false
 	_tone.set_stimulus(_stim)
 	_tone.bone = session.transducer == &"bone"
 	_tone.start_tone(session.ear, session.freq, session.db)
@@ -615,7 +629,7 @@ func _level(direction: int) -> void:
 func _mask_level(direction: int) -> void:
 	if _demo_locked():
 		return
-	if not _accepting or not _masking_ui or session == null:
+	if not _accepting or not _mask_deck or session == null:
 		return
 	if session.tone_on:
 		_lcd.deny()
@@ -636,7 +650,7 @@ func _mask_level(direction: int) -> void:
 func _toggle_mask() -> void:
 	if _demo_locked():
 		return
-	if not _accepting or not _masking_ui or session == null:
+	if not _accepting or not _mask_deck or session == null:
 		return
 	if session.tone_on:
 		_lcd.deny()
@@ -877,8 +891,12 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 							title = "Bone %d, air %d? BOO!" % [int(bone[lf]), int(air[lf])]
 					var life := 2.0
 					if not _demo.is_empty():
-						# (v4) the demo's own shout; the Ghost lands on the better ear's bone mark
+						# (v4) the demo's own shout; the Ghost lands on the better ear's bone mark. (polish) A
+						# missed first beep answers higher: the shout names the level she really answered at.
+						var heard_db := int(data.get("db", session.db))
 						title = String(_demo.get("title", title))
+						if heard_db != int(_demo.get("db", heard_db)) and air.has(session.freq):
+							title = "Bone %d, air %d? BOO!" % [heard_db, int(air[session.freq])]
 						_demo_ghost = true
 						life = DEMO_GHOST_S
 						var vb := session.stored_thresholds(via, &"bc")
@@ -1353,8 +1371,27 @@ func _demo_verdict(rec: Dictionary) -> void:
 		_finish_demo()
 		return
 	session.step_level(1)
-	Hoot.say("No hand? Up 5, one more beep: hold %s." % _k(&"present_tone"), Hoot.HIGH, "tone_button", "", 0.0)
+	var tip := "No hand? Up 5, one more beep: hold %s." % _k(&"present_tone")
+	Hoot.say(tip, Hoot.HIGH, "tone_button", "", 0.0)
+	_demo_wait_after(tip)
 	_refresh()
+
+
+## (polish) The demo's wait clock starts once Hoot's tip has typed out (the bubble types at about
+## 55 characters a second) plus a moment to read it, not when the deck appears.
+func _demo_wait_after(tip: String) -> void:
+	var speed := maxf(0.25, float(Game.settings.get("text_speed", 1.0)))
+	_demo_idle = -(tip.length() / (55.0 * speed) + 1.0)
+	_demo_nudged = false
+
+
+## (polish) After idle_s of waiting, TONE wiggles and says what to do; Hoot only presses it for the
+## player after twice that.
+func _demo_nudge() -> void:
+	_demo_nudged = true
+	var b: AoButton = _buttons["tone_button"]
+	b.wiggle()
+	_fx.chip("Hold %s!" % _k(&"present_tone"), b.get_global_rect().get_center() + Vector2(0, -66), Palette.SUNNY, Palette.INK, 18, 1.4)
 
 
 ## Hoot presses TONE himself when the player waits (the demo never soft-locks).
@@ -1819,8 +1856,12 @@ func _process(delta: float) -> void:
 		session.advance(delta)
 	if not _demo.is_empty() and not _demo_done and _accepting and session != null and not session.tone_on and _hold.is_empty():
 		_demo_idle += delta
-		if _demo_idle >= float(_demo.get("idle_s", DEMO_IDLE_S)):
+		var idle_s := float(_demo.get("idle_s", DEMO_IDLE_S))
+		if _demo_idle >= idle_s and not _demo_nudged:
+			_demo_nudge()
+		if _demo_idle >= idle_s * 2.0:
 			_demo_idle = 0.0
+			_demo_nudged = false
 			_demo_hoot_press()
 	if _accepting:
 		_sync_bubble_hint()
@@ -1869,7 +1910,7 @@ func _refresh() -> void:
 		"trail": st["trail"], "strokes": st["strokes"], "par": st["par"], "hits": hits, "candidate": st["candidate_db"],
 		"accepting": st["accepting_input"],
 		"transducer": String(st["transducer"]), "test": String(st["test"]), "plateau": st["plateau"],
-		"mask": {"enabled": bool(st["masking_controls"]), "on": bool(st["mask_on"]), "db": int(st["mask_db"]), "ear": String(st["mask_ear"]),
+		"mask": {"enabled": bool(st["masking_controls"]) and _mask_deck, "on": bool(st["mask_on"]), "db": int(st["mask_db"]), "ear": String(st["mask_ear"]),
 			"status": String(st["mask_status"]), "limit": int(st["overmask_limit_db"]), "initial": int(st["initial_mask_db"])}})
 	for k: String in _cards:
 		var card: AoEarCard = _cards[k]
@@ -2315,6 +2356,8 @@ func _layout_deck(deck: Rect2) -> void:
 			["ROUTE", [["transducer_air_button", lerpf(56.0, 76.0, k)], ["transducer_bone_button", lerpf(56.0, 76.0, k)]], 3.0],
 			["EAR", [["ear_right_button", lerpf(44.0, 62.0, k)], ["ear_left_button", lerpf(44.0, 62.0, k)]]],
 		]
+		if not _mask_deck:
+			groups.remove_at(3)   # (polish) route only: no MASKING group before masking is taught
 	# narrower buttons, smaller labels (Day 1 keeps its sizes)
 	var fonts := {"softer_button": [19, 15], "louder_button": [19, 15], "tone_button": [26, 22], "store_button": [22, 17], "no_response_button": [17, 13],
 		"freq_down_button": [22, 17], "freq_up_button": [22, 17], "ear_right_button": [18, 15], "ear_left_button": [18, 15]}

@@ -12,12 +12,18 @@ extends Control
 ##   Cross-Hearing Ghost (Lefty under a bedsheet); the purple "shhh" noise cloud; the noise dial;
 ##   the plateau graph; a little Hoot; stage curtains and the title card.
 ##
-## Adding a set for a new movie: add its id to SETS and a branch in _draw()'s match that calls a
-## `_set_<id>()` function. Use `_k(a, b)` (0..1 between two scene times), `_pop()`, `_ring()` and
-## the drawing helpers below; read numbers from `params` (docs/ADDING_A_CHAPTER.md, "Hoot's movies").
-## No code needed for a simple slide: the generic set "card" draws a chunky title card from DATA
-## (params: heading, lines, line_at, icon, hoot, tint; see _set_card()), and an unknown set falls
-## back to a card with the scene's title.
+## Sets for a new movie, three ways (docs/ADDING_A_CHAPTER.md, "Hoot's movies"):
+##  1. the built-in sets below (SETS);
+##  2. no code: the generic set "card" draws a chunky title card from DATA (params: heading, lines,
+##     line_at, icon, hoot, tint; see _set_card());
+##  3. the movie's OWN sets script, in its chapter's files: MOVIE.stage = "res://.../<id>_sets.gd",
+##     extending story/explainers/explainer_sets.gd with its own `const SETS` and `_set_<id>()`
+##     functions. use_movie() loads it; _draw() hands it any set this stage does not know, with the
+##     same t / duration / params and this stage's palette and helpers (its `s`). Nothing here changes.
+## A set nobody knows falls back to a card with the scene's title (never a blank screen).
+## Built-in sets: a `_set_<id>()` function, its id in SETS and a branch in _draw()'s match. Use
+## `_k(a, b)` (0..1 between two scene times), `_pop()`, `_ring()` and the helpers below; read
+## numbers from `params`.
 ## Sounds are not played here: they are the scene's "cues" in the movie data (CONTRACTS.md §1.3:
 ## "too loud" and "too much noise" are only ever drawn).
 
@@ -71,6 +77,13 @@ const BOO_AT := Vector2(100, 232)
 const CALLOUT_AT := Vector2(440, 32)   # the scene's big one-line callout, top centre
 const INSERTS_AT := Vector2(748, 116)
 const STREAM_Y := 318.0                # the overmasking spill crosses the wall at this height
+const SQUEEZE_Y := 322.0               # a crossing beep squeezes through the wall here, under the sign
+const SKULL_C1 := Vector2(232, 210)    # the skull-shake path: from the right ear canal's mouth, over
+const SKULL_C2 := Vector2(392, 214)    #   Righty (never out of Righty) to the wall (cubic control points)
+const LEFTY_HEARS_AT := Vector2(770, 396)
+const MATH_AT := Vector2(784, 236)     # "70 - 40 = 30" beside Lefty
+## The toll sign once the bone buzzer is on: bone crosses the skull for (almost) free.
+const BONE_SIGN: Array[String] = ["BONE: 0 dB lost", "(really 0-10)"]
 
 var set_id: StringName = &"meet"
 var params: Dictionary = {}
@@ -86,11 +99,40 @@ var _xf := Transform2D.IDENTITY
 var _xf_stack: Array[Transform2D] = []
 var _motion := 1.0   # 1 = full motion; smaller with the reduced-motion setting
 var _box_cache: Dictionary = {}
+## (v4 hook) The playing movie's own sets (MOVIE.stage, an explainer_sets.gd), or null.
+var _movie_sets: RefCounted = null
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
+
+
+## The player calls this when a movie starts: load the movie's own sets script (MOVIE.stage), if any.
+func use_movie(m: Dictionary) -> void:
+	_movie_sets = load_sets(String(m.get("stage", "")))
+
+
+## A movie's sets script (MOVIE.stage) as a fresh object, or null when there is none or it is not an
+## explainer_sets.gd (Movies.validate() reports that).
+static func load_sets(path: String) -> RefCounted:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	var sc := load(path) as GDScript
+	if sc == null or not sc.can_instantiate():
+		return null
+	var o: Variant = sc.new()
+	if o is RefCounted and (o as Object).has_method("draw_set") and (o as Object).has_method("set_ids"):
+		return o as RefCounted
+	return null
+
+
+## The movie's own set ids ([] without a sets script).
+func movie_set_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	if _movie_sets != null:
+		out.assign(_movie_sets.call("set_ids"))
+	return out
 
 
 func show_scene(scene: Dictionary) -> void:
@@ -135,7 +177,10 @@ func _draw() -> void:
 		&"outro":
 			_set_outro()
 		_:
-			_set_card()   # "card", and the fallback for a set this stage does not know
+			if _movie_sets != null and bool(_movie_sets.call("has_set", set_id)):
+				_movie_sets.call("draw_set", self, set_id)   # the movie's own set (MOVIE.stage)
+			else:
+				_set_card()   # "card", and the fallback for a set nobody knows
 	_xf_stack.clear()
 	_xf = Transform2D.IDENTITY
 	draw_set_transform_matrix(_xf)
@@ -210,28 +255,37 @@ func _set_air() -> void:
 	_chip("earphone: ONE ear", CUP_R_AT + Vector2(-4, -132), Palette.RIGHT_TINT, 16, INK, _pop(1.2))
 
 
-## 3. wall: the brick skull wall grows between them with its "-40 dB" toll sign. Soft beeps lose
-## 40 dB crossing it and fizzle; a LOUD one (drawn big, the sound stays soft) squeezes through,
-## comes out 40 dB smaller and wakes Lefty: cross-hearing.
+## 3. wall: the brick skull wall grows between them with its "-40 dB" toll sign. Every beep goes into
+## Righty's ear AND shakes the skull: a skull-shake note runs from the cup along the skull, OVER
+## Righty (the test cochlea never passes the sound on), to the wall. Soft ones lose 40 dB there and
+## fizzle (below Lefty's threshold); the LOUD one (drawn big, the sound stays soft) squeezes through
+## under the sign, counts down 70 -> 30 on a big chip and wakes Lefty: cross-hearing. A
+## "70 - 40 = 30" chip holds beside Lefty while he wakes.
 func _set_wall() -> void:
-	var levels: Array = params.get("levels", [30, 40, 70])
+	var levels: Array = params.get("levels", [30, 35, 70])
 	var ia := int(params.get("ia", 40))
-	var shots: Array[float] = [2.6, 3.9, 5.8]
-	var cross := 7.8   # the loud beep reaches Lefty
+	var lefty_hears := int(params.get("lefty_hears", 5))
+	var shots: Array[float] = [2.4, 3.7, 5.7]
+	var into := 0.3        # cup -> the ear canal's mouth
+	var skull := 0.7       # the canal's mouth -> the wall, along the skull over Righty
+	var squeeze := 0.6     # through the wall (the loud one)
+	var cross := 7.8       # the loud beep reaches Lefty
+	var mouth := CUP_R_AT + Vector2(46, -4)
+	var wall_in := Vector2(WALL_X - WALL_W * 0.5 - 16.0, SQUEEZE_Y)
 	_head_open(0.0)
 	var look_x := -0.8
-	if t > 6.5:
-		look_x = lerpf(-0.8, 0.9, _ease_in_out(_k(6.5, 7.6)))
-	_head({"look": Vector2(look_x, 0.1), "mood": &"wow" if t > 7.8 else &"smile"})
+	if t > 6.6:
+		look_x = lerpf(-0.8, 0.9, _ease_in_out(_k(6.6, 7.6)))
+	_head({"look": Vector2(look_x, 0.1), "mood": &"wow" if t > cross else &"smile"})
 	var grow := _back(_k(0.3, 1.1))
 	_wall(grow, 1.0, false)
 	if grow > 0.98:
 		_dust(Vector2(WALL_X, WALL_BOTTOM - 4), 1.1)
 	var r_hit := -10.0
 	for s: float in shots:
-		if t >= s + 0.4:
-			r_hit = s + 0.4
-	_snail(RIGHTY_AT, 1.0, Palette.RIGHT_RED, RIGHTY_BODY, {"mood": &"alert" if t - r_hit < 0.6 else &"idle", "squash": _ring(r_hit, 0.12, 20.0, 7.0), "look": Vector2(1, 0)})
+		if t >= s + into + 0.35:
+			r_hit = s + into + 0.35
+	_snail(RIGHTY_AT, 1.0, Palette.RIGHT_RED, RIGHTY_BODY, {"mood": &"alert" if t - r_hit < 0.6 else &"idle", "squash": _ring(r_hit, 0.12, 20.0, 7.0), "look": Vector2(-1, -0.1)})
 	var lefty_up := t >= cross
 	_snail(LEFTY_AT, -1.0, Palette.LEFT_BLUE, LEFTY_BODY, {"mood": &"alert" if lefty_up else &"sleep", "arm": _k(cross + 0.2, cross + 0.5),
 		"squash": _ring(cross, 0.25, 18.0, 5.0), "look": Vector2(1, -0.3)})
@@ -244,11 +298,13 @@ func _set_wall() -> void:
 	# the toll sign, and the inserts tag up in the corner
 	var sign_k := _pop(1.2, 0.4)
 	if sign_k > 0.01:
-		_toll_sign(SIGN_AT, ["-%d dB" % ia, "on-ear phones"], sign_k, _ring(1.2, 0.18, 9.0, 2.5), Palette.PAPER)
-	var ins_k := _pop(2.3)
+		_toll_sign(SIGN_AT, ["-%d dB" % ia, "on-ear phones: at least"], sign_k, _ring(1.2, 0.18, 9.0, 2.5), Palette.PAPER)
+	var ins_k := _pop(2.0)
 	if ins_k > 0.01:
-		_dashed_curve(INSERTS_AT + Vector2(-70, 14), Vector2(600, 196), SIGN_AT + Vector2(70, -4), Palette.INK_SOFT, _k(2.3, 2.8))
-		_chip("inserts: -%d dB" % int(params.get("inserts_ia", 55)), INSERTS_AT, Palette.SKY, 17, INK, ins_k)
+		_dashed_curve(INSERTS_AT + Vector2(-70, 14), Vector2(600, 196), SIGN_AT + Vector2(80, -4), Palette.INK_SOFT, _k(2.0, 2.5))
+		_chip("inserts: -%d dB or more" % int(params.get("inserts_ia", 55)), INSERTS_AT, Palette.SKY, 17, INK, ins_k)
+	# Lefty's own threshold: what a crossed beep must reach
+	_chip("Lefty hears from %d dB" % lefty_hears, LEFTY_HEARS_AT, Palette.LEFT_TINT, 15, INK, _pop(1.8))
 	# the level meter on the cup
 	var lvl_i := -1
 	for i in shots.size():
@@ -265,50 +321,58 @@ func _set_wall() -> void:
 		var t0: float = shots[i]
 		var lv := int(levels[mini(i, levels.size() - 1)])
 		var big := 0.95 + 0.85 * clampf((lv - 30.0) / 40.0, 0.0, 1.0)
-		var to_righty := _k(t0, t0 + 0.4)
-		var to_wall := _k(t0 + 0.4, t0 + 0.8)
-		var at_righty := RIGHTY_AT + Vector2(0, -58)
-		if t >= t0 and to_righty < 1.0:
-			_note(_bezier(CUP_R_AT + Vector2(20, -30), Vector2(214, 200), at_righty, to_righty), big, Palette.RIGHT_RED, 0.0, str(lv) if to_righty > 0.3 else "")
-		elif to_righty >= 1.0 and to_wall < 1.0:
-			var wall_at := Vector2(WALL_X - WALL_W * 0.5 - 14.0 * big, 304)
-			_note(at_righty.lerp(wall_at, to_wall) + Vector2(0, -sin(to_wall * PI) * 46.0), big, Palette.RIGHT_RED, 0.0, str(lv))
-		var hit := t0 + 0.8
 		var out := lv - ia
+		var to_mouth := _k(t0, t0 + into)
+		if t >= t0 and to_mouth < 1.0:
+			_note(_bezier(CUP_R_AT + Vector2(10, -40), CUP_R_AT + Vector2(40, -70), mouth, to_mouth), big, Palette.RIGHT_RED, 0.0, str(lv))
+		# into Righty's ear: the test ear hears it
+		var ear_k := _k(t0 + into, t0 + into + 0.35)
+		if to_mouth >= 1.0 and ear_k < 1.0:
+			_note(mouth.lerp(RIGHTY_AT + Vector2(-26, -40), ear_k), big * 0.75, Palette.RIGHT_RED, 0.0)
+		# and the skull shake: along the skull, over Righty, to the wall
+		var sk := _k(t0 + into, t0 + into + skull)
+		if to_mouth >= 1.0 and sk < 1.0:
+			for d in 9:
+				var u := sk * d / 8.0
+				draw_circle(_cubic(mouth, SKULL_C1, SKULL_C2, wall_in, u), 3.5, Color(Palette.CORAL, 0.25 + 0.4 * d / 8.0), true, -1.0, true)
+			_note(_cubic(mouth, SKULL_C1, SKULL_C2, wall_in, sk), big * 0.9, Palette.RIGHT_RED, sin(t * 14.0) * 0.15, str(lv))
+		var hit := t0 + into + skull
 		if i < shots.size() - 1:
-			# a soft one: squish and bonk on the wall; a faint wisp on the other side shows what is left
+			# a soft one: squish and bonk on the wall; a faint wisp on the other side, too soft for Lefty
 			if t >= hit and t < hit + 0.35:
 				var sq := 1.0 - _k(hit, hit + 0.35)
-				_push(_about(Vector2(WALL_X - 30, 304), 0.0, Vector2(0.5 + 0.5 * sq, 1.3)))
-				_note(Vector2(WALL_X - 30, 304), big * sq, Palette.RIGHT_RED, 0.0)
+				_push(_about(wall_in + Vector2(-6, 0), 0.0, Vector2(0.5 + 0.5 * sq, 1.3)))
+				_note(wall_in + Vector2(-6, 0), big * 0.9 * sq, Palette.RIGHT_RED, 0.0)
 				_pop_xf()
-			_bonk(Vector2(WALL_X - 24, 296), hit, Vector2(WALL_X, 346))
+			_bonk(wall_in + Vector2(-2, -8), hit, Vector2(WALL_X - 70, SQUEEZE_Y + 46))
 			if t >= hit:
-				var w := _k(hit, hit + 1.0)
+				var w := _k(hit, hit + 1.1)
 				if w < 1.0:
-					var wp := Vector2(WALL_X + 40 + 8.0 * w, 304 - 40.0 * w)
+					var wp := Vector2(WALL_X + 40 + 8.0 * w, SQUEEZE_Y - 26.0 * w)
 					_note(wp, 0.5, Color(Palette.RIGHT_RED, 0.65 * (1.0 - w)), 0.0)
 					draw_circle(wp + Vector2(-8, 14), 9.0 * (1.0 - w) + 2.0, Color(Palette.PAPER.darkened(0.1), 1.0 - w), true, -1.0, true)
-					var left_txt := "%d dB" % out if out > 0 else "fizzle!"
-					_text(left_txt, wp + Vector2(6, -32), 17, Color(INK, 1.0 - w), 700, 5, Color(Palette.PAPER, 1.0 - w))
+					_text("%d - %d: fizzle!" % [lv, ia], wp + Vector2(58, 26), 17, Color(INK, 1.0 - w), 700, 5, Color(Palette.PAPER, 1.0 - w))
 		else:
-			# the LOUD one squeezes through, 40 dB smaller
-			var sq_k := _k(hit, hit + 0.6)
+			# the LOUD one squeezes through under the sign, 40 dB smaller: a big countdown chip
+			var sq_k := _k(hit, hit + squeeze)
 			if t >= hit and sq_k < 1.0:
-				var nx := lerpf(WALL_X - 28, WALL_X + 30, sq_k)
+				var nx := lerpf(wall_in.x, WALL_X + 30, sq_k)
 				var thin := 1.0 - 0.55 * sin(sq_k * PI)
-				_push(_about(Vector2(nx, 304), 0.0, Vector2(thin, 2.0 - thin)))
-				_note(Vector2(nx, 304), lerpf(big, 0.95, sq_k), Palette.RIGHT_RED, 0.0)
+				_push(_about(Vector2(nx, SQUEEZE_Y), 0.0, Vector2(thin, 2.0 - thin)))
+				_note(Vector2(nx, SQUEEZE_Y), lerpf(big * 0.9, 0.95, sq_k), Palette.RIGHT_RED, 0.0)
 				_pop_xf()
-				_text("%d" % int(round(lerpf(lv, out, sq_k))), Vector2(nx, 266), 24, INK, 700, 7)
-			var fly := _k(hit + 0.6, cross)
-			var from := Vector2(WALL_X + 30, 304)
+			if t >= hit - 0.1 and t < cross + 0.4:
+				var n := int(round(lerpf(lv, out, sq_k) / 5.0) * 5.0)
+				_chip("%d" % n, Vector2(WALL_X, SQUEEZE_Y + 50), Palette.CORAL if sq_k < 1.0 else Palette.SUNNY, 24, INK, _pop(hit - 0.1, 0.3))
+			var fly := _k(hit + squeeze, cross)
+			var from := Vector2(WALL_X + 30, SQUEEZE_Y)
 			var to := LEFTY_AT + Vector2(-64, -58)
-			if t >= hit + 0.6 and t < cross + 0.2:
-				var np := from.lerp(to, fly) + Vector2(0, -sin(fly * PI) * 34.0)
+			if t >= hit + squeeze and t < cross + 0.2:
+				var np := from.lerp(to, fly) + Vector2(0, -sin(fly * PI) * 30.0)
 				_note(np, 0.95, Palette.RIGHT_RED, sin(t * 10.0) * 0.2, str(out))
-			if t > cross + 0.3:
-				_trail(Vector2(WALL_X - 60, 300), Vector2(WALL_X, 262), to + Vector2(-14, 4), Palette.CORAL, _k(cross + 0.3, cross + 0.8))
+			if t > cross:
+				_chip("%d - %d = %d" % [lv, ia, out], MATH_AT, Palette.SUNNY, 24, INK, _pop(cross, 0.4), sin(t * 3.0) * 0.02 * _motion)
+				_text("%d is above his %d!" % [out, lefty_hears], MATH_AT + Vector2(0, 38), 15, INK, 700, 5, Palette.PAPER, 0.5, _pop(cross + 0.5))
 	if t > cross + 0.6:
 		_chip("cross-hearing!", CALLOUT_AT, Palette.SUNNY, 22, INK, _pop(cross + 0.6), sin(t * 3.0) * 0.03 * _motion)
 		_sparkles(CALLOUT_AT, cross + 0.6, 10, 110.0, Palette.SUNNY)
@@ -317,7 +381,7 @@ func _set_wall() -> void:
 
 
 ## 4. bone: the cup pops off, the buzzer clicks onto the bump behind her right ear and the WHOLE head
-## jiggles like jelly: both snails buzz the same. The toll sign flips to "-0 dB", bricks see-through.
+## jiggles like jelly: both snails buzz the same. The toll sign flips to "0 dB lost", bricks see-through.
 func _set_bone() -> void:
 	var buzz := _k(1.4, 1.9)
 	var flip := _k(5.0, 5.5)
@@ -345,9 +409,9 @@ func _set_bone() -> void:
 			var jig := Vector2(sin(t * 47.0 + i), cos(t * 39.0 + i)) * 2.0 * _motion
 			_text("bzz!", spots[i] + Vector2(0, -118) + jig, 20, Color(cols[i].darkened(0.2), buzz), 700, 6, Color(Palette.PAPER, buzz), 0.5, _pop(1.6 + 0.15 * i))
 	if flip < 0.5:
-		_toll_sign(SIGN_AT, ["-40 dB", "on-ear phones"], 1.0, 0.0, Palette.PAPER, cos(flip * PI))
+		_toll_sign(SIGN_AT, ["-40 dB", "on-ear phones: at least"], 1.0, 0.0, Palette.PAPER, cos(flip * PI))
 	else:
-		_toll_sign(SIGN_AT, ["BONE: -0 dB", "(really 0-10)"], 1.0, _ring(5.5, 0.12, 9.0, 3.0), Palette.MINT, -cos(flip * PI))
+		_toll_sign(SIGN_AT, BONE_SIGN, 1.0, _ring(5.5, 0.12, 9.0, 3.0), Palette.MINT, -cos(flip * PI))
 	if t > 5.5:
 		_sparkles(SIGN_AT, 5.5, 8, 70.0, Palette.SUNNY)
 	_chip("SAME buzz in both!", CALLOUT_AT, Palette.SUNNY, 20, INK, _pop(6.4))
@@ -378,7 +442,7 @@ func _set_ghost() -> void:
 		_bzz(LEFTY_AT + Vector2(0, -44), 52.0, 0.6)
 		_text("soft bzz", BUZZ_AT + Vector2(-58, 34), 16, INK, 700, 5)
 	_zzz(RIGHTY_AT + Vector2(-60, -66))
-	_toll_sign(SIGN_AT, ["BONE: -0 dB", "(really 0-10)"], 1.0, 0.0, Palette.MINT)
+	_toll_sign(SIGN_AT, BONE_SIGN, 1.0, 0.0, Palette.MINT)
 	_chip("poorer ear today", RIGHTY_AT + Vector2(-4, 54), Palette.RIGHT_TINT, 15, INK, _pop(0.7))
 	if t > 1.5 and not landed:
 		_text("!", LEFTY_AT + Vector2(-26, -122), 38, Palette.LEFT_BLUE, 700, 7)
@@ -438,12 +502,15 @@ func _set_mask() -> void:
 	if buzz_on:
 		_bzz(RIGHTY_AT + Vector2(0, -44), 58.0, 1.0)
 		_text("BZZ", BUZZ_AT + Vector2(-48, 34), 22, INK, 700, 5)
+	# (polish) masking alone never makes Righty hear: the buzz is raised to Righty's own level
+	if t >= 4.4:
+		_chip("buzz turned UP to Righty's level", CALLOUT_AT, Palette.SUNNY, 18, INK, _pop(4.4) * (1.0 - _k(8.6, 8.9)))
 	if not answered:
 		_zzz(RIGHTY_AT + Vector2(-60, -66))
 	else:
 		_sparkles(RIGHTY_AT + Vector2(110, -70), 6.4, 10, 70.0, Palette.SUNNY)
 		_chip("Righty's OWN answer!", RIGHTY_AT + Vector2(-34, -150), Palette.MINT, 17, INK, _pop(6.6))
-	_toll_sign(SIGN_AT, ["BONE: -0 dB", "(really 0-10)"], 1.0, 0.0, Palette.MINT)
+	_toll_sign(SIGN_AT, BONE_SIGN, 1.0, 0.0, Palette.MINT)
 	_chip("busy!", LEFTY_AT + Vector2(44, -162), Palette.PAPER, 17, NOISE_DEEP, _pop(3.4))
 	_chip("TEST EAR", RIGHTY_AT + Vector2(-4, 48), Palette.RIGHT_RED, 16, Palette.PAPER, _pop(5.0))
 	_chip("NON-TEST EAR: shhh", LEFTY_AT + Vector2(6, 48), NOISE, 16, Palette.PAPER, _pop(5.3))
@@ -495,13 +562,13 @@ func _set_under() -> void:
 		if sheet_off <= 0.0 and t > 1.6:
 			_text("boo!", gp + Vector2(10, -84), 28, Palette.LEFT_BLUE, 700, 8, Palette.PAPER, 0.5, _pop(1.6))
 			_text("still answering...", gp + Vector2(-6, 66), 15, NOISE_DEEP, 700, 5, Palette.PAPER, 0.5, _pop(2.0) * (1.0 - _k(step1 - 0.2, step1)))
-	_toll_sign(SIGN_AT, ["BONE: -0 dB", "(really 0-10)"], 1.0, 0.0, Palette.MINT)
+	_toll_sign(SIGN_AT, BONE_SIGN, 1.0, 0.0, Palette.MINT)
 	_dial(DIAL_AT, 50.0, float(db), _ring(step1, 4.0, 22.0, 6.0) + _ring(step2, 4.0, 22.0, 6.0))
 	var plus := _pop(2.4) if t < step2 + 0.2 else 0.0
 	_chip("+5", DIAL_AT + Vector2(-104, 8 - absf(sin(t * 5.0)) * 6.0 * _motion), Palette.SUNNY, 24, INK, plus)
 	_chip("too little shhh!", DIAL_AT + Vector2(0, -100), Palette.SUNNY, 16, INK, _pop(0.9) * (1.0 - _k(step2, step2 + 0.2)))
 	if t > step2 + 0.3:
-		_chip("just right", DIAL_AT + Vector2(0, -100), Palette.MINT, 17, INK, _pop(step2 + 0.3))
+		_chip("enough!", DIAL_AT + Vector2(0, -100), Palette.MINT, 17, INK, _pop(step2 + 0.3))
 		_sparkles(DIAL_AT + Vector2(0, -20), step2 + 0.2, 8, 50.0, Palette.MINT)
 	_name_tag("RIGHTY", RIGHTY_AT, Palette.RIGHT_RED, 1.0)
 	_zzz(RIGHTY_AT + Vector2(-60, -66))
@@ -541,7 +608,7 @@ func _set_over() -> void:
 	if smother > 0.3:
 		_shhh_letters(RIGHTY_AT + Vector2(-22, -44), 60.0, smother)
 	if flip < 0.5:
-		_toll_sign(SIGN_AT, ["BONE: -0 dB", "(really 0-10)"], 1.0, 0.0, Palette.MINT, cos(flip * PI))
+		_toll_sign(SIGN_AT, BONE_SIGN, 1.0, 0.0, Palette.MINT, cos(flip * PI))
 	else:
 		_toll_sign(SIGN_AT, ["AIR: -%d dB" % ia, "noise comes by AIR"], 1.0, _ring(2.0, 0.12, 9.0, 3.0), Palette.PAPER, -cos(flip * PI))
 	# the noise's tag pays the toll as it crosses
@@ -564,19 +631,22 @@ func _set_over() -> void:
 	_name_tag("RIGHTY", RIGHTY_AT, Palette.RIGHT_RED, 1.0)
 
 
-## 9. plateau: the AudiOtron's plateau graph as a cartoon. Hoot hops along the answers: first they
-## climb with the noise (the Ghost), then three 5 dB hops stay flat (PLATEAU!), then, far later,
-## too much noise makes them climb again (overmasking).
+## 9. plateau: the AudiOtron's plateau graph as a cartoon, the same way up (louder answers LOWER,
+## like an audiogram). Hoot hops along the answers: first they sink with the noise (the Ghost
+## chases it), then three 5 dB hops stay flat (PLATEAU!), then, far later, too much noise makes
+## them sink again (overmasking). params: rise / flat / over ([[noise, answer], ...]), start (the
+## starting noise: the other ear's air + 10).
 func _set_plateau() -> void:
 	var rise: Array = params.get("rise", [])
 	var flat: Array = params.get("flat", [])
 	var over: Array = params.get("over", [])
+	var start_m := int(params.get("start", int(rise[0][0]) if rise.size() > 0 else 15))
 	var pts: Array = []
 	var times: Array[float] = []
 	var kinds: Array[StringName] = []
 	for i in rise.size():
 		pts.append(rise[i])
-		times.append(0.8 + 0.8 * i)
+		times.append(3.2 - 0.8 * (rise.size() - 1 - i))   # the last Ghost answer at 3.2 s
 		kinds.append(&"rise")
 	for i in flat.size():
 		pts.append(flat[i])
@@ -590,10 +660,12 @@ func _set_plateau() -> void:
 	var draw_k := _ease_out(_k(0.0, 0.7))
 	# the graph card
 	_panel(Rect2(60, 60, 760, 352), GRAPH_BG, 18)
-	var gx0 := 5.0
+	var gx0 := 10.0
 	var gx1 := 80.0
 	var gap_lo := 45.0
 	var gap_hi := 65.0
+	var db_top := 5.0
+	var db_bot := 45.0
 	var to_px := func(p: Array) -> Vector2:
 		var x := float(p[0])
 		var u := 0.0
@@ -602,29 +674,37 @@ func _set_plateau() -> void:
 			u = (x - gx0) / span
 		else:
 			u = (gap_lo - gx0 + 6.0 + (x - gap_hi)) / span
-		return Vector2(g.position.x + g.size.x * u, g.end.y - g.size.y * (float(p[1]) / 45.0))
-	# grid and axes
+		return Vector2(g.position.x + g.size.x * u, g.position.y + g.size.y * (float(p[1]) - db_top) / (db_bot - db_top))
+	# grid and axes: dB HL grows DOWNWARD, like the AudiOtron's plateau graph and the audiogram
 	for db: int in [10, 20, 30, 40]:
-		var y := g.end.y - g.size.y * (db / 45.0)
+		var y: float = (to_px.call([gx0, db]) as Vector2).y
 		draw_dashed_line(Vector2(g.position.x, y), Vector2(g.position.x + g.size.x * draw_k, y), Color(INK, 0.12), 2.0, 8.0)
 		_text("%d" % db, Vector2(g.position.x - 22, y), 16, Palette.INK_SOFT, 700)
 	draw_line(Vector2(g.position.x, g.end.y), Vector2(g.position.x + g.size.x * draw_k, g.end.y), INK, 4.0, true)
-	draw_line(Vector2(g.position.x, g.end.y), Vector2(g.position.x, g.end.y - g.size.y * draw_k), INK, 4.0, true)
-	for x: int in [10, 20, 30, 40, 70, 80]:
-		var px: Vector2 = to_px.call([x, 0])
+	draw_line(Vector2(g.position.x, g.position.y), Vector2(g.position.x, g.position.y + g.size.y * draw_k), INK, 4.0, true)
+	for x: int in [20, 30, 40, 70, 80]:
+		var px := Vector2((to_px.call([x, db_bot]) as Vector2).x, g.end.y)
 		if px.x <= g.position.x + g.size.x * draw_k:
 			draw_line(px, px + Vector2(0, 8), INK, 3.0)
 			_text("%d" % x, px + Vector2(0, 22), 16, Palette.INK_SOFT, 700)
+	# the starting noise (the other ear's air + 10), like the AudiOtron's "start" line
+	var sk := _pop(0.6)
+	if sk > 0.01:
+		var sx := (to_px.call([start_m, db_bot]) as Vector2).x
+		draw_dashed_line(Vector2(sx, g.position.y), Vector2(sx, g.end.y), Color(NOISE, 0.55), 2.5, 7.0)
+		_text("start %d" % start_m, Vector2(sx, g.end.y + 22), 15, NOISE_DEEP, 700, 0, Palette.PAPER, 0.5, sk)
 	# the axis break sits in the skipped stretch (between gap_lo and gap_hi)
 	var gap_span := (gap_lo - gx0) + (gx1 - gap_hi) + 6.0
 	var gap_px := Vector2(g.position.x + g.size.x * (gap_lo - gx0 + 3.0) / gap_span, g.end.y)
 	if draw_k > 0.6:
 		for s: float in [-6.0, 6.0]:
 			draw_line(gap_px + Vector2(s - 5, 10), gap_px + Vector2(s + 5, -10), INK, 3.0, true)
-	_text("more shhh in the better ear (dB EM)", Vector2(g.get_center().x, g.end.y + 50), 18, INK, 700)
+	_text("more shhh in the other ear (dB EM)", Vector2(g.get_center().x, g.end.y + 50), 18, INK, 700)
 	_push(_xform(Vector2(g.position.x - 58, g.get_center().y), -PI * 0.5))
-	_text("Righty's answer (dB HL)", Vector2.ZERO, 18, INK, 700)
+	_text("the answer (dB HL)", Vector2.ZERO, 18, INK, 700)
 	_pop_xf()
+	_text("louder", Vector2(g.position.x - 24, g.end.y - 12), 12, Palette.INK_SOFT, 700)
+	UiDraw.arrow(self, Vector2(g.position.x - 24, g.end.y + 8), 10.0, Vector2(0, 1), Palette.INK_SOFT)
 	# the line so far
 	var shown := 0
 	for i in pts.size():
@@ -659,14 +739,14 @@ func _set_plateau() -> void:
 		var k := _pop(times[i], 0.3)
 		draw_circle(p, 10.0 * k, Palette.RIGHT_RED, true, -1.0, true)
 		draw_arc(p, 10.0 * k, 0.0, TAU, 24, INK, 3.0, true)
-	# the Ghost climbs along with the first answers, and poofs once the noise keeps Lefty busy
+	# the Ghost chases the noise with the first answers, and poofs once the noise keeps Lefty busy
 	if rise.size() >= 2 and t > times[rise.size() - 1] + 0.4:
 		var ga := 1.0 - _k(gone_t, gone_t + 0.4)
-		var r0: Vector2 = to_px.call(rise[0])
-		var gp := r0 + Vector2(0, -120 + sin(t * 3.0) * 4.0 * _motion)
+		var r1: Vector2 = to_px.call(rise[rise.size() / 2])
+		var gp := r1 + Vector2(64, -58 + sin(t * 3.0) * 4.0 * _motion)
 		if ga > 0.0:
 			_ghost(gp, 26.0 * (1.0 + 0.3 * (1.0 - ga)), {"boo": true, "alpha": ga})
-			_chip("GHOST: climbs with the noise", gp + Vector2(150, -56), Palette.CORAL, 16, INK, _pop(times[rise.size() - 1] + 0.4) * ga)
+			_chip("GHOST: the answer chases the noise", gp + Vector2(190, -6), Palette.CORAL, 16, INK, _pop(times[rise.size() - 1] + 0.4) * ga)
 		_dust(gp + Vector2(0, 10), gone_t)
 		_sparkles(gp, gone_t, 8, 50.0, NOISE_FILL)
 	if found and flat.size() > 0:
@@ -674,14 +754,14 @@ func _set_plateau() -> void:
 		var f0: Vector2 = to_px.call(start)
 		var f1: Vector2 = to_px.call(flat[-1])
 		_brace(Vector2(f0.x, f0.y + 24), Vector2(f1.x, f1.y + 24), "+%d dB of shhh, same answer" % int(float(flat[-1][0]) - float(start[0])), _k(plateau_t, plateau_t + 0.4))
-		var sign_at := Vector2(lerpf(f0.x, f1.x, 0.35), f0.y - 100)
+		var sign_at := Vector2(lerpf(f0.x, f1.x, 0.5), f0.y - 84)
 		_big_sign("PLATEAU!", sign_at, _pop(plateau_t, 0.5), sin(t * 4.0) * 0.05 * _motion, Palette.MINT)
 		_sparkles(sign_at, plateau_t, 14, 120.0, Palette.SUNNY)
-		_chip("Righty's TRUE threshold: %d dB" % int(flat[-1][1]), Vector2((f0.x + f1.x) * 0.5, f0.y + 94), Palette.PAPER, 16, INK, _pop(plateau_t + 0.6))
+		_chip("Righty's TRUE threshold: %d dB" % int(flat[-1][1]), Vector2((f0.x + f1.x) * 0.5, f0.y + 90), Palette.PAPER, 16, INK, _pop(plateau_t + 0.6))
 	if over.size() > 0 and shown == pts.size() and t > times[-1] + 0.3:
-		var o0: Vector2 = to_px.call(over[0])
-		var oc := Vector2(o0.x + 10, o0.y + 66)
-		_dashed_curve(oc + Vector2(10, -16), oc + Vector2(14, -40), o0 + Vector2(4, 14), Palette.CORAL.darkened(0.2), _k(times[-1] + 0.3, times[-1] + 0.6))
+		var o1: Vector2 = to_px.call(over[-1])
+		var oc := Vector2(o1.x - 30, o1.y - 74)
+		_dashed_curve(oc + Vector2(10, 16), oc + Vector2(24, 40), o1 + Vector2(-6, -14), Palette.CORAL.darkened(0.2), _k(times[-1] + 0.3, times[-1] + 0.6))
 		_chip("TOO MUCH: overmasking", oc, Palette.CORAL, 16, INK, _pop(times[-1] + 0.3))
 	# Hoot hops from answer to answer
 	var at_i := maxi(0, shown - 1)
@@ -1357,7 +1437,7 @@ func _zzz(at: Vector2) -> void:
 		_text("z", p, int(14 + 12 * k), Color(Palette.INK_SOFT, sin(k * PI)), 700, 4, Color(Palette.PAPER, sin(k * PI)))
 
 
-## The noise dial: 0-100 dB EM, yellow too little, green just right, coral too much.
+## The noise dial: 0-100 dB EM, yellow too little, green enough (anywhere on the plateau), coral too much.
 func _dial(c: Vector2, r: float, db: float, wobble: float) -> void:
 	_rbox(Rect2(c - Vector2(r + 18, r + 18), Vector2((r + 18) * 2.0, r + 76)), Palette.PAPER, 18, 4)
 	var zones: Array = [[0.0, 27.5, Palette.SUNNY], [27.5, 62.5, Palette.MINT], [62.5, 100.0, Palette.CORAL]]
@@ -1678,6 +1758,10 @@ static func _hash(i: int, salt: int = 0) -> float:
 
 static func _bezier(a: Vector2, ctrl: Vector2, b: Vector2, u: float) -> Vector2:
 	return a.lerp(ctrl, u).lerp(ctrl.lerp(b, u), u)
+
+
+static func _cubic(a: Vector2, c1: Vector2, c2: Vector2, b: Vector2, u: float) -> Vector2:
+	return a.bezier_interpolate(c1, c2, b, clampf(u, 0.0, 1.0))
 
 
 static func _xform(pos: Vector2, rot: float = 0.0, scl: Vector2 = Vector2.ONE, skew: float = 0.0) -> Transform2D:
