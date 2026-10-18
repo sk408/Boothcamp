@@ -100,7 +100,8 @@ word ("...bow?") or a wrong word (another spondee, or the word's own funny mishe
 The share of half-word misses is `speech.half_words` (0.15 by default; a non-organic patient gives many more).
 
 **Non-organic loss (Mike).** His voluntary tone thresholds sit around 70 dB, so his PTA is about 70, but he
-repeats spondees at about 30. An SRT 13 dB or more better than the PTA is "poor agreement" in the direction of a
+repeats spondees at about 30. Hoot's 1 kHz retest also comes back 15 dB better than the first (a retest should
+agree within 5 dB): poor test-retest reliability is another sign. An SRT 13 dB or more better than the PTA is "poor agreement" in the direction of a
 non-organic loss: re-instruct, retest, and refer for objective tests that don't need his answers (acoustic
 reflexes, OAEs, ABR / ASSR). An SRT of 30 is an upper bound on his hearing, not his real hearing. Never accuse:
 most non-organic losses aren't fibs (stress, worry, even a real loss underneath), and the clinic's job is an

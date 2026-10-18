@@ -30,6 +30,11 @@ const UNKNOWN_WORD := "windmill"
 const SAY_ALONG_S := 4.4
 ## Mike says back this many of them in his dialogue line (the rest are on the cards).
 const ECHO_WORDS := 8
+## Hoot's 1 kHz retest after the right-ear montage comes back this much BETTER than the first 1 kHz
+## result: past ClinicRules.RETEST_TOLERANCE_DB (5), a test-retest mismatch, one more sign of a
+## non-organic loss. Mike's simulated tones are steady, so the level derives the retest from the
+## measured result (the shared tone code is left as it is).
+const RETEST_BETTER_DB := 15
 ## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
 ## reach Mike's first miss below his SRT (down 10 per hit from PTA + 15), and maybe the step back up.
 const LEFT_SOLO_WORDS := 8
@@ -68,6 +73,8 @@ var screen: CanvasLayer
 ## The tone results from Hoot's run (§5.1), then the merged visit results (§9.5).
 var tones: Dictionary = {}
 var results: Dictionary = {}
+## Hoot's right-ear 1 kHz retest (retest_1k(); {} before the tones).
+var tone_retest: Dictionary = {}
 ## Familiarisation: the word ids used, and the ones dropped.
 var words: Array[String] = []
 var dropped: Array[String] = []
@@ -301,9 +308,11 @@ func _tones() -> void:
 	await _tone_test("right", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Beeps first. I'll run them; watch the stamps fly in.",
 		"hoot_turn_text": "My turn! Right ear at 8x. Watch the dance card!"})
+	await _retest_right_1k()
 	await _tone_test("left", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Left ear, Hoot speed!",
 		"hoot_turn_text": "Left ear at 8x. Same dance, other ear!"})
+	_record_retest()
 	screen.queue_free()
 	screen = null
 	cam.current = true
@@ -320,6 +329,43 @@ func _tones() -> void:
 		await _say("Mike", "Severe! Write that down. In big letters. Skip the 'moderately'.")
 	else:
 		await _say("Mike", "%s! Write that down. In big letters." % _cap(degree))
+
+
+## The right ear's 1 kHz retest from Hoot's tone results: the first 1 kHz result minus
+## RETEST_BETTER_DB, in the §5.1 retest_1k shape (plus by_hoot). {} when 1 kHz wasn't measured.
+static func retest_1k(tone_results: Dictionary) -> Dictionary:
+	var ac := ClinicRules.sheet_thresholds(tone_results, "right", &"ac")
+	if not ac.has(ClinicRules.START_FREQ):
+		return {}
+	var first := int(ac[ClinicRules.START_FREQ])
+	var again := maxi(ClinicRules.MIN_DB, first - RETEST_BETTER_DB)
+	return {"first_db": first, "stored_db": again, "diff": first - again, "strokes": 0, "par": 0, "by_hoot": true}
+
+
+## Hoot's remark on the retest: the numbers and the 5 dB rule, never a verdict on Mike.
+static func retest_remark(rt: Dictionary) -> String:
+	return "1000 Hz again: %d dB, %d better than before. Retests usually agree within %d dB." % [
+		int(rt.get("stored_db", 0)), int(rt.get("diff", 0)), ClinicRules.RETEST_TOLERANCE_DB]
+
+
+## After the right-ear montage: Hoot retests 1 kHz and it comes back better (test-retest mismatch).
+func _retest_right_1k() -> void:
+	tone_retest = retest_1k(tones)
+	if tone_retest.is_empty():
+		return
+	await _say("Hoot", retest_remark(tone_retest))
+	_react(&"wince")
+	await _say("Mike", "Must be the earphones warming up. Happens to my forklift too.")
+
+
+## The retest goes on the record (results.ears.right.retest_1k), next to Hoot's first 1 kHz stamp;
+## the PTA keeps the first one (the two disagree by more than ClinicRules.RETEST_TOLERANCE_DB).
+func _record_retest() -> void:
+	if tone_retest.is_empty() or not (tones.get("ears", {}) as Dictionary).has("right"):
+		return
+	((tones["ears"] as Dictionary)["right"] as Dictionary)["retest_1k"] = tone_retest.duplicate()
+	results = tones
+	Game.set_audiometry_results(results)
 
 
 ## Hoot's PTA definition, true to the average the speech tests use (SpeechRules.pta_method).

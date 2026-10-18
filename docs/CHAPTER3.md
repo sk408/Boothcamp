@@ -67,6 +67,7 @@ reaction 0.8-1.5 s (dramatic pauses), rhythm sensitivity 0.3, tags non_organic, 
 | Stored SRT | 30 (sometimes 25 or 35) | 30 |
 | Agreement | poor (about 40 dB) | poor |
 | Speech masking | not needed (85 - 40 = 45 is below his claimed left ear) | not needed |
+| Hoot's 1 kHz retest | 15 dB better than his first 1 kHz (about 55 vs 70) | (right ear only) |
 
 ## 3. Beat by beat (about 11 minutes)
 
@@ -78,7 +79,7 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | 2 | `history` | Two rounds (table above). Red-flag card: "Sudden, both ears: a doctor must know fast." Medal `history`. The flag is closed at beat 10 (his doctor hears about it). | choice | 1:20 |
 | 3 | `otoscopy` | A quick look: canals clear, eardrums normal. Medal `otoscopy` gold. | dialogue | 0:20 |
 | 4 | `instructions` | "Beeps AND words today." Pick: press for every beep, repeat every word, guess if unsure. Wrong picks: "only when you're sure" (too strict), "shout every word" (the gag). Medal `instructions`. | choice | 0:40 |
-| 5 | `audiometry` {right, ac} / {left, ac} | Hoot pops the earphones on and runs both ears as a few-second montage each (`montage`, `skip_hoot_retest`, as on Day 2: the beeps aren't today's lesson). "About 75 dB in both ears. Severe, on paper." The degree comes from `ClinicRules.degree_name` (at 70 it is "Moderately severe", and Mike says "Skip the 'moderately'."). Then Hoot defines the PTA. | (AudiOtron) | 0:30 |
+| 5 | `audiometry` {right, ac} / {left, ac} | Hoot pops the earphones on and runs both ears as a few-second montage each (`montage`, `skip_hoot_retest`, as on Day 2: the beeps aren't today's lesson). After the right ear he retests 1000 Hz, and it comes back 15 dB better than the first time (`LevelMike.RETEST_BETTER_DB`, from his measured 1 kHz result): "1000 Hz again: 55 dB, 15 better than before. Retests usually agree within 5 dB." Mike: "Must be the earphones warming up." (a test-retest mismatch, one more sign; the PTA keeps the first stamp, the retest goes on the record as `retest_1k`). "About 75 dB in both ears. Severe, on paper." The degree comes from `ClinicRules.degree_name` (at 70 it is "Moderately severe", and Mike says "Skip the 'moderately'."). Then Hoot defines the PTA. | (AudiOtron), dialogue | 0:40 |
 | 6 | `familiarize` | Hoot's spondee line ("two-part words, equal stress on both parts, like rain-bow"). "Go through the word list with Mike first?" Yes = gold. Twelve word cards flip over on the clinician's side (a small "CLINICIAN'S SIDE: Mike can't see this" sign): Hoot says each word and Mike says it back by ear, never reading it. The player sees every word on the cards and on the "now saying" line (Hoot: "rainbow"  Mike: "Rainbow!"), with a tick per card; nothing depends on hearing. Mike repeats "Wind... mill?" and has never seen one, so the player drops that card ("Drop any word they don't know"). Then his SRT instructions: every test word comes from this list; say back what you hear, guess if unsure. Medal `familiarize`. | choice, dialogue, familiarize_cards | 0:50 |
 | 7 | `speech` {right, srt} | Hoot defines the SRT, then the dance. The SPEECH screen, coached. PTA + 15 = 85. Mike repeats words all the way down to the 30s. The tell (once, on the screen): the first word scored as repeated 30 dB or more below the ear's PTA, "He's repeating words 40 dB below his beeps. Hmm!", with Hoot's hand on the agreement meter, then the coach's tip comes back. Half-word tip. Store at 30 (the coached ear never stores before a bracket). | (speech beats) | 2:30 |
 | 7b | | The **agreement meter** swings: PTA 72, SRT 30, difference 42: **POOR**. The needle clunks into the red. Hoot: "SRT should sit within 6 dB of the PTA. His is 42 dB better. Poor agreement!" (the 6 is `SpeechRules.AGREE_GOOD_DB`; an SRT worse than the PTA gets the instructions / language / word scores / slope line instead). | | 0:15 |
@@ -95,6 +96,7 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | Purpose | "Day 3, trainee: speech! Today we check if words agree with the beeps." |
 | Red flag | "Sudden loss in both ears is a red flag. A doctor needs to know fast, if it's real." |
 | Instructions | "Beeps AND words today. Repeat every word you hear, and guess if you're not sure." |
+| Retest | "1000 Hz again: 55 dB, 15 better than before. Retests usually agree within 5 dB." (his numbers; the 5 is `ClinicRules.RETEST_TOLERANCE_DB`) |
 | After tones | "About 75 dB in both ears. Severe, on paper. Yet he heard my whisper..." (the degree from `ClinicRules`) |
 | PTA | "That's his PTA, pure-tone average: his beeps at 500, 1000 and 2000 Hz, averaged." (with a best-two PTA: "his best two beeps of 500, 1000 and 2000 Hz, averaged.") |
 | Spondees | "Spondees: two-part words, equal stress on both parts, like rain-bow. Chosen because they're equally easy to hear." |

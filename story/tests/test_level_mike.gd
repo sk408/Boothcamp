@@ -488,6 +488,42 @@ func test_familiarize_flow() -> void:
 	lv.free()
 
 
+## A 1 kHz retest after the right-ear montage that comes back 15 dB better: derived from the measured
+## result, past the 5 dB test-retest tolerance, on the record, and the PTA keeps the first stamp.
+func test_retest_1k_comes_back_better() -> void:
+	var tones := SpeechSession.tone_results_from(_mike())
+	var rt := LevelMike.retest_1k(tones)
+	assert_eq(int(rt.get("first_db", -1)), 70, "Mike's first right 1 kHz")
+	var diff := int(rt["first_db"]) - int(rt["stored_db"])
+	assert_eq(diff, LevelMike.RETEST_BETTER_DB)
+	assert_true(diff >= 10 and diff <= 15, "10-15 dB better")
+	assert_true(diff > ClinicRules.RETEST_TOLERANCE_DB, "past the 5 dB test-retest tolerance")
+	assert_eq(int(rt["diff"]), diff)
+	assert_true(bool(rt["by_hoot"]), "Hoot's retest, not the player's")
+	var other := tones.duplicate(true)
+	other["ears"]["right"]["freqs"][1000]["stored_db"] = 60
+	assert_eq(int(LevelMike.retest_1k(other)["stored_db"]), 60 - LevelMike.RETEST_BETTER_DB, "from the measured result")
+	assert_true(LevelMike.retest_1k({}).is_empty(), "no tones: no retest")
+	var line := LevelMike.retest_remark(rt)
+	assert_true(line.split(" ", false).size() <= Hoot.MAX_WORDS, "%d words: %s" % [line.split(" ", false).size(), line])
+	assert_true(line.contains("55 dB") and line.contains("15 better"), line)
+	for word: String in ["fake", "faking", "liar", "lying", "fib", "pretend"]:
+		assert_false(line.to_lower().contains(word), "never accusing: " + line)
+	var lv := _level_with_tones()
+	var pta := float(lv.call("ear_pta", "right"))
+	lv.set("tone_retest", rt)
+	lv.call("_record_retest")
+	var right: Dictionary = ((lv.get("tones") as Dictionary)["ears"] as Dictionary)["right"]
+	assert_eq(int((right.get("retest_1k", {}) as Dictionary).get("stored_db", -1)), 55, "on the record")
+	assert_near(float(lv.call("ear_pta", "right")), pta, 0.001, "the PTA keeps the first 1 kHz stamp")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).contains("85"), "the SRT start is unchanged")
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	var note := String(paper.call("_retest_line", lv.get("tones")))
+	paper.free()
+	assert_true(note.contains("Right 70 then 55") and note.contains("More than 5 dB apart"), "the paper's beep card: " + note)
+	lv.free()
+
+
 func test_hoot_lines_fit() -> void:
 	var src := FileAccess.get_file_as_string((LevelMike as Script).resource_path)
 	var re := RegEx.create_from_string("_say\\(\"Hoot\", \"((?:[^\"\\\\]|\\\\.)*)\"")

@@ -1208,7 +1208,9 @@ or an unbracketed store; "Clean!" for a clean run over par, never "Par!").
 ### §9.8 Story and flow (Day 3, `story/level_mike.gd`)
 
 Phases: `intro`, `history`, `otoscopy`, `instructions`, `audiometry` {right, ac} / {left, ac} (Hoot runs the tones:
-`hoot_turn_after` 0), `familiarize` (Hoot says each word and Mike says it back by ear, the cards facing Hoot; a
+`hoot_turn_after` 0; after the right ear he retests 1 kHz, `LevelMike.retest_1k(tones)`: his first 1 kHz minus
+`RETEST_BETTER_DB` 15, past `ClinicRules.RETEST_TOLERANCE_DB`, said by Hoot and kept as the right ear's `retest_1k`
+with `by_hoot`; the PTA keeps the first stamp, and the shared tone code is unchanged), `familiarize` (Hoot says each word and Mike says it back by ear, the cards facing Hoot; a
 word Mike doesn't know is dropped; then his SRT instructions: the test words come from this list), `speech` {ear, test:
 "srt"} for right (coached) and left, `evidence` (OBJECTION!), `referral`, `results`. New blocking beats:
 `familiarize_cards` (info {mouse}), `objection_present` (info {targets, mouse: {drag: [clue, target]}}; solver

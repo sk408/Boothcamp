@@ -55,7 +55,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Tones:** Hoot runs both ears on the AudiOtron (`hoot_turn_after` 0, coached false, `montage` and
   `skip_hoot_retest` as on Day 2: a few seconds per ear). The AudiOtron only starts Hoot's turn at once
   with quick visit on, so the level sets the screen's public `quick_visit = true` right after `add_child`
-  (see the request below). Hoot then names the degree from `ClinicRules.degree_name` and defines the PTA
+  (see the request below). After the right ear Hoot retests 1 kHz in the level (`retest_1k(tones)`: the
+  measured 1 kHz minus `RETEST_BETTER_DB` 15, a test-retest mismatch; Hoot says the numbers, Mike blames the
+  earphones) and it goes on the record as the right ear's `retest_1k` (`by_hoot`, PTA unchanged); not on the
+  OBJECTION! board, where SRT vs PTA stays the clue. Hoot then names the degree from `ClinicRules.degree_name` and defines the PTA
   (`pta_line()`, best two when `SpeechRules.pta_method` says so).
 - **SPEECH screen:** one instance for both ears (`start_test(patient, ear, coached, plan)`, then
   `await test_finished`); plan `{test: "srt", tones, list: "spondee_a", words: the 12 familiarised ids,
