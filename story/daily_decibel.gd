@@ -56,7 +56,8 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
 }
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"]]
+## (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >" row.
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "L  >", "left"], ["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),
@@ -587,7 +588,7 @@ func _row_tag(ear: String, sheet: StringName) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size = Vector2(40, 40)
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	c.tooltip_text = {&"ac": "air", &"bc_masked": "masked bone", &"ac_masked": "masked air"}.get(test, "")
+	c.tooltip_text = {&"ac": "air", &"bc": "bone", &"bc_masked": "masked bone", &"ac_masked": "masked air"}.get(test, "")
 	c.draw.connect(func() -> void:
 		var col := Palette.ear_color(ear)
 		var f := UiKit.font(700)

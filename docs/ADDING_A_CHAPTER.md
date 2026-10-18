@@ -21,6 +21,7 @@ so branches don't collide.
 | Characters and props | `world/characters/<name>.gd`, `world/props/<name>.gd` |
 | Tests | `<module>/tests/test_<chapter_id>_*.gd` (the runner finds them) |
 | Dev shot scene | `story/dev_<chapter_id>.tscn` or `ui/dev/dev_<thing>.tscn` |
+| **(v4)** Hoot's movie (optional) | `story/explainers/movies/<movie_id>.gd` + one line in `story/explainers/movies.gd` (below) |
 
 ### Speech audiometry (SRT, WRS, speech in noise)
 
@@ -61,6 +62,49 @@ so branches don't collide.
   `DAY_FACES` / `DAY_TINTS` tables win when they have the id; otherwise the card uses these keys, else a cream card
   with a star. So a chapter branch never needs to edit `story/title_screen.gd`.
 - Keep `title` as `"Day N: Name"` and `day` unique. The bot finds a card by its title (`--via-days --pick=<id>`).
+
+## Hoot's movies: an animated explainer for your chapter (v4)
+
+A chapter may open with a short cartoon that explains its one hard idea before the patient arrives (Day 2:
+"Hoot's masking movie", `docs/CHAPTER2.md` §16). Movies are **data**: you write a scene list; the shared player
+types the captions, plays the stings and asks the stage to draw each scene. API: `CONTRACTS.md` §3.4.
+
+1. **Write the data:** `story/explainers/movies/<movie_id>.gd`:
+   ```gdscript
+   extends RefCounted
+   const MOVIE: Dictionary = {
+   	"id": "tymp", "title": "Hoot's tymp movie", "subtitle": "The Wobbly Drum",
+   	"chapter": "rocco",            # the Game.CHAPTERS id that plays it and offers the replay
+   	"narrator": "Hoot",
+   	"scenes": [
+   		{"id": "drum", "set": "drum", "duration": 8.0,
+   			"captions": ["Meet the eardrum: a tiny drum skin that wobbles with every sound."],
+   			"teaches": "The eardrum moves with sound.",       # one idea per scene
+   			"board": "What the stage draws and animates (never shown).",
+   			"params": {}, "cues": [{"t": 0.4, "sfx": "pop", "vol_db": -8.0}]},
+   	],
+   }
+   ```
+   Rules: captions are Hoot lines, **18 words or fewer**; one idea per scene; the whole movie **about 60-100 s**
+   (`Movies.validate()` allows 45-110); cues are `Sfx` names (`CONTRACTS.md` §2.4) at **-6 dB or softer**
+   (the player caps them); anything loud ("too loud", noise, overmasking) is **drawn, never played**. Facts and
+   numbers come from `ClinicRules` and are reviewed by Steve; the test should check them against the rules.
+2. **Register it:** one line in `story/explainers/movies.gd` `MOVIES` (`"tymp": "res://story/explainers/movies/tymp.gd"`).
+3. **Draw the sets:** each new `set` id goes in `story/explainers/explainer_stage.gd` (`SETS` plus a draw function
+   that animates over `t` / `duration` with `params`). Reuse sets when you can. Check it with
+   `timeout 400 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://story/explainers/dev_explainer.tscn --shots=/abs/dir --movie=tymp`
+   (one shot per scene, `explainer_tymp_<NN>_<scene>`), and LOOK at every shot.
+4. **Play it from your level** (copy `level_bonnie._movie()`): emit phase `explainer` {movie, source, seen}, then
+   instance `res://story/explainers/explainer_player.tscn`, `await player.call("play", id, "day_start")`, free it.
+   Once `Game.is_movie_seen(id)` is true, offer it with a choice (best = skip) instead of playing it again.
+   The player emits the `explainer` beat (solver = skip), so the autoplay bot and `--mouse` need no edits.
+5. **Replay is free:** the pause menu shows "Watch <title>" for every movie whose `chapter` is the current chapter,
+   and every movie on the title's Options. Nothing to add.
+6. **Test it:** add your movie to a test like `tests/test_contracts_v4.gd` (`Movies.validate(id, Stage.SETS)` is
+   empty, the scene ids, the facts against `ClinicRules`).
+
+The player's controls are the same for every movie: Space / Enter / a click = next scene, Esc = skip the movie,
+buttons "Next scene" and "Skip movie"; P pauses.
 
 ## Shared files: additive changes only
 

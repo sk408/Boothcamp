@@ -10,6 +10,10 @@ extends Node
 ##    same search on bone, and the plateau ("Hood") dance on masked sheets with toggle_mask and
 ##    mask_louder / mask_softer: heard -> noise +5, missed -> tone +5, store after 3 noise steps
 ##    with the same answer. It reads only get_state() (what the screen shows) and its own stamps.
+##  - (v4) Hoot's masking movie (beat "explainer"): keys press Space (next scene) then Esc (skip);
+##    --mouse clicks "Next scene" then "Skip movie". The Ghost demo (get_state().demo): hold TONE
+##    once (again if she misses); it stores nothing and emits no ear_completed, so the bot also
+##    treats Events.audiometry_finished as the end of a test.
 ##  - Screenshots at each phase and key moments; prints AUTOPLAY_RESULT {json}; quits.
 ##  - --mouse: the mouse-only path. Every beat and every audiometer control is driven with real
 ##    InputEventMouseButton / InputEventMouseMotion at the on-screen anchors (Hoot anchors, visible
@@ -64,6 +68,10 @@ var _mouse_misses: PackedStringArray = []
 var _back_at_title := false
 var _want_title := false
 var _resolved: Dictionary = {}   # beat -> times Events.input_resolved fired
+var _cur_ear := ""               # (v4) the ear of the test on screen (audiometry_started)
+var _movies: Array[String] = []  # (v4) movies that started (Events.explainer_started)
+var _demo_tones := 0             # (v4) tones held in the Ghost demo
+var _phase_log: Array[StringName] = []
 const MOUSE_ANCHORS: Dictionary = {
 	&"present_tone": "tone_button", &"louder": "louder_button", &"softer": "softer_button",
 	&"freq_up": "freq_up_button", &"freq_down": "freq_down_button", &"store": "store_button",
@@ -99,6 +107,15 @@ func _ready() -> void:
 	Events.tone_started.connect(_on_tone_started)
 	Events.threshold_stored.connect(_on_stored)
 	Events.ear_completed.connect(_on_ear_completed)
+	# (v4) the Ghost demo ends with audiometry_finished only (nothing stored, no ear_completed)
+	Events.audiometry_finished.connect(func(_r: Dictionary) -> void:
+		_progress()
+		if _cur_ear != "":
+			_ear_done[_cur_ear] = true)
+	Events.explainer_started.connect(func(id: String, _src: String) -> void:
+		_progress()
+		_movies.append(id))
+	Events.explainer_scene.connect(func(_id: String, _i: int, _sid: String) -> void: _progress())
 	Events.level_finished.connect(func(s: Dictionary) -> void:
 		_summary = s
 		_progress())
@@ -147,6 +164,7 @@ func _on_phase(phase: StringName, info: Dictionary) -> void:
 	_progress()
 	_phase = phase
 	_phase_info = info
+	_phase_log.append(phase)
 	var suffix := ("_" + String(info["ear"])) if info.has("ear") else ""
 	if info.has("test") and String(info["test"]) != "ac":
 		suffix += "_" + String(info["test"])
@@ -179,6 +197,9 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	if _via_days and beat == &"chapter_select":
 		await _pick_via_days(info)
 		return
+	if beat == &"explainer" and not _mouse:
+		await _keys_explainer(solver)
+		return
 	if _mouse:
 		await _mouse_beat(beat, info)
 		return
@@ -188,10 +209,25 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 		push_warning("AutoplayBot: beat %s has no valid solver" % beat)
 
 
+## (v4) Hoot's movie with real keys: Space (next scene), a peek at scene 2, then Esc (skip it all).
+## The solver is the fallback when the keys did not end it.
+func _keys_explainer(solver: Callable) -> void:
+	await _tap(&"advance_dialogue")
+	await _wait(1.6)
+	await _shot("explainer_scene_2")
+	await _tap(&"ui_cancel")
+	await _wait(0.6)
+	var p := get_tree().get_first_node_in_group("explainer_player")
+	if p != null and bool(p.call("is_playing")) and solver.is_valid():
+		push_warning("AutoplayBot: Esc did not skip the movie; using the solver")
+		solver.call()
+
+
 # ---------------------------------------------------------------- audiometry
 
 func _on_audiometry_started(_pid: String, ear: String, _coached: bool) -> void:
 	_progress()
+	_cur_ear = ear
 	_ear_done[ear] = false
 	_run_audiometry.call_deferred(ear)
 
@@ -283,6 +319,8 @@ func _run_audiometry(ear: String) -> void:
 	if String(_state().get("ear", "")) != ear:
 		await _tap(&"ear_right" if ear == "right" else &"ear_left")
 	var goal := StringName(_state().get("goal_test", &"ac"))
+	var st0 := _state()
+	print("BOT test %s %s opens at %d Hz %d dB on %s" % [ear, goal, int(st0.get("freq", 0)), int(st0.get("db", 0)), str(st0.get("test", ""))])
 	if goal != &"ac":
 		await _run_v3(ear, goal)
 		return
@@ -421,6 +459,9 @@ func _goto_freq(target: int) -> bool:
 
 ## Bone (unmasked) or a masked sheet: whatever the screen's goal sheet still needs.
 func _run_v3(ear: String, goal: StringName) -> void:
+	if bool(_state().get("demo", false)):
+		await _demo(ear)
+		return
 	var bone := ClinicRules.test_is_bone(goal)
 	var masked := ClinicRules.test_is_masked(goal)
 	var safety := 0
@@ -451,6 +492,25 @@ func _run_v3(ear: String, goal: StringName) -> void:
 		await _frames(1)
 
 
+## (v4) The Ghost demo: every control but TONE is locked. Hold TONE once; if she misses, the screen
+## raises the tone 5 and asks again (at most 3 tones), then ends by itself.
+func _demo(ear: String) -> void:
+	for i in 3:
+		if not bool(_state().get("demo", false)) or not bool(_state().get("accepting_input", false)):
+			break
+		_demo_tones += 1
+		var heard := await _present()
+		print("BOT Ghost demo tone %d at %d dB: %s" % [i + 1, int(_state().get("db", -1)), "heard" if heard else "missed"])
+		if i == 0:
+			await _wait(0.5)
+			await _shot("audiometry_%s_ghost_demo" % ear)
+		if heard:
+			break
+	var t0 := Game.clock
+	while not _ear_done.get(ear, false) and Game.clock - t0 < 60.0:
+		await _frames(1)
+
+
 ## Put the controls on the goal sheet: the right transducer, masking on or off.
 func _route(bone: bool, masked: bool) -> void:
 	var guard := 0
@@ -475,7 +535,17 @@ func _set_mask(target: int) -> void:
 ## raises with the same answer (or when the next raise would overmask).
 func _plateau(ear: String, freq: int, goal: StringName) -> void:
 	var unmasked := String(ClinicRules.unmasked_test(goal))
-	var start := int((_mine.get(unmasked, {}).get(ear, {}) as Dictionary).get(freq, 30))
+	var mine_un: Dictionary = _mine.get(unmasked, {})
+	var start := -999
+	if (mine_un.get(ear, {}) as Dictionary).has(freq):
+		start = int(mine_un[ear][freq])
+	elif ClinicRules.test_is_bone(goal):
+		# (v4) bone went on the better ear first: unmasked bone from EITHER mastoid is the start
+		for e: String in ["right", "left"]:
+			if (mine_un.get(e, {}) as Dictionary).has(freq):
+				start = int(mine_un[e][freq]) if start == -999 else mini(start, int(mine_un[e][freq]))
+	if start == -999:
+		start = int(_state().get("db", 30))
 	var initial := int(_state().get("initial_mask_db", 30))
 	await _set_mask(initial)
 	await _set_level(start)
@@ -649,7 +719,15 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 		&"evidence_present":
 			await _drag(_anchor_center("evidence_slope"), _anchor_center("evidence_target"))
 		&"bc_placement":
-			await _drag(_anchor_center("oscillator"), _anchor_center("mastoid_target_right"))
+			# (v4) the left mastoid first, then the right one for the Ghost demo: info.targets says which
+			var targets: Array = info.get("targets", ["mastoid_target_right"])
+			await _drag(_anchor_center("oscillator"), _anchor_center(String(targets[0])))
+		&"explainer":
+			# (v4) Hoot's movie: "Next scene" once, then "Skip movie"
+			await _click_text("Next scene")
+			await _wait(1.6)
+			await _shot("explainer_scene_2")
+			await _click_text("Skip movie")
 		&"referral_stamp":
 			await _click(_anchor_center("referral_stamp"))
 		&"chapter_select":
@@ -865,6 +943,23 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 		for f: int in [500, 1000, 2000, 4000]:
 			if not (r.get("bc_masked", {}) as Dictionary).has(f):
 				problems.append("right masked bone missing at %d Hz" % f)
+		# (v4) bone on the better (left) ear first, unmasked; the Ghost demo stores nothing
+		var l: Dictionary = ears.get("left", {})
+		for f: int in [500, 1000, 2000, 4000]:
+			if not (l.get("bc", {}) as Dictionary).has(f):
+				problems.append("left unmasked bone missing at %d Hz" % f)
+		if not (r.get("bc", {}) as Dictionary).is_empty():
+			problems.append("right unmasked bone was stamped (the Ghost demo must store nothing)")
+		report["movies"] = _movies
+		report["ghost_demo_tones"] = _demo_tones
+		if not _phase_log.has(&"explainer"):
+			problems.append("no explainer phase (Hoot's masking movie)")
+		elif not _movies.has("masking") and not Game.cli_flag("keep-save"):
+			problems.append("Hoot's masking movie never started on a fresh save")
+		if not _phase_log.has(&"ghost_demo"):
+			problems.append("no ghost_demo phase")
+		if _demo_tones == 0:
+			problems.append("the Ghost demo never played a tone")
 		# masked air only where the rules ask for it with this air transducer (inserts: often none)
 		var tr := &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
 		var need := ClinicRules.masked_freqs_needed(res, "right", &"ac_masked", tr)

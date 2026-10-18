@@ -17,6 +17,8 @@ const PHASES: Array[StringName] = [
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
 	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
 	&"chapter_select", &"bc_placement", &"masking", &"referral",
+	# v4 (Day 2 feedback): Hoot's movie before Bonnie arrives; the Cross-Hearing Ghost demo
+	&"explainer", &"ghost_demo",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -66,6 +68,7 @@ const DEFAULT_PROGRESS: Dictionary = {
 	"plays": 0,
 	"chapters_done": [],         ## (v3) chapter ids completed at least once (CHAPTERS)
 	"last_chapter": "",          ## (v3) the chapter started most recently
+	"movies_seen": [],           ## (v4) Hoot's movies (story/explainers/movies.gd ids) shown at least once
 }
 
 var save_path: String = DEFAULT_SAVE_PATH
@@ -473,6 +476,22 @@ func chapter_for_day(day: int) -> Dictionary:
 
 func is_chapter_done(id: String) -> bool:
 	return (progress.get("chapters_done", []) as Array).has(id)
+
+
+## (v4) Hoot's movies (CONTRACTS.md §3.4): a movie id (story/explainers/movies.gd) was shown at
+## least once, watched to the end or skipped. The explainer player calls mark_movie_seen() when a
+## movie ends; a level asks is_movie_seen() to offer a replay instead of playing it again.
+func is_movie_seen(id: String) -> bool:
+	return (progress.get("movies_seen", []) as Array).has(id)
+
+
+func mark_movie_seen(id: String) -> void:
+	if id == "" or is_movie_seen(id):
+		return
+	if not progress.get("movies_seen") is Array:
+		progress["movies_seen"] = []
+	(progress["movies_seen"] as Array).append(id)
+	save_game()
 
 
 ## (polish) Every chapter is open from the start, in any order: always true. Kept so callers

@@ -999,6 +999,15 @@ func textbook_mask_presentations(e: String, f: int, start_db: int, start_mask: i
 ## Where a textbook clinician starts the measurement at (e, f): 40 dB HL for the first 1 kHz of
 ## an ear; the stored 1 kHz threshold + 10 for the 1 kHz retest (never above START_DB); otherwise
 ## 10 dB above the previous stamp, clamped to 20..MAX_START_DB. Fixed once the measurement opens.
+## (v4) Forget the open (unstored) measurement at (e, f) on the current sheet and its bookkeeping:
+## the Ghost demo's one tone (plan demo_tone) is a demonstration, not the start of a bone search.
+func discard_open(e: String, f: int) -> void:
+	(_open[e] as Dictionary).erase(f)
+	var key := _mkey(e, f)
+	for d: Dictionary in [_start_ref, _loud_hit, _marathon_hit, _meas_errors, _overmask_hit]:
+		d.erase(key)
+
+
 func recommended_start(e: String, f: int) -> int:
 	var key := _mkey(e, f)
 	if _start_ref.has(key):
@@ -1013,6 +1022,18 @@ func _compute_start(e: String, f: int) -> int:
 		var un: Dictionary = ((_sheets[ClinicRules.unmasked_test(test)] as Dictionary)["stored"] as Dictionary)[e]
 		if un.has(f):
 			return _clamp_level(int(un[f]["stored_db"]), f)
+		# (v4) masked bone on the poorer ear after unmasked bone on the better one (Day 2): the
+		# unmasked bone stamp from either mastoid is the better cochlea's, the textbook start
+		if test == &"bc_masked":
+			var ub: Variant = ClinicRules.unmasked_bone(results_view(), f)
+			if ub != null:
+				return _clamp_level(int(ub), f)
+	if test == &"bc" and goal_test == &"bc_masked" and (order[e] as Array).is_empty():
+		# (v4) a masked bone test opens on the unmasked bone sheet (noise off) before the player
+		# presses M: show the unmasked bone from either mastoid, where the masked search starts
+		var ub2: Variant = ClinicRules.unmasked_bone(results_view(), f)
+		if ub2 != null:
+			return _clamp_level(int(ub2), f)
 	if measurement_kind(e, f) == &"retest":
 		return _clamp_level(mini(int(st[1000]["stored_db"]) + 10, ClinicRules.START_DB), f)
 	var ord: Array = order[e]

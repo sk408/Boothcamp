@@ -166,6 +166,18 @@ var _deferred_tips: Array = []
 var _chase_seen := false
 ## (Polish) The player has moved the noise dial at least once (the occlusion line explains first).
 var _mask_tapped := false
+## (v4) Plan "demo_tone" (CONTRACTS.md §4.2 v4): the one-tone Cross-Hearing Ghost demo. {} = off.
+## Integrator stub: dial preset and locked, only TONE works, the first verdict ends the test (a miss:
+## up 5, again, at most DEMO_MAX_TONES), Hoot presses after "idle_s" without a press, nothing is
+## stored, scoring is off. Builder A owns the polish (LCD, quest panel, the BOO staging).
+var _demo: Dictionary = {}
+var _demo_tones := 0
+var _demo_idle := 0.0
+var _demo_done := false
+const DEMO_MAX_TONES := 3
+const DEMO_IDLE_S := 6.0
+const DEMO_HOLD_S := 1.3
+const DEMO_END_S := 2.4
 
 var _root: Control
 var _bg: Control
@@ -302,6 +314,14 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_plan = plan.duplicate(true)
 	session.configure(_plan)
 	_masking_ui = bool(_plan.get("masking_controls", session.goal_test != &"ac"))
+	# (v4) the Ghost demo: one tone, no deck, no coach, no score
+	_demo = (_plan.get("demo_tone", {}) as Dictionary).duplicate()
+	_demo_tones = 0
+	_demo_idle = 0.0
+	_demo_done = false
+	if not _demo.is_empty():
+		_masking_ui = false
+		session.scoring = false
 	_solo_limit = int(_plan.get("hoot_turn_after", QUICK_SOLO_HOLES))
 	_auto_done_ears.erase(ear)
 	for id: String in MASK_BUTTONS:
@@ -317,6 +337,9 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 		session.set_freq(rem[0] if not rem.is_empty() else ClinicRules.START_FREQ)
 		# (polish) "start_db": the plan's own first level (Day 2's 250 Hz bonus hole starts at 40)
 		session.set_level(int(_plan["start_db"]) if _plan.has("start_db") else session.recommended_start(ear, session.freq))
+		if not _demo.is_empty():
+			session.set_freq(int(_demo.get("freq", ClinicRules.START_FREQ)))
+			session.set_level(int(_demo.get("db", 10)))
 		if coached and _masking_ui and session.goal_test == &"bc" and session.stored_thresholds(ear, &"bc").is_empty():
 			# the route lesson: the first coached bone test starts on air, so the player presses B
 			session.set_transducer(session.air_transducer)
@@ -337,6 +360,12 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	var intro := String(_plan.get("intro", ""))
 	if not quick_visit and _plan.has("intro_full"):
 		intro = String(_plan["intro_full"])   # (polish) no Hoot turn without quick visit: no "I'll run it"
+	if not _demo.is_empty():
+		# (v4) the Ghost demo: a sticky "hold TONE once" tip on the TONE pad, no coach
+		_coach_active = false
+		Hoot.say(intro if intro != "" else "ONE beep: hold %s." % _k(&"present_tone"), Hoot.HIGH, "tone_button", "", 0.0)
+		_refresh()
+		return
 	if session.goal_test != &"ac" and session.is_ear_complete(ear):
 		# (polish) nothing to measure on this sheet (inserts: no cross-over, no masked air): done
 		_coach_active = false
@@ -375,7 +404,7 @@ func get_state() -> Dictionary:
 			"hoot_turn": false, "quick_visit": quick_visit,
 			"test": &"ac", "goal_test": &"ac", "transducer": &"phones", "air_transducer": &"phones", "masking_controls": false,
 			"mask_on": false, "mask_db": 0, "mask_ear": "left", "mask_status": &"off", "initial_mask_db": 0, "overmask_limit_db": 0,
-			"plateau": {}, "stored_tests": {}}
+			"plateau": {}, "stored_tests": {}, "demo": false}
 	var cand: Variant = session.store_candidate(session.ear, session.freq)
 	var trail := session.trail(session.ear, session.freq)
 	var stored_tests := {}
@@ -422,6 +451,7 @@ func get_state() -> Dictionary:
 		"overmask_limit_db": session.overmask_limit_db() if _masking_ui else 0,
 		"plateau": session.plateau_info() if masked_now else {},
 		"stored_tests": stored_tests,
+		"demo": not _demo.is_empty(),                 # (v4) the one-tone Ghost demo (plan demo_tone)
 	}
 
 
@@ -438,6 +468,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not _player_ok():
 		return
+	if not _demo.is_empty() and not (event.is_action(&"present_tone") and not event.is_echo()):
+		return  # (v4) the Ghost demo: only TONE is live
 	if event.is_action_pressed(&"present_tone"):
 		_buttons["tone_button"].show_press(true)
 		_hold_add("key")
@@ -538,6 +570,8 @@ func _tone_up() -> void:
 
 
 func _level(direction: int) -> void:
+	if _demo_locked():
+		return
 	if not _accepting:
 		return
 	if session.tone_on:
@@ -556,6 +590,8 @@ func _level(direction: int) -> void:
 
 ## (v3) Masker dial one step up (+1) / down (-1). Works with the noise off (preset).
 func _mask_level(direction: int) -> void:
+	if _demo_locked():
+		return
 	if not _accepting or not _masking_ui or session == null:
 		return
 	if session.tone_on:
@@ -575,6 +611,8 @@ func _mask_level(direction: int) -> void:
 
 ## (v3) Masking noise on / off (M).
 func _toggle_mask() -> void:
+	if _demo_locked():
+		return
 	if not _accepting or not _masking_ui or session == null:
 		return
 	if session.tone_on:
@@ -588,6 +626,8 @@ func _toggle_mask() -> void:
 
 ## (v3) Air (A) or bone (B).
 func _set_transducer(tr: StringName) -> void:
+	if _demo_locked():
+		return
 	if not _accepting or not _masking_ui or session == null:
 		return
 	if session.tone_on:
@@ -619,6 +659,8 @@ func _sync_masker() -> void:
 
 
 func _freq(direction: int) -> void:
+	if _demo_locked():
+		return
 	if not _accepting:
 		return
 	if session.tone_on:
@@ -631,6 +673,8 @@ func _freq(direction: int) -> void:
 
 
 func _jump_freq(f: int) -> void:
+	if _demo_locked():
+		return
 	if not _accepting or session.tone_on:
 		return
 	if session.set_freq(f):
@@ -642,6 +686,8 @@ func _jump_freq(f: int) -> void:
 func _set_ear(e: String) -> void:
 	if not _accepting:
 		return
+	if _demo_locked():
+		return
 	if e != _ear:
 		var b: AoButton = _buttons["ear_right_button" if e == "right" else "ear_left_button"]
 		b.wiggle()
@@ -652,6 +698,8 @@ func _set_ear(e: String) -> void:
 
 
 func _store(no_response: bool) -> void:
+	if _demo_locked():
+		return
 	if not _accepting or session == null:
 		return
 	if session.tone_on:
@@ -710,6 +758,8 @@ func _toggle_key_style() -> void:
 
 ## Ask Hoot: one hint about the next textbook move (3 feathers per patient).
 func _ask_hoot() -> void:
+	if _demo_locked():
+		return
 	if not _player_ok():
 		return
 	var b: AoButton = _buttons["hint_button"]
@@ -754,6 +804,8 @@ func _on_responded(ear: String, freq: int, db: int, related: bool) -> void:
 func _on_presentation_closed(_e: String, _f: int, rec: Dictionary) -> void:
 	if _montage_busy:
 		return
+	if not _demo.is_empty():
+		_demo_verdict(rec)
 	if not bool(rec.get("responded", false)) and not _auto_running and not _coach_active and int(rec.get("mask_db", -1)) >= 0:
 		_check_chase(_e, _f)
 	if not bool(rec.get("responded", false)):
@@ -782,7 +834,7 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 				var e_now := String(data.get("ear", _ear))
 				# (polish) before the first bone stamp there is nothing to compare yet: a small "boo?" only;
 				# the big Ghost flies once a bone mark sits next to the air mark (or under masking)
-				var early := not bool(data.get("masked", false)) and session.stored_thresholds(e_now, &"bc").is_empty()
+				var early := not bool(data.get("masked", false)) and session.stored_thresholds(e_now, &"bc").is_empty() and _demo.is_empty()
 				if _auto_running or early:
 					_fx.chip("boo?" if early and not _auto_running else "boo!", bc + Vector2(0, -40), Color("#efeaf7"), Palette.PLUM, 16, 0.7)
 				else:
@@ -800,6 +852,8 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 						var lf := int(b_order[-1])   # the last bone mark and the air mark at the same pitch
 						if air.has(lf) and bone.has(lf):
 							title = "Bone %d, air %d? BOO!" % [int(bone[lf]), int(air[lf])]
+					if not _demo.is_empty():
+						title = String(_demo.get("title", title))   # (v4) the demo's own shout
 					_fx.ghost(from, to, title, "the %s cochlea may have heard it" % via.to_upper(), shout)
 					Sfx.play(&"whoosh", 1.3, -10.0)
 		&"tickle":
@@ -1205,6 +1259,62 @@ func _complete_ear(ear: String) -> void:
 	test_finished.emit(results)
 
 
+# ---------------------------------------------------------------- (v4) the Ghost demo (plan demo_tone)
+
+## The Ghost demo locks every control but TONE.
+func _demo_locked() -> bool:
+	return not _demo.is_empty()
+
+
+## A verdict in the demo: heard (or the last try) ends it; a miss nudges the tone up 5 and asks again.
+func _demo_verdict(rec: Dictionary) -> void:
+	if _demo_done:
+		return
+	_demo_tones += 1
+	_demo_idle = 0.0
+	if bool(rec.get("responded", false)) or _demo_tones >= int(_demo.get("max_tones", DEMO_MAX_TONES)):
+		_demo_done = true
+		_finish_demo()
+		return
+	session.step_level(1)
+	Hoot.say("No hand? Up 5, one more beep: hold %s." % _k(&"present_tone"), Hoot.HIGH, "tone_button", "", 0.0)
+	_refresh()
+
+
+## Hoot presses TONE himself when the player waits (the demo never soft-locks).
+func _demo_hoot_press() -> void:
+	if _demo_done or not _accepting or session == null or session.tone_on:
+		return
+	_buttons["tone_button"].show_press(true)
+	_hold_add("demo")
+	await get_tree().create_timer(DEMO_HOLD_S, false).timeout
+	if is_inside_tree() and _hold.has("demo"):
+		_buttons["tone_button"].show_press(false)
+		_hold_remove("demo")
+
+
+## End the demo: nothing was stored; the Ghost gets a moment to fly, then test_finished.
+func _finish_demo() -> void:
+	_accepting = false
+	for src: String in _hold.keys():
+		_hold_remove(src)
+	_hold.clear()
+	_tone.stop_tone()
+	_buttons["tone_button"].cancel_hold()
+	_buttons["tone_button"].show_press(false)
+	Hoot.dismiss_target("tone_button")
+	_refresh()
+	await get_tree().create_timer(DEMO_END_S, false).timeout
+	if not is_inside_tree() or session == null:
+		return
+	session.discard_open(_ear, session.freq)   # its one tone opens no bone search
+	session.scoring = true
+	_demo = {}
+	var results := session.build_results()
+	Events.audiometry_finished.emit(results)
+	test_finished.emit(results)
+
+
 # ---------------------------------------------------------------- Hoot's turn (quick visit)
 
 ## Quick visit: after QUICK_SOLO_HOLES solo stamps Hoot finishes the ear by the textbook at x8.
@@ -1585,6 +1695,11 @@ func _notification(what: int) -> void:
 func _process(delta: float) -> void:
 	if session != null:
 		session.advance(delta)
+	if not _demo.is_empty() and not _demo_done and _accepting and session != null and not session.tone_on and _hold.is_empty():
+		_demo_idle += delta
+		if _demo_idle >= float(_demo.get("idle_s", DEMO_IDLE_S)):
+			_demo_idle = 0.0
+			_demo_hoot_press()
 	if _accepting:
 		_sync_bubble_hint()
 	if Hoot.is_showing() != _perch_hidden:

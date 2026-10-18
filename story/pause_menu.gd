@@ -6,8 +6,14 @@ extends CanvasLayer
 ## "Up = SOFTER (swapped)" (setting "affinity"). Player-facing text never names a vendor.
 ## Keyboard: Up/Down pick a row, Left/Right adjust, Enter toggles / presses, Esc closes. It opens
 ## on the Resume button, and Space does nothing here (a held beep key must never flip a setting).
+## (v4) Replays of Hoot's movies (story/explainers/, CONTRACTS.md §3.4): one "Watch <title>" button
+## per movie of the current chapter (in a level) or every movie (on the title's Options). The movie
+## plays over the paused game (the player is our child, so it inherits PROCESS_MODE_ALWAYS); the menu
+## comes back when it ends. Hidden while a movie is already playing.
 
 const UiKit := preload("res://story/ui_kit.gd")
+const Movies := preload("res://story/explainers/movies.gd")
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const TEXT_SPEEDS: Array[float] = [0.6, 1.0, 1.6, 3.0]
 const TEXT_SPEED_NAMES: Array[String] = ["Slow", "Normal", "Fast", "Zoom"]
@@ -26,6 +32,8 @@ var _in_audiometry := false
 var _opened_t := 0
 var _btns: Array[Button] = []
 var _btn_hl := 0
+var _movie_btns: Dictionary = {}    # (v4) movie id -> its "Watch ..." button
+var _movie_playing := false         # (v4) a replay is on screen (the menu waits, hidden)
 
 
 func _ready() -> void:
@@ -44,6 +52,8 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _movie_playing:
+		return   # the movie has its own keys (Esc skips it); the menu comes back after
 	if event.is_action_pressed(&"pause") and not event.is_echo():
 		if _open:
 			close()
@@ -83,6 +93,7 @@ func open() -> void:
 	var on_title := _on_title()
 	_title.text = "Options" if on_title else "Paused"
 	_quit_title_btn.visible = not on_title
+	_update_movie_buttons()
 	_refresh()
 	_btn_hl = 0
 	_set_hl(_rows.size() - 1, false)
@@ -95,7 +106,7 @@ func open() -> void:
 
 
 func close() -> void:
-	if not _open:
+	if not _open or _movie_playing:
 		return
 	_open = false
 	_root.visible = false
@@ -109,6 +120,43 @@ func is_open() -> bool:
 	return _open
 
 
+## (v4) The movies this menu offers: the current chapter's in a level, all of them on the title.
+func movie_ids_here() -> Array[String]:
+	if _on_title():
+		return Movies.ids()
+	if get_tree().get_first_node_in_group("explainer_player") != null:
+		return [] as Array[String]   # one movie at a time (P during the day-start movie)
+	return Movies.for_chapter(Game.current_chapter_id)
+
+
+func _update_movie_buttons() -> void:
+	var here := movie_ids_here()
+	for id: String in _movie_btns:
+		(_movie_btns[id] as Button).visible = here.has(id) and not _movie_playing
+
+
+## (v4, coroutine) Replay a movie from the menu. Returns the player's result.
+func play_movie(id: String) -> Dictionary:
+	if _movie_playing or not Movies.has(id):
+		return {}
+	_movie_playing = true
+	_root.visible = false
+	_corner.visible = false
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", id, "title" if _on_title() else "pause")
+	player.queue_free()
+	_movie_playing = false
+	if _open:
+		_root.visible = true
+		_update_movie_buttons()
+		_refresh()
+		_opened_t = Time.get_ticks_msec()   # the key that ended the movie does nothing here
+		Juice.bounce_in(_card, 0.3)
+	_update_corner()
+	return r
+
+
 func _on_title() -> bool:
 	return get_tree().get_first_node_in_group("title_screen") != null
 
@@ -120,7 +168,8 @@ func _update_corner() -> void:
 	# pause button; Esc / P still pause there). Stage.audiometer also covers the standalone
 	# --scene demo, where no story phase is announced.
 	var ao_up := Stage.audiometer != null and is_instance_valid(Stage.audiometer)
-	_corner.visible = not _open and not _on_title() and not _in_audiometry and not ao_up
+	_corner.visible = not _open and not _on_title() and not _in_audiometry and not ao_up and not _movie_playing \
+		and get_tree().get_first_node_in_group("explainer_player") == null
 
 
 ## The AudiOtron can appear without a phase or scene change (standalone demo, tests), so
@@ -344,6 +393,14 @@ func _build() -> void:
 	resume.pressed.connect(close)
 	row.add_child(resume)
 	_btns.append(resume)
+	for id: String in Movies.ids():
+		var mb := UiKit.button("Watch %s" % Movies.title(id), &"", Vector2(300, 52))
+		mb.tooltip_text = "%s (about %d s; Esc skips it)" % [Movies.title(id), int(Movies.total_s(id))]
+		mb.pressed.connect(func() -> void: play_movie(id))
+		mb.visible = false
+		row.add_child(mb)
+		_btns.append(mb)
+		_movie_btns[id] = mb
 	_quit_title_btn = UiKit.button("Quit to title", &"", Vector2(180, 52))
 	_quit_title_btn.pressed.connect(func() -> void:
 		close()

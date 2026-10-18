@@ -5,10 +5,18 @@ Contract changes for this chapter are marked **(v3)** in `CONTRACTS.md`. Every c
 `autoload/clinic_rules.gd` (section "v3") or `core/patients/bonnie.tres`; change it there, not in a copy.
 Steve reviews every number.
 
+**(v4) Steve's feedback, applied** (contract changes marked **(v4)** in `CONTRACTS.md`):
+1. **Bone on the better ear first.** The oscillator goes on Bonnie's LEFT mastoid and unmasked bone is measured there
+   first (coached, `>` marks). Hoot states the rule: *unmasked bone tells you about the better cochlea, wherever the
+   oscillator sits.* Then the **Ghost demo**: the oscillator moves to her right mastoid and ONE unmasked tone plays;
+   the left cochlea answers; BOO. Then masking: noise in the LEFT ear, oscillator on the RIGHT mastoid, masked
+   right bone with the plateau, then masked right air. Results, reveal and golf card show left `>` and right `[`.
+2. **Hoot's masking movie**: a 92-second skippable, replayable cartoon at the start of the day (§16).
+
 | | |
 |---|---|
 | Teaches | bone conduction, the air-bone gap, cross-hearing, clinical masking (plateau), overmasking, conductive loss = ENT referral |
-| Length | 10-15 minutes (about 12 with "quick visit" on, the default) |
+| Length | 12-15 minutes: **(v4)** about 14:30 with the movie and "quick visit" on (the default), about 13 if the movie is skipped |
 | Opens | after Day 1 is finished, or at once with "Unlock all days (demo)" (title Days card, pause menu) |
 | New controls | B bone, A air, M masking on/off, PgUp / PgDn (or Shift+Up / Shift+Down) masking level, all with on-screen buttons |
 | Level scene | `res://story/level_bonnie.tscn` (`story/level_bonnie.gd`) |
@@ -70,32 +78,49 @@ What the player sees, derived from those numbers (all checked in `tests/test_mas
 | Masked right air | 55 | 55 | 50 | 50 | | same as unmasked: her real head did not cross over |
 
 Result the reveal shows: right ear **conductive** (gaps 45 / 40 / 25 / 25 at 500-4k, bone average 14),
-referral red flag (gap 15+ at 500, 1k and 2k), Carhart notch; left ear normal. Bone is tested on the right
-only: the left air is normal, so the left can't have an air-bone gap.
+referral red flag (gap 15+ at 500, 1k and 2k), Carhart notch; left ear normal. ~~Bone is tested on the right
+only: the left air is normal, so the left can't have an air-bone gap.~~ **(v4)** Bone is tested on the LEFT
+(better) ear first, unmasked (`>`: 5 / 0 / 5 / 5 at 500-4k). Unmasked bone is the better cochlea's answer
+wherever the oscillator sits, so these marks are the bone baseline for BOTH ears; the right ear's air (50) sits
+far below it, so the right cochlea is unknown until it is masked. The unmasked-right-bone row above is what the
+Ghost demo shows with one tone (at 1 kHz, 5 dB above the measured left bone); it is never stored.
 
-## 3. Beat by beat (about 12 minutes)
+## 3. Beat by beat (v4: about 14:30 with the movie)
 
 Times are for a first-time player with "quick visit" on. "Hoot runs" = Hoot's turn at x8 speed (input
 locked, his stamps marked "hoot", not scored for golf). Every blocking beat emits `Events.awaiting_input`.
+**(v4)** New or changed rows are bold. The v3 table (bone on the right first) is replaced.
 
 | # | Phase (`phase_changed`) | What happens | Beat(s) | Time |
 |---|---|---|---|---|
-| 1 | `intro` | Bonnie bursts in with croissants. Hoot: "Day 2, trainee! Today we test through the bone, not just the air." | dialogue | 0:45 |
-| 2 | `history` | Two rounds of questions (table above). Red-flag card: "One ear only: YES = see a doctor." Medal `history`. | choice | 1:30 |
-| 3 | `otoscopy` | A quick look (no mini-game today): canals clear, eardrums normal. "A healthy-looking eardrum can still hide a stiff middle ear." Medal `otoscopy` gold. | dialogue | 0:20 |
-| 4 | `instructions` | New wrinkle: "Press for every beep, even faint ones. Ignore the shhh noise." Wrong picks cost a retry (and comfort for "press for the noise too"). | choice | 0:40 |
-| 5 | `earphones` | Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | earphones_place | 0:40 |
-| 6 | `audiometry` {ear right, test ac} | Player stamps 1 kHz (coached), Hoot runs the rest. | (AudiOtron) | 1:30 |
-| 6b | `audiometry` {ear left, test ac} | Hoot runs the left ear at top speed. Hoot: right needs about 50 dB, left normal. "But WHERE is it stuck?" | (AudiOtron) | 0:45 |
-| 7 | `bc_placement` | Earphones off. The **oscillator placement mini-game** (section 6). Then the 3D oscillator goes on the right mastoid. Medal `bc_placement`. | bc_placement | 1:00 |
-| 8 | `audiometry` {ear right, test bc} | Unmasked bone, coached: switch to BONE, stamp 1k and 2k; Hoot does 4k and 500. The **BOO!** Ghost callout on the first cross-heard tone. Afterwards: "Bone at 0 dB, air at 50? Suspicious. Bone buzzes BOTH cochleas." | (AudiOtron) | 1:30 |
-| 9 | `masking` | "Which ear gets the shhh noise?" (left!). Medal `masking`. A single blue earphone goes on her left ear. Hoot explains the starting level and the plateau dance. | choice | 0:40 |
-| 9b | `audiometry` {ear right, test bc_masked} | Masked bone, coached: masking ON, noise to the starting level, find the **flat line** at 1k and 2k; Hoot does 4k and 500. | (AudiOtron) | 2:30 |
-| 9c | `audiometry` {ear right, test ac_masked} | Earphones back on. "Air needs masking too: 50 minus 40 reaches her left bone. I'll run it!" Hoot runs masked air. | (AudiOtron) | 0:20 |
-| 10 | `reveal` | Bonnie's audiogram stamps in (O X, < unmasked bone, [ masked bone). The **toll bridge** draws in between bone and air with the gap in dB. "AIR-BONE GAP: ~35 dB". | dialogue | 1:00 |
-| 11 | `evidence` | "What type of loss is Bonnie's right ear?" Sensorineural / Conductive / Mixed (the answer is the type her measured results show). Carhart notch line, masking-dilemma mention. Medal `evidence`. | choice | 0:45 |
-| 12 | `referral` | "What's next for Bonnie?" Hearing aids today / **Refer to an ENT doctor** / See you in five years. Then the player slams the **REFERRED TO ENT** stamp. Medal `referral`. | choice, referral_stamp | 0:45 |
-| 13 | `results` | The Daily Decibel, Day 2 edition. | results_continue | 0:45 |
+| **0** | **`explainer`** {movie, source, seen} | **Hoot's masking movie (§16), before Bonnie knocks. First visit: it plays (Space = next scene, Esc = skip). Seen before: "Hoot's masking movie again? Popcorn's on me!" Roll the film / Skip it.** | **explainer** (or choice) | **1:35** |
+| 1 | `intro` | Bonnie bursts in with croissants. Hoot: "Day 2, trainee! Today we test through the bone, not just the air." | dialogue | 0:35 |
+| 2 | `history` | Two rounds of questions (table above). Red-flag card: "One ear only: YES = see a doctor." Medal `history`. | choice | 1:10 |
+| 3 | `otoscopy` | A quick look: canals clear, eardrums normal. | dialogue | 0:15 |
+| 4 | `instructions` | "Press for every beep, even faint ones. Ignore the shhh noise." | choice | 0:30 |
+| 5 | `earphones` | Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | earphones_place | 0:30 |
+| 6 | `audiometry` {right, ac} | Player stamps 1 kHz (coached), Hoot runs the rest. | (AudiOtron) | 1:10 |
+| 6b | `audiometry` {left, ac} | The left-ear montage. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 0:15 |
+| **7** | **`bc_placement` {ear: left}** | **Earphones off. "Meet the bone buzzer! Better ear first: her LEFT." The placement game on her LEFT profile (§6). The 3D oscillator goes on her left mastoid.** | **bc_placement** (`mastoid_target_left`) | **0:45** |
+| **8** | **`audiometry` {left, bc}** | **Unmasked bone on the LEFT, coached: press B, stamp 1k; Hoot does 2k, 4k, 500 (`>` marks). Optional 250 Hz bonus hole (the tickle). Then: "Left bone 0, left air 5: side by side." and THE RULE: "unmasked bone tells you about the BETTER cochlea, wherever the buzzer sits."** | (AudiOtron), choice | **1:40** |
+| **9** | **`ghost_demo` {ear: right}** | **"Her right air needs 50. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." A quick second placement ("Swap sides!") on her RIGHT mastoid. ONE unmasked tone at 1 kHz, 5 dB above her measured left bone (every control but TONE locked; Hoot presses it if you wait). Her LEFT cochlea answers: the Ghost flies, "Bone 5, air 50? BOO!" Nothing is stored. "Was that her right cochlea, or the LEFT one? Can't tell!"** | **bc_placement** (quick), (AudiOtron `demo_tone`) | **0:50** |
+| 10 | `masking` | "Which ear gets the shhh noise?" (left!). Medal `masking`. A single blue earphone goes on her left ear; the oscillator stays on her right mastoid. | choice | 0:30 |
+| 10b | `audiometry` {right, bc_masked} | Masked bone, coached: noise in the LEFT ear, find the **flat line** at 1k and 2k; Hoot does 4k and 500. Starts at the unmasked (left) bone. | (AudiOtron) | 2:00 |
+| 10c | `audiometry` {right, ac_masked} | Earphones back on. Hoot runs masked air (none with inserts). | (AudiOtron) | 0:20 |
+| 11 | `reveal` | Audiogram stamps in: O X, **left `>` (unmasked bone), right `[` (masked bone)**. "The > marks: left bone, unmasked. The [ marks: right bone, masked." The toll bridge. | dialogue | 0:45 |
+| 12 | `evidence` | Type of loss (conductive). Carhart notch line. Medal `evidence`. | choice | 0:35 |
+| 13 | `referral` | Refer to ENT, the stamp. Medal `referral`. | choice, referral_stamp | 0:40 |
+| 14 | `results` | The Daily Decibel. **Golf card rows: R O, L X, L `>`, R `[`, R O+.** | results_continue | 0:35 |
+
+Total about 14:40 with the whole movie; about 13:05 if the movie is skipped. Medal `bc_placement` counts the
+slips of both placements (0 gold, 1 silver, 2+ bronze). The demo never soft-locks: if the player waits 6 s Hoot
+presses TONE; a miss raises the tone 5 dB (at most 3 tones). If her left cochlea misses all three (a rare lapse),
+Hoot says the no-Ghost line (§4) and the day goes on.
+
+**Why this order (Steve).** Clinically you put the oscillator on the better ear first: unmasked bone there is
+both ears' bone baseline (bone crosses the skull for free, IA about 0). The poorer ear's air is then compared
+with that baseline: any gap over 10 dB means its bone must be masked. An unmasked tone on the poorer side only
+re-measures the better cochlea, which the demo shows with one tone instead of a whole unscored test.
 
 ## 4. Teaching moments (Hoot, 18 words or fewer)
 
@@ -110,9 +135,9 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Instructions | "She'd press for the noise all day! Beeps only. Try again." |
 | Air vs bone | "Air goes through the ear canal and middle ear. Bone skips both, straight to the cochlea." |
 | Placement | "Snug on the mastoid, not touching the ear. Bone tones go 500 to 4000 Hz." |
-| The Ghost | "Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!" |
+| ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
-| Why mask | "To hear the right cochlea alone, keep the left one busy with noise. Masking!" |
+| Why mask | "To hear the right cochlea alone, keep the left one busy with noise. Masking!" **(v4)** ends "Masking, like the movie!" when the movie played to the end |
 | Wrong ear | "Noise in the test ear just hides the beep. Busy the OTHER ear." |
 | Starting level | "Start noise: her left air threshold plus 10, plus extra for occlusion on low tones." |
 | The dance | "Heard? Noise up 5. Missed? Tone up 5. Three noise steps, same answer: plateau!" |
@@ -130,12 +155,41 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask_too_low`, `mask_start`,
 `store_no_plateau`, `overmasked` (section 7).
 
+**(v4) New and changed lines** (all 18 words or fewer; `%d` = the player's own numbers):
+
+| Moment | Speaker | Line |
+|---|---|---|
+| Movie offer (seen before) | choice | "Hoot's masking movie again? Popcorn's on me!" / "Roll the film! (about 90 s)" / "Skip it: I know my masking." |
+| Placement, left | Hoot | "Meet the bone buzzer! Better ear first: her LEFT. It sits behind the ear, on the mastoid." |
+| Placement caption, quick | card | "Swap sides! Her RIGHT mastoid: the same bony bump, behind the right ear." |
+| Unicorn slip | Hoot | "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her {left / right} ear." |
+| Top of head, glasses already found | Hoot | "Top of her head? Glasses gone, so: behind the ear, on the bony mastoid." ("Bonk!") |
+| Left bone intro | AudiOtron tip | "Bone time, left ear! B = bone. Same dance: down 10, up 5. Start at 1k." |
+| After left bone | Hoot | "Left bone %d, left air %d: side by side. Her left ear works fine all the way in." |
+| | Bonnie | "A gold star for my left ear! I'll bake it a little one." |
+| **The rule** | Hoot | "The rule: unmasked bone tells you about the BETTER cochlea, wherever the buzzer sits." |
+| Demo setup | Hoot | "Her right air needs %d. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." |
+| Swap | Hoot | "Let's test that. Swap the buzzer to her RIGHT mastoid: the poorer ear." |
+| Demo tip | AudiOtron tip | "ONE beep, buzzer on her right, %d dB: just above her LEFT bone. Hold Space!" |
+| Demo miss | AudiOtron tip | "No hand? Up 5, one more beep: hold Space." |
+| Ghost callout | AudiOtron | "Bone %d, air %d? BOO!" / "the LEFT cochlea may have heard it" |
+| After the demo | Hoot | "BOO! Same answer as her left bone. Was that her right cochlea, or the LEFT one? Can't tell!" |
+| | Bonnie | "A ghost in my skull?! I KNEW that oven was haunted." (kept) |
+| | Hoot | "That's the Ghost's trick. Only masking the left ear can tell us the right cochlea's truth." |
+| No Ghost (missed 3 times) | Hoot | "She missed it? Even the Ghost naps. But it CAN answer, so we mask anyway." |
+| Why mask | Hoot | "To hear the right cochlea alone, keep the left one busy with noise. Masking, like the movie!" |
+| Masked bone intro | AudiOtron tip | "Noise in her LEFT ear, bone on her right. Find the flat line!" (kept) |
+| Reveal | Hoot | "The > marks: left bone, unmasked. The [ marks: right bone, masked. Right air down near %d." |
+
 ## 5. Fun moments
 
-- **The Cross-Hearing Ghost.** The first time an unmasked bone tone is answered by the LEFT cochlea, the
-  booth window shows a big "BOO!" callout ("the Ghost: the LEFT cochlea heard it") and the glyph says "boo".
-  During Hoot's turn it is a small "boo!" chip. After the unmasked bone test Bonnie: "A ghost in my skull?!
-  I KNEW that oven was haunted."
+- **The Cross-Hearing Ghost.** ~~The first time an unmasked bone tone is answered by the LEFT cochlea, the
+  booth window shows a big "BOO!" callout.~~ **(v4)** The Ghost demo: one tone on the right mastoid, the LEFT
+  cochlea answers, the Ghost flies from the right chart to the left one with "Bone 5, air 50? BOO!", the 3D Ghost
+  slips round the back of her skull and taps her button hand. Bonnie: "A ghost in my skull?! I KNEW that oven was
+  haunted."
+- **(v4) Hoot's masking movie** (§16): Righty and Lefty, the snail cochleas; the skull wall; the jelly-head bone
+  buzzer; the bedsheet Ghost; Lefty in sunglasses dancing in the "shhh" cloud; the plateau graph.
 - **Flat line.** The LCD trail turns into a PLATEAU graph (masker steps along x, tone level up the y axis).
   Three noise raises with the same answer draw a flat green line and pop "FLAT LINE!" with a "PLATEAU!" chip.
 - **The toll bridge.** On the reveal, an orange bridge deck runs along the masked bone marks with dashed posts
@@ -152,6 +206,12 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
   the oven timer", "Was I a unicorn for a second there? I felt majestic."
 
 ## 6. Oscillator placement mini-game (`story/games/bone_placement.gd`)
+
+**(v4) Two placements.** First her LEFT side (`setup("left")`: the profile faces LEFT so her left ear is the one you
+see, the tray sits bottom-left, target `mastoid_target_left`, Left/Right walk the highlight towards the back of her
+head the other way round). Then, for the Ghost demo, a quick RIGHT one (`setup("right", true)`: caption "Swap sides!
+Her RIGHT mastoid: the same bony bump, behind the right ear."; if her glasses were found the first time, they are
+gone from the card and "top" is a plain slip). One medal for both. The text below describes the right side.
 
 Bonnie in profile on a cream card, facing RIGHT, so the visible ear is her RIGHT (a profile facing left would
 show her left ear; fixed at integration). The grey "bone buzzer" sits in a tray. Drag it onto a spot, or click a
@@ -217,7 +277,8 @@ during bone tests. Gus (no bone data, no masking) gets exactly his air threshold
   `plateau_found`, `vibrotactile`.
 - **Medals (Day 2 paper row):** Chat (`history`), Bone (`bc_placement`), Mask (`masking`), Case (`evidence`),
   Refer (`referral`). Gold 10 / silver 6 / bronze 3 coins as before.
-- Golf card: rows R O, L X, plus R [ (masked bone) and R O+ (masked air) when present.
+- Golf card: rows R O, L X, plus R [ (masked bone) and R O+ (masked air) when present. **(v4)** plus L > (left
+  unmasked bone) before them. The Day 2 board legend lists "Left bone" too.
 
 ## 9. Audio safety for the masker
 
@@ -284,6 +345,9 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 
 1. Occlusion values (250/500 +15, 1k +10) and the overmask rule with the conservative 40 dB IA.
 2. Should Day 2 also ask for left bone, or is "left air normal, so no gap possible" the right lesson?
+   **(v4: answered by Steve)** Yes: left bone IS tested now, unmasked, and FIRST (the better ear; `>` marks). It is
+   the bone baseline for both ears, because unmasked bone tells you about the better cochlea wherever the
+   oscillator sits. The right ear then gets one unmasked demo tone (the Ghost) and masked bone.
 3. The plateau needs 3 raises with a response at the same tone level; a single lapse restarts it, so the
    stored masked threshold is often 5 dB above the truth (rarely 15: two unlucky lapses in a row, e.g.
    autoplay seed 4 at 250 Hz). Keep (realistic) or make the sim steadier near threshold?
@@ -310,3 +374,62 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
   the ENT confirms; surgery or hearing aids, both can work well. The Carhart line says the cochlea is fine.
 - **Board.** The bridge is drawn per frequency: planks under the bone marks, pillars down to the air marks
   labelled "toll N dB", the river only between gaps, the bone car hopping plank to plank.
+
+## 16. Hoot's masking movie (v4)
+
+"Hoot's Movie Matinee: The Cross-Hearing Ghost". A cartoon short that plays at the start of Day 2, before Bonnie
+knocks, so the player meets every masking idea once before using it. Data: `story/explainers/movies/masking.gd`
+(scene list); player: `story/explainers/explainer_player.tscn`; stage (the drawings): `story/explainers/explainer_stage.gd`.
+API and entry points: `CONTRACTS.md` §3.4. How to make another one: `docs/ADDING_A_CHAPTER.md`, "Hoot's movies".
+
+**Format.** A cinema: velvet curtains, a cream screen (the stage, 880 x 440), Hoot's portrait and caption bar
+under it (typewriter, his gibberish voice), the title top-left and one dot per scene top-right. Each scene teaches
+ONE idea in one or two captions (18 words or fewer each). Quiet stings only (Sfx at -6 dB or softer): "too loud"
+and "too much noise" are drawn, never played. Skippable at every moment: Space / Enter / a click = next scene,
+Esc = skip the movie, plus the "Next scene" and "Skip movie" buttons. Replay: pause menu "Watch Hoot's masking movie"
+during Day 2, and the title's Options.
+
+**The cast.** Righty (red snail-shell cochlea, the test ear today) and Lefty (blue, the better ear), drawn inside a
+big round cartoon head seen from the front, so her RIGHT is on the screen's LEFT, like the patient facing you.
+A brick skull wall between them with a dB sign; a red on-ear cup; a beige bone buzzer; the Ghost (Lefty under a
+bedsheet); the purple "shhh" cloud; a noise dial.
+
+| # | Scene (`set`) | Visuals (the stage brief) | Caption(s), Hoot | s | The one idea |
+|---|---|---|---|---|---|
+| 1 | `meet` | Curtains swish open; title card HOOT'S MOVIE MATINEE / THE CROSS-HEARING GHOST. The big head with a see-through window; red Righty (screen left) and blue Lefty (screen right) pop in with name tags and wave. | "Hoot's Movie Matinee! Meet Righty and Lefty: two cochleas, one on each side of one head." | 8 | Each ear has its own cochlea; both live in one skull. |
+| 2 | `air` | A red on-ear cup pops onto her right side. Music-note beeps hop down the canal to Righty, who rings a tiny bell. Lefty sleeps (zzz). | "An earphone sends a beep to ONE ear. Righty hears it. Lefty snoozes." | 8 | Air conduction tests one ear at a time. |
+| 3 | `wall` | A brick skull wall grows between them, sign "-40 dB" (small tag "inserts -55"). A meter on the cup climbs 30, 50, 70; the notes get BIGGER (drawn; the sound stays soft). Soft notes bonk on the wall; at 70 one squeezes through, its tag shrinks 70 -> 30, and taps Lefty, who wakes and raises a hand. | "Crossing the skull costs about 40 dB with on-ear headphones. Insert earphones: 55 or more." / "So a LOUD beep can leak across to Lefty. That's cross-hearing!" | 11 | Interaural attenuation: about 40 dB on-ear (55+ inserts); loud air tones can cross. |
+| 4 | `bone` | The cup pops off; a bone buzzer clicks onto the bump behind Righty's ear. bzz lines; the whole head jiggles like jelly; both snails vibrate the same. The wall sign flips "-40 dB" -> "-0 dB" and the bricks turn see-through. | "A bone buzzer shakes the WHOLE skull, not just one side." / "Both cochleas feel it almost equally: 0 to 10 dB lost. Call it zero!" | 10 | Bone reaches both cochleas (IA 0-10 dB, treat as 0). |
+| 5 | `ghost` | Righty (the poorer ear today) wears a nightcap and snores through a soft buzz. Lefty throws a bedsheet over itself (blue under the sheet, two eye holes), floats over to Righty's side and waves an "I HEARD IT!" flag. A big "BOO!" bubble; Hoot gasps. | "Testing Righty? Lefty hears the buzz too, and if Lefty hears better, Lefty answers first." / "That's the Cross-Hearing Ghost: the better cochlea answering for the poorer ear." | 10 | The Ghost = the better cochlea answering for the poorer ear. |
+| 6 | `mask` | A blue cup pops onto Lefty's side; a purple squiggly cloud full of "shhh" letters fills Lefty's corner. Lefty puts on tiny sunglasses and dances, busy. The buzz comes: the bedsheet slides off; Righty raises its own hand. | "Masking: a steady 'shhh' in the BETTER ear keeps it too busy to answer." / "The shhh goes in the non-test ear. The beep still goes to the test ear." | 10 | Masking = noise in the non-test (better) ear. |
+| 7 | `under` | The cloud shrinks to a patchy puff with holes; the Ghost peeks through one ("boo!"). The noise dial shows a "+5" arrow. | "Too little shhh? The Ghost still sneaks through the gaps. Add more!" | 7 | Undermasking: too little noise and the Ghost still answers. |
+| 8 | `over` | The dial swings into the red. The cloud balloons, spills over the wall (its tag shrinks by 40 as it crosses) and smothers Righty, whose hand drops. A coral "TOO MUCH NOISE!" sign wobbles. Nothing loud plays. | "Too much shhh? It leaks back across the skull and drowns Righty too. Overmasking!" | 9 | Overmasking: noise minus IA reaches the test ear's cochlea. |
+| 9 | `plateau` | A chunky graph like the AudiOtron's PLATEAU graph: noise (dB EM) along the bottom in 5 dB steps, Righty's answer (dB HL) up the side. Hoot hops: the first hops climb (label GHOST: 10/10, 15/15, 20/20, 25/25), then three hops stay level (30/25, 35/25, 40/25): a green FLAT LINE, a "15 dB" brace, "PLATEAU!". After a "..." gap the line climbs again (TOO MUCH: 70/30, 75/35). A soft blip per hop. | "Raise the shhh 5 dB at a time. If Righty's answer climbs along, the Ghost was answering." / "Answer holds steady through 15 dB more shhh? Plateau! That's Righty's true threshold." | 13 | The plateau: the same answer through about 15 dB more noise (three 5 dB steps) is the true threshold. |
+| 10 | `outro` | Righty, Lefty and Hoot bow; a "THE END?" card; the curtains close. Two soft knocks on the cinema door: the next patient is here. | "Busy the better ear, find the flat line. Ooh, a knock! Places, trainee!" | 6 | Recap: mask the better ear, trust the plateau. |
+
+Total 92 s planned (each scene lasts at least its time and long enough to read its last caption, so about 95 s
+at normal text speed). `tests/test_contracts_v4.gd` checks the scene ids, the caption lengths, 60-100 s, the
+quiet cues, and the facts against `ClinicRules` (IA 40 / 55 / 0, three 5 dB steps, the "too much" scene really
+overmasking).
+
+**The facts behind it (Steve).** Supra-aural (on-ear) interaural attenuation about 40 dB is the conservative
+textbook value (inserts 55 or more); bone IA is 0-10 dB, treated as 0. Masker levels are dB EM (effective
+masking). Plateau = the same threshold through about 15 dB of masker increase (three 5 dB steps). Overmasking
+starts when the masker minus the IA reaches the test ear's bone (cochlea). Undermasking: the non-test cochlea
+still hears the tone. The movie never claims a number the game does not use.
+
+**Sounds per scene** (all `Sfx`, at -8 to -16 dB): fanfare and two pops (meet), pop / note / ding (air), two boings,
+a whoosh and a chirp (wall), thunk / soft squeak / stamp (bone), squeak / whoosh / boing (ghost), pop / soft whoosh
+/ ding (mask), boing / click (under), whoosh / soft sad trombone (over), five blips and a sparkle (plateau),
+a soft fanfare and two door knocks (outro).
+
+## 17. (v4) Builder checklist
+
+| Who | What | Where |
+|---|---|---|
+| builder B (story) | Animate the ten sets of §16 on the stage (the v4 stage is a placeholder drawing per set with the props, labels and timing hooks: `t`, `duration`, `params`). Keep `SETS` and `show_scene()`; captions and cues stay in the data. Cartoon, readable at 1280x720, no vendor art. Check with `dev_explainer.tscn` | `story/explainers/explainer_stage.gd` |
+| builder B | Polish the left placement art if needed (it is the unmirrored drawing; tray bottom-left), the quick right placement, and the left 3D oscillator shot (`ear_left`) | `story/games/bone_placement.gd`, `world/clinic.gd` |
+| builder B | Day 2 board: the left `>` marks next to the right `[` on the reveal; the bridge stays on the right ear | `story/games/day2_board.gd` |
+| builder A | The `demo_tone` plan's look: TONE glowing as the only live control, the other controls dimmed, the Ghost's "Bone 5, air 50? BOO!" | `ui/audiometer/audiometer_screen.gd` |
+| builder A | The coach on the LEFT bone sheet (the first bone test is now the left ear): the route lesson (B), no masking talk (no gap on the left) | `ui/audiometer/*` |
+| integrator | Steve review of §3, §4 (v4 lines) and §16; `tools/movie_check.sh --day=2` (the movie's stings stay quiet) | |

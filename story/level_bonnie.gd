@@ -1,18 +1,21 @@
 extends Node
-## LevelBonnie (v3): Day 2, "Bone conduction + masking". Bonnie Bunsworth, 34, baker, with a
-## slowly muffled RIGHT ear (otosclerosis). Design: docs/CHAPTER2.md. Same contracts as Day 1
+## LevelBonnie (v3, v4 flow): Day 2, "Bone conduction + masking". Bonnie Bunsworth, 34, baker, with
+## a slowly muffled RIGHT ear (otosclerosis). Design: docs/CHAPTER2.md. Same contracts as Day 1
 ## (CONTRACTS.md §3.1): every blocking beat emits Events.awaiting_input with a solver.
+## (v4, Steve's feedback) Hoot's masking movie opens the day; bone goes on the BETTER (left) ear
+## first, unmasked; then a one-tone Ghost demo on the right mastoid; then masked right bone + air.
 ##   world:  res://world/clinic.tscn with patient_id = "bonnie" (§6 + the v3 extras)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn start_test(patient, ear, coached, plan)
 ##   global: Game (visit, medals, scores), Events (phases, awaiting_input), Hoot (tips)
-## Beats: dialogue, choice, earphones_place, bc_placement, the AudiOtron's tone beats,
-## referral_stamp, results_continue.
+## Beats: explainer (v4), dialogue, choice, earphones_place, bc_placement (left, then right quick),
+## the AudiOtron's tone beats, referral_stamp, results_continue.
 
 const Hud := preload("res://story/hud.gd")
 const Earphones := preload("res://story/games/earphones.gd")
 const BonePlacement := preload("res://story/games/bone_placement.gd")
 const Day2Board := preload("res://story/games/day2_board.gd")
 const Otoscopy := preload("res://story/games/otoscopy.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -20,6 +23,12 @@ const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_bonnie.tscn"
 const PATIENT_ID := "bonnie"
+## (v4) Hoot's masking movie (story/explainers/, CONTRACTS.md §3.4): plays before Bonnie knocks.
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
+const MOVIE_ID := "masking"
+## (v4) The one-tone Ghost demo: 1 kHz, 5 dB above her measured LEFT bone (never above 30).
+const DEMO_FREQ := 1000
+const DEMO_MAX_DB := 30
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"phones", &"air", &"bone", &"mask", &"reveal", &"case", &"refer"]
 const STEP_LABELS: Dictionary = {
@@ -55,6 +64,9 @@ var screen: CanvasLayer
 var results: Dictionary = {}
 var _walk_done := true
 var _found_glasses := false   # the player tried the oscillator on her glasses (the running gag)
+var _movie_watched := false   # (v4) the movie played to the end this visit (lines may refer to it)
+var _placement_slips := 0     # (v4) both placements (left, then right) share the bc_placement medal
+var _ghost_seen := false      # (v4) the demo tone was answered by the LEFT cochlea (cross_heard)
 
 
 func _ready() -> void:
@@ -97,6 +109,7 @@ func _shot(shot_name: String, delay: float = 0.0) -> void:
 
 
 func _run() -> void:
+	await _movie()
 	await _intro()
 	await _history()
 	await _otoscopy()
@@ -105,11 +118,36 @@ func _run() -> void:
 	await _air()
 	await _bone_placement()
 	await _bone()
+	await _ghost_demo()
 	await _masking()
 	var board: Control = await _reveal()
 	await _evidence(board)
 	await _referral(board)
 	await _results()
+
+
+# ---------------------------------------------------------------- 0. Hoot's masking movie (v4)
+
+## Before Bonnie knocks: "Hoot's masking movie" (about 90 s, docs/CHAPTER2.md §16). The first time
+## it just plays (Space/Enter = next scene, Esc = skip it all, or the buttons); once seen, Hoot asks.
+## Replay any time from the pause menu (CONTRACTS.md §3.4).
+func _movie() -> void:
+	if not Movies.has(MOVIE_ID):
+		return
+	var seen := Game.is_movie_seen(MOVIE_ID)
+	_phase(&"explainer", {"movie": MOVIE_ID, "source": "day_start", "seen": seen})
+	clinic.call("focus_camera", &"door", 0.0)
+	if seen:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(MOVIE_ID) / 10.0) * 10.0), "Skip it: I know my masking."]
+		var c: int = await dialogue.choose("Hoot's masking movie again? Popcorn's on me!", opts, 1)
+		if c != 0:
+			return
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", MOVIE_ID, "day_start")
+	player.queue_free()
+	_movie_watched = not bool(r.get("skipped", false))
+	Game.set_visit_flag("movie_watched", _movie_watched)
 
 
 # ---------------------------------------------------------------- 1. intro
@@ -311,24 +349,25 @@ func _air() -> void:
 
 # ---------------------------------------------------------------- 7. bone oscillator placement
 
+## (v4) Bone on the BETTER ear first: her LEFT mastoid (Steve). The right comes later (the Ghost demo).
 func _bone_placement() -> void:
-	_phase(&"bc_placement")
+	_phase(&"bc_placement", {"ear": "left"})
 	hud.call("set_step", &"bone")
 	clinic.call("take_off_earphones")
-	clinic.call("focus_camera", &"ear_right", 0.8)
-	await _say("Hoot", "Meet the bone buzzer! It goes behind the ear, on the mastoid bone.")
+	clinic.call("focus_camera", &"ear_left", 0.8)
+	await _say("Hoot", "Meet the bone buzzer! Better ear first: her LEFT. It sits behind the ear, on the mastoid.")
 	var g := BonePlacement.new()
+	g.setup("left")
 	hud.call("add_game", g)
 	_shot("bone_placement", 0.7)
 	await g.run()
-	var m := g.mistakes
+	_placement_slips = g.mistakes
 	_found_glasses = g.wrong_spots.has("top")
 	var was_unicorn := g.wrong_spots.has("forehead")
-	Game.record_medal("bc_placement", "gold" if m == 0 else ("silver" if m == 1 else "bronze"))
-	Game.set_visit_flag("bc_placement_mistakes", m)
+	_record_placement()
 	await _wait(0.6)
 	g.queue_free()
-	clinic.call("put_on_bone_oscillator", "right")
+	clinic.call("put_on_bone_oscillator", "left")
 	await _wait(0.4)
 	if was_unicorn:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
@@ -337,37 +376,96 @@ func _bone_placement() -> void:
 	await _say("Hoot", "Snug on the mastoid, not touching the ear. Bone tones go 500 to 4000 Hz.")
 
 
-# ---------------------------------------------------------------- 8. unmasked bone: the Cross-Hearing Ghost
+## Both placements share one medal: every slip of the visit counts (0 gold, 1 silver, more bronze).
+func _record_placement() -> void:
+	var m := _placement_slips
+	Game.record_medal("bc_placement", "gold" if m == 0 else ("silver" if m == 1 else "bronze"))
+	Game.set_visit_flag("bc_placement_mistakes", m)
 
+
+# ---------------------------------------------------------------- 8. unmasked bone, LEFT (the better ear)
+
+## (v4) Unmasked bone on her left mastoid, coached (">" marks). Then the rule of the day.
 func _bone() -> void:
 	var cam := _open_screen()
-	await _test("right", true, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true,
-		"hoot_turn_after": 2, "done_title": "BONE DONE!",
-		"intro": "Bone time! %s = bone. Same dance: down 10, up 5. Start at 1k." % Game.key_label(&"transducer_bone")})
-	await _bonus_hole()
+	await _test("left", true, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true,
+		"hoot_turn_after": 1, "done_title": "LEFT BONE DONE!",
+		"intro": "Bone time, left ear! %s = bone. Same dance: down 10, up 5. Start at 1k." % Game.key_label(&"transducer_bone")})
+	await _bonus_hole("left")
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
-	var bone := ClinicRules.sheet_thresholds(results, "right", &"bc")
-	var air := ClinicRules.sheet_thresholds(results, "right", &"ac")
+	var bone := ClinicRules.sheet_thresholds(results, "left", &"bc")
+	var air := ClinicRules.sheet_thresholds(results, "left", &"ac")
 	var b1 := int(bone.get(1000, 5))
-	var a1 := int(air.get(1000, 50))
-	await _say("Hoot", "Bone at %d dB, air at %d? Suspicious. Bone buzzes BOTH cochleas." % [b1, a1])
-	_react(&"startle")
-	await _say("Hoot", "Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!")
-	await _say("Bonnie", "A ghost in my skull?! I KNEW that oven was haunted.")
+	var a1 := int(air.get(1000, 5))
+	await _say("Hoot", "Left bone %d, left air %d: side by side. Her left ear works fine all the way in." % [b1, a1])
+	await _say("Bonnie", "A gold star for my left ear! I'll bake it a little one.")
+	clinic.call("hoot_emote", &"wing_up")
+	await _say("Hoot", "The rule: unmasked bone tells you about the BETTER cochlea, wherever the buzzer sits.")
+
+
+# ---------------------------------------------------------------- 8b. the Ghost demo (v4)
+
+## (v4) The buzzer moves to her RIGHT mastoid (a quick second placement) and ONE unmasked tone plays,
+## 5 dB above her measured left bone: her LEFT cochlea answers. BOO! Nothing is stored (plan
+## "demo_tone", CONTRACTS.md §4.2): unmasked right bone would only be the Ghost's mark.
+func _ghost_demo() -> void:
+	_phase(&"ghost_demo", {"ear": "right"})
+	var air := ClinicRules.sheet_thresholds(results, "right", &"ac")
+	var a1 := int(air.get(DEMO_FREQ, 50))
+	await _say("Hoot", "Her right air needs %d. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." % a1)
+	await _say("Hoot", "Let's test that. Swap the buzzer to her RIGHT mastoid: the poorer ear.")
+	clinic.call("take_off_bone_oscillator")
+	clinic.call("focus_camera", &"ear_right", 0.8)
+	var g := BonePlacement.new()
+	g.setup("right", true)
+	g.glasses_on = not _found_glasses
+	hud.call("add_game", g)
+	_shot("bone_placement_right", 0.7)
+	await g.run()
+	_placement_slips += g.mistakes
+	if g.wrong_spots.has("top") and not _found_glasses:
+		_found_glasses = true
+	_record_placement()
+	await _wait(0.5)
+	g.queue_free()
+	clinic.call("put_on_bone_oscillator", "right")
+	await _wait(0.4)
+	var left_bone := ClinicRules.sheet_thresholds(results, "left", &"bc")
+	var db := clampi(int(left_bone.get(DEMO_FREQ, 5)) + ClinicRules.LEVEL_STEP_DB, 0, DEMO_MAX_DB)
+	_ghost_seen = false
+	var watch := func(kind: StringName, _data: Dictionary) -> void:
+		if kind == &"cross_heard":
+			_ghost_seen = true
+	Events.patient_reaction.connect(watch)
+	var cam := _open_screen()
+	await _test("right", false, {"test": "bc", "bc_freqs": [DEMO_FREQ], "masking_controls": false, "hoot_turn_after": 99,
+		"demo_tone": {"freq": DEMO_FREQ, "db": db, "title": "Bone %d, air %d? BOO!" % [db, a1]},
+		"intro": "ONE beep, buzzer on her right, %d dB: just above her LEFT bone. Hold %s!" % [db, Game.key_label(&"present_tone")]})
+	Events.patient_reaction.disconnect(watch)
+	_close_screen(cam)
+	clinic.call("focus_camera", &"face", 0.6)
+	Game.set_visit_flag("ghost_demo_seen", _ghost_seen)
+	if _ghost_seen:
+		_react(&"startle")
+		await _say("Hoot", "BOO! Same answer as her left bone. Was that her right cochlea, or the LEFT one? Can't tell!")
+		await _say("Bonnie", "A ghost in my skull?! I KNEW that oven was haunted.")
+	else:
+		await _say("Hoot", "She missed it? Even the Ghost naps. But it CAN answer, so we mask anyway.")
+	await _say("Hoot", "That's the Ghost's trick. Only masking the left ear can tell us the right cochlea's truth.")
 	hud.call("complete_step", &"bone")
 
 
 ## (polish) The optional 250 Hz bone "bonus hole": loud low bone tones are FELT before they are
 ## heard (ClinicRules.VIBROTACTILE_DB 250: 30), so it starts at 40 and the first buzz tickles.
 ## Skipping is fine (many clinics skip 250 Hz bone); the textbook answer (the bot's) plays it.
-func _bonus_hole() -> void:
+func _bonus_hole(ear: String = "left") -> void:
 	var opts: Array[String] = ["Bonus hole! Bring on the tickle.", "Skip it: 500 to 4000 Hz is plenty."]
 	var c: int = await dialogue.choose("Bonus hole: bone at 250 Hz? Warning: low buzzes tickle!", opts, 0)
 	if c != 0:
 		await _say("Hoot", "Fair! Many clinics skip 250 Hz bone: a loud low buzz gets felt, not heard.")
 		return
-	await _test("right", false, {"test": "bc", "bc_freqs": [250], "masking_controls": true, "hoot_turn_after": 99,
+	await _test(ear, false, {"test": "bc", "bc_freqs": [250], "masking_controls": true, "hoot_turn_after": 99,
 		"start_db": 40, "done_title": "BONUS HOLE!",
 		"intro": "250 Hz, starting at 40. Watch her face on the first buzz!"})
 
@@ -377,7 +475,7 @@ func _bonus_hole() -> void:
 func _masking() -> void:
 	_phase(&"masking")
 	hud.call("set_step", &"mask")
-	await _say("Hoot", "To hear the right cochlea alone, keep the left one busy with noise. Masking!")
+	await _say("Hoot", "To hear the right cochlea alone, keep the left one busy with noise. Masking%s" % (", like the movie!" if _movie_watched else "!"))
 	var opts: Array[String] = ["The right ear: the one we're testing.", "The left ear: the good one.", "Both ears, for maximum shhh."]
 	var medal := "gold"
 	while true:
@@ -449,7 +547,8 @@ func _reveal() -> Control:
 	go.call()
 	await b.run_reveal(results)
 	_shot("reveal")
-	await _say("Hoot", "Brackets are masked bone. Bone near normal, air down at 50.")
+	var air_r := ClinicRules.sheet_thresholds(results, "right", &"ac")
+	await _say("Hoot", "The > marks: left bone, unmasked. The [ marks: right bone, masked. Right air down near %d." % int(air_r.get(1000, 50)))
 	await b.show_gap()
 	_shot("bridge", 0.2)
 	await _say("Hoot", "That gap is the toll bridge: air pays a toll at the middle ear. Bone drives past.")

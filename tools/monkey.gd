@@ -21,10 +21,13 @@ const ACTIONS: Array[StringName] = [&"present_tone", &"louder", &"softer", &"fre
 const ACTIONS_V3: Array[StringName] = [&"toggle_mask", &"mask_louder", &"mask_softer", &"transducer_air", &"transducer_bone"]
 const MAX_GAME_S_DAY2 := 3600.0
 ## (v3) Bonnie's tests in story order: [ear, coached, plan].
+## (v4) bone on the better (left) ear first, then the one-tone Ghost demo on the right (plan
+## demo_tone: only TONE works, nothing is stored), then masked right bone and air.
 const DAY2_TESTS := [
 	["right", true, {"test": "ac", "hoot_turn_after": 1}],
 	["left", false, {"test": "ac", "hoot_turn_after": 0}],
-	["right", true, {"test": "bc", "hoot_turn_after": 2}],
+	["left", true, {"test": "bc", "masking_controls": true, "hoot_turn_after": 1}],
+	["right", false, {"test": "bc", "bc_freqs": [1000], "masking_controls": false, "hoot_turn_after": 99, "demo_tone": {"freq": 1000, "db": 10, "title": "BOO!"}}],
 	["right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2}],
 	["right", false, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0}],
 ]
