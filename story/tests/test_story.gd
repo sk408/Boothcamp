@@ -272,7 +272,7 @@ func test_title_screen_beats() -> void:
 
 func test_voice_bank_is_quiet() -> void:
 	var ceiling := pow(10.0, (Voice.VOICE_PEAK_DBFS + 0.5) / 20.0)
-	for who: String in ["Gus", "Hoot", "Doris", "Gus|muffled", "Doris|muffled"]:
+	for who: String in ["Gus", "Hoot", "Doris", "Mike", "Gus|muffled", "Doris|muffled"]:
 		var parts := who.split("|")
 		var bank: Array = Voice.bank_for(parts[0], parts.size() > 1)
 		assert_true(bank.size() > 0)
@@ -372,6 +372,13 @@ func test_title_day_cards_keyboard() -> void:
 		if b.has_meta("chapter"):
 			cards.append(b)
 	assert_eq(cards.size(), Game.chapters().size(), "one card per day")
+	# (Speech) every card fits on screen, in one row, without overlapping its neighbour
+	var vp := title.get_viewport_rect().size
+	for i in cards.size():
+		var r := (cards[i] as Button).get_global_rect()
+		assert_true(r.position.x >= 0.0 and r.end.x <= vp.x and r.end.y <= vp.y, "Day %d card on screen: %s" % [i + 1, str(r)])
+		if i > 0:
+			assert_true(r.position.x >= (cards[i - 1] as Button).get_global_rect().end.x - 0.5, "Day %d card clear of Day %d" % [i + 1, i])
 	assert_true(bool((cards[0] as Button).get_meta("hl", false)), "Day 1 highlighted first")
 	assert_true(bool((cards[1] as Button).get_meta("locked", false)), "Day 2 locked on a fresh save")
 	await tap_action(&"ui_right")
@@ -382,3 +389,19 @@ func test_title_day_cards_keyboard() -> void:
 	assert_eq(title.get("_state"), &"days", "Enter on a locked day does not start it")
 	await tap_action(&"ui_cancel")
 	assert_eq(title.get("_state"), &"menu", "Esc goes back")
+
+
+## (Speech) The Days row stays inside 1280 px (with a gutter) for 1 to 6 days: cards shrink, never
+## below CARD_MIN_W, and keep CARD_SIZE while three fit.
+func test_title_day_cards_fit_any_count() -> void:
+	var ts: GDScript = load("res://story/title_screen.gd")
+	var full: Vector2 = ts.get("CARD_SIZE")
+	for n in range(1, 7):
+		var cs: Vector2 = ts.call("_card_size", n)
+		var sep := int(ts.call("_days_row_sep", n))
+		var row := cs.x * n + sep * (n - 1)
+		assert_true(row <= 1280.0 - 32.0, "%d days: row %.0f px fits" % [n, row])
+		assert_true(cs.x >= float(ts.get("CARD_MIN_W")) and cs.x <= full.x, "%d days: card width %.0f" % [n, cs.x])
+	assert_eq(ts.call("_card_size", 3), full, "three days keep the full card")
+	for id: String in ["mike", "nora", "marco"]:
+		assert_true((ts.get("DAY_FACES") as Dictionary).has(id) and (ts.get("DAY_TINTS") as Dictionary).has(id), "face and tint for " + id)

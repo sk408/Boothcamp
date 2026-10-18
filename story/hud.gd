@@ -133,7 +133,7 @@ func set_notes_visible(on: bool) -> void:
 
 
 func _on_phase(phase: StringName, _info: Dictionary) -> void:
-	var hide_all := phase == &"audiometry" or phase == &"results"
+	var hide_all := phase == &"audiometry" or phase == &"speech" or phase == &"results"   # (Speech) under the SPEECH screen
 	tracker.visible = not hide_all
 	notes_box.visible = not hide_all and phase in [&"history", &"otoscopy", &"instructions", &"earphones"]
 

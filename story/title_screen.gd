@@ -36,9 +36,15 @@ var _menu_buttons: Array[Button] = []
 var _day_buttons: Array[Button] = []
 var _days_note: Label
 const CARD_SIZE := Vector2(340, 318)
-## Who is on each day's card (a Portraits speaker) and the card's tint.
-const DAY_FACES: Dictionary = {"gus": "Gus", "bonnie": "Bonnie"}
-const DAY_TINTS: Dictionary = {"gus": Color("#bfeee6"), "bonnie": Color("#ffe3c2")}
+## (Speech) The row of day cards must fit the 1280 px view with any number of days: cards narrow
+## from CARD_SIZE down to this, and their text shrinks to fit.
+const DAYS_ROW_MAX_W := 1180.0
+const CARD_MIN_W := 180.0
+## Who is on each day's card (a Portraits speaker) and the card's tint. (Unknown speakers draw the
+## narrator star, so a day can be listed before its portrait exists.)
+const DAY_FACES: Dictionary = {"gus": "Gus", "bonnie": "Bonnie", "mike": "Mike", "nora": "Nora", "marco": "Marco"}
+const DAY_TINTS: Dictionary = {"gus": Color("#bfeee6"), "bonnie": Color("#ffe3c2"), "mike": Color("#fff0a6"),
+	"nora": Color("#e3dcff"), "marco": Color("#ffd9cc")}
 
 
 func _ready() -> void:
@@ -412,7 +418,7 @@ func _build_days(root: Control) -> void:
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 22)
+	row.add_theme_constant_override("separation", _days_row_sep())
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
 	for ch: Dictionary in Game.chapters():
@@ -446,35 +452,65 @@ func _build_days(root: Control) -> void:
 		v.add_child(hr)
 
 
+## (Speech) Gap between day cards: roomy for a few days, tighter for many.
+## n = the number of days (0 = Game.chapters()).
+static func _days_row_sep(n: int = 0) -> int:
+	return 22 if (n if n > 0 else Game.chapters().size()) <= 3 else 14
+
+
+## (Speech) One card's size for n days (0 = Game.chapters()): CARD_SIZE while they fit in one
+## row, narrower (never below CARD_MIN_W) when there are more.
+static func _card_size(n: int = 0) -> Vector2:
+	var count := maxi(1, n if n > 0 else Game.chapters().size())
+	var w := floorf((DAYS_ROW_MAX_W - (count - 1) * _days_row_sep(count)) / count)
+	return Vector2(clampf(w, CARD_MIN_W, CARD_SIZE.x), CARD_SIZE.y)
+
+
+## (Speech) The largest font size (from `size` down to `min_size`) at which text fits in width px.
+static func _fit_font(text: String, weight: int, size: int, min_size: int, width: float) -> int:
+	var f := UiKit.font(weight)
+	var fs := size
+	while fs > min_size and f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+		fs -= 1
+	return fs
+
+
 ## One day's card: a flat button that draws itself (_draw_day_card); its labels are children, so
 ## the title text ("Day 2: Bonnie Bunsworth") is what a click or a screen reader finds.
 func _day_card(ch: Dictionary) -> Button:
 	var id := String(ch["id"])
+	var cs := _card_size()
 	var b := Button.new()
 	b.flat = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = CARD_SIZE
+	b.custom_minimum_size = cs
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	b.set_meta("label", String(ch["title"]))
 	b.set_meta("chapter", id)
 	b.draw.connect(_draw_day_card.bind(b))
-	var title := UiKit.label(String(ch["title"]), 23, Palette.INK, 700)
+	var title_text := String(ch["title"])
+	var title := UiKit.label(title_text, _fit_font(title_text, 700, 23, 15, cs.x - 24), Palette.INK, 700)
 	title.name = "Title"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.clip_text = true
 	title.position = Vector2(10, 182)
-	title.size = Vector2(CARD_SIZE.x - 20, 32)
+	title.size = Vector2(cs.x - 20, 32)
 	b.add_child(title)
-	var teach := UiKit.label(String(ch.get("teaches", "")), 18, Palette.INK_SOFT, 600)
+	var teach_text := String(ch.get("teaches", ""))
+	var teach := UiKit.label(teach_text, _fit_font(teach_text, 600, 18, 13, cs.x - 24), Palette.INK_SOFT, 600)
 	teach.name = "Teaches"
 	teach.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	teach.clip_text = true
 	teach.position = Vector2(10, 218)
-	teach.size = Vector2(CARD_SIZE.x - 20, 26)
+	teach.size = Vector2(cs.x - 20, 26)
 	b.add_child(teach)
-	var status := UiKit.label("", 17, Palette.INK_SOFT, 700)
+	var status := UiKit.label("", 17 if cs.x >= 280.0 else 15, Palette.INK_SOFT, 700)
 	status.name = "Status"
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.clip_text = true
 	status.position = Vector2(10, 266)
-	status.size = Vector2(CARD_SIZE.x - 20, 26)
+	status.size = Vector2(cs.x - 20, 26)
 	b.add_child(status)
 	return b
 
@@ -493,12 +529,15 @@ func _draw_day_card(b: Button) -> void:
 	# the tinted top with the patient's portrait
 	var top := Rect2(Vector2(4, 4), Vector2(b.size.x - 8, 150))
 	UiDraw.rounded_rect(b, top, tint.lerp(Palette.PAPER, 0.35) if not locked else Color("#e6e0d6"), 20)
-	for i in 6:
+	for i in maxi(2, int((b.size.x - 30.0) / 58.0) + 1):
 		var x := 26.0 + i * 58.0
 		b.draw_circle(Vector2(x, 34.0 + 18.0 * float(i % 2)), 5.0, Color(Color.WHITE, 0.45))
 	var pc := Vector2(b.size.x * 0.5, 100)
-	var bob := sin(_t * 2.4 + (0.0 if id == "gus" else 1.7)) * (3.0 if hl and not locked else 0.0)
-	Portraits.draw(b, String(DAY_FACES.get(id, "")), pc + Vector2(0, bob), 66.0, false, fmod(_t + pc.x, 4.2) < 0.12)
+	# the portrait shrinks a little on narrow cards; the bob is out of phase from card to card
+	var pr := clampf(b.size.x / CARD_SIZE.x, 0.78, 1.0) * 66.0
+	var phase := float(maxi(0, Game.chapters().find(ch))) * 1.7
+	var bob := sin(_t * 2.4 + phase) * (3.0 if hl and not locked else 0.0)
+	Portraits.draw(b, String(DAY_FACES.get(id, "")), pc + Vector2(0, bob), pr, false, fmod(_t + pc.x, 4.2) < 0.12)
 	# the DAY chip
 	var f := UiKit.font(700)
 	var chip := "DAY %d" % int(ch.get("day", 1))
@@ -519,7 +558,7 @@ func _draw_day_card(b: Button) -> void:
 	b.draw_line(Vector2(60, 256), Vector2(b.size.x - 60, 256), Color(Palette.INK, 0.12), 2.0)
 	if locked:
 		# frosted portrait and a big padlock
-		b.draw_circle(pc, 72.0, Color(Palette.PAPER, 0.62))
+		b.draw_circle(pc, pr + 6.0, Color(Palette.PAPER, 0.62))
 		var lk := pc + Vector2(0, 10)
 		b.draw_arc(lk + Vector2(0, -22), 20.0, PI, TAU, 16, Palette.INK, 13.0, true)
 		b.draw_arc(lk + Vector2(0, -22), 20.0, PI, TAU, 16, Color("#b9c0cc"), 6.0, true)
@@ -567,12 +606,21 @@ func _on_new_player() -> void:
 func _stats_text() -> String:
 	var parts: PackedStringArray = []
 	var any := false
+	var bests: Array[Array] = []
 	for ch: Dictionary in Game.chapters():
 		var rec: Dictionary = (Game.progress.get("patients", {}) as Dictionary).get(String(ch["patient_id"]), {})
 		if not rec.is_empty():
 			any = true
 		if not rec.is_empty() and String(rec.get("best_grade", "")) != "":
-			parts.append("Day %d best: %s" % [int(ch["day"]), String(rec["best_grade"])])
+			bests.append([int(ch["day"]), String(rec["best_grade"])])
+	# (Speech) one compact entry, so many days don't wrap the menu card off the screen
+	if bests.size() == 1:
+		parts.append("Day %d best: %s" % [int(bests[0][0]), String(bests[0][1])])
+	elif not bests.is_empty():
+		var each: PackedStringArray = []
+		for d: Array in bests:
+			each.append("Day %d %s" % [int(d[0]), String(d[1])])
+		parts.append("Best: " + ", ".join(each))
 	var coins := int(Game.progress.get("coins", 0))
 	if coins > 0 or any:
 		parts.append("%d Decibucks" % coins)

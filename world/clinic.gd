@@ -80,6 +80,7 @@ var _bone_rings: Node3D
 var _mask_phone: Node3D
 var _mask_cup: Node3D
 var _basket: Node3D
+var _clipboard: Node3D
 var _transducer: StringName = &"phones"
 var _tone_on := false
 var _masker_on := false
@@ -92,6 +93,8 @@ var _ghost_last_bust := -100.0
 const GHOST_SIZE := 1.6
 ## Where Bonnie leaves her croissant basket (on the desk, left of the otoscope cradle).
 const BASKET_DESK_POS := Vector3(-1.95, 0.86, -0.62)
+## (Speech) Where Mike leaves his clipboard of forms (the same free corner of the desk).
+const CLIPBOARD_DESK_POS := Vector3(-1.9, 0.875, -0.66)
 
 
 func _enter_tree() -> void:
@@ -298,6 +301,7 @@ func sit() -> void:
 	if bool(gus.get("seated")):
 		return
 	put_down_basket()
+	put_down_clipboard()
 	var chair: Vector3 = SPOTS[&"booth"]
 	var front: Vector3 = refs["chair_front"]
 	if gus.position.distance_to(chair) > 0.2:
@@ -711,6 +715,43 @@ func put_down_basket() -> void:
 	t.tween_property(b, "scale", Vector3(1.15, 0.85, 1.15), 0.06)
 	t.tween_property(b, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	t.tween_callback(_sfx.bind(&"thunk", 1.4, -12.0))
+
+
+## (Speech) Mike puts his clipboard of forms down on the desk, face up (sit() does it too).
+func put_down_clipboard() -> void:
+	if _clipboard != null or gus == null or not gus.has_method("detach_clipboard"):
+		return
+	var c: Node3D = gus.call("detach_clipboard")
+	if c == null:
+		return
+	_clipboard = c
+	add_child(c)
+	c.global_transform = c.get_meta("xf") as Transform3D
+	var t := c.create_tween()
+	var land := Transform3D(Basis(Vector3.UP, 0.35) * Basis(Vector3.RIGHT, -PI / 2.0), CLIPBOARD_DESK_POS)
+	t.tween_property(c, "global_transform", land, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_callback(_sfx.bind(&"pen", 1.2, -12.0))
+
+
+## (Speech) Speech answers are spoken out loud: hide the response button (the earphones and the
+## bone oscillator hand it to the patient). on = true gives it back.
+func hold_response_button(on: bool) -> void:
+	if gus != null:
+		gus.call("set_holding_button", on)
+
+
+## (Speech, coroutine) After walk_out(): the door bursts open again and the patient pops back in
+## just inside it ("GLAZED?!"). walk_out() takes him out again.
+func peek_in() -> void:
+	if gus == null:
+		return
+	gus.position = refs["door_spot_outside"]
+	gus.rotation.y = 0.0
+	gus.visible = true
+	await _door_burst()
+	await gus.call("walk_path", [refs["door_spot_inside"]], 2.4)
+	await gus.call("turn_to", 0.35, 0.2)
+	gus.call("react", &"startle", {})
 
 
 ## (v3, coroutine) A croissant hops from the basket into Hoot's wings; Hoot munches, crumbs fly.

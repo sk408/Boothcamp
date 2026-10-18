@@ -45,6 +45,48 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Screenshots (Day 2):** `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`,
   `day2_carhart`, `day2_stamp`, `day2_croissant`, `day2_goodbye`.
 
+## Speech (Day 3: Mike)
+
+- **Level:** `story/level_mike.tscn` (`level_mike.gd`), chapter `mike`. Phases: `intro`, `history`,
+  `otoscopy`, `instructions`, `audiometry` {right, ac} / {left, ac}, `familiarize`, `speech`
+  {ear, test: "srt"} (right coached, then left), `evidence`, `referral`, `results`. Medals: `history`,
+  `otoscopy` (always gold, not on the paper), `instructions`, `familiarize`, `evidence`, `referral`.
+- **Tones:** Hoot runs both ears on the AudiOtron (`hoot_turn_after` 0, coached false). The AudiOtron
+  only starts Hoot's turn at once with quick visit on, so the level sets the screen's public
+  `quick_visit = true` right after `add_child` (see the request below).
+- **SPEECH screen:** one instance for both ears (`start_test(patient, ear, coached, plan)`, then
+  `await test_finished`); plan `{test: "srt", tones, list: "spondee_a", words: the 12 familiarised ids,
+  exclude: ["windmill"] once dropped, transducer, intro}`, plus `hoot_turn_after: 4` on the left ear
+  with quick visit on. Mike's response button is put away first (`hold_response_button(false)`).
+  Hoot's "the tell" tip ("He's repeating words N dB below his beeps. Hmm!") fires once on the first
+  correct word 30+ dB below that ear's PTA (`Events.speech_response`). If the SPEECH scene is missing,
+  Hoot runs the words himself through `SpeechSession` (`LevelMike.hoot_runs_ear`, not scored).
+- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)`,
+  `read_along(from, to, s)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
+  `{targets: ["word_card_windmill"], mouse: {click: "word_card_windmill"}}`, solver drops it; other cards
+  are slips with a kind tip), `show_objection(claim, clues)`, `run_objection()` (beat `objection_present`,
+  info `{targets: ["objection_claim"], mouse: {drag: ["clue_srt_pta", "objection_claim"]}}`, solver
+  presents the strongest clue; a weaker one gets a Hoot nudge and a retry; drag, click-then-claim, or
+  1-3 + Enter), `set_referral_mode(on)`, `run_stamp()` (beat `referral_stamp`, RECHECK + OBJECTIVE TESTS).
+  OBJECTION! slams in with `Events.screen_shake` and settles into a corner sticker; reduced motion
+  keeps it still. Anchors: `word_card_<id>`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+  `clue_canals`, `referral_stamp`.
+- **Daily Decibel:** headlines, subheads and the medal row (Chat, Explain, Words, Case, Next) for
+  `mike`; with `audiometry.speech.srt` present, column 2 is the word golf card (per ear stored SRT,
+  PTA, agreement chip with the gap, words vs par, golf) with half-words and Hoot's words in the facts
+  line. Tone-only results keep the beep golf card.
+- **Shared story bits:** Mike's portrait (`portraits.gd`), display name "Mike \"Totally Deaf\"
+  Lenders", a gruff voice (f0 105 Hz), Days cards that shrink to fit up to six days in one row
+  (`_card_size(n)`), faces and tints for `mike`, `nora`, `marco`. The HUD tracker, the Hoot notes
+  and the pause corner hide in the `speech` phase like in `audiometry`.
+- **Note:** CHAPTER3.md names Mike's favourite forklift with what reads like a real product name;
+  the level uses "Old Rumbles, bay six" instead (originality rule).
+- **Screenshots (Day 3):** `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`,
+  `day3_glazed`.
+- **Tests:** `story/tests/test_level_mike.gd` (board beats, keyboard paths and solvers, the plans and
+  objection cards with real numbers, Hoot's textbook fallback, the Day 3 paper, a smoke run to the
+  instructions).
+
 ## Dev tool
 
 `story/dev_gallery.tscn` shows each story screen with made-up results and requests `gallery_*` shots:
@@ -54,6 +96,8 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 
 It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (`--part=world`,
 `placement`, `board`, `title`, default all but title).
+`story/dev_day3.tscn` does it for Day 3 (`--part=world`, `board`, `paper`, `title`, default all;
+`dev_day3_*` shots). Both are in the export exclude filter.
 
 ## Tests
 

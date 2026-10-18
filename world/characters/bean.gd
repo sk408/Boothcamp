@@ -40,11 +40,25 @@ const BONNIE := {
 	"hair": Color("#8a4f2a"), "hair_style": &"bun", "mustache": false, "brows": false,
 	"glasses": &"perched", "glasses_color": Color("#2fb3a3"), "walker": false, "prop": &"basket", "apron": true,
 }
+## (Speech) Day 3: Mike "Totally Deaf" Lenders, 41, forklift driver. A hi-vis vest over a cherry
+## bowling shirt, a foam neck brace "just in case", sunglasses pushed up on his head, a slick
+## quiff, a little stubble, and a clipboard of forms from his cousin Vinnie.
+const MIKE := {
+	"name": "Mike", "face": &"mike",
+	"skin": Color("#d9a07a"), "skin_shade": Color("#b97f5a"), "nose": Color("#cf8f69"),
+	"cardigan": Color("#a3333d"), "pants": Color("#34405e"), "shirt": Color("#fff3dc"),
+	"accent": Color("#ffd23f"), "shoes": Color("#4a3a30"),
+	"hair": Color("#3a2a22"), "hair_style": &"quiff", "mustache": false, "brows": true,
+	"glasses": &"shades", "glasses_color": Color("#2e2442"), "walker": false, "prop": &"clipboard",
+	"apron": false, "vest": true, "neck_brace": true,
+}
 ## (v3) Pick a bean spec by patient id (unknown ids get Gus).
 static func spec_for(patient_id: String) -> Dictionary:
 	match patient_id:
 		"bonnie":
 			return BONNIE
+		"mike":
+			return MIKE
 	return GUS
 
 var cfg: Dictionary = {}
@@ -88,6 +102,8 @@ func build(config: Dictionary) -> void:
 		_build_plate()
 	elif cfg["prop"] == &"basket":
 		_build_basket()
+	elif cfg["prop"] == &"clipboard":
+		_build_clipboard()
 	_build_button()
 	for k: String in ["hand_r", "hand_l", "foot_r", "foot_l"]:
 		_rest[k] = (parts[k] as Node3D).position
@@ -112,18 +128,25 @@ func _build_body() -> void:
 	body.add_child(torso)
 	parts["torso"] = torso
 	Kit.capsule(torso, 0.37, 0.98, Vector3(0, 0.31, 0), cfg["cardigan"], {}, 20)
-	# shirt V and collar
-	Kit.sphere(torso, 0.15, Vector3(0, 0.66, 0.255), cfg["shirt"], Vector3(1.0, 1.05, 0.55), {"outline": 0.012})
-	for side: int in [-1, 1]:
-		var lapel := Kit.box(torso, Vector3(0.045, 0.26, 0.04), Vector3(0.085 * side, 0.6, 0.325), cfg["cardigan"].darkened(0.12), {"outline": 0.0})
-		lapel.rotation.z = 0.38 * side
-		lapel.rotation.x = -0.2
-	for i in 3:
-		Kit.sphere(torso, 0.03, Vector3(0.0, 0.36 - i * 0.13, 0.372 - i * 0.004), Color("#f6e1b3"), Vector3(1, 1, 0.6), {"outline": 0.006}, 10)
-	# pockets
-	for side: int in [-1, 1]:
-		Kit.box(torso, Vector3(0.14, 0.11, 0.02), Vector3(0.2 * side, 0.08, 0.335), cfg["cardigan"].darkened(0.1), {"outline": 0.006}).rotation.y = -0.45 * side
-	if bool(cfg.get("apron", false)):
+	# shirt V and collar ((Speech) under a vest it is the bowling shirt itself)
+	var vest := bool(cfg.get("vest", false))
+	Kit.sphere(torso, 0.15, Vector3(0, 0.66, 0.255), cfg["cardigan"].lightened(0.06) if vest else cfg["shirt"], Vector3(1.0, 1.05, 0.55), {"outline": 0.012})
+	if not vest:
+		# (a vest covers the cardigan's lapels, buttons and pockets)
+		for side: int in [-1, 1]:
+			var lapel := Kit.box(torso, Vector3(0.045, 0.26, 0.04), Vector3(0.085 * side, 0.6, 0.325), cfg["cardigan"].darkened(0.12), {"outline": 0.0})
+			lapel.rotation.z = 0.38 * side
+			lapel.rotation.x = -0.2
+		for i in 3:
+			Kit.sphere(torso, 0.03, Vector3(0.0, 0.36 - i * 0.13, 0.372 - i * 0.004), Color("#f6e1b3"), Vector3(1, 1, 0.6), {"outline": 0.006}, 10)
+		# pockets
+		for side: int in [-1, 1]:
+			Kit.box(torso, Vector3(0.14, 0.11, 0.02), Vector3(0.2 * side, 0.08, 0.335), cfg["cardigan"].darkened(0.1), {"outline": 0.006}).rotation.y = -0.45 * side
+	if bool(cfg.get("neck_brace", false)):
+		_build_neck_brace(torso)
+	if vest:
+		_build_vest(torso)
+	elif bool(cfg.get("apron", false)):
 		_build_apron(torso)
 	elif String(cfg["face"]) == "gus":
 		# bow tie
@@ -202,6 +225,8 @@ func _build_head() -> void:
 			_build_cateye_glasses(neck, hc)
 		&"perched":
 			_build_perched_glasses(neck, hc)
+		&"shades":
+			_build_shades(neck, hc)
 	# mustache
 	if bool(cfg["mustache"]):
 		var mus := Node3D.new()
@@ -232,6 +257,8 @@ func _build_head() -> void:
 			hook.position = Vector3(0.032, 0.06, 0)
 		&"bun":
 			_build_bun(neck, hc)
+		&"quiff":
+			_build_quiff(neck, hc)
 		&"beehive":
 			var hive := Node3D.new()
 			hive.position = hc
@@ -292,6 +319,56 @@ func _build_apron(torso: Node3D) -> void:
 		Kit.sphere(torso, 0.022, p, Color("#ffffff"), Vector3(1.6, 1.0, 0.3), {"outline": 0.0}, 8)
 
 
+## (Speech) Mike's hi-vis vest: a lime-yellow shell over the bowling shirt (a barrel that hugs the
+## torso capsule), two silver reflective bands, a name patch, and the shirt's camp collar on top.
+func _build_vest(torso: Node3D) -> void:
+	var vest := Node3D.new()
+	vest.name = "Vest"
+	torso.add_child(vest)
+	parts["vest"] = vest
+	var lime := Color("#d6ef3a")
+	var silver := Color("#eef2f7")
+	var shell := 0.015
+	# the torso capsule's radius at a height (torso space), plus the shell thickness
+	var r := func(y: float) -> float:
+		var cy := clampf(y, 0.19, 0.43)
+		return sqrt(maxf(0.0, 0.37 * 0.37 - (y - cy) * (y - cy))) + shell
+	var bands: Array[Vector2] = [Vector2(-0.03, 0.12), Vector2(0.12, 0.31), Vector2(0.31, 0.47), Vector2(0.47, 0.62)]
+	for b: Vector2 in bands:
+		Kit.cylinder(vest, r.call(b.y), r.call(b.x), b.y - b.x, Vector3(0, (b.x + b.y) * 0.5, 0), lime, {"outline": 0.01}, 22)
+	for b: Vector2 in [Vector2(0.06, 0.12), Vector2(0.31, 0.37)]:
+		Kit.cylinder(vest, r.call(b.y) + 0.006, r.call(b.x) + 0.006, b.y - b.x, Vector3(0, (b.x + b.y) * 0.5, 0), silver, {"outline": 0.0, "rim": 0.5}, 22)
+	# the name patch on his left chest
+	var px := 0.15
+	var py := 0.5
+	var pz: float = r.call(py)
+	var patch := Node3D.new()
+	patch.position = Vector3(px, py, sqrt(maxf(0.0, pz * pz - px * px)) + 0.004)
+	patch.rotation = Vector3(-0.28, asin(px / pz), 0.0)
+	vest.add_child(patch)
+	Kit.box(patch, Vector3(0.15, 0.06, 0.008), Vector3.ZERO, Color("#fffbf2"), {"outline": 0.004})
+	var name_l := Kit.label(patch, "MIKE", Vector3(0, 0, 0.006), 15, Color("#e5383b"), 0, 700)
+	name_l.name = "NamePatch"
+	# the bowling shirt's camp collar, flared over the vest
+	for side: int in [-1, 1]:
+		var flap := Kit.box(vest, Vector3(0.13, 0.024, 0.11), Vector3(0.105 * side, 0.665, 0.235), cfg["shirt"], {"outline": 0.006})
+		flap.rotation = Vector3(-0.55, 0.0, 0.42 * side)
+
+
+## (Speech) A chunky foam neck brace ("just in case"): a soft collar between torso and chin.
+func _build_neck_brace(torso: Node3D) -> void:
+	var foam := Color("#f4ecdc")
+	var brace := Node3D.new()
+	brace.name = "NeckBrace"
+	brace.position = Vector3(0, 0.79, 0)
+	torso.add_child(brace)
+	parts["neck_brace"] = brace
+	Kit.cylinder(brace, 0.245, 0.29, 0.15, Vector3.ZERO, foam, {"outline": 0.01}, 22)
+	# rolled edges and the velcro strap at the front
+	Kit.cylinder(brace, 0.297, 0.297, 0.022, Vector3(0, -0.068, 0), foam.darkened(0.08), {"outline": 0.0}, 22)
+	Kit.box(brace, Vector3(0.11, 0.09, 0.03), Vector3(0, -0.005, 0.262), Color("#cfd6de"), {"outline": 0.005}).rotation.x = -0.15
+
+
 func _build_round_glasses(neck: Node3D, hc: Vector3) -> void:
 	var g := Node3D.new()
 	g.name = "Glasses"
@@ -349,6 +426,92 @@ func _build_perched_glasses(neck: Node3D, hc: Vector3) -> void:
 	Kit.box(g, Vector3(0.05, 0.014, 0.014), Vector3(0, 0.0, 0.04), col, {"outline": 0.0})
 	# a little flour on the lenses
 	Kit.sphere(g, 0.012, Vector3(-0.07, 0.008, 0.02), Color.WHITE, Vector3(1.5, 0.4, 1.0), {"unshaded": true}, 6)
+
+
+## (Speech) Mike's quiff: a short cap, sideburns, and a proud front swoop (the part that stands
+## up on a too-loud blast). One node for both "tufts", like the bun and the beehive.
+func _build_quiff(neck: Node3D, hc: Vector3) -> void:
+	var cap := Node3D.new()
+	cap.name = "HairCap"
+	cap.position = hc
+	neck.add_child(cap)
+	Kit.sphere(cap, 0.34, Vector3(0, 0.13, -0.07), cfg["hair"], Vector3(1.07, 0.74, 1.0), {}, 20)
+	for side: int in [-1, 1]:
+		Kit.box(cap, Vector3(0.05, 0.13, 0.08), Vector3(0.335 * side, 0.02, 0.06), cfg["hair"], {"outline": 0.008})
+	var q := Node3D.new()
+	q.name = "Quiff"
+	q.position = hc + Vector3(0, 0.33, 0.06)
+	neck.add_child(q)
+	parts["tuft_r"] = q
+	parts["tuft_l"] = q
+	parts["quiff"] = q
+	var swoop := Kit.sphere(q, 0.15, Vector3(0, 0.06, 0.02), cfg["hair"], Vector3(1.4, 0.72, 1.2), {}, 16)
+	swoop.rotation.x = -0.35
+	Kit.sphere(q, 0.075, Vector3(0.05, 0.11, 0.17), cfg["hair"], Vector3(1.3, 0.8, 1.1), {"outline": 0.01}, 12)
+	# a glint of hair gel
+	Kit.box(q, Vector3(0.09, 0.012, 0.01), Vector3(-0.07, 0.13, 0.14), Color("#7a6458"), {"unshaded": true}).rotation.z = 0.35
+
+
+## (Speech) Mike's sunglasses, pushed up on his hairline (cool, apparently). Dark lenses with a
+## shine, chunky black frames.
+func _build_shades(neck: Node3D, hc: Vector3) -> void:
+	var g := Node3D.new()
+	g.name = "Glasses"
+	g.position = hc + Vector3(0, 0.285, 0.215)
+	g.rotation.x = 0.7
+	neck.add_child(g)
+	parts["glasses"] = g
+	var col: Color = cfg["glasses_color"]
+	for side: int in [-1, 1]:
+		var rim := Kit.torus(g, 0.064, 0.088, Vector3(0.1 * side, 0, 0), col, {"outline": 0.007}, 20, 6)
+		rim.scale = Vector3(1.25, 1.0, 0.86)
+		var lens := Kit.cylinder(g, 0.066, 0.066, 0.008, Vector3(0.1 * side, 0.0, 0.0), Color("#26394a"), {"outline": 0.0, "rim": 0.45}, 16)
+		lens.scale = Vector3(1.25, 1.0, 0.86)
+		var shine := Kit.box(g, Vector3(0.045, 0.006, 0.012), Vector3(0.1 * side + 0.025, 0.006, 0.025), Color.WHITE, {"unshaded": true})
+		shine.rotation.y = 0.7
+		var arm := Kit.box(g, Vector3(0.016, 0.016, 0.24), Vector3(0.2 * side, -0.01, -0.13), col, {"outline": 0.0})
+		arm.rotation.y = 0.1 * side
+		arm.rotation.x = -0.25
+	Kit.box(g, Vector3(0.06, 0.018, 0.018), Vector3(0, 0.0, 0.035), col, {"outline": 0.0})
+
+
+## (Speech) Mike's clipboard of forms from his cousin Vinnie, held up proudly in front of him.
+func _build_clipboard() -> void:
+	var c := Node3D.new()
+	c.name = "Clipboard"
+	c.position = Vector3(0, 0.8, 0.47)
+	c.rotation.x = -0.25
+	(parts["body"] as Node3D).add_child(c)
+	parts["clipboard"] = c
+	build_clipboard(c)
+
+
+## A clipboard: a wooden board, a form with ticks and a red stamp, and a metal clip.
+static func build_clipboard(c: Node3D) -> void:
+	var ink := Color("#2e2442")
+	Kit.box(c, Vector3(0.3, 0.4, 0.02), Vector3.ZERO, Color("#c8874b"), {"outline": 0.008})
+	Kit.box(c, Vector3(0.26, 0.33, 0.008), Vector3(0, -0.025, 0.013), Color("#fffbf2"), {"outline": 0.0})
+	var title := Kit.label(c, "FORMS", Vector3(0, 0.1, 0.019), 17, Color("#e5383b"), 0, 700)
+	title.name = "FormTitle"
+	for i in 4:
+		var y := 0.04 - i * 0.055
+		Kit.box(c, Vector3(0.025, 0.025, 0.004), Vector3(-0.09, y, 0.018), Color("#5bc8a3"), {"outline": 0.0})
+		Kit.box(c, Vector3(0.13, 0.008, 0.004), Vector3(0.02, y, 0.018), Color(ink, 0.55), {"unshaded": true})
+	Kit.box(c, Vector3(0.12, 0.05, 0.03), Vector3(0, 0.19, 0.02), Color("#c3ccd6"), {"outline": 0.006})
+	var ring := Kit.torus(c, 0.014, 0.026, Vector3(0, 0.215, 0.022), Color("#c3ccd6"), {"outline": 0.0}, 12, 6)
+	ring.rotation.x = PI / 2.0
+
+
+## (Speech) Hand over the clipboard (onto the desk): like detach_basket, null when not carrying one.
+func detach_clipboard() -> Node3D:
+	if not parts.has("clipboard"):
+		return null
+	var c: Node3D = parts["clipboard"]
+	parts.erase("clipboard")
+	c.set_meta("xf", c.global_transform)
+	c.get_parent().remove_child(c)
+	_set_hands(&"seated" if seated else &"rest", 0.25)
+	return c
 
 
 ## (v3) Bonnie's basket of croissants for the waiting room.
@@ -635,6 +798,8 @@ func _idle_pose() -> StringName:
 		return &"plate"
 	if parts.has("basket"):
 		return &"basket"
+	if parts.has("clipboard"):
+		return &"clipboard"
 	return &"rest"
 
 
@@ -846,7 +1011,7 @@ func _hair_blast(intensity: float) -> void:
 			continue
 		var tuft: Node3D = parts[k]
 		var side := -1.0 if k == "tuft_r" else 1.0
-		if cfg["hair_style"] == &"beehive" or cfg["hair_style"] == &"bun":
+		if cfg["hair_style"] in [&"beehive", &"bun", &"quiff"]:
 			side = 0.0
 		var t := _channel(k)
 		var rest_pos: Vector3 = tuft.get_meta("rest_pos", tuft.position)
@@ -1037,6 +1202,8 @@ func _set_hands(pose: StringName, duration: float) -> void:
 				pos = Vector3(0.2 * side, 0.85, 0.42)
 			&"basket":
 				pos = Vector3(0.21 * side, 0.84, 0.44)
+			&"clipboard":
+				pos = Vector3(0.2 * side, 0.8, 0.43)
 		var hand: Node3D = parts[key]
 		hand.set_meta("pose_pos", pos)
 		if duration <= 0.0:

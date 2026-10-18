@@ -22,6 +22,8 @@ const SPEAKERS: Dictionary = {
 	"Gus": {"f0": 128.0, "wobble": 0.06, "roll": 0.72, "vowels": ["a", "o", "u", "e", "a", "o"]},
 	"Hoot": {"f0": 410.0, "wobble": 0.10, "roll": 0.55, "vowels": ["u", "o", "u", "o", "i", "u"]},
 	"Doris": {"f0": 235.0, "wobble": 0.08, "roll": 0.68, "vowels": ["e", "i", "a", "e", "o", "i"]},
+	# (Speech) Day 3: Mike, gruff and booming (a showman)
+	"Mike": {"f0": 105.0, "wobble": 0.05, "roll": 0.78, "vowels": ["a", "o", "a", "u", "e", "o"]},
 }
 ## Rough vowel formants (F1, F2) in Hz.
 const FORMANTS: Dictionary = {

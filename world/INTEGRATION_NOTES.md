@@ -59,6 +59,23 @@ Bonnie's bean (`world/characters/bean.gd`, `BONNIE`): face style `&"bonnie"` (la
 flour smudge), hair bun with a wooden spoon, teal reading glasses perched on top of her head (the
 running "lost glasses" gag), apron, croissant basket. New face eyes `&"spiral"` (dizzy).
 
+## Speech (Day 3: Mike)
+
+Patient id `mike` builds `Bean.MIKE` (`spec_for("mike")`). Every key is explicit (build() merges onto
+GUS). Face style `&"mike"` (stubble dots, a chin dimple, a cocky brow), a dark quiff, sunglasses
+pushed up on his head (`parts["glasses"]`, `&"shades"`), a cherry bowling shirt with a lime hi-vis
+vest (`parts["vest"]`, silver bands, a "MIKE" name patch, camp collar), a foam neck brace
+(`parts["neck_brace"]`, "just in case") and a clipboard of forms in both hands (`parts["clipboard"]`,
+`detach_clipboard()`, `Bean.build_clipboard(parent)`). No walker, no mustache. Lip sync speaker: "Mike".
+
+| Method | Notes |
+|---|---|
+| `put_down_clipboard()` | Mike lays his clipboard face up on the desk (`sit()` does it too). |
+| `hold_response_button(on)` | Speech answers are spoken: `false` hides the response button that `put_on_earphones()` hands him. |
+| `peek_in()` (coroutine) | After `walk_out()`: the door bursts open and he pops back just inside it ("GLAZED?!"). `walk_out()` takes him out again. |
+
+Tests: `test_day3_mike_extras` in `world/tests/test_clinic.gd`.
+
 ## Notes
 
 - `set_world_saturation(v)` muffles at the sound sources, never with bus effects. Below 1.0 the
