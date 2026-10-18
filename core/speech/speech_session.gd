@@ -114,8 +114,8 @@ func _init(p: PatientProfile, seed_value: int = 0) -> void:
 
 ## Plan keys (all optional, §9.4): test, list, words (item ids to use), exclude (ids to drop),
 ## tones (§5.1 results), transducer, level (the dial's starting level), low_start_ok (bool, default
-## false: a first word below the start window is a clean &"srt_low_start", not an srt_start error;
-## the level sets it once suspicion of a non-organic loss is on screen).
+## false: a first word at least SRT_LOW_START_BELOW_PTA_DB below the PTA is a clean &"srt_low_start", not an
+## srt_start error; the level sets it once suspicion of a non-organic loss is on screen).
 func configure(p: Dictionary) -> void:
 	plan = p.duplicate(true)
 	test = StringName(String(plan.get("test", "srt")))
@@ -579,7 +579,10 @@ func _check_step(prev: Dictionary) -> void:
 	var here := _words_at(int(prev["db"]))
 	var v := SpeechRules.srt_step_verdict(int(prev["db"]), ok, db, here)
 	if v == &"wrong":
-		_error(&"srt_wrong_step", {"db": db, "expected": SpeechRules.srt_next_level(int(prev["db"]), ok), "got": db, "prev_db": prev["db"], "prev_correct": ok, "words_here": here}, false)
+		# staying put once a level has its words gets its own line (the plain tip says "another word here is fine")
+		var full := db == int(prev["db"]) and here >= SpeechRules.SRT_MAX_WORDS_PER_LEVEL
+		var msg := "%d words at one level is plenty. Got it: down 10. Missed: up 5." % SpeechRules.SRT_MAX_WORDS_PER_LEVEL if full else ""
+		_error(&"srt_wrong_step", {"db": db, "expected": SpeechRules.srt_next_level(int(prev["db"]), ok), "got": db, "prev_db": prev["db"], "prev_correct": ok, "words_here": here}, false, msg)
 	else:
 		_clean(&"speech_textbook")
 

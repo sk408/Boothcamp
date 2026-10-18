@@ -89,7 +89,7 @@ const SPEECH_C_SUBHEADS: Dictionary = {
 	"srt_store_no_bracket": "An SRT went in before its bracket. Two right, then under half 5 dB below.",
 	"srt_store_wrong_level": "An SRT went in off its bracket. Store the softest level with half or more right.",
 	"misscored": "A few scores missed what was said. Half a word, a wrong word or silence: all misses.",
-	"srt_wrong_step": "A few words went astray. Remember: got it, down 10; missed it, up 5.",
+	"srt_wrong_step": "A few words went astray. Remember: got it, down 10; missed it, up 5; four words a level at most.",
 	"srt_start": "The words started at the wrong level. Begin at the PTA plus 15.",
 	"speech_marathon": "A marathon of words. Bracket quickly and store: patients tire.",
 }

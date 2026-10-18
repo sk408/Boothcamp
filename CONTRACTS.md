@@ -1011,22 +1011,27 @@ noise). Additions are marked **(Speech)** where they touch earlier sections. Day
 | `ui/speech/**` | speech thread | `SpeechScreen` (`speech_screen.tscn`) and its widgets |
 | `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | the Day 3 level and its board |
 
-**Shared-file changes (Speech, all additive except the one replaced line):**
+**Shared-file changes (Speech).** Mostly additions. The lines that change in place are Mike or speech branches that
+leave every other day as it was, plus one removed rule:
 - `CONTRACTS.md` §1.3: the line **"Speech audiometry is not in this slice."** was removed and replaced by the
   **(Speech) Speech audiometry** rule (original material, TALK lamp, `AudioSafety.speech_to_rms()`); plus this §9.
-- `autoload/game.gd`: the `mike` chapter (Day 3, `requires: bonnie` as the suggested order only, `face`, `tint`,
-  teaches "Speech recognition threshold") and the `familiarize` / `speech` phases.
-- `autoload/events.gd`: the `speech_*` signals, at the end under `# --- mike / speech ---`.
-  `autoload/audio_safety.gd`: `SPEECH_OFFSET_DB`, `SPEECH_CEILING_DBFS`, `speech_to_rms()`, `speech_ceiling()`.
-- `core/patient_profile.gd`: `speech` (default `{}`: every existing patient behaves as before), `SPEECH_KEYS`,
-  `speech_value()` and its validation.
-- `project.godot` / `tools/setup_input_map.gd`: `speech_correct`, `speech_incorrect`, and the project-wide WAV
-  import default (§9.6).
-- `story/dialogue_box.gd` (Mike's display name "Mike Lenders"), `portraits.gd`, `voice.gd`, `hud.gd`,
-  `pause_menu.gd`, `daily_decibel.gd`; `world/clinic.gd`, `bean.gd`, `face_rig.gd` (Mike); `tools/autoplay_bot.gd`
-  (the generic mouse route and the speech sanity checks), `tools/scene_shot.sh`; `tests/test_chapters.gd`,
-  `story/tests/test_story.gd`; `export_presets.cfg` (the material JSON in, `story/dev_day3.*` out);
-  `docs/ADDING_A_CHAPTER.md` (recordings are WAV only).
+- Added only: `autoload/game.gd` (the `mike` chapter: Day 3, `requires: bonnie` as the suggested order only, `face`,
+  `tint`, teaches "Speech recognition threshold"; the `familiarize` / `speech` phases), `autoload/events.gd` (the
+  `speech_*` signals, at the end under `# --- mike / speech ---`), `autoload/audio_safety.gd` (`SPEECH_OFFSET_DB`,
+  `SPEECH_CEILING_DBFS`, `speech_to_rms()`, `speech_ceiling()`), `core/patient_profile.gd` (`speech`, default `{}`
+  so every existing patient behaves as before; `SPEECH_KEYS`, `speech_value()` and its validation),
+  `project.godot` / `tools/setup_input_map.gd` (`speech_correct`, `speech_incorrect`, the project-wide WAV import
+  default, §9.6), `story/voice.gd`, `world/clinic.gd` (Mike), `tools/autoplay_bot.gd` (the generic mouse route and
+  the speech sanity checks), `world/tests/test_clinic.gd`, and the new `tests/test_contracts_speech.gd`.
+- Changed in place, other days unchanged: `story/daily_decibel.gd` (column 2 and the weather line branch on the
+  speech results), `world/characters/bean.gd` (the shirt block moves inside a `vest` branch for Mike),
+  `world/characters/face_rig.gd` (Mike's face; one comment reworded), `story/portraits.gd` and
+  `tests/test_chapters.gd` (their tables gain Mike; the header comment changes), `story/pause_menu.gd` and
+  `story/hud.gd` (the speech phase hides the pause corner and the tracker, like the audiometry phase), `story/dialogue_box.gd` (Mike's display name "Mike
+  Lenders"), `story/tests/test_story.gd` (Mike in the voice-bank check; a new Day 3 card test), `export_presets.cfg` (the material JSON in,
+  `story/dev_day3.*` out), `tools/scene_shot.sh` (positional parsing, so `--` and options can come anywhere),
+  `tools/README.md` (Day 3 in the commands and exit codes), `README.md` (Day 3 and speech in the overview; the
+  "not in this slice" speech-in-noise bullet goes) and `docs/ADDING_A_CHAPTER.md` (recordings are WAV only).
 
 ### §9.1 PatientProfile.speech
 
@@ -1058,8 +1063,9 @@ other ear, -1 = off). Unmasked speech also reaches the other cochlea (real IA so
 Pure logic for every speech test of one visit (both ears); the screen owns all timing.
 - Setup: `SpeechSession.new(profile, seed)`, `configure(plan)` (keys below: `test`, `list`, `words`, `exclude`,
   `tones`, `transducer`, `level`, `low_start_ok`), `begin(ear, coached)` (the dial goes to the PTA rounded to 5 dB,
-  or `level`). `low_start_ok` (bool, default false): a first SRT word below the start window is the clean
-  `srt_low_start` instead of an `srt_start` error (an ascending start); the level sets it once suspicion of a
+  or `level`). `low_start_ok` (bool, default false): a first SRT word at least 10 dB below the PTA
+  (`SRT_LOW_START_BELOW_PTA_DB`) is the clean `srt_low_start` instead of an `srt_start` error (an ascending start;
+  the dial's default at the PTA does not count); the level sets it once suspicion of a
   non-organic loss is on screen, never from the hidden `non_organic` tag. A start above the window stays an error.
 - Controls: `step_level(dir)`, `set_level(db)`, `set_mask(on)`, `toggle_mask()`, `present() -> trial` (`{}` when
   refused: a word still needs its score, the ear is done, or no words), `score(correct) -> trial`, `store() -> sheet`.
@@ -1086,14 +1092,14 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
 
 | kind | type | when |
 |---|---|---|
-| `srt_start` | error | the first word is outside PTA + 10..25; below it is clean with `low_start_ok` (data: expected, pta) |
+| `srt_start` | error | the first word is outside PTA + 10..25; a first word at least 10 dB below the PTA is clean with `low_start_ok` (data: expected, pta) |
 | `srt_wrong_step` | error | not "got it: down 10 (5 tolerated); missed: up 5", nor another word at the same level (up to 4 there) (expected, got, prev_db, prev_correct, words_here) |
 | `misscored` | error | the score differs from what the patient said (said, said_kind, scored) |
 | `srt_store_no_bracket` | error | stored before a level scored 2+ right and half or more with the level 5 below under half |
 | `srt_store_wrong_level` | error | stored a level other than that one (candidate) |
 | `speech_marathon` | error | more than 3x par words in one measurement (once) |
 | `speech_textbook`, `srt_good_start`, `srt_store_ok` | clean | combo +1, points |
-| `srt_low_start` | clean | an ascending first word with plan `low_start_ok`: combo +1, 10 points, Hoot's line in `message` ("Starting low and coming up: smart when answers look exaggerated.") |
+| `srt_low_start` | clean | a first word at least 10 dB below the PTA with plan `low_start_ok`: combo +1, 10 points, Hoot's line in `message` ("Starting low and coming up: smart when answers look exaggerated.") |
 | `birdie` / `eagle` / `albatross` | observation | the SRT hole's golf |
 | `srt_stored`, `srt_agreement` | observation | after a store (agreement, diff, pta); `srt_agreement` carries Hoot's verdict line |
 | `half_word`, `cross_heard_speech`, `speech_mask_needed`, `score_first` | observation | lessons (once each) |

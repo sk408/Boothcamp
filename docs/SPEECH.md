@@ -51,7 +51,7 @@ tone audiogram.
 | Familiarise first | read the word list with the patient at a comfortable level; drop any word they don't know | story beat |
 | Better ear first | the ear with the lower PTA | `better_ear` |
 | Start level | the PTA rounded to the nearest 5 dB, plus 15 | `SRT_START_ABOVE_PTA_DB` 15, `srt_start` |
-| Acceptable first word | PTA + 10 to PTA + 25. Lower is an ascending start: clean (`srt_low_start`) when the plan sets `low_start_ok`, else an `srt_start` error. Higher is always an error | `SRT_START_MIN_DB` 10, `SRT_START_MAX_DB` 25, `srt_start_ok`, `srt_start_low` |
+| Acceptable first word | PTA + 10 to PTA + 25. A first word at least 10 dB below the PTA is an ascending start: clean (`srt_low_start`) when the plan sets `low_start_ok`. Anything else outside the window (including the dial's default at the PTA) is an `srt_start` error | `SRT_START_MIN_DB` 10, `SRT_START_MAX_DB` 25, `SRT_LOW_START_BELOW_PTA_DB` 10, `srt_start_ok`, `srt_start_low` |
 | The dance | repeated it: **down 10** (down 5 is tolerated); missed it: **up 5** | `SRT_DOWN_DB` 10, `SRT_UP_DB` 5, `srt_next_level` |
 | Same level again | another word at the same level is tolerated, after a hit or a miss, while fewer than 4 words were given at that level in this ear; the 5th word there is a wrong step | `SRT_MAX_WORDS_PER_LEVEL` 4, `srt_step_verdict(db, correct, next_db, words_here)` (`SpeechSession._check_step` counts the words) |
 | SRT | the lowest level with **at least 2 words right and at least half right**, once the level **5 dB below** it was tried and scored under half | `SRT_MIN_CORRECT` 2, `srt_candidate` |
@@ -73,8 +73,9 @@ start (from below, coming up) when an exaggerated loss (pseudohypacusis) is susp
 PTA + 15, with PTA + 10..25 accepted, is a shorter teaching default that Steve reviews (CHAPTER3.md §7 Q2;
 `SRT_START_MAX_DB` stays until he answers). The plan key `low_start_ok` turns the ascending start on: Day 3 sets
 it once Hoot's coffee whisper has been on screen (never from the hidden `non_organic` tag), and a first word
-below the window then scores clean with Hoot's *"Starting low and coming up: smart when answers look
-exaggerated."*
+at least 10 dB below the PTA (`SRT_LOW_START_BELOW_PTA_DB`) then scores clean with Hoot's *"Starting low and
+coming up: smart when answers look exaggerated."* The dial's default (the PTA itself) is not an ascending start, so
+presenting straight away is still an `srt_start` error.
 
 **On the SPEECH screen.** The sheet's `bracketed` key (stored at the bracketed SRT) decides the praise: "ear done:
 nice work!", the golf callout (a clean run over par reads "Clean!", never "Par!") and the fanfare only follow a
@@ -175,7 +176,7 @@ without any of it.
 
 | kind | when |
 |---|---|
-| `srt_start` | the first SRT word is outside PTA + 10..25 (below it is clean with plan `low_start_ok`) |
+| `srt_start` | the first SRT word is outside PTA + 10..25 (at least 10 dB below the PTA is clean with plan `low_start_ok`) |
 | `srt_wrong_step` | not "got it = down 10 (or 5), missed = up 5", nor another word at the same level (up to 4 there) |
 | `srt_store_no_bracket` | stored with no level below scoring under half |
 | `srt_store_wrong_level` | stored a level that is not the lowest one with 2+ right and half or more |
@@ -183,7 +184,7 @@ without any of it.
 | `wrs_level` | the first word of a list is outside the comfortable window |
 | `sin_level` | the party test is not at its level |
 | `speech_textbook` | a by-the-book step or score (combo +1) |
-| `srt_low_start` | clean: a first word below the window with plan `low_start_ok` (combo +1, 10 points, Hoot's line in `message`) |
+| `srt_low_start` | clean: a first word at least 10 dB below the PTA with plan `low_start_ok` (combo +1, 10 points, Hoot's line in `message`) |
 | `srt_stored` / `wrs_done` / `sin_done` | observations at the end of a measurement |
 | `half_word` | the patient gave half a word ("Lots of half-words can be a sign of a non-organic loss.") |
 | `cross_heard_speech` | unmasked: the other ear repeated the word |

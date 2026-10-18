@@ -89,12 +89,15 @@ static func clamp_db(db: int) -> int:
 # parts, chosen because they are about equally easy to hear.
 
 const SRT_START_ABOVE_PTA_DB := 15
-const SRT_START_MIN_DB := 10   ## first word at PTA + 10 (lower: an ascending start, plan low_start_ok) ...
+const SRT_START_MIN_DB := 10   ## first word at PTA + 10 ...
 const SRT_START_MAX_DB := 25   ## ... to PTA + 25
 const SRT_DOWN_DB := 10        ## repeated it -> down 10
 const SRT_DOWN_TOLERATED_DB := 5   ## down 5 is tolerated (some clinics drop 5 after every correct word)
 const SRT_UP_DB := 5           ## missed it -> up 5
 const SRT_MAX_WORDS_PER_LEVEL := 4  ## more words at one level are fine up to this many there (per ear)
+## An ascending start (plan low_start_ok) begins at least this far BELOW the PTA, so the dial's
+## default (the PTA itself) is never mistaken for one.
+const SRT_LOW_START_BELOW_PTA_DB := 10
 const SRT_MIN_CORRECT := 2     ## SRT needs at least two correct words at that level ...
 const SRT_MIN_FRACTION := 0.5  ## ... and at least half right there
 const SRT_PAR_SLACK := 1       ## par = the textbook dance on a perfectly steady patient + this (real ones wobble)
@@ -126,10 +129,10 @@ static func srt_start_ok(db: int, pta: float) -> bool:
 	return float(db) >= pta + SRT_START_MIN_DB and float(db) <= pta + SRT_START_MAX_DB
 
 
-## Is this first word below the start window (an ascending start, as ASHA allows when answers look
-## exaggerated)? false when the PTA is unknown.
+## Is this first word an ascending start (as ASHA allows when answers look exaggerated): at least
+## SRT_LOW_START_BELOW_PTA_DB below the PTA? false when the PTA is unknown.
 static func srt_start_low(db: int, pta: float) -> bool:
-	return not is_nan(pta) and float(db) < pta + SRT_START_MIN_DB
+	return not is_nan(pta) and float(db) <= pta - SRT_LOW_START_BELOW_PTA_DB
 
 
 ## The textbook next level after a word scored at `db`.

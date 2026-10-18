@@ -108,7 +108,9 @@ func test_srt_steps() -> void:
 
 
 func test_low_start_rule() -> void:
-	assert_true(SpeechRules.srt_start_low(60, 71.7), "below PTA + 10")
+	assert_true(SpeechRules.srt_start_low(60, 71.7), "10 dB or more below the PTA")
+	assert_false(SpeechRules.srt_start_low(70, 71.7), "the dial's default (the PTA) is not an ascending start")
+	assert_false(SpeechRules.srt_start_low(80, 71.7), "just under the window is not one either")
 	assert_false(SpeechRules.srt_start_low(85, 71.7), "in the window")
 	assert_false(SpeechRules.srt_start_low(100, 71.7), "too high is not low")
 	assert_false(SpeechRules.srt_start_low(0, NAN), "no PTA: no start window")
@@ -350,6 +352,7 @@ func test_more_words_at_one_level() -> void:
 	var d: Dictionary = got[kinds.find(&"srt_wrong_step")][1]
 	assert_eq(int(d["words_here"]), 4)
 	assert_eq(int(d["expected"]), 90, "after a miss: up 5")
+	assert_eq(String(d["message"]), "4 words at one level is plenty. Got it: down 10. Missed: up 5.", "not 'another word here is fine'")
 	assert_eq(s.tip_text(&"srt_wrong_step"), "Got it: down 10. Missed: up 5. Another word here is fine too!")
 	# coming back to a level counts the words already given there
 	var s2 := _session(_mike())
@@ -407,6 +410,14 @@ func test_low_start_ok() -> void:
 	good.set_level(85)
 	good.present()
 	assert_eq(_kinds(got_good), [&"srt_good_start"] as Array[StringName], "the window is still the window")
+	# the dial opens at the PTA rounded to 5 (70 for Mike's right ear): pressing straight away is not
+	# an ascending start, flag or not
+	var lazy := _session(_mike(), 11, {"low_start_ok": true})
+	var got_lazy := _record(lazy)
+	lazy.begin("right")
+	assert_eq(lazy.db, 70)
+	lazy.present()
+	assert_eq(_kinds(got_lazy), [&"srt_start"] as Array[StringName], "the untouched dial is a start error")
 	assert_false((got_good[0][1] as Dictionary).has("message"), "a plain clean kind has no line")
 
 

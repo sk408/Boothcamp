@@ -46,7 +46,7 @@ said N dB", "stored by Hoot, by the book"). `SpeechScreen.golf_text(sheet)` give
 a slip or an unbracketed store, "Clean!" for a clean run over par (never "Par!" over "14 words, par 12"). The
 fanfare and confetti only play for a bracketed or Hoot store.
 
-**Clean kinds with a message:** `srt_low_start` (an ascending start with `low_start_ok`) takes the clean branch
+**Clean kinds with a message:** `srt_low_start` (a first word at least 10 dB below the PTA with `low_start_ok`) takes the clean branch
 (combo note, "+points") and shows its `message` as a once-per-visit Hoot tip pointing at `speech_ladder`.
 
 **The tell:** once per visit, the first word rightly scored as repeated `TELL_GAP_DB` (30) dB or more below the

@@ -103,7 +103,7 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | SRT start | "Start at his PTA plus 15: 85 dB. He should repeat that easily." |
 | SRT | "SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more." |
 | The dance | "Got it: down 10. Missed: up 5. Another word at the same level is fine too!" (the wrong-step tip: "...Another word here is fine too!") |
-| Low start | "Starting low and coming up: smart when answers look exaggerated." (a first word below the window, once the whisper has been on screen: `low_start_ok`) |
+| Low start | "Starting low and coming up: smart when answers look exaggerated." (a first word at least 10 dB below the PTA, once the whisper has been on screen: `low_start_ok`) |
 | Scoring | "Score what he SAID. Half a word, a different word, or silence: all misses." |
 | SRT rule | "SRT: the softest level with two right and half or more. Check the trail!" |
 | Bracket (coach) | "Bracketed! 30 dB: the softest level with half or more right. Press S to STORE." |
@@ -167,7 +167,8 @@ words or fewer (`story/tests/test_level_mike.gd::test_hoot_lines_fit`).
    5th is a wrong step. Is 4 right?
 2. Start level PTA + 15 (rounded) and the acceptable window PTA + 10..25. ASHA (1988) starts 30-40 dB above the
    estimated SRT, and allows an ascending start when pseudohypacusis (an exaggerated loss) is suspected. The game
-   now scores an ascending start clean once the whisper is on screen (`low_start_ok`); a start above PTA + 25 is
+   now scores an ascending start (a first word at least 10 dB below the PTA) clean once the whisper is on screen
+   (`low_start_ok`); a start above PTA + 25 is
    still an error (`SRT_START_MAX_DB` waits for your answer).
 3. Agreement bands 6 / 12 dB (good / fair / poor) with the 3-frequency PTA (best two when the three spread 20+).
 4. Is the next step right: re-instruct, retest (an ascending retest?), objective tests that don't need his answers
