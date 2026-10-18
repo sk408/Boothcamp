@@ -2,15 +2,16 @@ class_name SpeechRules
 extends RefCounted
 ## SpeechRules: the speech-audiometry rulebook for Days 3-5 (pure data + pure functions, no state).
 ##
-## SRT, WRS and the Party Noise Test (speech in babble). Every number is a teaching default that
-## Steve reviews; docs/SPEECH.md explains each one. Speech constants live HERE, not in ClinicRules
-## (docs/ADDING_A_CHAPTER.md). Sources: ASHA (1988) speech-threshold guidelines; Carhart (1971) and
-## Martin et al. on PTA/SRT agreement; Dubno et al. (1995) for WRS against PTA; Killion et al. (2004)
-## for the SNR-loss arithmetic (in-game scores are unnormed).
+## SRT (speech recognition threshold, ASHA's preferred term), WRS and the Party Noise Test (speech in
+## babble). Every number is a teaching default that Steve reviews; docs/SPEECH.md explains each one.
+## Speech constants live HERE, not in ClinicRules (docs/ADDING_A_CHAPTER.md). Sources: ASHA (1988)
+## speech-threshold guidelines; Carhart (1971) and Martin et al. on PTA/SRT agreement; Dubno et al.
+## (1995) for WRS against PTA; Killion et al. (2004) for the SNR-loss arithmetic (in-game scores are
+## unnormed).
 
 const TESTS: Array[StringName] = [&"srt", &"wrs", &"sin"]
 const TEST_TITLES: Dictionary[StringName, String] = {
-	&"srt": "SRT", &"wrs": "Word score", &"sin": "Party Noise Test",
+	&"srt": "Speech recognition threshold", &"wrs": "Word score", &"sin": "Party Noise Test",
 }
 const MIN_DB := -10
 const MAX_DB := 100            ## the AudiOtron's speech output limit (phones)
@@ -84,13 +85,16 @@ static func clamp_db(db: int) -> int:
 	return clampi(db, MIN_DB, MAX_DB)
 
 # ---------------------------------------------------------------- SRT (Day 3)
+# The speech recognition threshold, with spondees: two-part words said with equal stress on both
+# parts, chosen because they are about equally easy to hear.
 
 const SRT_START_ABOVE_PTA_DB := 15
-const SRT_START_MIN_DB := 10   ## first word at PTA + 10 ...
+const SRT_START_MIN_DB := 10   ## first word at PTA + 10 (lower: an ascending start, plan low_start_ok) ...
 const SRT_START_MAX_DB := 25   ## ... to PTA + 25
 const SRT_DOWN_DB := 10        ## repeated it -> down 10
 const SRT_DOWN_TOLERATED_DB := 5   ## down 5 is tolerated (some clinics drop 5 after every correct word)
 const SRT_UP_DB := 5           ## missed it -> up 5
+const SRT_MAX_WORDS_PER_LEVEL := 4  ## more words at one level are fine up to this many there (per ear)
 const SRT_MIN_CORRECT := 2     ## SRT needs at least two correct words at that level ...
 const SRT_MIN_FRACTION := 0.5  ## ... and at least half right there
 const SRT_PAR_SLACK := 1       ## par = the textbook dance on a perfectly steady patient + this (real ones wobble)
@@ -122,13 +126,22 @@ static func srt_start_ok(db: int, pta: float) -> bool:
 	return float(db) >= pta + SRT_START_MIN_DB and float(db) <= pta + SRT_START_MAX_DB
 
 
+## Is this first word below the start window (an ascending start, as ASHA allows when answers look
+## exaggerated)? false when the PTA is unknown.
+static func srt_start_low(db: int, pta: float) -> bool:
+	return not is_nan(pta) and float(db) < pta + SRT_START_MIN_DB
+
+
 ## The textbook next level after a word scored at `db`.
 static func srt_next_level(db: int, correct: bool) -> int:
 	return clamp_db(db - SRT_DOWN_DB if correct else db + SRT_UP_DB)
 
 
 ## Is `next_db` an acceptable step after a word at `db`? Returns &"textbook", &"tolerated" or &"wrong".
-static func srt_step_verdict(db: int, correct: bool, next_db: int) -> StringName:
+## `words_here` = the words already given at `db` in this ear (at least the one just scored): another
+## word at the same level is tolerated, after a hit or a miss, while fewer than SRT_MAX_WORDS_PER_LEVEL
+## were given there (SpeechSession._check_step counts them).
+static func srt_step_verdict(db: int, correct: bool, next_db: int, words_here: int = 1) -> StringName:
 	if next_db == srt_next_level(db, correct):
 		return &"textbook"
 	if correct and next_db == clamp_db(db - SRT_DOWN_TOLERATED_DB):
@@ -136,6 +149,8 @@ static func srt_step_verdict(db: int, correct: bool, next_db: int) -> StringName
 	# at the floor, staying put after a correct word is the only way down
 	if correct and db <= MIN_DB and next_db == MIN_DB:
 		return &"textbook"
+	if next_db == db and words_here < SRT_MAX_WORDS_PER_LEVEL:
+		return &"tolerated"
 	return &"wrong"
 
 
@@ -205,7 +220,9 @@ static func srt_textbook_words(start_db: int, srt_true: int) -> int:
 	return trials.size()
 
 
-## PTA/SRT agreement: |SRT - PTA| <= 6 good, <= 12 fair, else poor.
+## PTA/SRT agreement: |SRT - PTA| <= AGREE_GOOD_DB (6) good, <= AGREE_FAIR_DB (12) fair, else poor.
+## The direction matters too (srt_pta_diff): an SRT much better than the PTA points to a non-organic
+## loss; a worse one to the instructions, language, word recognition or a sloping loss.
 static func agreement(srt: int, pta: float) -> StringName:
 	if is_nan(pta) or srt == NO_SRT or srt < MIN_DB:
 		return &""

@@ -6,7 +6,7 @@ extends RefCounted
 ## SRT (spondees): a word is repeated with probability
 ##   logistic((level - (SRT_true - SpeechRules.SRT_BIAS_DB)) / SpeechRules.SRT_SLOPE_DB)
 ## The true SRT is speech.srt[ear], or the ear's PTA (5 dB grid) + speech.srt_offset[ear].
-## A miss is silence, half the word ("...cake?") or a wrong word (the item's own mishear, or
+## A miss is silence, half the word ("...bow?") or a wrong word (the item's own mishear, or
 ## another word of the list). speech.half_words sets how many misses are half words.
 ## Cross-hearing: unmasked speech also reaches the other cochlea, IA (the head's real one) softer;
 ## speech noise in the other ear (dB EM) lifts that cochlea's threshold to the noise level.
@@ -155,7 +155,7 @@ func respond_srt(ear: String, level: int, it: Dictionary, others: Array = []) ->
 func _wrong_word(it: Dictionary, others: Array) -> String:
 	var mis: Array = it.get("mishears", [])
 	if not mis.is_empty() and (others.is_empty() or rng.randf() < 0.7):
-		return String(mis[rng.randi_range(0, mis.size() - 1)]).capitalize() + "?"
+		return as_question(String(mis[rng.randi_range(0, mis.size() - 1)]))
 	var pool: Array = []
 	for o: Variant in others:
 		if o is Dictionary and String((o as Dictionary).get("id", "")) != String(it.get("id", "")):
@@ -163,7 +163,17 @@ func _wrong_word(it: Dictionary, others: Array) -> String:
 	if pool.is_empty():
 		return "Hmm?"
 	var pick: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
-	return String(pick.get("text", "?")).capitalize() + "?"
+	return as_question(String(pick.get("text", "")))
+
+
+## A wrong word as the patient asks it: only the first letter up, and one "?" ("light... mouse?" ->
+## "Light... mouse?", never "Light... Mouse??").
+static func as_question(said: String) -> String:
+	var t := said.strip_edges()
+	if t.is_empty():
+		return "?"
+	t = t.left(1).to_upper() + t.substr(1)
+	return t if t.ends_with("?") else t + "?"
 
 
 ## Seconds from the end of the word to the answer (the profile's reaction range, slower near SRT).

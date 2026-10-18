@@ -5,12 +5,15 @@ extends RefCounted
 ## handles all timing (the word "plays", then the answer appears). It holds the speech simulator,
 ## the technique checker and the golf / combo / points scoring. Results shape: CONTRACTS.md §9.5.
 ##
-## The SRT dance it teaches (SpeechRules has the numbers, docs/SPEECH.md §3):
-##   - familiarise first; start at the PTA (rounded to 5) + 15
-##   - repeated it -> down 10 (5 tolerated); missed it -> up 5
+## The SRT (speech recognition threshold) dance it teaches (SpeechRules has the numbers, docs/SPEECH.md §3):
+##   - familiarise first; start at the PTA (rounded to 5) + 15 (or below it and coming up, once the
+##     plan says a non-organic loss is suspected: low_start_ok)
+##   - repeated it -> down 10 (5 tolerated); missed it -> up 5; another word at the same level is
+##     fine, up to SRT_MAX_WORDS_PER_LEVEL words there
 ##   - score what the patient SAID: half a word, a different word or silence are all misses
 ##   - SRT = the softest level with 2+ right and half or more, the level 5 below scoring under half
-##   - compare with the PTA: within 6 dB good, 7-12 fair, 13+ poor (recheck; think non-organic)
+##   - compare with the PTA: within 6 dB good, 7-12 fair, 13+ poor. An SRT much better than the PTA:
+##     think non-organic, recheck; a worse one: instructions, language, word recognition or a slope
 ## Golf: each SRT is a hole; par = the textbook dance from the first word's level (srt_par).
 
 signal technique(kind: StringName, data: Dictionary)
@@ -22,15 +25,17 @@ signal stored(ear: String, test: StringName, sheet: Dictionary)
 ## Hoot's one-liners per technique kind (original wording, 18 words max). {he} {his} {him} tokens.
 const TIPS: Dictionary[StringName, String] = {
 	&"srt_start": "Start at {his} PTA plus 15: easy words first, then work down.",
-	&"srt_wrong_step": "Got it: down 10. Missed: up 5. Same dance as the beeps!",
+	&"srt_wrong_step": "Got it: down 10. Missed: up 5. Another word here is fine too!",
 	&"srt_store_no_bracket": "Not bracketed yet! 5 dB below, {he} must get fewer than half right.",
 	&"srt_store_wrong_level": "SRT: the softest level with two right and half or more. Check the trail!",
 	&"misscored": "Score what {he} SAID. Half a word, a different word, or silence: all misses.",
 	&"speech_marathon": "Long word lists tire patients out. Bracket quickly and store!",
-	&"half_word": "Half a word is a miss. Lots of half-words can be a sign of exaggerating.",
+	&"half_word": "Half a word is a miss. Lots of half-words can be a sign of a non-organic loss.",
 	&"cross_heard_speech": "Loud speech can cross the skull to the other ear. Mask the other ear!",
 	&"speech_mask_needed": "This loud, speech can cross to the other ear. Speech noise on: press M.",
 	&"score_first": "Score that word first: did {he} say the whole word?",
+	# a clean kind: an ascending start once the plan allows it (low_start_ok)
+	&"srt_low_start": "Starting low and coming up: smart when answers look exaggerated.",
 }
 ## misscored, by what the patient actually said.
 const MISSCORED_TIPS: Dictionary[StringName, String] = {
@@ -39,14 +44,17 @@ const MISSCORED_TIPS: Dictionary[StringName, String] = {
 	&"silence": "Silence is a miss. Score it as missed.",
 	&"correct": "{He} said the whole word! Score it as correct.",
 }
-## Hoot's line on the PTA/SRT agreement after a store ({diff} = dB apart).
+## Hoot's line on the PTA/SRT agreement after a store, by agreement and, when they disagree, by
+## direction (agreement_tip()). {diff} = dB apart; {good} / {fair} = SpeechRules.AGREE_GOOD_DB / AGREE_FAIR_DB.
 const AGREEMENT_TIPS: Dictionary[StringName, String] = {
-	&"good": "SRT and PTA agree within 6 dB. The audiogram checks out!",
-	&"fair": "{diff} dB apart: fair agreement. Re-check the tones near 500 to 2000 Hz.",
-	&"poor": "{diff} dB apart: POOR agreement! Recheck, re-instruct, and think about why.",
+	&"good": "A reliable SRT: within {good} dB of the PTA. The audiogram checks out!",
+	&"fair_better": "SRT {diff} dB better than the PTA: fair agreement. Recheck the tones near 500 to 2000 Hz.",
+	&"fair_worse": "SRT {diff} dB worse than the PTA: fair agreement. Check {he} understood, then recheck the tones.",
+	&"poor_better": "SRT {diff} dB better than the PTA: POOR agreement! Think non-organic: re-instruct and recheck.",
+	&"poor_worse": "SRT {diff} dB worse than the PTA: POOR agreement! Check instructions, language, word recognition, or a sloping loss.",
 }
 ## Positive kinds and the points they are worth (times the combo multiplier).
-const POINTS: Dictionary[StringName, int] = {&"speech_textbook": 10, &"srt_good_start": 10, &"srt_store_ok": 50}
+const POINTS: Dictionary[StringName, int] = {&"speech_textbook": 10, &"srt_good_start": 10, &"srt_low_start": 10, &"srt_store_ok": 50}
 const GOLF_POINTS: Dictionary[StringName, int] = {&"albatross": 300, &"eagle": 200, &"birdie": 100, &"par": 50, &"bogey": 20}
 ## More words than this x par in one measurement: the patient tires (once per measurement).
 const MARATHON_FACTOR := 3.0
@@ -105,7 +113,9 @@ func _init(p: PatientProfile, seed_value: int = 0) -> void:
 
 
 ## Plan keys (all optional, §9.4): test, list, words (item ids to use), exclude (ids to drop),
-## tones (§5.1 results), transducer, level (the dial's starting level).
+## tones (§5.1 results), transducer, level (the dial's starting level), low_start_ok (bool, default
+## false: a first word below the start window is a clean &"srt_low_start", not an srt_start error;
+## the level sets it once suspicion of a non-organic loss is on screen).
 func configure(p: Dictionary) -> void:
 	plan = p.duplicate(true)
 	test = StringName(String(plan.get("test", "srt")))
@@ -333,8 +343,8 @@ func store() -> Dictionary:
 	stored.emit(ear, test, sheet)
 	_observe(&"srt_stored", {"db": db, "agreement": sheet["agreement"], "diff": sheet["diff"], "pta": sheet["pta"]})
 	if StringName(sheet["agreement"]) != &"":
-		var tip := String(AGREEMENT_TIPS.get(StringName(sheet["agreement"]), "")).replace("{diff}", str(absi(int(sheet["diff"]))))
-		_emit_kind(&"srt_agreement", {"db": db, "agreement": sheet["agreement"], "diff": sheet["diff"], "pta": sheet["pta"]}, _say(tip))
+		var tip := agreement_tip(StringName(sheet["agreement"]), int(sheet["diff"]))
+		_emit_kind(&"srt_agreement", {"db": db, "agreement": sheet["agreement"], "diff": sheet["diff"], "pta": sheet["pta"]}, tip)
 	if scoring and not bool(sheet["by_hoot"]) and GOLF_POINTS.has(StringName(sheet["golf"])):
 		var g := StringName(sheet["golf"])
 		if g in [&"birdie", &"eagle", &"albatross"]:
@@ -366,6 +376,8 @@ func _make_sheet(cand: int) -> Dictionary:
 		"stored_db": db, "true_db": truth, "error_db": err,
 		"accuracy": ClinicRules.accuracy_for_error(err),
 		"candidate_db": cand,
+		# stored at the bracketed SRT (the UI and story praise only these)
+		"bracketed": cand != SpeechRules.NO_SRT and db == cand,
 		"pta": p, "pta_method": SpeechRules.pta_method(_tone_thresholds(ear)),
 		"agreement": SpeechRules.agreement(db, p), "diff": SpeechRules.srt_pta_diff(db, p),
 		"start_db": start, "recommended_start": SpeechRules.srt_start(p),
@@ -556,17 +568,29 @@ func _check_start() -> void:
 	var p := pta_for(ear)
 	if SpeechRules.srt_start_ok(db, p):
 		_clean(&"srt_good_start")
+	elif bool(plan.get("low_start_ok", false)) and SpeechRules.srt_start_low(db, p):
+		_clean(&"srt_low_start")
 	else:
 		_error(&"srt_start", {"db": db, "expected": SpeechRules.srt_start(p), "pta": p}, false)
 
 
 func _check_step(prev: Dictionary) -> void:
 	var ok: bool = prev["scored"] if prev["scored"] != null else bool(prev["correct"])
-	var v := SpeechRules.srt_step_verdict(int(prev["db"]), ok, db)
+	var here := _words_at(int(prev["db"]))
+	var v := SpeechRules.srt_step_verdict(int(prev["db"]), ok, db, here)
 	if v == &"wrong":
-		_error(&"srt_wrong_step", {"db": db, "expected": SpeechRules.srt_next_level(int(prev["db"]), ok), "got": db, "prev_db": prev["db"], "prev_correct": ok}, false)
+		_error(&"srt_wrong_step", {"db": db, "expected": SpeechRules.srt_next_level(int(prev["db"]), ok), "got": db, "prev_db": prev["db"], "prev_correct": ok, "words_here": here}, false)
 	else:
 		_clean(&"speech_textbook")
+
+
+## Words already given at `level` in this ear (Hoot's too).
+func _words_at(level: int) -> int:
+	var n := 0
+	for tr: Dictionary in trials_for():
+		if int(tr["db"]) == level:
+			n += 1
+	return n
 
 
 func _check_marathon() -> void:
@@ -581,7 +605,7 @@ func _check_marathon() -> void:
 
 func _clean(kind: StringName) -> void:
 	if not scoring:
-		technique.emit(kind, _data({"combo": 0, "multiplier": 1, "points": 0, "auto": true}))
+		technique.emit(kind, _with_tip(kind, _data({"combo": 0, "multiplier": 1, "points": 0, "auto": true})))
 		return
 	checks += 1
 	clean_checks += 1
@@ -591,7 +615,14 @@ func _clean(kind: StringName) -> void:
 	var gained: int = POINTS.get(kind, 0) * mult
 	points += gained
 	combo_changed.emit(combo, mult)
-	technique.emit(kind, _data({"combo": combo, "multiplier": mult, "points": gained}))
+	technique.emit(kind, _with_tip(kind, _data({"combo": combo, "multiplier": mult, "points": gained})))
+
+
+## A clean kind with a Hoot line (srt_low_start) carries it as data.message, like the errors.
+func _with_tip(kind: StringName, d: Dictionary) -> Dictionary:
+	if TIPS.has(kind):
+		d["message"] = tip_text(kind)
+	return d
 
 
 ## An error: always a check (a failed one), breaks the combo, lowers technique.
@@ -642,6 +673,17 @@ func _data(extra: Dictionary) -> Dictionary:
 
 func tip_text(kind: StringName) -> String:
 	return _say(String(TIPS.get(kind, "")))
+
+
+## Hoot's agreement line for a stored SRT: `diff` = SRT - PTA (negative = the SRT is better). Poor and
+## fair lines depend on the direction; "" when there is no agreement yet.
+func agreement_tip(agreement: StringName, diff: int) -> String:
+	var key := agreement
+	if agreement != &"good" and diff != 0:
+		key = StringName("%s_%s" % [agreement, "better" if diff < 0 else "worse"])
+	var t := String(AGREEMENT_TIPS.get(key, ""))
+	t = t.replace("{diff}", str(absi(diff))).replace("{good}", str(SpeechRules.AGREE_GOOD_DB)).replace("{fair}", str(SpeechRules.AGREE_FAIR_DB))
+	return _say(t)
 
 
 func _say(t: String) -> String:

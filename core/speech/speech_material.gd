@@ -2,8 +2,10 @@ class_name SpeechMaterial
 extends RefCounted
 ## SpeechMaterial: loads the game's own speech lists (CONTRACTS.md §9.2, docs/SPEECH.md §1).
 ##
-## Every list lives in res://core/speech/material/<list_id>.json and was written for Booth Camp:
-## no word, foil or sentence comes from a published test. Shapes:
+## Every list lives in res://core/speech/material/<list_id>.json and was written for Booth Camp: no
+## list, order or recording is copied; every word is checked against ASHA (1988) Appendices A-C and
+## CID W-1 (the guard in core/tests/test_speech_core.gd). A spondee is a two-part word said with equal
+## stress on both parts, chosen because such words are about equally easy to hear. Shapes:
 ##   {"id", "title", "kind": "spondee" | "monosyllable" | "sentence", "original": true, "items": [...]}
 ##   spondee item:      {"id", "text", "parts": [first, second], "mishears": [funny wrong words]}
 ##   monosyllable item: {"id", "text", "key_sound", "foils": [3 words that differ in the key sound]}
@@ -127,7 +129,7 @@ static func recording_path(list_id: String, item_id: String) -> String:
 	return ""
 
 
-## Half of a spondee as the patient says it: "...cake?" (second part) or "Cup...?" (first part).
+## Half of a spondee as the patient says it: "...bow?" (second part) or "Rain...?" (first part).
 static func half_word(it: Dictionary, first_part: bool) -> String:
 	var parts: Array = it.get("parts", [])
 	if parts.size() != 2:
