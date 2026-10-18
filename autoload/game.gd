@@ -36,11 +36,11 @@ const CHAPTERS: Array[Dictionary] = [
 	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
 	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",
 		"scene": "res://story/level_case.tscn", "requires": "bonnie", "case": "noise_notch", "face": "Rocco", "tint": Color("#ffd9c7")},
-	{"id": "marina", "day": 7, "title": "Day 7: Captain Marina Gale", "patient_id": "marina", "teaches": "Case file: a spinning room",
+	{"id": "marina", "day": 7, "title": "Day 7: Captain Marina Gale", "patient_id": "marina", "teaches": "Case file: the ferry captain",
 		"scene": "res://story/level_case.tscn", "requires": "rocco", "case": "menieres", "face": "Marina", "tint": Color("#cfe3ff")},
-	{"id": "dash", "day": 8, "title": "Day 8: Dash Delgado", "patient_id": "dash", "teaches": "Case file: one ear, overnight",
+	{"id": "dash", "day": 8, "title": "Day 8: Dash Delgado", "patient_id": "dash", "teaches": "Case file: the pizza rush",
 		"scene": "res://story/level_case.tscn", "requires": "marina", "case": "sudden", "face": "Dash", "tint": Color("#ffe0d6")},
-	{"id": "ginger", "day": 9, "title": "Day 9: Ginger Snapp", "patient_id": "ginger", "teaches": "Case file: voices with a bite missing",
+	{"id": "ginger", "day": 9, "title": "Day 9: Ginger Snapp", "patient_id": "ginger", "teaches": "Case file: the ventriloquist",
 		"scene": "res://story/level_case.tscn", "requires": "dash", "case": "cookie_bite", "face": "Ginger", "tint": Color("#f3e1ff")},
 ]
 

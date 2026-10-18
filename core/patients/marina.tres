@@ -7,7 +7,7 @@ script = ExtResource("1_case")
 id = "marina"
 display_name = "Marina Gale"
 age = 46
-complaint = "Twenty-five years at sea, never once seasick. Now my living room spins like a whirlpool!"
+complaint = "My left ear's full of seawater, and it roars like the engine room. Some days it's nearly fine."
 thresholds_right = Dictionary[int, int]({
 250: 10,
 500: 10,
@@ -22,15 +22,15 @@ thresholds_right = Dictionary[int, int]({
 })
 thresholds_left = Dictionary[int, int]({
 250: 50,
-500: 50,
+500: 45,
 750: 45,
 1000: 45,
 1500: 35,
-2000: 30,
+2000: 25,
 3000: 25,
 4000: 25,
 6000: 30,
-8000: 35
+8000: 30
 })
 ia_phones_db = 60
 ia_inserts_db = 75

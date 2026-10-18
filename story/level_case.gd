@@ -2,9 +2,11 @@ extends Node
 ## LevelCase (cases): one runner for every case file (docs/CASES.md, CONTRACTS.md §11). It reads the
 ## case for the current chapter (Game.CHAPTERS "case" key) from res://story/cases/<case_id>.json and
 ## plays it: the patient's story and clues, a look in the ear, the tympanometer, the case's test plan
-## (plus whatever masked tests the rules ask for), the pattern reveal, then the call: FIT / REFER /
-## DOCTOR TODAY, and the clue card that proves it. Same contracts as Days 1-2: every blocking beat
-## emits Events.awaiting_input with a solver (dialogue, choice, the AudiOtron's beats, results_continue).
+## (plus whatever masked tests the rules ask for), the chart, the shape question (the pattern comes
+## alive once the player names it), then the call: FIT / REFER / DOCTOR TODAY, and the clue card that
+## proves it. Every choice is shuffled with Game.rng (seeded by --seed, so autoplay is reproducible).
+## Same contracts as Days 1-2: every blocking beat emits Events.awaiting_input with a solver
+## (dialogue, choice, the AudiOtron's beats, results_continue).
 ##   world:  res://world/clinic.tscn with patient_id + patient_spec (the case's look and extras)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn start_test(patient, ear, coached, plan)
 ##   global: Game (visit, medals, flags), Events (phases, awaiting_input), Hoot
@@ -17,6 +19,7 @@ const CaseBoard := preload("res://story/games/case_board.gd")
 const CaseTymp := preload("res://story/games/case_tymp.gd")
 const CaseClock := preload("res://story/games/case_clock.gd")
 const CaseProps := preload("res://story/games/case_props.gd")
+const Voice := preload("res://story/voice.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -35,6 +38,11 @@ const TIP_OPTIONS: Array[String] = ["Small tip", "Medium tip", "Large tip"]
 ## The tympanogram types the quiz offers (plus any other type the case uses).
 const TYMP_QUIZ: Array[StringName] = [&"A", &"B", &"C"]
 const TYPE_ANSWERS: Dictionary = {&"sensorineural": 0, &"conductive": 1, &"mixed": 2}
+## Unmasked bone reads the better cochlea, so it can stand in for an ear with no bone test of its own
+## when it sits within this many dB of that ear's air at every bone frequency (no gap is possible).
+const BORROW_BONE_DB := 10
+## Hoot's one-time briefing, the first time a player opens any case.
+const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
 
 var case_id := ""
 var case_data: Dictionary = {}
@@ -73,6 +81,12 @@ func _ready() -> void:
 			Events.goto_scene.emit.call_deferred(TITLE_SCENE)
 			return
 	speaker = String(case_data["speaker"])
+	if case_data.get("voice", null) is Dictionary:
+		Voice.register(speaker, case_data["voice"])
+	var voices: Dictionary = case_data.get("voices", {})
+	for who: String in voices:
+		if (voices[who] as Dictionary).get("voice", null) is Dictionary:
+			Voice.register(who, (voices[who] as Dictionary)["voice"])
 	var pid := String(case_data["patient_id"])
 	Game.begin_visit(pid)
 	Game.set_visit_flag("case_id", case_id)
@@ -88,7 +102,7 @@ func _ready() -> void:
 	add_child(dialogue)
 	if case_data.has("sudden_clock"):
 		clock_widget = CaseClock.new()
-		clock_widget.call("setup", float((case_data["sudden_clock"] as Dictionary).get("onset_h", 24)), Game.clock)
+		clock_widget.call("setup", float((case_data["sudden_clock"] as Dictionary).get("onset_h", 24)))
 		hud.call("add_game", clock_widget)
 	Events.level_started.emit(pid)
 	_run.call_deferred()
@@ -100,6 +114,36 @@ func _phase(p: StringName, info: Dictionary = {}) -> void:
 
 func _say(who: String, text: String) -> void:
 	await dialogue.say(who, text)
+
+
+## A reply from the case file: one line, or a list of lines said in turn.
+func _say_all(who: String, reply: Variant) -> void:
+	if reply is Array:
+		for r: Variant in reply:
+			await _say(who, String(r))
+	else:
+		await _say(who, String(reply))
+
+
+## 0..n-1 in a Game.rng order (Fisher-Yates), so every choice's layout is fresh but reproducible.
+static func shuffled_order(n: int) -> Array[int]:
+	var out: Array[int] = []
+	for i in n:
+		out.append(i)
+	for i in range(n - 1, 0, -1):
+		var j := Game.rng.randi_range(0, i)
+		var t := out[i]
+		out[i] = out[j]
+		out[j] = t
+	return out
+
+
+## True the first time a player opens any case (no case chapter finished yet).
+static func first_case() -> bool:
+	for cid: Variant in Game.progress.get("chapters_done", []):
+		if String(Game.chapter(String(cid)).get("case", "")) != "":
+			return false
+	return true
 
 
 func _wait(s: float) -> void:
@@ -134,6 +178,37 @@ func _play(lines: Variant) -> void:
 				clinic.call("hoot_emote", StringName(String(d["hoot"])))
 			if d.has("do"):
 				await _do(String(d["do"]))
+			if d.has("choose"):
+				await _choose(d["choose"])
+
+
+## A counselling choice in a script: {"prompt", "options": [[text, points, Hoot's line]]}. Shuffled;
+## Hoot answers each pick, and it repeats until the best option is picked. No medal.
+func _choose(spec: Dictionary) -> void:
+	var raw: Array = spec.get("options", [])
+	if raw.is_empty():
+		return
+	var order := shuffled_order(raw.size())
+	var best_pts := -1
+	for o: Variant in raw:
+		best_pts = maxi(best_pts, int((o as Array)[1]))
+	while not order.is_empty():
+		var opts: Array[String] = []
+		var best := 0
+		for k in order.size():
+			var o: Array = raw[order[k]]
+			opts.append(String(o[0]))
+			if int(o[1]) == best_pts:
+				best = k
+		var ch: int = await dialogue.choose(String(spec.get("prompt", "Pick one:")), opts, best)
+		var pick: Array = raw[order[ch]]
+		var good := int(pick[1]) == best_pts
+		if good:
+			_react(&"cheer")
+		await _say("Hoot", String(pick[2]) if pick.size() > 2 else "")
+		if good:
+			return
+		order.remove_at(ch)
 
 
 ## The payoff actions.
@@ -145,12 +220,12 @@ func _do(what: String) -> void:
 			_shot("hearing_aids", 0.4)
 			await _wait(1.2)
 			clinic.call("focus_camera", &"desk", 0.6)
-		"letter", "phone":
+		"letter", "phone", "boat":
 			if props == null:
 				props = CaseProps.new()
 				hud.call("add_game", props)
-			if what == "letter":
-				_shot("letter", 0.6)
+			if what != "phone":
+				_shot(what, 0.6)
 			await props.call("play", what)
 
 
@@ -191,6 +266,9 @@ func _intro() -> void:
 	await clinic.call("walk_in")
 	_react(&"wave")
 	_shot("intro", 0.3)
+	if first_case():
+		clinic.call("hoot_emote", &"wing_up")
+		await _say("Hoot", BRIEFING)
 	await _play(case_data["intro"])
 	for cl: Variant in case_data.get("always_clues", []):
 		var d: Dictionary = cl
@@ -207,24 +285,27 @@ func _history() -> void:
 	var tags: Dictionary = {}
 	for rd: Variant in case_data["history"]:
 		var r: Dictionary = rd
+		var raw: Array = r["options"]
+		var order := shuffled_order(raw.size())
 		var opts: Array[String] = []
 		var best := 0
 		var best_pts := -1
-		for o: Variant in r["options"]:
-			var oa: Array = o
+		for k in order.size():
+			var oa: Array = raw[order[k]]
 			opts.append(String(oa[0]))
 			if int(oa[1]) > best_pts:
 				best_pts = int(oa[1])
-				best = opts.size() - 1
+				best = k
 		var ch: int = await dialogue.choose(String(r.get("prompt", "Ask a question:")), opts, best)
-		var pick: Array = (r["options"] as Array)[ch]
+		var pick: Array = raw[order[ch]]
 		var pts := int(pick[1])
 		var tag := String(pick[4])
 		points += pts
 		if tag != "":
 			tags[tag] = true
 		_react(&"cheer" if pts == 0 else &"nod")
-		await _say(speaker, String(pick[2]))
+		var who := String(pick[6]) if pick.size() > 6 and String(pick[6]) != "" else speaker
+		await _say_all(who, pick[2])
 		if String(pick[3]) != "":
 			hud.call("add_clue", String(pick[3]))
 			_add_clue(tag, String(pick[3]), "clue", "history")
@@ -237,10 +318,13 @@ func _history() -> void:
 	var asked := tags.has(String(rf["tag"]))
 	if not asked:
 		await _say("Hoot", String(rf["ask_line"]))
-		await _say(speaker, String(rf["answer"]))
+		await _say_all(speaker, rf["answer"])
 	clinic.call("hoot_emote", &"nod")
 	hud.call("add_clue", String(rf["card"]), String(rf.get("card_kind", "clue")))
 	_add_clue(String(rf["tag"]), String(rf["clue"]), String(rf.get("card_kind", "clue")), "flag")
+	for ex: Variant in rf.get("extra_clues", []):
+		var exd: Dictionary = ex
+		_add_clue(String(exd.get("tag", "")), String(exd["text"]), String(exd.get("kind", "clue")), "flag")
 	Game.record_medal("history", "gold" if points >= 4 else ("silver" if points >= 2 else "bronze"))
 	Game.set_visit_flag("asked_red_flags", asked)
 	await _play(case_data.get("after_history", []))
@@ -284,7 +368,10 @@ func _tymp() -> void:
 	var tip_tries := 0
 	while true:
 		tip_tries += 1
-		var ch: int = await dialogue.choose("Which ear tip fits %s's ear canal?" % speaker, opts, sizes.find(right_tip))
+		var canal := String(ty.get("canal", ""))
+		var tprompt := "Which ear tip fits %s's %s canal?" % [speaker, canal] if canal != "" \
+			else "Which ear tip fits %s's ear canal?" % speaker
+		var ch: int = await dialogue.choose(tprompt, opts, sizes.find(right_tip))
 		var size := sizes[ch]
 		var ok: bool = await g.call("try_tip", size)
 		if ok:
@@ -305,11 +392,61 @@ func _tymp() -> void:
 	_shot("tymp_curves")
 	var type_r := StringName(String((ty["right"] as Dictionary)["type"]))
 	var type_l := StringName(String((ty["left"] as Dictionary)["type"]))
+	if ty.get("quiz", null) is Dictionary:
+		# the patient's own worry, answered by the tymp ("Her ear feels full. Fluid?")
+		slips += await _tymp_quiz(ty["quiz"])
+		for ear: String in ["right", "left"]:
+			g.call("reveal_type", ear)
+	else:
+		slips += await _tymp_type_quiz(g, type_r, type_l)
+	hud.call("add_clue", String(ty["clue"]))
+	_add_clue(String(ty["tag"]), String(ty["clue"]), "clue", "tymp")
+	await _play(ty.get("after", []))
+	Game.record_medal("tymp", "gold" if slips == 0 else ("silver" if slips == 1 else "bronze"))
+	Game.set_visit_flag("tymp_tip_tries", tip_tries)
+	var t := g.create_tween()
+	t.tween_property(g, "modulate:a", 0.0, 0.3)
+	await t.finished
+	g.queue_free()
+	hud.call("complete_step", &"tymp")
+
+
+## The case's own tymp question: {"prompt", "options": [[text, right, Hoot's line when wrong]]}.
+## Returns the slips.
+func _tymp_quiz(q: Dictionary) -> int:
+	var raw: Array = q.get("options", [])
+	var order := shuffled_order(raw.size())
+	var slips := 0
+	while not order.is_empty():
+		var opts: Array[String] = []
+		var best := 0
+		for k in order.size():
+			var o: Array = raw[order[k]]
+			opts.append(String(o[0]))
+			if bool(o[1]):
+				best = k
+		var ch: int = await dialogue.choose(String(q.get("prompt", "What does the tymp show?")), opts, best)
+		var pick: Array = raw[order[ch]]
+		if bool(pick[1]):
+			break
+		slips += 1
+		var why := String(pick[2]) if pick.size() > 2 else ""
+		await _say("Hoot", why if why != "" else "Look where the peak sits, and how tall.")
+		order.remove_at(ch)
+	return slips
+
+
+## The plain "what type is it?" quiz (both ears at once when they match). Returns the slips.
+func _tymp_type_quiz(g: Control, type_r: StringName, type_l: StringName) -> int:
+	var slips := 0
 	var asks: Array = [["both", type_r]] if type_r == type_l else [["right", type_r], ["left", type_l]]
 	for ask: Array in asks:
-		var types: Array[StringName] = TYMP_QUIZ.duplicate()
-		if not types.has(ask[1]):
-			types.append(ask[1])
+		var pool: Array[StringName] = TYMP_QUIZ.duplicate()
+		if not pool.has(ask[1]):
+			pool.append(ask[1])
+		var types: Array[StringName] = []
+		for k: int in shuffled_order(pool.size()):
+			types.append(pool[k])
 		var topts: Array[String] = []
 		for t: StringName in types:
 			topts.append(CaseRules.TYMP_TITLES[t])
@@ -325,16 +462,7 @@ func _tymp() -> void:
 			topts.remove_at(ti)
 		for ear: String in (["right", "left"] if String(ask[0]) == "both" else [String(ask[0])]):
 			g.call("reveal_type", ear)
-	hud.call("add_clue", String(ty["clue"]))
-	_add_clue(String(ty["tag"]), String(ty["clue"]), "clue", "tymp")
-	await _play(ty.get("after", []))
-	Game.record_medal("tymp", "gold" if slips == 0 else ("silver" if slips == 1 else "bronze"))
-	Game.set_visit_flag("tymp_tip_tries", tip_tries)
-	var t := g.create_tween()
-	t.tween_property(g, "modulate:a", 0.0, 0.3)
-	await t.finished
-	g.queue_free()
-	hud.call("complete_step", &"tymp")
+	return slips
 
 
 # ---------------------------------------------------------------- 5. instructions + earphones
@@ -433,6 +561,7 @@ func _audiometry() -> void:
 			_open_screen()
 			await _test(main_ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
 				"intro": "Masked air: same plateau dance, noise in the %s ear." % other})
+	_borrow_bone()
 	screen.queue_free()
 	screen = null
 	cam.current = true
@@ -443,7 +572,33 @@ func _audiometry() -> void:
 	await _play(case_data.get("after_audiometry", []))
 
 
-# ---------------------------------------------------------------- 7. reveal: the pattern comes alive
+## An ear with air but no bone test of its own: the other ear's UNMASKED bone reads the better cochlea,
+## so this ear's bone can be no better than it. When that bone sits within BORROW_BONE_DB of this
+## ear's air at every bone frequency, no gap is possible and the ear is typed from it (Rocco's and
+## Ginger's left ears). Otherwise the ear stays "unknown" (it would need its own bone test).
+func _borrow_bone() -> void:
+	var ears: Dictionary = results.get("ears", {})
+	for ear: String in ["right", "left"]:
+		var e: Dictionary = ears.get(ear, {})
+		if e.is_empty() or e.get("hearing_type", &"unknown") != &"unknown":
+			continue
+		var other := "left" if ear == "right" else "right"
+		var bone := ClinicRules.sheet_thresholds(results, other, &"bc")
+		var air := ClinicRules.best_thresholds(results, ear, false)
+		if bone.is_empty() or air.is_empty():
+			continue
+		var close := true
+		for f: int in bone:
+			if air.has(f) and int(air[f]) - int(bone[f]) > BORROW_BONE_DB:
+				close = false
+		var kind := ClinicRules.hearing_type(air, bone)
+		if close and (kind == &"sensorineural" or kind == &"normal"):
+			e["hearing_type"] = kind
+			e["bone_from"] = other
+	Game.set_audiometry_results(results)
+
+
+# ---------------------------------------------------------------- 7. reveal: the chart
 
 func _reveal() -> Control:
 	_phase(&"reveal")
@@ -461,19 +616,12 @@ func _reveal() -> Control:
 	go.call()
 	await b.run_reveal(results)
 	_shot("reveal")
-	await b.show_pattern()
-	if String((case_data["reveal"] as Dictionary).get("pattern", "")) == "flat_one" and clock_widget != null:
-		clock_widget.call("ring")
-	_shot("pattern", 0.3)
-	await _play((case_data["reveal"] as Dictionary).get("lines", []))
-	for f: Variant in case_data["findings"]:
-		var fd: Dictionary = f
-		_add_clue(String(fd["tag"]), String(fd["text"]), "clue", "test")
+	await _play((case_data["reveal"] as Dictionary).get("ask", [["Hoot", "Here's the chart, trainee. What shape do you see?"]]))
 	hud.call("complete_step", &"reveal")
 	return b
 
 
-# ---------------------------------------------------------------- 8. evidence: what the chart shows
+# ---------------------------------------------------------------- 8. evidence: name it, then it comes alive
 
 ## The ear the case is about ("both" = the right ear stands in for the pair).
 func _case_ear() -> String:
@@ -497,7 +645,9 @@ func _evidence(b: Control) -> void:
 	var answer_text := all[answer]
 	var wrong: Array = ev.get("wrong", [])
 	b.call("set_compact", true)
-	var opts := all.duplicate()
+	var opts: Array[String] = []
+	for k: int in shuffled_order(all.size()):
+		opts.append(all[k])
 	var tries := 0
 	while true:
 		tries += 1
@@ -510,31 +660,73 @@ func _evidence(b: Control) -> void:
 		opts.remove_at(ch)
 	Game.record_medal("evidence", "gold" if tries == 1 else ("silver" if tries == 2 else "bronze"))
 	Sfx.play(&"ding", 1.2, -6.0)
+	# the reward: the pattern comes alive, with its title
+	await b.show_pattern()
+	if String((case_data["reveal"] as Dictionary).get("pattern", "")) == "flat_one" and clock_widget != null:
+		clock_widget.move_to_front()
+		clock_widget.call("ring")
+	_shot("pattern", 0.3)
+	await _play((case_data["reveal"] as Dictionary).get("lines", []))
 	if kind != &"unknown" and kind != &"normal":
 		b.call("show_type", String(ClinicRules.HEARING_TYPE_TITLES.get(kind, "Sensorineural loss")))
-	await _say("Hoot", String(ev.get("right", "Exactly!")))
+	if String(ev.get("right", "")) != "":
+		await _say("Hoot", String(ev["right"]))
+	_add_findings()
 	hud.call("complete_step", &"pattern")
+
+
+## The reveal's cards for the case file. A finding with "when": "symmetric" / "asymmetric" only
+## appears when the measured air says so (the truth table when an ear has no air).
+func _add_findings() -> void:
+	var right := ClinicRules.best_thresholds(results, "right", false)
+	var left := ClinicRules.best_thresholds(results, "left", false)
+	if right.is_empty() or left.is_empty():
+		right = CaseData.truth(patient, "right")
+		left = CaseData.truth(patient, "left")
+	var asym := CaseRules.is_asymmetric(right, left)
+	for f: Variant in case_data["findings"]:
+		var fd: Dictionary = f
+		match String(fd.get("when", "")):
+			"symmetric":
+				if asym:
+					continue
+			"asymmetric":
+				if not asym:
+					continue
+		_add_clue(String(fd["tag"]), String(fd["text"]), "clue", "test")
 
 
 # ---------------------------------------------------------------- 9. the call: stamp it, then prove it
 
-## The clue cards for the case file: at most CaseBoard.MAX_CARDS, dropping history cards that aren't
-## the proof first (the proof is always kept).
+## The clue cards for the case file: at most CaseBoard.MAX_CARDS, then shuffled. The proof cards
+## (clue_pick "answers") and the deliberate red herrings ("decoys") always stay. Others go first if
+## the case never mentions them (no wrong line), then by source: history, notes, the exam, the chart.
+const DROP_ORDER: Dictionary = {"history": 1, "note": 2, "look": 3, "tymp": 3, "flag": 4, "test": 4}
+
+
 func _board_clues() -> Array[Dictionary]:
-	var answers: Array = (case_data["clue_pick"] as Dictionary).get("answers", [])
+	var cp: Dictionary = case_data["clue_pick"]
+	var keep: Array = (cp.get("answers", []) as Array) + (cp.get("decoys", []) as Array)
+	var wrong_lines: Dictionary = cp.get("wrong_lines", {})
 	var out: Array[Dictionary] = clues.duplicate()
-	var i := 0
-	while out.size() > CaseBoard.MAX_CARDS and i < out.size():
-		if String(out[i]["src"]) == "history" and not answers.has(String(out[i]["tag"])):
-			out.remove_at(i)
-		else:
-			i += 1
 	while out.size() > CaseBoard.MAX_CARDS:
-		var j := out.size() - 1
-		while j > 0 and answers.has(String(out[j]["tag"])):
-			j -= 1
-		out.remove_at(j)
-	return out
+		var drop := -1
+		var drop_rank := 99
+		for i in out.size():
+			var tag := String(out[i]["tag"])
+			if keep.has(tag):
+				continue
+			var rank: int = 0 if not wrong_lines.has(tag) else int(DROP_ORDER.get(String(out[i]["src"]), 5))
+			if rank <= drop_rank:
+				drop_rank = rank
+				drop = i
+		if drop < 0:
+			drop = out.size() - 1
+		out.remove_at(drop)
+	var shuffled: Array[Dictionary] = []
+	for k: int in shuffled_order(out.size()):
+		shuffled.append(out[k])
+	return shuffled
 
 
 func _decision(b: Control) -> void:
@@ -552,6 +744,8 @@ func _decision(b: Control) -> void:
 		var i: int = await b.call("choose_stamp", String(dec["prompt"]), CaseRules.DECISIONS.find(answer))
 		var d: StringName = CaseRules.DECISIONS[i]
 		var right := d == answer
+		if tries == 1:
+			Game.set_visit_flag("decision_first", String(d))
 		await b.call("slam", d, right)
 		if right:
 			_shot("stamp", 0.1)
@@ -564,6 +758,8 @@ func _decision(b: Control) -> void:
 	Game.set_visit_flag("decision_tries", tries)
 	var cp: Dictionary = case_data["clue_pick"]
 	var answers: Array = cp.get("answers", [])
+	var wrong_lines: Dictionary = cp.get("wrong_lines", {})
+	var right_lines: Dictionary = cp.get("right_lines", {})
 	var cards: Array = b.get("clues")
 	var best := 0
 	for k in cards.size():
@@ -574,14 +770,15 @@ func _decision(b: Control) -> void:
 	while true:
 		clue_tries += 1
 		var j: int = await b.call("choose_clue", String(cp["prompt"]), best)
-		var ok := answers.has(String((cards[j] as Dictionary)["tag"]))
+		var tag := String((cards[j] as Dictionary)["tag"])
+		var ok := answers.has(tag)
 		b.call("mark_card", j, ok)
 		if ok:
 			_shot("exhibit", 0.2)
-			await _say("Hoot", String(cp["right_line"]))
+			await _say("Hoot", String(right_lines.get(tag, cp["right_line"])))
 			break
 		slips += 1
-		await _say("Hoot", String(cp["wrong_line"]))
+		await _say("Hoot", String(wrong_lines.get(tag, cp["wrong_line"])))
 	Game.set_visit_flag("clue_tries", clue_tries)
 	Game.record_medal("decision", "gold" if slips == 0 else ("silver" if slips == 1 else "bronze"))
 	hud.call("complete_step", &"call")

@@ -4,7 +4,14 @@ extends RefCounted
 ## CONTRACTS.md §11). Static, no node. Keep case constants here, not in ClinicRules.
 ## Teaching defaults: Steve reviews every number. Case data lives in res://story/cases/<id>.json.
 
-## The three calls a case ends with, in the stamp tray's order.
+## The three calls a case ends with, in the stamp tray's order. Which one is right:
+##   fit    no red flag and no asymmetry, and a loss that hearing aids can help (+ counselling and
+##          hearing protection)
+##   refer  any red flag or asymmetry that is not an emergency: a doctor promptly, before any
+##          fitting (not same-day)
+##   today  sudden hearing loss (came on over SUDDEN_ONSET_MAX_H hours or less, within the last
+##          SUDDEN_REFER_TODAY_DAYS days) not explained by wax or the middle ear; it overrides refer.
+##          A sudden loss longer ago than that is an urgent refer.
 const DECISIONS: Array[StringName] = [&"fit", &"refer", &"today"]
 ## What each rubber stamp says (the stamp buttons' text starts with this).
 const DECISION_STAMPS: Dictionary[StringName, String] = {&"fit": "FIT", &"refer": "REFER", &"today": "DOCTOR TODAY"}
@@ -15,28 +22,37 @@ const DECISION_TITLES: Dictionary[StringName, String] = {
 	&"today": "See a doctor TODAY",
 }
 
-## Red flags that mean "a doctor first", paraphrased from the long-standing US list for hearing aid
-## dispensers. Since the 2022 OTC rule adults no longer need a medical evaluation to buy hearing aids,
-## but these stay good practice (and some state rules). Steve checks the wording.
+## Red flags that mean "a doctor first, preferably an ear specialist", paraphrased from the US FDA
+## prescription hearing aid labeling (21 CFR 801.422, since October 2022). The 2022 OTC rule removed
+## the old rule that adults get a medical evaluation or sign a waiver before buying; these stay
+## dispenser guidance and good practice. Under-18s still see a doctor first, and some states still
+## require referral. Steve checks the wording.
 const RED_FLAGS: Array[Dictionary] = [
-	{"id": "deformity", "text": "A visible deformity of the ear"},
-	{"id": "drainage", "text": "Drainage from the ear in the last 90 days"},
-	{"id": "sudden", "text": "Sudden or quickly worsening hearing loss in the last 90 days"},
-	{"id": "dizziness", "text": "Dizziness, sudden or ongoing"},
-	{"id": "one_sided", "text": "Sudden or recent hearing loss in one ear"},
-	{"id": "air_bone_gap", "text": "An air-bone gap of 15 dB or more at 500, 1000 and 2000 Hz"},
-	{"id": "wax", "text": "Lots of wax or something stuck in the canal"},
+	{"id": "deformity", "text": "A visible deformity of the ear, from birth or injury"},
+	{"id": "drainage", "text": "Fluid, pus or blood from the ear in the last 6 months"},
 	{"id": "pain", "text": "Ear pain or discomfort"},
+	{"id": "wax", "text": "A lot of wax, or something stuck in the canal"},
+	{"id": "dizziness", "text": "Dizziness, recent or long-standing"},
+	{"id": "sudden", "text": "Sudden, quickly worsening or fluctuating hearing loss in the last 6 months"},
+	{"id": "one_sided", "text": "Hearing loss or ringing in one ear only, or a clear difference between the ears"},
+	{"id": "air_bone_gap", "text": "An air-bone gap of 15 dB or more at 500, 1000 and 2000 Hz"},
 ]
 
-## Asymmetry: the ears differ by at least ASYMMETRY_DB at ASYMMETRY_RUN or more neighbouring test
-## frequencies. One common screening rule; clinics use several.
+## Asymmetry, the measurable test of the "difference between the ears" flag: the ears differ by at
+## least ASYMMETRY_DB at ASYMMETRY_RUN or more neighbouring test frequencies. One common screening
+## rule; clinics use several.
 const ASYMMETRY_DB := 15
 const ASYMMETRY_RUN := 2
 
-## Sudden loss: the case board's clock. Treatment tends to work best when it starts early, so the game
-## counts the hours since onset against this window. It is a teaching prop, not a deadline.
-const SUDDEN_CLOCK_H := 72
+## Sudden sensorineural hearing loss, by definition: 30 dB or more poorer at 3 or more neighbouring
+## frequencies, coming on over SUDDEN_ONSET_MAX_H hours or less. This is how fast it came on, NOT a
+## treatment deadline: treatment works best when it starts early, but doctors still treat for weeks,
+## so a patient who comes in late still goes the same day. The game's hours clock only counts up.
+const SUDDEN_ONSET_MAX_H := 72
+const SUDDEN_MIN_DB := 30
+const SUDDEN_MIN_FREQS := 3
+## A sudden loss that started within this many days goes to a doctor the same day.
+const SUDDEN_REFER_TODAY_DAYS := 30
 
 # ---------------------------------------------------------------- tympanometry
 
@@ -62,8 +78,10 @@ const TYMP_ADULT_ECV := Vector2(0.9, 2.0)
 ## The pressure sweep, positive to negative (daPa).
 const TYMP_SWEEP_FROM := 200
 const TYMP_SWEEP_TO := -400
-## Peak half-width (daPa) for drawing the curve.
-const TYMP_WIDTH: Dictionary[StringName, float] = {&"A": 70.0, &"C": 70.0, &"As": 55.0, &"Ad": 90.0, &"B": 300.0}
+## Peak half-width (daPa) for drawing the curve: the curve is at half height this far either side of
+## the peak, so the tympanometric width (full width at half height) is twice this. A: TW 75 (mid
+## normal for adults, about 50-115), C: TW 90, As: TW 80, Ad: TW 60 (a narrow skyscraper).
+const TYMP_WIDTH: Dictionary[StringName, float] = {&"A": 37.5, &"C": 45.0, &"As": 40.0, &"Ad": 30.0, &"B": 300.0}
 ## Peak admittance below this reads as flat (type B).
 const TYMP_FLAT_ML := 0.1
 ## Ear tip sizes for the seal.
@@ -78,7 +96,7 @@ static func tymp_admittance(tymp: Dictionary, pressure: float) -> float:
 	if kind == &"B":
 		# flat: a gentle tilt, no peak
 		return maxf(0.02, peak * 0.5 + (pressure - TYMP_SWEEP_TO) / float(TYMP_SWEEP_FROM - TYMP_SWEEP_TO) * 0.05)
-	var w: float = TYMP_WIDTH.get(kind, 70.0)
+	var w: float = TYMP_WIDTH.get(kind, 37.5)
 	var d := (pressure - float(tymp.get("peak_daPa", 0))) / w
 	return peak / (1.0 + d * d)
 
@@ -105,6 +123,17 @@ static func tymp_type_of(tymp: Dictionary) -> StringName:
 
 static func tymp_normal(tymp: Dictionary) -> bool:
 	return tymp_type_of(tymp) == &"A"
+
+
+## What a flat (type B) tympanogram means, read with the canal volume (mL): normal volume = fluid
+## behind the eardrum (&"fluid"); small = wax or the probe against the canal wall (&"blocked"); large
+## = a hole in the eardrum or an open ear tube (&"hole"). Compare with the other ear.
+static func tymp_b_reading(ecv_ml: float) -> StringName:
+	if ecv_ml < TYMP_ADULT_ECV.x:
+		return &"blocked"
+	if ecv_ml > TYMP_ADULT_ECV.y:
+		return &"hole"
+	return &"fluid"
 
 
 # ---------------------------------------------------------------- audiogram findings
@@ -154,9 +183,10 @@ static func biggest_gap(right: Dictionary, left: Dictionary) -> Dictionary:
 	return best
 
 
-## Hours since a sudden loss began: the case's onset plus the game time spent on the visit.
-static func hours_since_onset(onset_h: float, visit_seconds: float, hours_per_game_minute: float = 1.0) -> float:
-	return onset_h + visit_seconds / 60.0 * hours_per_game_minute
+## Hours since a sudden loss began: the case's onset plus the real (unscaled, unpaused) seconds the
+## visit has taken so far.
+static func hours_since_onset(onset_h: float, real_seconds: float) -> float:
+	return onset_h + maxf(0.0, real_seconds) / 3600.0
 
 
 static func decision_title(decision: StringName) -> String:

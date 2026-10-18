@@ -7,7 +7,7 @@ script = ExtResource("1_case")
 id = "rocco"
 display_name = "Rocco Rimshot"
 age = 52
-complaint = "Everybody at the pub mumbles. And my ears ring like a cymbal that never stops."
+complaint = "My bandmates' jokes have lost their punchlines. And my ears ring like a cymbal that never stops."
 thresholds_right = Dictionary[int, int]({
 250: 15,
 500: 15,
@@ -16,7 +16,7 @@ thresholds_right = Dictionary[int, int]({
 1500: 30,
 2000: 40,
 3000: 55,
-4000: 60,
+4000: 65,
 6000: 55,
 8000: 40
 })
@@ -28,7 +28,7 @@ thresholds_left = Dictionary[int, int]({
 1500: 35,
 2000: 45,
 3000: 60,
-4000: 65,
+4000: 70,
 6000: 60,
 8000: 45
 })

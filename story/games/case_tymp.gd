@@ -160,8 +160,9 @@ func _draw_device() -> void:
 		var y := _ml2y(ml)
 		c.draw_line(Vector2(plot.position.x, y), Vector2(plot.end.x, y), LCD_GRID, 1.0)
 		c.draw_string(fr, Vector2(SCREEN.position.x + 8, y + 4), "%.1f" % ml, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, LCD_TEXT)
-	c.draw_string(fr, Vector2(plot.end.x - 34, plot.end.y + 16), "daPa", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(LCD_TEXT, 0.7))
-	c.draw_string(fr, Vector2(SCREEN.position.x + 8, plot.position.y - 2), "mL", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(LCD_TEXT, 0.7))
+	# units in the plot's top corners, where no curve reaches
+	c.draw_string(fr, Vector2(plot.position.x + 6, plot.position.y + 14), "mL", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(LCD_TEXT, 0.7))
+	c.draw_string(fr, Vector2(plot.end.x - 60, plot.position.y + 14), "daPa", HORIZONTAL_ALIGNMENT_RIGHT, 54, 11, Color(LCD_TEXT, 0.7))
 	for ear: String in ["right", "left"]:
 		if _curves.has(ear):
 			_draw_curve(ear)

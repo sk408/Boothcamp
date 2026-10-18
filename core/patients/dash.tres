@@ -9,16 +9,16 @@ display_name = "Dash Delgado"
 age = 29
 complaint = "I woke up yesterday and my right ear was just... gone. Probably wax. Can you be quick?"
 thresholds_right = Dictionary[int, int]({
-250: 45,
-500: 50,
-750: 55,
+250: 40,
+500: 45,
+750: 50,
 1000: 55,
-1500: 60,
-2000: 60,
-3000: 60,
-4000: 60,
-6000: 65,
-8000: 65
+1500: 55,
+2000: 55,
+3000: 55,
+4000: 55,
+6000: 60,
+8000: 60
 })
 thresholds_left = Dictionary[int, int]({
 250: 10,

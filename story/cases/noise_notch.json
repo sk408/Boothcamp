@@ -8,34 +8,38 @@
 		"cardigan": "#2b2b3a", "pants": "#3f5d8a", "shirt": "#f4f4f4", "accent": "#e5383b", "shoes": "#1f1f1f",
 		"hair": "#3b2a20", "hair_style": "none", "mustache": true, "brows": true,
 		"glasses": "none", "walker": false, "prop": "",
-		"extras": ["headband", "drumsticks"],
+		"extras": ["spiky_hair", "headband", "band_tee", "drumsticks"],
 		"portrait_bg": "#ffd9c7", "name_color": "#c2410c", "headband": "#e5383b"
 	},
+	"voice": {"f0": 112.0, "wobble": 0.05, "roll": 0.74, "vowels": ["a", "o", "a", "u", "e", "a"]},
 	"intro": [
-		["Rocco", "Ba-dum-TSS! Rocco Rimshot, drummer of The Decibelles. Thirty years, every Friday night!"],
-		{"hoot": "wing_up"},
-		["Hoot", "Day 6, trainee! Welcome to the Case Files: find the clues, then make the call."],
+		["Rocco", "Ba-dum-TSS! Rocco Rimshot, drummer of The Decibelles. Thirty years behind the kit, not one earplug!"],
+		{"hoot": "gasp"},
+		["Hoot", "Thirty years of cymbals and no earplugs? My feathers just curled."],
 		{"react": "confused"},
-		["Rocco", "Everybody at the pub mumbles. And my ears ring like a cymbal that never stops."],
-		["Hoot", "Ringing ears and mumbling mates. Let's investigate! Questions first."]
+		["Rocco", "My bandmates' jokes have lost their punchlines. In noisy pubs I laugh at the wrong bits."],
+		["Rocco", "And my ears ring like a cymbal that never stops."],
+		["Hoot", "Ringing ears and lost punchlines. Let's investigate! Questions first."]
 	],
 	"always_clues": [
-		{"tag": "ringing", "text": "Ringing in both ears, high-pitched"}
+		{"tag": "noise_years", "text": "30 years of loud drumming, no earplugs"},
+		{"tag": "noise_trouble", "text": "Lost in noisy pubs"},
+		{"tag": "ringing", "text": "Constant high ringing, both ears"}
 	],
 	"history": [
 		{
 			"prompt": "Ask Rocco a question:",
 			"options": [
-				["How long have you drummed, and with earplugs?", 2, "Thirty years. Earplugs? Real drummers feel the music, man. In their SOUL.", "30 years of loud drums, no earplugs", "noise_years", "Thirty years of cymbals, no protection. File that one!"],
+				["Is it worse in quiet, or in noise?", 2, "Quiet chat's fine. Noisy pub, I laugh at the wrong bits.", "Fine in quiet, lost in noise", "noise_trouble", "Hearing but not understanding: the high pitches carry the consonants."],
 				["What's your favourite drum?", 0, "The cowbell. Criminally underrated.", "", ""],
-				["Is it both ears, or just one?", 2, "Both. The left's a smidge worse. That's my hi-hat side.", "Both ears, left a smidge worse (hi-hat side)", "both_ears"]
+				["Which ear is worse?", 1, "About the same. Maybe the left: that's my hi-hat side.", "Both ears, about the same", "both_ears"]
 			]
 		},
 		{
 			"prompt": "Next question:",
 			"options": [
-				["Any ear pain, drainage, dizziness, or sudden change?", 2, "Nope. No pain, no drips, no spinning. It just crept up over the years.", "No pain, drainage, dizziness or sudden change", "no_red_flags"],
-				["Where is it hardest to hear?", 1, "Noisy pubs. I hear people talking, I just can't make out the words.", "Hears voices but misses words in noise", "noise_trouble", "Hearing but not understanding: the high pitches carry the consonants."],
+				["Any ear pain, drainage, dizziness, or sudden change?", 2, "No pain, no gunk, no spinning. It crept up over the years.", "No pain, drainage, dizziness or sudden change", "no_red_flags"],
+				["When was your last loud gig?", 1, "Saturday. Nothing loud since. My neighbours are thrilled.", "No loud sound for 4 days", "rested", "Good. Right after loud sound, hearing can dip for a day or two."],
 				["Can you do a drum solo for me?", 0, "*drums on the desk* Ba-da-ba-da-ba-da TSSSS! ...What was the question?", "", ""]
 			]
 		}
@@ -43,20 +47,20 @@
 	"joke_line": "Groovy, but not a clue. Ask about his hearing!",
 	"red_flags": {
 		"tag": "no_red_flags",
-		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or one-sided change.",
-		"answer": "None of those. It just crept up, year after year, gig after gig.",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
+		"answer": "None of those. It crept up, year after year, gig after gig.",
 		"clue": "No pain, drainage, dizziness or sudden change",
-		"card": "Pain, drainage, dizziness, sudden change: NONE.\nBoth ears alike: no red flags so far.",
+		"card": "Pain, drainage, dizziness, sudden change: NONE.",
 		"card_kind": "clue"
 	},
 	"after_history": [
-		["Hoot", "Both ears, crept up slowly, no red flags so far. Let's look inside!"]
+		["Hoot", "Crept up slowly, no red flags so far. Let's look inside!"]
 	],
 	"otoscopy": {
 		"ear": "right",
-		"caption": "Rocco's RIGHT ear: clear canal, shiny eardrum.",
+		"caption": "Rocco's RIGHT ear: a roomy canal, shiny eardrum.",
 		"lines": [
-			["Hoot", "Clear canals, healthy eardrums. No drumsticks stuck in there either."],
+			["Hoot", "Roomy canals, healthy eardrums. No drumsticks stuck in there either."],
 			["Rocco", "You'd be surprised what ends up in a drummer's ear."]
 		],
 		"clue": "Canals clear, eardrums normal",
@@ -64,12 +68,13 @@
 	},
 	"tymp": {
 		"tip": "large",
-		"right": {"type": "A", "peak_daPa": -5, "peak_ml": 0.9, "ecv_ml": 1.5},
-		"left": {"type": "A", "peak_daPa": -15, "peak_ml": 0.8, "ecv_ml": 1.4},
-		"clue": "Tymp: type A both ears (middle ears move fine)",
+		"canal": "roomy",
+		"right": {"type": "A", "peak_daPa": -15, "peak_ml": 0.9, "ecv_ml": 1.5},
+		"left": {"type": "A", "peak_daPa": -10, "peak_ml": 0.8, "ecv_ml": 1.6},
+		"clue": "Tymp: type A both ears (no fluid, no blockage)",
 		"tag": "tymp_a",
 		"after": [
-			["Hoot", "Type A both sides: the middle ears move fine. So the trouble is deeper in."]
+			["Hoot", "Type A both sides: no fluid, no blockage. The bone test will tell us if it's deeper."]
 		]
 	},
 	"instructions": [
@@ -77,23 +82,27 @@
 		["Rocco", "Beeps yes, ringing no. Got it, boss."]
 	],
 	"audiometry": [
-		{"ear": "right", "test": "ac", "hoot_turn_after": 4, "intro": "Right ear's yours: 1k, 2k, 4k, 8k. Watch what happens between 4k and 8k!"},
+		{"ear": "right", "test": "ac", "hoot_turn_after": 6, "intro": "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"},
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed. Same pattern?"},
-		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: is it the inner ear?",
-			"before": [["Hoot", "Now the bone buzzer: is the trouble in the middle ear or the inner ear?"]]}
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
+			"before": [["Hoot", "Now the bone buzzer, on his right: is it the middle ear, or deeper?"]]}
 	],
 	"after_audiometry": [
-		["Hoot", "Bone matches air: no gap. The trouble is in the inner ear itself."]
+		["Hoot", "Unmasked bone matches both ears' air: no gap on either side."]
 	],
 	"reveal": {
 		"pattern": "notch",
+		"burst": "cymbal",
 		"ear": "both",
 		"freq": 4000,
 		"title": "NOISE NOTCH",
+		"ask": [
+			["Hoot", "Here's Rocco's chart, trainee. What shape do you see?"]
+		],
 		"lines": [
-			["Hoot", "Dip at 4k, better again at 8k: the noise notch. Loud sound did that."],
+			["Hoot", "Dip at 4k, back up at 8k: a noise notch. It points to years of loud sound."],
 			["Rocco", "So my drums wrote their name in my ears?"],
-			["Hoot", "Pretty much. Noise damage is permanent, but you can stop it getting worse."]
+			["Hoot", "Pretty much. The damage so far is permanent. More damage is preventable."]
 		]
 	},
 	"evidence": {
@@ -101,34 +110,51 @@
 		"options": ["A notch: a dip at 4k that recovers at 8k.", "A ski slope: worse and worse up to 8k.", "Rising: worse in the low pitches."],
 		"answer": 0,
 		"wrong": ["", "Look at 8k: it climbs back up. A ski slope keeps going down.", "His low pitches are fine. Look at the right side of the chart."],
-		"right": "A noise notch! It usually sits between 3 and 6k, deepest near 4k."
+		"right": "Noise notches usually sit between 3k and 6k, deepest near 4k."
 	},
 	"findings": [
 		{"tag": "notch", "text": "Dip at 4k, better at 8k (noise notch)"},
-		{"tag": "symmetric", "text": "Both ears match"},
-		{"tag": "snhl", "text": "Bone matches air: inner ear"}
+		{"tag": "symmetric", "text": "Both ears match (within 5 dB)", "when": "symmetric"},
+		{"tag": "snhl", "text": "Bone matches air: no gap"}
 	],
 	"decision": {
 		"prompt": "Make the call for Rocco:",
 		"answer": "fit",
 		"lines": {
-			"fit": "Both ears match, no red flags: hearing aids help. And earplugs at every gig!",
-			"refer": "No red flags: both ears match, no dizziness, no pain, nothing sudden. He can be fitted.",
-			"today": "Nothing sudden here: thirty years of cymbals, slowly. No emergency today."
+			"fit": "No red flags, and he misses words in noisy pubs: hearing aids help. Earplugs every gig!",
+			"refer": "Careful is good! But no red flags: ears match, no pain, no spins, nothing sudden.",
+			"today": "Nothing sudden: it crept up over thirty years of drumming. Not an emergency."
 		}
 	},
 	"clue_pick": {
 		"prompt": "Present the evidence: why is it safe to fit Rocco today?",
-		"answers": ["no_red_flags", "symmetric"],
+		"answers": ["no_red_flags", "symmetric", "both_ears"],
 		"wrong_line": "True, but it doesn't prove he's safe to fit. Look for the red-flag check!",
-		"right_line": "Exactly! No red flags, ears that match: fitting is the right call."
+		"wrong_lines": {
+			"noise_years": "That's why he has a loss, not why it's safe to fit. Find the red-flag check!",
+			"noise_trouble": "That's why he WANTS hearing aids. What shows it's safe to fit them?",
+			"notch": "That's the pattern, not the safety check. Find the red-flag check!",
+			"ear_clear": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
+			"tymp_a": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?",
+			"snhl": "True, the exam looks clean. Which clue clears pain, dizziness and sudden change?"
+		},
+		"right_line": "Exactly! Nothing on the red-flag list, and ears that match: fitting is the right call."
 	},
 	"payoff": [
-		["Hoot", "Hearing aids tuned for the high pitches, plus musicians' earplugs for every gig."],
+		["Hoot", "Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too."],
 		{"do": "hearing_aids"},
 		{"react": "cheer"},
 		["Rocco", "Whoa. I can hear the hi-hat AND my bandmates' terrible jokes!"],
-		["Hoot", "Noise damage is permanent but preventable. Earplugs in, every gig. Rock on!"],
+		["Hoot", "Now protect what's left: earplugs at every gig AND every rehearsal."],
+		{"choose": {
+			"prompt": "Which earplugs for a drummer?",
+			"options": [
+				["Cotton wool", 0, "Cotton wool? It barely blocks a thing, and it just fell in the snare."],
+				["Foam earplugs", 1, "Foam works, but it muffles the highs. A drummer wants it even."],
+				["Musicians' earplugs", 2, "Flat, even quieting: the cymbals still sound like cymbals. Rock on, safely!"]
+			]
+		}},
+		["Hoot", "On stage: hearing aids out, earplugs in. And a hearing check every year."],
 		["Rocco", "Earplugs in. Ba-dum-TSS!"]
 	],
 	"paper": {
@@ -140,11 +166,11 @@
 			"Do-over": "ROCCO BACK FOR AN ENCORE; BRINGS DRUMSTICKS"
 		},
 		"subheads": {
-			"S": "A textbook notch at 4k and a perfect call. The Decibelles buy earplugs in bulk.",
-			"A": "No red flags, ears that match: fit, then protect what's left.",
+			"S": "A textbook notch at 4k and a perfect call. The Decibelles buy musicians' earplugs in bulk.",
+			"A": "No red flags and a real need: fit, then protect what's left.",
 			"B": "The notch showed up; a few stamps wandered. Hoot recommends practice.",
 			"C": "Look for the dip at 4k and the comeback at 8k.",
-			"Do-over": "Noise notches hide between 3 and 6k. Rocco will be back next Friday."
+			"Do-over": "Noise notches hide between 3k and 6k. Rocco will be back next Friday."
 		}
 	}
 }

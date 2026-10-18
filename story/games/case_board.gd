@@ -1,7 +1,8 @@
 extends Control
-## CaseBoard (cases): the case file. First the audiogram stamps in and its pattern comes alive (a
-## firework out of a noise notch, a wave over a low-pitch loss with last spring's line, an alarm clock
-## by a one-sided loss, a cookie bite out of the middle pitches). Then the file opens: the chart on the
+## CaseBoard (cases): the case file. First the audiogram stamps in; once the player has named the
+## shape, its pattern comes alive (a crash cymbal, or a firework, out of a noise notch; a wave over a
+## low-pitch loss; an alarm clock by a one-sided loss; a cookie bite out of the middle pitches), with
+## any earlier chart on file ("previous") dashed behind it. Then the file opens: the chart on the
 ## left, the clue cards on the right, and three rubber stamps underneath: FIT / REFER / DOCTOR TODAY.
 ## The player stamps the call, then presents the clue card that proves it (docs/CASES.md §3, §6, §7).
 ## The stamps and the cards are ordinary `choice` beats (same info as DialogueBox.choose), and their
@@ -176,8 +177,13 @@ func show_pattern() -> void:
 	match _pattern:
 		"notch":
 			Sfx.play(&"whoosh", 0.7, -6.0)
+			var cymbal := String(rv.get("burst", "")) == "cymbal"
 			get_tree().create_timer(0.45, false).timeout.connect(func() -> void:
-				Sfx.play(&"fanfare", 1.2, -4.0)
+				if cymbal:
+					Sfx.play(&"thunk", 0.8, -4.0)
+					Sfx.play(&"sparkle", 0.6, -4.0)
+				else:
+					Sfx.play(&"fanfare", 1.2, -4.0)
 				Events.screen_shake.emit(0.35, 0.2))
 		"rising":
 			Sfx.play(&"whoosh", 0.55, -4.0)
@@ -375,6 +381,9 @@ func _move_card(sc: float, visible_at: Vector2) -> void:
 func _set_prompt(prompt: String) -> void:
 	_banner_label.text = prompt
 	_banner.reset_size()
+	# reset_size grows to the right only: centre it again, clear of the pause button
+	_banner.offset_left = -_banner.size.x / 2.0
+	_banner.offset_right = _banner.size.x / 2.0
 	Juice.pop(_banner, 1.06, 0.2)
 
 
@@ -444,7 +453,7 @@ func _build_tray() -> void:
 				_pick(i))
 		b.mouse_entered.connect(b.queue_redraw)
 		b.mouse_exited.connect(b.queue_redraw)
-		var big := UiKit.label(CaseRules.DECISION_STAMPS[d], 34 if i < 2 else 30, STAMP_COLORS[d], 700)
+		var big := UiKit.label(CaseRules.DECISION_STAMPS[d], 34 if i < 2 else 26, STAMP_COLORS[d], 700)
 		big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		big.position = Vector2(0, 40)
 		big.size = Vector2(STAMP_SIZE.x, 40)
@@ -587,17 +596,25 @@ func _draw_fx() -> void:
 		_draw_slam()
 
 
-## A firework bursts out of the dip; an arrow shows the climb back up at 8k.
+## A firework bursts out of the dip (or, with "burst": "cymbal", a crash cymbal drops into it and
+## leaves a dent); an arrow shows the climb back up at 8k.
 func _draw_notch() -> void:
 	var s := _sc()
 	var f := int((case_data.get("reveal", {}) as Dictionary).get("freq", 4000))
 	var f_font := UiKit.font(700)
+	var cymbal := String((case_data.get("reveal", {}) as Dictionary).get("burst", "")) == "cymbal"
+	var bang := "TSSSH!" if cymbal else "KA-BOOM!"
 	for ear: String in ["right", "left"]:
 		var air := _air(ear)
 		if not air.has(f):
 			continue
 		var p := _pt(f, float(air[f]))
 		var col := Palette.ear_color(ear)
+		if cymbal:
+			_fx.draw_arc(p, 18.0 * s, 0, TAU, 24, Color(col, 0.8), 3.0, true)
+			if ear == _focus_ear():
+				_draw_cymbal(p, s)
+			continue
 		# the burst repeats every 2.4 s, the two ears a little out of step
 		var lap := fmod(_pattern_t + (0.0 if ear == "right" else 0.35), 2.4)
 		var k := clampf(lap / 0.9, 0.0, 1.0)
@@ -627,9 +644,89 @@ func _draw_notch() -> void:
 			var pop := 1.0 + 0.6 * maxf(0.0, 1.0 - (_pattern_t - 0.5) / 0.3)
 			var kp := _pt(f, float(air2[f])) + Vector2(-110, -64) * s
 			_fx.draw_set_transform(kp, -0.12, Vector2.ONE * pop * s)
-			_fx.draw_string_outline(f_font, Vector2.ZERO, "KA-BOOM!", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, 9, Palette.INK)
-			_fx.draw_string(f_font, Vector2.ZERO, "KA-BOOM!", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.SUNNY)
+			_fx.draw_string_outline(f_font, Vector2.ZERO, bang, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, 9, Palette.INK)
+			_fx.draw_string(f_font, Vector2.ZERO, bang, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.SUNNY)
 			_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## A crash cymbal drops onto a chart point, lands with a wobble and shimmers.
+func _draw_cymbal(p: Vector2, s: float) -> void:
+	var k := clampf(_pattern_t / 0.45, 0.0, 1.0)
+	var since := maxf(0.0, _pattern_t - 0.45)
+	var at := p + Vector2(0, -18.0 * s - (1.0 - k) * (1.0 - k) * 170.0 * s)
+	var wob := sin(since * 26.0) * exp(-since * 2.5) * 0.3 if k >= 1.0 else -0.15
+	_fx.draw_set_transform(at, wob, Vector2.ONE * s)
+	var rim := PackedVector2Array()
+	for i in 33:
+		var a := TAU * i / 32.0
+		rim.append(Vector2(cos(a) * 52.0, sin(a) * 13.0))
+	var shadow := PackedVector2Array()
+	for q: Vector2 in rim:
+		shadow.append(q + Vector2(0, 5))
+	_fx.draw_colored_polygon(shadow, Color(Palette.INK, 0.25))
+	_fx.draw_colored_polygon(rim, Color("#e9b949"))
+	_fx.draw_polyline(rim, Palette.INK, 3.0, true)
+	for rr: float in [0.72, 0.45]:
+		var g := PackedVector2Array()
+		for q: Vector2 in rim:
+			g.append(q * rr)
+		_fx.draw_polyline(g, Color("#b8860b", 0.7), 1.5, true)
+	_fx.draw_circle(Vector2(0, -3), 7.0, Palette.INK)
+	_fx.draw_circle(Vector2(0, -3), 5.0, Color("#f6d27a"))
+	_fx.draw_line(Vector2(0, -8), Vector2(0, -60), Palette.INK_SOFT, 3.0, true)
+	if k >= 1.0 and since < 1.6:
+		for side: float in [-1.0, 1.0]:
+			for j in 2:
+				var x := (62.0 + 10.0 * j) * side
+				_fx.draw_line(Vector2(x, -8), Vector2(x + 6.0 * side, 8), Color(Palette.SUNNY.darkened(0.2), 1.0 - since / 1.6), 3.0, true)
+	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## An earlier chart on file (the case's reveal "previous"), dashed in the ear's colour behind
+## today's, with its label; arrows show the drop at drop_freqs.
+func _draw_previous(drop_freqs: Array[int]) -> void:
+	var s := _sc()
+	var rv: Dictionary = case_data.get("reveal", {})
+	var prev: Dictionary = rv.get("previous", {})
+	if prev.is_empty():
+		return
+	var ear := String(prev.get("ear", rv.get("ear", "right")))
+	if ear == "both":
+		ear = "right"
+	var col := Palette.ear_color(ear)
+	var air := _air(ear)
+	var f_font := UiKit.font(700)
+	var pth := CaseData.thresholds(prev.get("thresholds", {}))
+	var keys: Array = pth.keys()
+	keys.sort()
+	var reveal_k := clampf(_pattern_t / 1.2, 0.0, 1.0)
+	var last_x := INF
+	for i in keys.size() - 1:
+		var p0 := _pt(int(keys[i]), float(pth[keys[i]]))
+		var p1 := _pt(int(keys[i + 1]), float(pth[keys[i + 1]]))
+		if float(i) / maxf(1.0, keys.size() - 1) > reveal_k:
+			break
+		var dl := p0.distance_to(p1)
+		var n := maxi(1, int(dl / (12.0 * s)))
+		for j in n:
+			if j % 2 == 0:
+				_fx.draw_line(p0.lerp(p1, float(j) / n), p0.lerp(p1, float(j + 1) / n), Color(col, 0.55), 3.0 * s, true)
+		last_x = p1.x
+	for fk: Variant in keys:
+		var pp := _pt(int(fk), float(pth[fk]))
+		if pp.x <= last_x + 1.0:
+			_fx.draw_circle(pp, 4.0 * s, Color(col, 0.5))
+	if keys.size() > 0 and reveal_k >= 1.0:
+		var lp := _pt(int(keys[0]), float(pth[keys[0]])) + Vector2(-8, -18) * s
+		_fx.draw_string(f_font, lp, String(prev.get("label", "BEFORE")), HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s + 0.5), Color(col, 0.8))
+		for fq: int in drop_freqs:
+			if air.has(fq) and pth.has(fq):
+				var top := _pt(fq, float(pth[fq])) + Vector2(10, 6) * s
+				var bot := _pt(fq, float(air[fq])) + Vector2(10, -14) * s
+				if bot.y - top.y > 10.0:
+					_fx.draw_line(top, bot, Palette.CORAL, 3.0 * s, true)
+					UiDraw.arrow(_fx, bot, 11.0 * s, Vector2.DOWN, Palette.CORAL)
+					_fx.draw_string(f_font, (top + bot) * 0.5 + Vector2(8, 5) * s, "-%d" % (int(air[fq]) - int(pth[fq])), HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s + 0.5), Palette.CORAL)
 
 
 ## A wave rolls over the low pitches; last spring's line sits above today's, dashed.
@@ -637,43 +734,8 @@ func _draw_rising() -> void:
 	var s := _sc()
 	var rv: Dictionary = case_data.get("reveal", {})
 	var ear := String(rv.get("ear", "left"))
-	var col := Palette.ear_color(ear)
 	var air := _air(ear)
-	var prev: Dictionary = rv.get("previous", {})
-	var f_font := UiKit.font(700)
-	if not prev.is_empty():
-		var pth := CaseData.thresholds(prev.get("thresholds", {}))
-		var keys: Array = pth.keys()
-		keys.sort()
-		var reveal_k := clampf(_pattern_t / 1.2, 0.0, 1.0)
-		var last_x := INF
-		for i in keys.size() - 1:
-			var p0 := _pt(int(keys[i]), float(pth[keys[i]]))
-			var p1 := _pt(int(keys[i + 1]), float(pth[keys[i + 1]]))
-			if float(i) / maxf(1.0, keys.size() - 1) > reveal_k:
-				break
-			var dl := p0.distance_to(p1)
-			var n := maxi(1, int(dl / (12.0 * s)))
-			for j in n:
-				if j % 2 == 0:
-					_fx.draw_line(p0.lerp(p1, float(j) / n), p0.lerp(p1, float(j + 1) / n), Color(col, 0.55), 3.0 * s, true)
-			last_x = p1.x
-		for fk: Variant in keys:
-			var pp := _pt(int(fk), float(pth[fk]))
-			if pp.x <= last_x + 1.0:
-				_fx.draw_circle(pp, 4.0 * s, Color(col, 0.5))
-		if keys.size() > 0 and reveal_k >= 1.0:
-			var lp := _pt(int(keys[0]), float(pth[keys[0]])) + Vector2(-8, -18) * s
-			_fx.draw_string(f_font, lp, String(prev.get("label", "BEFORE")), HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s + 0.5), Color(col, 0.8))
-			# the drop at 250 and 500
-			for fq: int in [250, 500]:
-				if air.has(fq) and pth.has(fq):
-					var top := _pt(fq, float(pth[fq])) + Vector2(10, 6) * s
-					var bot := _pt(fq, float(air[fq])) + Vector2(10, -14) * s
-					if bot.y - top.y > 10.0:
-						_fx.draw_line(top, bot, Palette.CORAL, 3.0 * s, true)
-						UiDraw.arrow(_fx, bot, 11.0 * s, Vector2.DOWN, Palette.CORAL)
-						_fx.draw_string(f_font, (top + bot) * 0.5 + Vector2(8, 5) * s, "-%d" % (int(air[fq]) - int(pth[fq])), HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s + 0.5), Palette.CORAL)
+	_draw_previous([250, 500] as Array[int])
 	# the wave: a crest rolls in from the left over 250-1k, then bobs
 	if air.has(500):
 		var roll := clampf(_pattern_t / 1.0, 0.0, 1.0)
@@ -733,9 +795,9 @@ func _draw_flat_one() -> void:
 	_fx.draw_line(Vector2.ZERO, Vector2(cos(hours - PI / 2), sin(hours - PI / 2)) * 10.0, Palette.INK, 3.0, true)
 	_fx.draw_line(Vector2.ZERO, Vector2(cos(hours * 12.0 - PI / 2), sin(hours * 12.0 - PI / 2)) * 15.0, Palette.INK, 2.0, true)
 	if ring:
-		for side: float in [-1.0, 1.0]:
-			for j in 2:
-				_fx.draw_arc(Vector2.ZERO, 38.0 + 8.0 * j, -0.5 + (PI if side < 0 else 0.0), 0.5 + (PI if side < 0 else 0.0), 8, Palette.CORAL, 3.0, true)
+		# the ring only comes out of one side: he woke up to it in one ear
+		for j in 2:
+			_fx.draw_arc(Vector2.ZERO, 38.0 + 8.0 * j, PI - 0.5, PI + 0.5, 8, Palette.CORAL, 3.0, true)
 		_fx.draw_string_outline(UiKit.font(700), Vector2(-30, -48), "RING!", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, 7, Palette.INK)
 		_fx.draw_string(UiKit.font(700), Vector2(-30, -48), "RING!", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.SUNNY)
 	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -744,6 +806,7 @@ func _draw_flat_one() -> void:
 ## A giant cookie takes a bite out of the middle pitches; crumbs fall into the dip.
 func _draw_cookie() -> void:
 	var s := _sc()
+	_draw_previous([] as Array[int])
 	var air := _air("right")
 	var air_l := _air("left")
 	var dip := maxf(float(air.get(1500, air.get(2000, 50))), float(air_l.get(1500, air_l.get(2000, 50))))

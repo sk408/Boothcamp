@@ -6,7 +6,10 @@ extends RefCounted
 ##   var spec := CaseData.bean_spec(c)                # the clinic's patient_spec (colours, hair, extras)
 ##   var ids := CaseData.chapter_case_ids()           # every case Game.CHAPTERS registers
 ## A dialogue line in a case file is ["Speaker", "text"] or one action:
-##   {"react": kind}  {"hoot": emote}  {"do": "hearing_aids" | "letter" | "phone"}
+##   {"react": kind}  {"hoot": emote}  {"do": "hearing_aids" | "letter" | "boat" | "phone"}
+##   {"choose": {"prompt", "options": [[text, points, Hoot's line]]}}   (repeats until the best pick)
+## A case may name extra speakers in "voices" (Ginger's puppet, Chip): {name: {portrait, portrait_bg,
+## name_color, voice}}. History options may end with that speaker's name to have them answer.
 
 const CASES_DIR := "res://story/cases/"
 const REQUIRED_KEYS: PackedStringArray = [
@@ -14,8 +17,12 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"instructions", "audiometry", "reveal", "evidence", "findings", "decision", "clue_pick", "payoff", "paper",
 ]
 const PATTERNS: PackedStringArray = ["notch", "rising", "flat_one", "cookie", "slope"]
-const ACTIONS: PackedStringArray = ["react", "hoot", "do"]
-const DOS: PackedStringArray = ["hearing_aids", "letter", "phone"]
+const BURSTS: PackedStringArray = ["", "firework", "cymbal"]
+const ACTIONS: PackedStringArray = ["react", "hoot", "do", "choose"]
+const DOS: PackedStringArray = ["hearing_aids", "letter", "boat", "phone"]
+const WHENS: PackedStringArray = ["", "symmetric", "asymmetric"]
+## Hoot's coaching lines stay short (house style).
+const HOOT_MAX_WORDS := 18
 const LOOK_NAMES: PackedStringArray = ["face", "hair_style", "glasses", "prop"]
 const GRADES: PackedStringArray = ["S", "A", "B", "C", "Do-over"]
 
@@ -53,15 +60,89 @@ static func case_for_chapter(chapter_id: String) -> String:
 	return String(Game.chapter(chapter_id).get("case", ""))
 
 
-## The case whose patient speaks as `speaker` ({} if none). For portraits.
+## The case whose patient (or one of its "voices") speaks as `speaker` ({} if none). For portraits.
 static func case_for_speaker(speaker: String) -> Dictionary:
 	if speaker == "":
 		return {}
 	for cid: String in chapter_case_ids():
 		var c := load_case(cid)
-		if String(c.get("speaker", "")) == speaker:
+		if String(c.get("speaker", "")) == speaker or (c.get("voices", {}) as Dictionary).has(speaker):
 			return c
 	return {}
+
+
+## The portrait look for a speaker: the patient's "look", or a voice's own entry ({} if none).
+static func look_for_speaker(speaker: String) -> Dictionary:
+	var c := case_for_speaker(speaker)
+	if c.is_empty():
+		return {}
+	var voices: Dictionary = c.get("voices", {})
+	if voices.has(speaker):
+		return voices[speaker]
+	return c.get("look", {})
+
+
+## A patient's true air thresholds for one ear (freq -> dB), for when the chart has gaps.
+static func truth(patient: PatientProfile, ear: String) -> Dictionary:
+	var out := {}
+	if patient == null:
+		return out
+	var t := patient.get_thresholds(ear)
+	for f: int in t:
+		out[f] = int(t[f])
+	return out
+
+
+## Every line of Hoot's in a case file (for the word-count test), as ["where", "text"].
+static func hoot_lines(c: Dictionary) -> Array:
+	var out: Array = []
+	var scripts := {}
+	for key: String in ["intro", "after_history", "instructions", "after_audiometry", "payoff"]:
+		scripts[key] = c.get(key, [])
+	scripts["otoscopy"] = (c.get("otoscopy", {}) as Dictionary).get("lines", [])
+	scripts["tymp.after"] = (c.get("tymp", {}) as Dictionary).get("after", [])
+	scripts["reveal.ask"] = (c.get("reveal", {}) as Dictionary).get("ask", [])
+	scripts["reveal.lines"] = (c.get("reveal", {}) as Dictionary).get("lines", [])
+	for key: String in scripts:
+		for e: Variant in scripts[key]:
+			if is_line(e) and String((e as Array)[0]) == "Hoot":
+				out.append([key, String((e as Array)[1])])
+			elif e is Dictionary and (e as Dictionary).has("choose"):
+				for o: Variant in ((e as Dictionary)["choose"] as Dictionary).get("options", []):
+					out.append([key + ".choose", String((o as Array)[2]) if (o as Array).size() > 2 else ""])
+	for p: Variant in c.get("audiometry", []):
+		var pd: Dictionary = p
+		if pd.has("intro"):
+			out.append(["audiometry.intro", String(pd["intro"])])
+		for e: Variant in pd.get("before", []):
+			if is_line(e) and String((e as Array)[0]) == "Hoot":
+				out.append(["audiometry.before", String((e as Array)[1])])
+	for rd: Variant in c.get("history", []):
+		for o: Variant in (rd as Dictionary).get("options", []):
+			var a: Array = o
+			if a.size() > 5 and String(a[5]) != "":
+				out.append(["history", String(a[5])])
+	for key: String in ["joke_line"]:
+		if c.has(key):
+			out.append([key, String(c[key])])
+	out.append(["red_flags.ask_line", String((c.get("red_flags", {}) as Dictionary).get("ask_line", ""))])
+	var quiz: Variant = (c.get("tymp", {}) as Dictionary).get("quiz", null)
+	if quiz is Dictionary:
+		for o: Variant in (quiz as Dictionary).get("options", []):
+			out.append(["tymp.quiz", String((o as Array)[2]) if (o as Array).size() > 2 else ""])
+	var ev: Dictionary = c.get("evidence", {})
+	for w: Variant in ev.get("wrong", []):
+		out.append(["evidence.wrong", String(w)])
+	out.append(["evidence.right", String(ev.get("right", ""))])
+	for d: Variant in (c.get("decision", {}) as Dictionary).get("lines", {}).values():
+		out.append(["decision", String(d)])
+	var cp: Dictionary = c.get("clue_pick", {})
+	for key: String in ["wrong_line", "right_line"]:
+		out.append(["clue_pick." + key, String(cp.get(key, ""))])
+	for key: String in ["wrong_lines", "right_lines"]:
+		for v: Variant in (cp.get(key, {}) as Dictionary).values():
+			out.append(["clue_pick." + key, String(v)])
+	return out.filter(func(x: Array) -> bool: return String(x[1]) != "")
 
 
 ## The clinic's patient_spec from a case's "look": colours become Color, names become StringName.
@@ -105,6 +186,9 @@ static func validate(c: Dictionary) -> PackedStringArray:
 		out.append("no patient " + pid)
 	for key: String in ["intro", "instructions", "payoff"]:
 		out.append_array(_check_script(c[key], key))
+	var speakers := {String(c["speaker"]): true, "Hoot": true}
+	for v: String in (c.get("voices", {}) as Dictionary):
+		speakers[v] = true
 	for key: String in ["after_history", "after_audiometry"]:
 		if c.has(key):
 			out.append_array(_check_script(c[key], key))
@@ -124,18 +208,33 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			if a.size() < 5:
 				out.append("history option needs [text, points, reply, clue, tag]: %s" % str(a))
 				continue
+			if a.size() > 6 and String(a[6]) != "" and not speakers.has(String(a[6])):
+				out.append("history option answered by unknown speaker %s" % a[6])
 			if String(a[4]) == String(c["red_flags"].get("tag", "")):
 				asked_red_flags = true
 	if not asked_red_flags:
 		out.append("no history option asks the red-flag question (tag %s)" % c["red_flags"].get("tag", ""))
 	tags[String(c["red_flags"].get("tag", ""))] = true
+	for ex: Variant in c["red_flags"].get("extra_clues", []):
+		tags[String((ex as Dictionary).get("tag", ""))] = true
 	tags[String(c["otoscopy"].get("tag", ""))] = true
 	tags[String(c["tymp"].get("tag", ""))] = true
 	for f: Variant in c["findings"]:
-		tags[String((f as Dictionary).get("tag", ""))] = true
+		var fd: Dictionary = f
+		if not WHENS.has(String(fd.get("when", ""))):
+			out.append("finding %s: when must be symmetric or asymmetric" % fd.get("tag", ""))
+		elif String(fd.get("when", "")) == "":
+			tags[String(fd.get("tag", ""))] = true
 	var tymp: Dictionary = c["tymp"]
 	if not CaseRules.TIP_SIZES.has(StringName(String(tymp.get("tip", "")))):
 		out.append("tymp tip must be small, medium or large")
+	if tymp.get("quiz", null) is Dictionary:
+		var rights := 0
+		for o: Variant in (tymp["quiz"] as Dictionary).get("options", []):
+			if (o as Array).size() >= 2 and bool((o as Array)[1]):
+				rights += 1
+		if rights != 1:
+			out.append("tymp quiz needs exactly one right option")
 	for ear: String in ["right", "left"]:
 		var t: Dictionary = tymp.get(ear, {})
 		if not CaseRules.TYMP_TYPES.has(StringName(String(t.get("type", "")))):
@@ -157,6 +256,8 @@ static func validate(c: Dictionary) -> PackedStringArray:
 	var rv: Dictionary = c["reveal"]
 	if not PATTERNS.has(String(rv.get("pattern", ""))):
 		out.append("reveal pattern must be one of " + ", ".join(PATTERNS))
+	if not BURSTS.has(String(rv.get("burst", ""))):
+		out.append("reveal burst must be firework or cymbal")
 	var ev: Dictionary = c["evidence"]
 	if int(ev.get("answer", -1)) < 0 or int(ev.get("answer", -1)) >= (ev.get("options", []) as Array).size():
 		out.append("evidence answer out of range")
@@ -194,6 +295,13 @@ static func _check_script(lines: Variant, where: String) -> PackedStringArray:
 					ok = true
 					if k == "do" and not DOS.has(String(d[k])):
 						out.append("%s: unknown do %s" % [where, d[k]])
+					if k == "choose":
+						var opts: Array = (d[k] as Dictionary).get("options", []) if d[k] is Dictionary else []
+						if opts.size() < 2:
+							out.append("%s: a choose needs 2+ options" % where)
+						for o: Variant in opts:
+							if not o is Array or (o as Array).size() < 3:
+								out.append("%s: choose option needs [text, points, line]" % where)
 			if ok:
 				continue
 		out.append("%s: bad entry %s" % [where, str(e)])

@@ -11,14 +11,15 @@
 		"extras": ["cap", "pizza_box"],
 		"portrait_bg": "#ffe0d6", "name_color": "#c0392b", "cap": "#e5383b"
 	},
+	"voice": {"f0": 150.0, "wobble": 0.09, "roll": 0.66, "vowels": ["a", "e", "i", "a", "o", "e"]},
 	"sudden_clock": {"onset_h": 30},
 	"intro": [
-		["Dash", "Dash Delgado, Speedy Slice Pizza! Thirty minutes or it's free. So, um, can we do this in twenty?"],
+		["Dash", "Dash Delgado: owner, chef AND only driver of Speedy Slice! Hot or it's free. Can we do this in twenty?"],
 		{"hoot": "wing_up"},
-		["Hoot", "Day 8, trainee: the Case Files. A young man in a very big hurry..."],
+		["Hoot", "A pizza boss in a hurry! We'll be quick AND careful, Dash."],
 		{"react": "confused"},
 		["Dash", "I woke up yesterday and my right ear was just... gone. Probably wax. Can you be quick?"],
-		{"hoot": "facepalm"},
+		{"hoot": "gasp"},
 		["Hoot", "Gone overnight? Hold on to your pizza. This could matter a lot."]
 	],
 	"always_clues": [
@@ -28,35 +29,40 @@
 		{
 			"prompt": "Ask Dash a question:",
 			"options": [
-				["Exactly when did it start?", 2, "Yesterday, when I woke up. There was a pop, then whooshing. About thirty hours ago?", "Pop, then whooshing: about 30 hours ago", "onset", "Thirty hours. Every one of them counts. Keep going!"],
+				["Exactly when did it start?", 2, "Yesterday, when I woke up. There was a pop, then whooshing. About thirty hours ago?", "Pop, then whooshing: about 30 hours ago", "onset", "Thirty hours. Sooner is better, so let's keep moving!"],
 				["What's the best pizza topping?", 0, "Pineapple. Fight me. Actually, don't, I'm busy.", "", ""],
-				["Has your hearing ever done this before?", 1, "Never. The right was perfect until yesterday. I hear my scooter fine with the left.", "Never before: right ear fine until yesterday", "first_time"]
+				["Has your hearing ever done this before?", 1, "Never. The right was perfect until yesterday. I hear my scooter fine with the left.", "First time ever: right ear fine until yesterday", "first_time"]
 			]
 		},
 		{
 			"prompt": "Next question:",
 			"options": [
-				["Any pain, drainage, or dizziness?", 2, "No pain, no drips. A bit wobbly yesterday, fine now. Just the whoosh.", "No pain or drainage; a bit wobbly yesterday", "red_flag_check"],
+				["Any pain, drainage, or dizziness?", 2, "No pain, no drips. A bit wobbly yesterday, fine now. Just the whoosh.", "No pain or drainage", "red_flag_check"],
 				["Have you tried cleaning it out?", 1, "I tried a cotton bud. Nothing came out. Pretty sure it's wax though.", "Tried a cotton bud: nothing came out", "cotton_bud", "Never poke in there! And 'probably wax' is a guess. We'll look."],
-				["Can I get a free pizza?", 0, "If I'm late, EVERYBODY gets a free pizza. Which is why we must HURRY.", "", ""]
+				["Can I get a free pizza?", 0, "Only if it arrives cold. Mine never do. Which is why we must HURRY.", "", ""]
 			]
 		}
 	],
-	"joke_line": "Tasty, but not a clue, and the clock is ticking. Ask about his ear!",
+	"joke_line": "Tasty, but not a clue. Ask about his ear!",
 	"red_flags": {
 		"tag": "red_flag_check",
 		"ask_line": "Always ask about red flags: pain, drainage, dizziness.",
 		"answer": "No pain, no drips. A bit wobbly yesterday, fine now. Just the whoosh.",
-		"clue": "No pain or drainage; a bit wobbly yesterday",
-		"card": "Sudden, one ear, yesterday: YES.\nThat red flag can't wait.",
-		"card_kind": "flag"
+		"clue": "No pain or drainage",
+		"card": "Sudden, one ear, yesterday: YES. Dizzy too.\nSee a doctor. How soon? You decide.",
+		"card_kind": "flag",
+		"extra_clues": [
+			{"tag": "dizzy", "text": "Wobbly yesterday: dizziness", "kind": "flag"}
+		]
 	},
 	"after_history": [
-		["Hoot", "A sudden loss in one ear, yesterday. Every hour counts, so: quick AND careful."]
+		["Hoot", "Any face droop, numbness, slurred speech or double vision? Those mean the ER now."],
+		["Dash", "None of that. Just the ear."],
+		["Hoot", "A sudden loss in one ear, yesterday. Quick AND careful: let's look."]
 	],
 	"otoscopy": {
 		"ear": "right",
-		"caption": "Dash's RIGHT ear: clear canal. No wax at all!",
+		"caption": "Dash's RIGHT ear: an average-sized canal. No wax at all!",
 		"lines": [
 			["Hoot", "Clear canal, healthy eardrum. Not a speck of wax!"],
 			{"react": "startle"},
@@ -68,12 +74,21 @@
 	},
 	"tymp": {
 		"tip": "medium",
+		"canal": "average-sized",
 		"right": {"type": "A", "peak_daPa": -5, "peak_ml": 0.8, "ecv_ml": 1.3},
 		"left": {"type": "A", "peak_daPa": 0, "peak_ml": 0.9, "ecv_ml": 1.3},
-		"clue": "Tymp: type A both ears (no fluid, no blockage)",
+		"quiz": {
+			"prompt": "Dash says it's wax. Does the tymp agree?",
+			"options": [
+				["No: a normal peak and a normal canal volume.", true, ""],
+				["Yes: it's flat, like a wax plug.", false, "A wax plug gives a flat line and a small canal volume. His peak is normal."],
+				["A tymp can't tell.", false, "It can! A wax plug flattens the curve and shrinks the canal volume."]
+			]
+		},
+		"clue": "Tymp: type A both ears (no fluid, no wax plug)",
 		"tag": "tymp_a",
 		"after": [
-			["Hoot", "Type A both sides: no fluid, no blockage. Something deeper changed."]
+			["Hoot", "Type A both sides: no fluid, no wax plug. The bone test shows if it's deeper."]
 		]
 	},
 	"instructions": [
@@ -83,20 +98,24 @@
 	"audiometry": [
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. Left at Hoot speed!"},
 		{"ear": "right", "test": "ac", "hoot_turn_after": 3, "intro": "Right ear's yours. Start at 1k, as always."},
-		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: is it the inner ear?",
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: where is the trouble?",
 			"before": [["Hoot", "Wax would block air but not bone. The bone buzzer will tell us!"]]}
 	],
 	"after_audiometry": [
-		["Hoot", "Masked bone sits right with the air. No gap: not wax, not fluid."]
+		["Hoot", "Masked bone is in. Let's see where it landed."]
 	],
 	"reveal": {
 		"pattern": "flat_one",
 		"ear": "right",
 		"title": "ONE EAR, OVERNIGHT",
+		"ask": [
+			["Hoot", "One ear down overnight. Now: where did the masked bone land?"]
+		],
 		"lines": [
-			["Hoot", "Right ear down 50 to 65 dB, left ear normal. One ear, overnight."],
+			["Hoot", "Right ear needs 40 to 60 dB, left ear normal. One ear, overnight."],
 			["Dash", "So it's not wax?"],
-			["Hoot", "Not wax, not fluid. And that's exactly what makes it urgent."]
+			["Hoot", "Not wax, not fluid: bone is down too. That's what makes it urgent."],
+			["Hoot", "Sooner is better. Doctors still treat after three days, but today beats tomorrow."]
 		]
 	},
 	"evidence": {
@@ -105,31 +124,41 @@
 		"answer": 0,
 		"answer_from_type": "right",
 		"wrong": ["", "Then bone would be near normal. His masked bone is down with the air.", "Mixed needs a gap too. His bone and air sit together."],
-		"right": "Sensorineural and sudden: the inner ear changed overnight."
+		"right": "Sensorineural and sudden: the inner ear or nerve changed overnight."
 	},
 	"findings": [
-		{"tag": "one_ear_snhl", "text": "Right ear down, bone too: inner ear"},
+		{"tag": "one_ear_snhl", "text": "Right ear down, bone too: inner ear or nerve"},
 		{"tag": "left_normal", "text": "Left ear normal"}
 	],
 	"decision": {
 		"prompt": "Make the call for Dash:",
 		"answer": "today",
 		"lines": {
-			"today": "Sudden sensorineural loss is urgent. Treatment works best early. Doctor TODAY!",
-			"fit": "A hearing aid on a brand-new sudden loss? Doctor first, and today: treatment works best early.",
-			"refer": "A routine referral could take weeks. Sudden hearing loss can't wait: TODAY."
+			"today": "Hot delivery! Sudden sensorineural loss is urgent: treatment works best early. Doctor TODAY!",
+			"fit": "Hold the pizza! A brand-new sudden loss needs a doctor first, and today.",
+			"refer": "A routine referral could take weeks. A sudden loss can't wait: TODAY."
 		}
 	},
 	"clue_pick": {
 		"prompt": "Present the evidence: why TODAY and not next month?",
-		"answers": ["sudden", "onset", "one_ear_snhl"],
+		"answers": ["sudden", "onset", "first_time", "one_ear_snhl", "dizzy"],
 		"wrong_line": "True, but that wouldn't make it a rush. What makes it urgent?",
-		"right_line": "Exactly! Sudden, one ear, inner ear: the doctor sees him today."
+		"wrong_lines": {
+			"no_wax": "No wax rules out a plug. What makes it a rush?",
+			"tymp_a": "That rules out fluid and wax. What makes it a rush?",
+			"cotton_bud": "Never poke in there! But that's not the rush. Look again.",
+			"red_flag_check": "No pain is good news. What makes it urgent?",
+			"left_normal": "That's his good ear. What happened to the other one?"
+		},
+		"right_lines": {
+			"dizzy": "Yes! Dizzy with a sudden loss: another red flag. Today."
+		},
+		"right_line": "Exactly! Sudden, one ear, inner ear or nerve: the doctor sees him today."
 	},
 	"payoff": [
 		{"do": "phone"},
-		["Hoot", "Hoot here, Booth Camp. Sudden loss in the right ear, since yesterday. Can you see him today?"],
-		["Hoot", "Three o'clock? Perfect. Thank you!"],
+		["Hoot", "Hoot here, Booth Camp. Sudden loss in the right ear since yesterday. Can you see him today?"],
+		["Hoot", "Three o'clock? Perfect. His audiogram is on its way to you now."],
 		["Hoot", "Dash, the ear doctor sees you at three. Go straight there, pizzas or not."],
 		{"react": "cheer"},
 		["Dash", "Same day? Faster than my pizzas! Thanks, owl!"]
@@ -137,17 +166,17 @@
 	"paper": {
 		"headlines": {
 			"S": "SUDDEN LOSS SPOTTED IN RECORD TIME; PIZZA STILL HOT",
-			"A": "COURIER RUSHED TO EAR DOCTOR SAME DAY; TOPPINGS DEBATE CONTINUES",
+			"A": "PIZZA BOSS RUSHED TO EAR DOCTOR SAME DAY; TOPPINGS DEBATE CONTINUES",
 			"B": "DASH SENT TO DOCTOR TODAY; OWL CHECKS WATCH",
 			"C": "SOME BEEPS ARRIVED COLD, CONFIRMS OWL",
 			"Do-over": "TRAINEE DEMANDS REMATCH; DASH ALREADY AT THE DOCTOR"
 		},
 		"subheads": {
-			"S": "One ear, overnight, inner ear: a same-day referral. Every hour counted.",
+			"S": "One ear, overnight, bone down too: a same-day referral. Sooner was better.",
 			"A": "A sudden one-sided loss can't wait: doctor today.",
 			"B": "The call was right; a few stamps wandered.",
 			"C": "Sudden plus sensorineural means doctor today.",
-			"Do-over": "Remember: sudden hearing loss is urgent. Dash made his appointment anyway."
+			"Do-over": "Remember: sudden hearing loss is urgent, even after three days. Dash made his appointment anyway."
 		}
 	}
 }

@@ -1,15 +1,19 @@
 extends Control
 ## CaseProps (cases): the 2D payoff props over the clinic: the referral letter that folds itself into
-## an envelope and flies off, and the big desk phone Hoot calls the ear doctor on (docs/CASES.md §3).
+## an envelope and flies off, the letter that folds into a paper boat and sails to a little lighthouse
+## marked EAR DOCTOR, and the big desk phone Hoot calls the ear doctor on (docs/CASES.md §3).
 ## Story-internal:
 ##   var p := CaseProps.new(); hud.add_game(p)
-##   await p.play("letter")     # the letter writes, folds and flies away (frees itself after)
+##   await p.play("letter")     # the letter writes, folds and flies away
+##   await p.play("boat")       # the letter writes, folds into a boat and sails to the lighthouse
 ##   await p.play("phone")      # the phone rings in; it stays until p.hang_up()
 ##   p.hang_up()
 
 const UiKit := preload("res://story/ui_kit.gd")
 const LETTER_AT := Vector2(640, 300)
 const PHONE_AT := Vector2(1080, 300)
+const LIGHTHOUSE_AT := Vector2(1110, 330)
+const SEA_Y := 380.0
 
 var _kind := ""
 var _t := 0.0
@@ -38,6 +42,16 @@ func play(kind: String) -> void:
 			Sfx.play(&"whoosh", 1.2, -6.0)
 			await get_tree().create_timer(0.9, false).timeout
 			Sfx.play(&"door", 1.6, -14.0)
+			_kind = ""
+		"boat":
+			Sfx.play(&"pen", 1.0, -6.0)
+			await get_tree().create_timer(1.1, false).timeout
+			Sfx.play(&"whoosh", 1.0, -8.0)
+			await get_tree().create_timer(0.4, false).timeout
+			Sfx.play(&"note", 0.8, -14.0)
+			await get_tree().create_timer(1.7, false).timeout
+			Sfx.play(&"ding", 1.3, -6.0)
+			await get_tree().create_timer(0.7, false).timeout
 			_kind = ""
 		"phone":
 			for i in 2:
@@ -69,6 +83,8 @@ func _draw_props() -> void:
 	match _kind:
 		"letter":
 			_draw_letter()
+		"boat":
+			_draw_boat()
 		"phone":
 			_draw_phone()
 
@@ -104,6 +120,66 @@ func _draw_letter() -> void:
 		c.draw_circle(r2.get_center() + Vector2(0, 8), 14.0, Palette.RIGHT_RED)
 		c.draw_rect(Rect2(r2.end - Vector2(46, 40), Vector2(32, 28)), Palette.SKY)
 		c.draw_rect(Rect2(r2.end - Vector2(46, 40), Vector2(32, 28)), Palette.INK, false, 2.0)
+	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The letter folds into a paper boat and sails over a drawn sea to a lighthouse marked EAR DOCTOR.
+func _draw_boat() -> void:
+	var c := _canvas
+	var f := UiKit.font(700)
+	var appear := clampf((_t - 1.0) / 0.4, 0.0, 1.0)
+	# the sea and the lighthouse fade in while the letter is folding
+	if appear > 0.0:
+		var a := appear
+		var wave := PackedVector2Array()
+		for i in 49:
+			var x := lerpf(420.0, 1240.0, i / 48.0)
+			wave.append(Vector2(x, SEA_Y + sin(x * 0.04 + _t * 3.0) * 6.0))
+		var sea := wave.duplicate()
+		sea.append(Vector2(1240, SEA_Y + 60))
+		sea.append(Vector2(420, SEA_Y + 60))
+		c.draw_colored_polygon(sea, Color(Palette.SKY, 0.55 * a))
+		c.draw_polyline(wave, Color(Palette.INK, 0.6 * a), 3.0, true)
+		var lh := LIGHTHOUSE_AT
+		var tower := PackedVector2Array([lh + Vector2(-26, 50), lh + Vector2(-16, -70), lh + Vector2(16, -70), lh + Vector2(26, 50)])
+		c.draw_colored_polygon(tower, Color(Palette.PAPER, a))
+		for k in 3:
+			var y0 := 30.0 - k * 40.0
+			var band := PackedVector2Array([lh + Vector2(-25 + k * 3.3, y0), lh + Vector2(-23 + k * 3.3, y0 - 18), lh + Vector2(23 - k * 3.3, y0 - 18), lh + Vector2(25 - k * 3.3, y0)])
+			c.draw_colored_polygon(band, Color(Palette.RIGHT_RED, a))
+		var ring := tower.duplicate()
+		ring.append(tower[0])
+		c.draw_polyline(ring, Color(Palette.INK, a), 3.0, true)
+		UiDraw.rounded_rect(c, Rect2(lh + Vector2(-20, -96), Vector2(40, 26)), Color(Palette.SUNNY, a), 6, 3, Color(Palette.INK, a))
+		c.draw_colored_polygon(PackedVector2Array([lh + Vector2(-24, -96), lh + Vector2(0, -116), lh + Vector2(24, -96)]), Color(Palette.INK, a))
+		var sweep := sin(_t * 2.0)
+		for s: float in [-1.0, 1.0]:
+			var beam := PackedVector2Array([lh + Vector2(0, -83), lh + Vector2(160 * s * absf(sweep), -110), lh + Vector2(160 * s * absf(sweep), -56)])
+			c.draw_colored_polygon(beam, Color(Palette.SUNNY, 0.28 * a))
+		var tag := "EAR DOCTOR"
+		var w := f.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		UiDraw.rounded_rect(c, Rect2(lh + Vector2(-w * 0.5 - 10, 58), Vector2(w + 20, 26)), Color(Palette.PAPER, a), 10, 3, Color(Palette.INK, a))
+		c.draw_string(f, lh + Vector2(-w * 0.5, 77), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(Palette.INK, a))
+	if _t < 1.0:
+		_draw_letter()
+		return
+	# the paper boat: it folds out of the letter, then bobs across to the lighthouse
+	var fold := clampf((_t - 1.0) / 0.35, 0.0, 1.0)
+	var sail := clampf((_t - 1.4) / 1.7, 0.0, 1.0)
+	var ease := sail * sail * (3.0 - 2.0 * sail)
+	var start := Vector2(LETTER_AT.x, lerpf(LETTER_AT.y, SEA_Y - 22.0, fold))
+	var at := start.lerp(Vector2(LIGHTHOUSE_AT.x - 90.0, SEA_Y - 22.0), ease)
+	at.y += sin(_t * 4.0) * 4.0 * sail
+	c.draw_set_transform(at, sin(_t * 3.0) * 0.08 * sail, Vector2.ONE * lerpf(1.3, 1.0, fold))
+	var hull := PackedVector2Array([Vector2(-60, 0), Vector2(60, 0), Vector2(38, 26), Vector2(-38, 26)])
+	c.draw_colored_polygon(hull, Palette.PAPER)
+	c.draw_polyline(PackedVector2Array([hull[0], hull[1], hull[2], hull[3], hull[0]]), Palette.INK, 3.0, true)
+	var sail_pts := PackedVector2Array([Vector2(-34, 0), Vector2(0, -56), Vector2(34, 0)])
+	c.draw_colored_polygon(sail_pts, Palette.PAPER.darkened(0.05))
+	c.draw_polyline(PackedVector2Array([sail_pts[0], sail_pts[1], sail_pts[2]]), Palette.INK, 3.0, true)
+	for i in 3:
+		c.draw_line(Vector2(-18 + i * 4, -8 - i * 9), Vector2(10 - i * 4, -8 - i * 9), Palette.INK_SOFT, 2.0, true)
+	c.draw_string(f, Vector2(-30, 18), "REFERRAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Palette.RIGHT_RED)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

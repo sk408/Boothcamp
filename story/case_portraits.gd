@@ -5,8 +5,9 @@ extends RefCounted
 ##   if CasePortraits.has("Rocco"): CasePortraits.draw(ci, "Rocco", center, radius, talk_open, blink)
 ## Look keys used: skin, nose, cardigan, shirt, accent, hair, hair_style (tufts / bun / beehive / none),
 ## mustache, brows, glasses (round / cateye / perched / none), glasses_color, face (doris and bonnie
-## faces get lashes and a pearl necklace), extras (headband, cap, captain_cap, drumsticks, pizza_box),
-## portrait_bg, name_color, and a colour per extra (e.g. "headband": "#e5383b").
+## faces get lashes and a pearl necklace), extras (headband, cap, captain_cap, drumsticks, pizza_box,
+## spiky_hair, band_tee, puppet), portrait_bg, name_color, and a colour per extra (e.g. "headband").
+## A case's extra speakers ("voices", e.g. Chip) can ask for "portrait": "cookie" instead.
 
 const CaseData := preload("res://story/case_data.gd")
 
@@ -18,8 +19,7 @@ static var _looks: Dictionary = {}   # speaker -> look ({} when no case names th
 
 static func look(who: String) -> Dictionary:
 	if not _looks.has(who):
-		var c := CaseData.case_for_speaker(who)
-		_looks[who] = c.get("look", {}) if not c.is_empty() else {}
+		_looks[who] = CaseData.look_for_speaker(who)
 	return _looks[who]
 
 
@@ -37,6 +37,9 @@ static func name_color(who: String) -> Color:
 
 static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: bool, blink: bool) -> void:
 	var lk := look(who)
+	if String(lk.get("portrait", "")) == "cookie":
+		_draw_cookie_puppet(ci, c, r, talk_open, blink, bg(who))
+		return
 	var extras: Array = lk.get("extras", [])
 	var skin := _col(lk, "skin", Color("#ffcf9e"))
 	var hair := _col(lk, "hair", Color("#5a3d2b"))
@@ -44,7 +47,14 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 	var lady := String(lk.get("face", "gus")) != "gus"
 	_shoulders(ci, c, r, _col(lk, "cardigan", Color("#3a9d96")), r * 0.42)
 	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.16, r * 0.5), c + Vector2(r * 0.16, r * 0.5), c + Vector2(0, r * 0.82)]), _col(lk, "shirt", WHITE))
-	if lady:
+	if extras.has("band_tee"):
+		# a sleeveless band tee: bare shoulders, a lightning bolt on the chest
+		for sd: float in [-1.0, 1.0]:
+			_ellipse(ci, c + Vector2(r * 0.62 * sd, r * 0.62), Vector2(r * 0.2, r * 0.16), skin)
+		var bolt := PackedVector2Array([c + Vector2(-r * 0.05, r * 0.6), c + Vector2(r * 0.1, r * 0.6), c + Vector2(r * 0.02, r * 0.7),
+			c + Vector2(r * 0.12, r * 0.7), c + Vector2(-r * 0.08, r * 0.88), c + Vector2(-r * 0.01, r * 0.75), c + Vector2(-r * 0.1, r * 0.75)])
+		ci.draw_colored_polygon(bolt, _col(lk, "accent", Color("#e5383b")))
+	elif lady:
 		for i in 7:
 			var a := lerpf(-1.0, 1.0, i / 6.0)
 			ci.draw_circle(c + Vector2(sin(a) * r * 0.3, r * 0.52 + cos(a) * r * 0.06), r * 0.045, WHITE)
@@ -59,6 +69,15 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 		ci.draw_circle(box.get_center(), r * 0.06, Color("#e5383b"))
 	var h := c + Vector2(0, -r * 0.04)
 	var hr := r * 0.46
+	if extras.has("spiky_hair"):
+		for i in 7:
+			var a := lerpf(-1.15, 1.15, i / 6.0)
+			var base := h + Vector2(sin(a), -cos(a)) * hr * 0.8
+			var tip := h + Vector2(sin(a), -cos(a)) * hr * (1.5 + 0.12 * (i % 2))
+			var side := Vector2(cos(a), sin(a)) * hr * 0.2
+			var spike := PackedVector2Array([base - side, tip, base + side])
+			ci.draw_colored_polygon(spike, hair)
+			ci.draw_polyline(spike, INK, 3.0, true)
 	# hair behind the head
 	match style:
 		"bun":
@@ -135,6 +154,8 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 		ci.draw_arc(h + Vector2(0, hr * 0.52), hr * 0.17, 0, TAU, 16, Color("#d9465f") if lady else INK, 3.0, true)
 	else:
 		ci.draw_arc(h + Vector2(0, hr * 0.32), hr * 0.25, 0.5, PI - 0.5, 12, Color("#d9465f") if lady else INK, 4.0, true)
+	if extras.has("puppet"):
+		_draw_cookie_puppet(ci, c + Vector2(r * 0.6, r * 0.62), r * 0.36, false, false, bg(who))
 	if extras.has("drumsticks"):
 		for s: float in [-1.0, 1.0]:
 			var a := c + Vector2(r * (0.55 + 0.12 * s), r * 0.85)
@@ -143,6 +164,36 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 			ci.draw_line(a, b, Color("#e9c48a"), 4.0, true)
 			ci.draw_circle(b, 4.5, INK)
 			ci.draw_circle(b, 3.0, Color("#f6e1b3"))
+
+
+## Chip: a chocolate-chip cookie puppet with a bite out of his head, googly eyes and a felt mouth.
+## bite_col: the background showing through the bite.
+static func _draw_cookie_puppet(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: bool, bite_col: Color) -> void:
+	var cookie := Color("#d99a5b")
+	var cr := r * 0.78
+	var cc := c + Vector2(0, r * 0.08)
+	ci.draw_circle(cc, cr + 3.0, INK)
+	ci.draw_circle(cc, cr, cookie)
+	for p: Vector2 in [Vector2(-0.5, -0.1), Vector2(0.45, 0.25), Vector2(-0.15, 0.55), Vector2(0.2, -0.35), Vector2(-0.55, 0.35)]:
+		ci.draw_circle(cc + p * cr, cr * 0.09, Color("#5a3d2b"))
+	# the bite out of the top-right of his head
+	for p: Vector2 in [Vector2(0.45, -0.8), Vector2(0.78, -0.5), Vector2(0.15, -0.98)]:
+		ci.draw_circle(cc + p * cr, cr * 0.24, bite_col)
+	# googly eyes
+	for sd: float in [-1.0, 1.0]:
+		var e := cc + Vector2(cr * 0.3 * sd, -cr * 0.18)
+		ci.draw_circle(e, cr * 0.2, INK)
+		ci.draw_circle(e, cr * 0.17, WHITE)
+		if blink:
+			ci.draw_line(e + Vector2(-cr * 0.14, 0), e + Vector2(cr * 0.14, 0), INK, 3.0, true)
+		else:
+			ci.draw_circle(e + Vector2(cr * 0.05 * sd, cr * 0.05), cr * 0.08, INK)
+	# the felt mouth: a hinge that drops open when he talks
+	if talk_open:
+		_ellipse(ci, cc + Vector2(0, cr * 0.36), Vector2(cr * 0.34, cr * 0.2), Color("#7a2a3a"))
+		_ellipse(ci, cc + Vector2(0, cr * 0.44), Vector2(cr * 0.16, cr * 0.08), Color("#ff6f8a"))
+	else:
+		ci.draw_arc(cc + Vector2(0, cr * 0.16), cr * 0.34, 0.4, PI - 0.4, 12, INK, 4.0, true)
 
 
 static func _draw_glasses(ci: CanvasItem, lk: Dictionary, h: Vector2, hr: float) -> void:

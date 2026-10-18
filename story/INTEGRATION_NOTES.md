@@ -62,3 +62,32 @@ It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (
 `story/tests/test_story.gd` covers dialogue keys and solvers, the mini-game solvers and keyboard paths,
 the Hoot bubble, the pause menu and its key-style label, the results continue beat, the title beats, and
 the voice ceiling.
+
+## Cases (Days 6 to 9, cases branch; CONTRACTS.md §11, docs/CASES.md)
+
+The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
+Requests for the integrator and the title owner:
+
+- **Day picker faces and tints.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker,
+  e.g. `"Rocco"`) and `tint` (the card colour). `title_screen.gd` still reads only `DAY_FACES` /
+  `DAY_TINTS` keyed by chapter id, so Days 6 to 9 show the default cream card and no portrait. Either read
+  `chapter.get("face")` / `chapter.get("tint")` as a fallback, or add `rocco`, `marina`, `dash`, `ginger` to
+  both tables. `Portraits` already draws every case speaker (it falls back to `CasePortraits`).
+- **Day picker overflow.** Six cards (Days 1, 2, 6 to 9) plus the speech days to come will not fit one
+  column at 720p. A scrolling list, two columns, or a "Case Files" cabinet card that opens the cases would
+  all work. The day numbers 3 to 5 are left for speech audiometry.
+- **No locks.** `requires` on the case chapters is a "suggested next" badge only; every day stays open.
+- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` lists right-ear masked rows only. Marina's masked tests are
+  on her LEFT ear, so her masked holes are not scored. Please add `["bc_masked", "L  ]", "left"]` and
+  `["ac_masked", "L  X+", "left"]` (or whatever symbols you prefer).
+- **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
+  `"Do-over"`) and `medal_beats`; when present they win over the per-chapter tables. Already wired, listed
+  here so it isn't undone at merge.
+- **Voice.** `Voice.register(speaker, spec)` adds a babble voice for a case speaker (built-in speakers can't
+  be overwritten). Case speakers with no voice fall back to Gus's.
+- **Portraits.** Unknown speakers fall back to `story/case_portraits.gd`. Chip (Ginger's puppet) has a cookie
+  portrait.
+- **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
+  `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
+- **Tests:** `story/tests/test_cases.gd` (12 tests). `python3 tools/case_scripts.py --check` fails if
+  `docs/CASE_SCRIPTS.md` is out of date with the case JSON.
