@@ -538,7 +538,13 @@ func _evidence(b: Control) -> void:
 		await _say("Hoot", words_beeps + " The two tests disagree.")
 	else:
 		await _say("Hoot", words_beeps)
-		await _say("Hoot", "They agree on paper, but that SRT went in before a bracket.")
+		var cand := int(sheet.get("candidate_db", SpeechRules.NO_SRT))
+		if cand == SpeechRules.NO_SRT:
+			await _say("Hoot", "They agree on paper, but that SRT went in before a bracket.")
+		elif cand != int(sheet.get("stored_db", cand)):
+			await _say("Hoot", "They agree on paper, but the bracket found %d dB, not that one." % cand)
+		else:
+			await _say("Hoot", "They agree on paper. Still, Mike's story doesn't add up, so we recheck.")
 	await _say("Hoot", "We don't know WHY yet. And we don't guess.")
 	hud.call("complete_step", &"case")
 

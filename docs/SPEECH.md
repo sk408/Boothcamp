@@ -56,7 +56,7 @@ The softest level at which the patient repeats **half** of a list of easy two-pa
 | Par | the words a textbook dance takes from the first word's level on a perfectly steady patient, plus 1 (from 85 to an SRT of 30: 11 + 1) | `srt_textbook_words`, `SRT_PAR_SLACK` 1, `srt_par` |
 
 Teaching line: **"Got it: down 10. Missed: up 5. SRT: the softest level with at least two words and half or
-more, and a miss 5 dB below."** It is the same dance as the tones on purpose ("got it twice at 30, missed at 25:
+more, with fewer than half right 5 dB below."** It is the same dance as the tones on purpose ("got it twice at 30, missed at 25:
 SRT 30").
 
 **The patient model.** Each word is repeated correctly with probability
