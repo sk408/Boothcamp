@@ -15,12 +15,13 @@ Every day is open from the start: pick one on the title's **Days** card, in any 
 suggested day wears an **UP NEXT** ribbon, and after Day 1 The Daily Decibel stamps UP NEXT! and
 **Next: Day 2** goes straight on. Progress is saved.
 
-**Day 3** brings Mike "Totally Deaf" Lenders, a forklift driver who says he can't hear a thing
-since a forklift beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his
-beeps, then you run the speech test on the new SPEECH screen: go through the two-part words
-first, present them softer and softer, score what Mike actually says, and find the level where he
-repeats half of them (the SRT). His words come back far better than his beeps, so you present
-the clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests.
+**Day 3** brings Mike Lenders, a forklift driver who says he can't hear a thing since a forklift
+beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his beeps, then you find
+his speech recognition threshold (SRT) on the new SPEECH screen: go through the two-part words
+first, present them softer and softer, score what Mike actually says, and find the softest level
+where he repeats half of them. His words come back far better than his beeps, so you present the
+clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests, with
+his doctor told about the sudden loss.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
@@ -169,19 +170,27 @@ always lights the NOISE box and the booth squiggles, so Day 2 is playable withou
 
 ### Day 3: what it teaches
 
-- **Spondees:** two-part words with equal stress on both halves (cupcake, doorbell). Go through
-  them first at a comfortable level, and drop any word the patient doesn't know.
-- **The SRT:** start about 15 dB above the pure-tone average (PTA); repeated = down 10, missed =
-  up 5; the SRT is the softest level where at least half the words come back, with fewer than
-  half right 5 dB below it. Score only what the patient said: half a word is a miss.
-- **PTA/SRT agreement:** an honest SRT lands within about 6 dB of the PTA (12 is fair). Mike's
-  SRT is about 40 dB better than his beeps, a classic sign of a non-organic loss.
-- **Never accuse:** gather the clues (the agreement, the whispered coffee, clear canals), stay
-  kind, and refer for a recheck and objective tests. The game never calls Mike a liar.
+- **Spondees:** two-part words said with equal stress on both parts (rainbow, doorbell), chosen
+  because they are about equally easy to hear. Go through them first at a comfortable level, and
+  drop any word the patient doesn't know.
+- **The SRT (speech recognition threshold):** start about 15 dB above the pure-tone average
+  (PTA: the average of the beeps at 500, 1000 and 2000 Hz); repeated = down 10, missed = up 5,
+  and another word at the same level is fine; the SRT is the softest level where at least two
+  words and half of them come back, with fewer than half right 5 dB below it. Score only what the
+  patient said: half a word is a miss.
+- **PTA/SRT agreement:** a reliable SRT lands within about 6 dB of the PTA (12 is fair). The
+  direction matters: Mike's SRT is about 40 dB better than his beeps, a classic sign of a
+  non-organic loss; an SRT worse than the PTA points to the instructions, language, word
+  recognition or a sloping loss instead.
+- **Never accuse:** most non-organic losses aren't fibs (stress, worry, even a real loss
+  underneath). Gather the clues (the agreement, the whispered coffee, clear canals), stay kind,
+  recheck, refer for objective tests, and tell his doctor about the sudden loss. The game never
+  calls Mike a liar.
 
-The words are an original list written for the game, shown on screen as you play. Each word
-plays as a quiet murmur through the same safety limits as the beeps; a recording can replace it
-later, and nothing depends on hearing it.
+The words are an original list written for the game, shown on screen as you play: no list, order
+or recording is copied, and every word is checked against ASHA (1988) Appendices A-C and CID W-1.
+Each word plays as a quiet murmur through the same safety limits as the beeps; a recording can
+replace it later, and nothing depends on hearing it.
 
 ## Build from source
 

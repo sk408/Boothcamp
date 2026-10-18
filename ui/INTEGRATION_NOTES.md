@@ -32,8 +32,27 @@ Lifecycle and ownership:
 - While it is in the tree it joins the group `speech_screen` and turns the booth view on.
 
 **Plan keys:** `test` ("srt"), `tones` (required for the PTA), `list`, `words`, `exclude`, `level`,
-`transducer`, `hoot_turn_after`, `intro`, `hoot_turn_text`, `show_agreement` (default true) and `done_title`
-(the big callout at the end of the ear).
+`transducer`, `low_start_ok` (passed to the session), `hoot_turn_after`, `intro`, `hoot_turn_text`,
+`show_agreement` (default true), `done_title` (the big callout at the end of the ear) and `fresh_session`.
+
+**`fresh_session` (Hoot's recheck on Day 3):** this ear runs on a new session. The player's session is parked
+(`_kept_session`) and comes back, with its sheets, on the next `start_test` without the key; the status card
+keeps showing the player's points meanwhile.
+
+**Feedback after a store (only a bracketed store is praised):** `SpeechScreen.is_bracketed(sheet)` reads the
+sheet's `bracketed` (else `candidate_db` == `stored_db`). The word card's line reads "ear done: nice work!" only
+for a clean bracketed store ("ear done: check Hoot's tips" after slips, "stored before a bracket", "the bracket
+said N dB", "stored by Hoot, by the book"). `SpeechScreen.golf_text(sheet)` gives the golf callout: "Oops!" after
+a slip or an unbracketed store, "Clean!" for a clean run over par (never "Par!" over "14 words, par 12"). The
+fanfare and confetti only play for a bracketed or Hoot store.
+
+**Clean kinds with a message:** `srt_low_start` (an ascending start with `low_start_ok`) takes the clean branch
+(combo note, "+points") and shows its `message` as a once-per-visit Hoot tip pointing at `speech_ladder`.
+
+**The tell:** once per visit, the first word rightly scored as repeated `TELL_GAP_DB` (30) dB or more below the
+ear's PTA gets "He's repeating words N dB below his beeps. Hmm!", with the hand on `agreement_meter`
+(`speech_ladder` when the meter is hidden), never on the answer bubble being judged. On the coached ear it
+interrupts the coach's tip, which comes back after.
 
 **`hoot_turn_after` (story builder):**
 - **Only applies when quick visit is on.** Quick visit is the `quick_visit` setting, which `--quick` / `--full`
@@ -104,10 +123,11 @@ All of them are unregistered on exit.
 **Deviations from §9.7 (small):**
 1. **Meter reading while testing.** While testing, the agreement needle reads `max(0, PTA - provisional
    SRT)` and not `|provisional - PTA|`. The provisional SRT is the softest level the player has scored as
-   repeated. With the plain formula an honest patient starts in the red, since his first words are
+   repeated. With the plain formula a reliable patient starts in the red, since his first words are
    above the PTA. When the SRT is stored, the needle reads `|SRT - PTA|` as specified.
 2. **STORE before a bracket.** The first press only warns: a tip, plus a chip saying "press again to store
-   anyway". A second press within 4 s stores. Hoot's turn and the beat solver handle this.
+   anyway". A second press within 4 s stores. On the coached ear it never stores: every press warns again
+   ("not bracketed yet: keep going"). Hoot's turn and the beat solver handle this.
 3. **Nod on a wrong word.** A confident wrong word also gets `nod`, alongside correct answers. Only half
    words and silence get the other reactions.
 4. **Silent Hoot's turn.** The voice is muted during Hoot's x8 turn; the TALK lamp still lights.
