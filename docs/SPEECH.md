@@ -48,19 +48,21 @@ The softest level at which the patient repeats **half** of a list of easy two-pa
 | Start level | the PTA rounded to the nearest 5 dB, plus 15 | `SRT_START_ABOVE_PTA_DB` 15, `srt_start` |
 | Acceptable first word | PTA + 10 to PTA + 25 | `SRT_START_MIN_DB` 10, `SRT_START_MAX_DB` 25 |
 | The dance | repeated it: **down 10** (down 5 is tolerated); missed it: **up 5** | `SRT_DOWN_DB` 10, `SRT_UP_DB` 5, `srt_next_level` |
-| SRT | the lowest level with **at least 2 words right and at least half right**, with a level below it scoring under half | `SRT_MIN_CORRECT` 2, `srt_candidate` |
+| SRT | the lowest level with **at least 2 words right and at least half right**, once the level **5 dB below** it was tried and scored under half | `SRT_MIN_CORRECT` 2, `srt_candidate` |
 | Scoring | only the whole word counts: "cup...?", "pupcake" and silence are all wrong | `SpeechSession.score` |
 | Agreement with PTA | difference 6 dB or less = **good**, 7-12 = **fair**, 13 or more = **poor** (recheck the tones; think non-organic) | `AGREE_GOOD_DB` 6, `AGREE_FAIR_DB` 12, `agreement` |
 | Speech masking | needed when the level minus 40 (phones) reaches the other ear's best bone (or air) | `speech_masking_needed` |
 | Speech masking level | presentation level minus 20 (a simple rule of thumb for speech noise) | `SPEECH_MASK_BELOW_DB` 20, `speech_mask_level` |
-| Par | words for a textbook search from the start: ceil((start - SRT) / 10) + 4 | `srt_par` |
+| Par | the words a textbook dance takes from the first word's level on a perfectly steady patient, plus 1 (from 85 to an SRT of 30: 11 + 1) | `srt_textbook_words`, `SRT_PAR_SLACK` 1, `srt_par` |
 
 Teaching line: **"Got it: down 10. Missed: up 5. SRT: the softest level with at least two words and half or
-more."** It is the same dance as the tones on purpose.
+more, and a miss 5 dB below."** It is the same dance as the tones on purpose ("got it twice at 30, missed at 25:
+SRT 30").
 
 **The patient model.** Each word is repeated correctly with probability
-`logistic((level - (SRT_true - SRT_BIAS_DB)) / SRT_SLOPE_DB)`, `SRT_SLOPE_DB` 2.0, `SRT_BIAS_DB` 2 (so a textbook
-search usually stores the true SRT, like `PatientSim.THRESHOLD_BIAS_DB` for tones). The true SRT of an ear is
+`logistic((level - (SRT_true - SRT_BIAS_DB)) / SRT_SLOPE_DB)`, `SRT_SLOPE_DB` 2.0, `SRT_BIAS_DB` 3 (so a textbook
+search stores the true SRT about two times in three and 5 dB either side otherwise, like
+`PatientSim.THRESHOLD_BIAS_DB` for tones; checked over 4000 simulated searches). The true SRT of an ear is
 `speech.srt[ear]` when the profile gives one, else the PTA of its true thresholds rounded to 5 dB plus
 `speech.srt_offset[ear]` (0 for an honest patient). A miss is one of: silence ("Huh?"), half the word
 ("...cake") or a wrong word (another spondee, or the word's own funny mishear). The share of half-word misses is
