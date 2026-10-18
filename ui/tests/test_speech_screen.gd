@@ -2,8 +2,9 @@ extends TestCase
 ## (Speech) The SPEECH screen (CONTRACTS.md §9.7): API and state keys, never the AudiOtron, a full
 ## coached SRT on Mike by keys and by mouse clicks on the anchors, the awaiting_input(&"speech")
 ## beat and its solver (and a stale solver), Hoot's x8 turn (time scale restored), Hoot's recheck on
-## a fresh session, the tell and the coached ear's STORE guard, the feedback after a store (no
-## praise off the bracket), the level locked while a word plays, and the swapped key style.
+## a fresh session, the tell, the low-start praise and the coached ear's STORE guard, the feedback
+## after a store (no praise off the bracket), the level locked while a word plays, and the swapped
+## key style.
 
 const SCREEN := "res://ui/speech/speech_screen.tscn"
 const SCRATCH_SAVE := "user://test_speech_screen_save.json"
@@ -483,6 +484,23 @@ func test_tell_points_at_the_meter_and_the_coach_comes_back() -> void:
 	assert_true(String(Hoot.current_tip().get("target", "")).ends_with("_button"), "the coach's tip comes back")
 	s.call("_maybe_tell", 30)
 	assert_false(String(Hoot.current_tip().get("text", "")).contains("below his beeps"), "once per visit")
+
+
+func test_low_start_shows_hoot_s_praise() -> void:
+	Hoot.reset_visit()   # a once-per-visit tip: an earlier test may have used it
+	var s := _screen()
+	# PTA 72: the start window is 82-97, so 40 starts low and comes up
+	s.start_test(_mike(), "right", false, _plan({"low_start_ok": true, "level": 40}))
+	var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(ok, "the player's turn")
+	if not ok:
+		return
+	await tap_action(&"present_tone")
+	var shown: bool = await _wait_until(func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting low"), 10.0)
+	assert_true(shown, "Hoot's praise: " + String(Hoot.current_tip().get("text", "")))
+	assert_eq(String(Hoot.current_tip().get("target", "")), "speech_ladder")
+	assert_eq(s.session.combo, 1, "a clean check: combo +1")
+	assert_true(s.session.errors.is_empty(), "not an srt_start error")
 
 
 func test_coached_ear_never_stores_off_the_bracket() -> void:

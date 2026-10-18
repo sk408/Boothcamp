@@ -27,7 +27,7 @@ const LIST_ID := "spondee_a"
 const FAMILIAR_WORDS := 12
 const UNKNOWN_WORD := "windmill"
 ## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
-## reach the bracket on Mike's numbers: six hits from 85 down to 35, the first miss, then up 5.
+## reach Mike's first miss below his SRT (down 10 per hit from PTA + 15), and maybe the step back up.
 const LEFT_SOLO_WORDS := 8
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
@@ -420,7 +420,8 @@ func _speech() -> void:
 	clinic.call("hold_response_button", false)
 	await _say("Hoot", "SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more.")
 	await _say("Hoot", "Now the words. He repeats each one; you score what he SAID.")
-	await _say("Hoot", "Got it: down 10. Missed: up 5. Same dance as the beeps!")
+	# the same-level rule (SpeechRules.SRT_MAX_WORDS_PER_LEVEL), as the wrong-step tip says
+	await _say("Hoot", "Got it: down 10. Missed: up 5. Another word at the same level is fine too!")
 	var cam: Camera3D = clinic.call("get_main_camera")
 	var packed: PackedScene = load(SPEECH_SCENE) as PackedScene if ResourceLoader.exists(SPEECH_SCENE) else null
 	if packed != null:
