@@ -85,7 +85,7 @@ func _board() -> void:
 	b.call_deferred("run_drop", LevelMike.UNKNOWN_WORD)
 	await _wait(0.4)
 	await _shot("dev_day3_cards_stumble")
-	b.call("_try_drop", "cupcake")
+	b.call("_try_drop", "rainbow")
 	await _wait(0.5)
 	await _shot("dev_day3_cards_slip")
 	b.call("_try_drop", LevelMike.UNKNOWN_WORD)
@@ -110,7 +110,7 @@ func _board() -> void:
 	await _wait(2.2)
 	await _shot("dev_day3_objection_settled")
 	b.set_referral_mode(true)
-	var opts: Array[String] = ["Fit strong hearing aids today.", "Re-instruct, retest, refer for objective tests.", "Call him a fibber."]
+	var opts: Array[String] = ["Fit strong hearing aids today.", "Re-instruct, retest, objective tests, tell his doctor.", "Call him a fibber."]
 	dialogue.call_deferred("choose", "What's next for Mike?", opts, 1)
 	await _wait(0.8)
 	await _shot("dev_day3_referral_choice")

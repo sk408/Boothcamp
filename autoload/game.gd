@@ -35,7 +35,7 @@ const CHAPTERS: Array[Dictionary] = [
 	{"id": "bonnie", "day": 2, "title": "Day 2: Bonnie Bunsworth", "patient_id": "bonnie", "teaches": "Bone conduction + masking",
 		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
 	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
-	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech reception (SRT)",
+	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech recognition threshold",
 		"scene": "res://story/level_mike.tscn", "requires": "bonnie", "face": "Mike", "tint": Color("#fff0a6")},
 	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
 	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.

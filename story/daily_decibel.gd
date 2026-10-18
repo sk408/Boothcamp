@@ -83,6 +83,17 @@ const GOLF_COLORS: Dictionary = {
 }
 ## (Speech) PTA/SRT agreement chip colours.
 const AGREE_COLORS: Dictionary = {&"good": Color("#2f9e73"), &"fair": Color("#e08a1c"), &"poor": Color("#e5383b")}
+## (Speech) A C on a speech day: the subhead names the slip that actually happened (the most
+## frequent speech technique error; ties go to the first listed), else SPEECH_C_CLEAN.
+const SPEECH_C_SUBHEADS: Dictionary = {
+	"srt_store_no_bracket": "An SRT went in before its bracket. Two right, then under half 5 dB below.",
+	"srt_store_wrong_level": "An SRT went in off its bracket. Store the softest level with half or more right.",
+	"misscored": "A few scores missed what was said. Half a word, a wrong word or silence: all misses.",
+	"srt_wrong_step": "A few words went astray. Remember: got it, down 10; missed it, up 5.",
+	"srt_start": "The words started at the wrong level. Begin at the PTA plus 15.",
+	"speech_marathon": "A marathon of words. Bracket quickly and store: patients tire.",
+}
+const SPEECH_C_CLEAN := "Clean steps, but a long road. Bracket quickly, then store the softest level."
 
 var _paper: PanelContainer
 var _coins_label: Label
@@ -329,7 +340,10 @@ func _build(s: Dictionary) -> void:
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
 	var subs: Dictionary = s.get("subheads", CHAPTER_SUBHEADS.get(cid, SUBHEADS))
-	var sub := UiKit.label(subs.get(grade, ""), 18, Palette.INK_SOFT, 500)
+	var sub_text := String(subs.get(grade, ""))
+	if grade == "C" and not s.has("subheads") and _is_speech(aud0):
+		sub_text = speech_c_subhead(aud0)
+	var sub := UiKit.label(sub_text, 18, Palette.INK_SOFT, 500)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
 	_rule(v, 2)
@@ -722,8 +736,26 @@ func _speech_card(sp: Dictionary) -> Control:
 		grid.add_child(_speech_cell("-" if is_nan(pta) else "%d dB" % roundi(pta), "beeps", Color(Palette.INK, 0.45)))
 		grid.add_child(_speech_cell(String(ag).to_upper() if ag != &"" else "-", "%d dB apart" % absi(int(sh.get("diff", 0))), AGREE_COLORS.get(ag, Color(Palette.INK, 0.3))))
 		grid.add_child(_speech_cell("%d / %d" % [strokes, int(sh.get("par", 0))], ("+%d by Hoot" % hoot_n) if hoot_n > 0 else "words / par", Color(Palette.INK, 0.45)))
-		grid.add_child(_speech_cell(String(golf).replace("_", " ").replace("double ", "2x ").replace("triple ", "3x ") if golf != &"" else "-", "", GOLF_COLORS.get(golf, Color(Palette.INK, 0.3))))
+		if not bool(sh.get("by_hoot", false)) and not SpeechScreen.is_bracketed(sh):
+			# no golf for an SRT stored off its bracket ("par" would praise it)
+			grid.add_child(_speech_cell("no bracket", "", Color(Palette.INK, 0.3)))
+		else:
+			grid.add_child(_speech_cell(String(golf).replace("_", " ").replace("double ", "2x ").replace("triple ", "3x ") if golf != &"" else "-", "", GOLF_COLORS.get(golf, Color(Palette.INK, 0.3))))
 	return grid
+
+
+## (Speech) The C-grade subhead from the speech results' technique errors (SPEECH_C_SUBHEADS).
+static func speech_c_subhead(aud: Dictionary) -> String:
+	var counts: Dictionary = {}
+	for e: Variant in ((aud.get("speech", {}) as Dictionary).get("technique_errors", []) as Array):
+		var k := String((e as Dictionary).get("kind", ""))
+		if SPEECH_C_SUBHEADS.has(k):
+			counts[k] = int(counts.get(k, 0)) + 1
+	var best := ""
+	for k: String in SPEECH_C_SUBHEADS:
+		if int(counts.get(k, 0)) > int(counts.get(best, 0)):
+			best = k
+	return String(SPEECH_C_SUBHEADS[best]) if best != "" else SPEECH_C_CLEAN
 
 
 func _speech_cell(main: String, small: String, col: Color) -> PanelContainer:
