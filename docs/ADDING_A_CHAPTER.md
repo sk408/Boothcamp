@@ -90,16 +90,28 @@ types the captions, plays the stings and asks the stage to draw each scene. API:
    (the player caps them); anything loud ("too loud", noise, overmasking) is **drawn, never played**. Facts and
    numbers come from `ClinicRules` and are reviewed by Steve; the test should check them against the rules.
 2. **Register it:** one line in `story/explainers/movies.gd` `MOVIES` (`"tymp": "res://story/explainers/movies/tymp.gd"`).
-3. **Draw the sets:** each new `set` id goes in `story/explainers/explainer_stage.gd` (`SETS` plus a draw function
-   that animates over `t` / `duration` with `params`). Reuse sets when you can. Check it with
-   `timeout 400 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://story/explainers/dev_explainer.tscn --shots=/abs/dir --movie=tymp`
-   (one shot per scene, `explainer_tymp_<NN>_<scene>`), and LOOK at every shot.
+3. **Draw the sets, or use the card set (no code).**
+   - **No code:** `"set": "card"` draws a chunky title card from data alone: `"params": {"heading": "The Wobbly Drum",
+     "lines": ["Sound pushes the drum in.", "It wobbles back out."], "icon": "note", "tint": "#e9f4ff"}`. At most
+     4 lines of 36 characters (`Movies.validate()` checks); they pop in one by one (`line_at: [s]` to time them).
+     Icons: `""`, `"snails"`, `"ghost"`, `"cloud"`, `"note"`, `"dial"`, `"hoot"`; `"hoot": false` hides the waving
+     Hoot. A `set` the stage does not know also falls back to a card with the scene's `title`, so a new movie
+     plays (as cards) before its art exists (`Movies.validate(id, Stage.SETS)` still lists the unknown set, so the
+     art is not forgotten).
+   - **Your own art:** add the `set` id to `SETS` in `story/explainers/explainer_stage.gd` and a `_set_<id>()` draw
+     function that animates over `t` / `duration` with `params` (a pure function of `t`: no tweens, nodes or RNG;
+     use `_k()`, `_pop()`, `_ring()` and the drawing helpers). Reuse the masking sets' props when you can.
+   - Give each scene a short `"title"` (the numbered chip in the stage's corner).
+   - Check it with
+     `timeout 400 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://story/explainers/dev_explainer.tscn --shots=/abs/dir --movie=tymp --speed=2`
+     (one shot per scene, `explainer_tymp_<NN>_<scene>`; `--at=0.2,0.6,0.95` shoots several moments, `--from=drum
+     --only` one scene, `--reduced-motion` with that setting on), and LOOK at every shot.
 4. **Play it from your level** (copy `level_bonnie._movie()`): emit phase `explainer` {movie, source, seen}, then
    instance `res://story/explainers/explainer_player.tscn`, `await player.call("play", id, "day_start")`, free it.
    Once `Game.is_movie_seen(id)` is true, offer it with a choice (best = skip) instead of playing it again.
    The player emits the `explainer` beat (solver = skip), so the autoplay bot and `--mouse` need no edits.
 5. **Replay is free:** the pause menu shows "Watch <title>" for every movie whose `chapter` is the current chapter,
-   and every movie on the title's Options. Nothing to add.
+   and every movie on the title's Options; the title's "Hoot's Movies" button opens them too. Nothing to add.
 6. **Test it:** add your movie to a test like `tests/test_contracts_v4.gd` (`Movies.validate(id, Stage.SETS)` is
    empty, the scene ids, the facts against `ClinicRules`).
 

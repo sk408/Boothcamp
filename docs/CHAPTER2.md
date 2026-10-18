@@ -17,7 +17,7 @@ Steve reviews every number.
 |---|---|
 | Teaches | bone conduction, the air-bone gap, cross-hearing, clinical masking (plateau), overmasking, conductive loss = ENT referral |
 | Length | 12-15 minutes: **(v4)** about 14:30 with the movie and "quick visit" on (the default), about 13 if the movie is skipped |
-| Opens | after Day 1 is finished, or at once with "Unlock all days (demo)" (title Days card, pause menu) |
+| Opens | from the start, in any order (polish: every day is open; Day 1 is the suggested first day) |
 | New controls | B bone, A air, M masking on/off, PgUp / PgDn (or Shift+Up / Shift+Down) masking level, all with on-screen buttons |
 | Level scene | `res://story/level_bonnie.tscn` (`story/level_bonnie.gd`) |
 
@@ -383,7 +383,8 @@ knocks, so the player meets every masking idea once before using it. Data: `stor
 API and entry points: `CONTRACTS.md` §3.4. How to make another one: `docs/ADDING_A_CHAPTER.md`, "Hoot's movies".
 
 **Format.** A cinema: velvet curtains, a cream screen (the stage, 880 x 440), Hoot's portrait and caption bar
-under it (typewriter, his gibberish voice), the title top-left and one dot per scene top-right. Each scene teaches
+under it (typewriter, his gibberish voice), the title top-left and one dot per scene top-right; **(builders)** each
+scene's title chip (the scene key `title`: a sunny number disc and the title in capitals, e.g. "3 THE SKULL WALL") in the screen's top-left corner. Each scene teaches
 ONE idea in one or two captions (18 words or fewer each). Quiet stings only (Sfx at -6 dB or softer): "too loud"
 and "too much noise" are drawn, never played. Skippable at every moment: Space / Enter / a click = next scene,
 Esc = skip the movie, plus the "Next scene" and "Skip movie" buttons. Replay: pause menu "Watch Hoot's masking movie"
@@ -398,7 +399,7 @@ bedsheet); the purple "shhh" cloud; a noise dial.
 |---|---|---|---|---|---|
 | 1 | `meet` | Curtains swish open; title card HOOT'S MOVIE MATINEE / THE CROSS-HEARING GHOST. The big head with a see-through window; red Righty (screen left) and blue Lefty (screen right) pop in with name tags and wave. | "Hoot's Movie Matinee! Meet Righty and Lefty: two cochleas, one on each side of one head." | 8 | Each ear has its own cochlea; both live in one skull. |
 | 2 | `air` | A red on-ear cup pops onto her right side. Music-note beeps hop down the canal to Righty, who rings a tiny bell. Lefty sleeps (zzz). | "An earphone sends a beep to ONE ear. Righty hears it. Lefty snoozes." | 8 | Air conduction tests one ear at a time. |
-| 3 | `wall` | A brick skull wall grows between them, sign "-40 dB" (small tag "inserts -55"). A meter on the cup climbs 30, 50, 70; the notes get BIGGER (drawn; the sound stays soft). Soft notes bonk on the wall; at 70 one squeezes through, its tag shrinks 70 -> 30, and taps Lefty, who wakes and raises a hand. | "Crossing the skull costs about 40 dB with on-ear headphones. Insert earphones: 55 or more." / "So a LOUD beep can leak across to Lefty. That's cross-hearing!" | 11 | Interaural attenuation: about 40 dB on-ear (55+ inserts); loud air tones can cross. |
+| 3 | `wall` | A brick skull wall grows between them, sign "-40 dB" (small tag "inserts -55"). A meter on the cup climbs 30, 40, 70 (**builders:** not 50, which would arrive at 10 dB, above Lefty's 5 dB, and cross); the notes get BIGGER (drawn; the sound stays soft). Soft notes bonk on the wall and "fizzle!"; at 70 one squeezes through, its tag shrinks 70 -> 30, and taps Lefty, who wakes and raises a hand. | "Crossing the skull costs about 40 dB with on-ear headphones. Insert earphones: 55 or more." / "So a LOUD beep can leak across to Lefty. That's cross-hearing!" | 11 | Interaural attenuation: about 40 dB on-ear (55+ inserts); loud air tones can cross. |
 | 4 | `bone` | The cup pops off; a bone buzzer clicks onto the bump behind Righty's ear. bzz lines; the whole head jiggles like jelly; both snails vibrate the same. The wall sign flips "-40 dB" -> "-0 dB" and the bricks turn see-through. | "A bone buzzer shakes the WHOLE skull, not just one side." / "Both cochleas feel it almost equally: 0 to 10 dB lost. Call it zero!" | 10 | Bone reaches both cochleas (IA 0-10 dB, treat as 0). |
 | 5 | `ghost` | Righty (the poorer ear today) wears a nightcap and snores through a soft buzz. Lefty throws a bedsheet over itself (blue under the sheet, two eye holes), floats over to Righty's side and waves an "I HEARD IT!" flag. A big "BOO!" bubble; Hoot gasps. | "Testing Righty? Lefty hears the buzz too, and if Lefty hears better, Lefty answers first." / "That's the Cross-Hearing Ghost: the better cochlea answering for the poorer ear." | 10 | The Ghost = the better cochlea answering for the poorer ear. |
 | 6 | `mask` | A blue cup pops onto Lefty's side; a purple squiggly cloud full of "shhh" letters fills Lefty's corner. Lefty puts on tiny sunglasses and dances, busy. The buzz comes: the bedsheet slides off; Righty raises its own hand. | "Masking: a steady 'shhh' in the BETTER ear keeps it too busy to answer." / "The shhh goes in the non-test ear. The beep still goes to the test ear." | 10 | Masking = noise in the non-test (better) ear. |
@@ -418,18 +419,22 @@ masking). Plateau = the same threshold through about 15 dB of masker increase (t
 starts when the masker minus the IA reaches the test ear's bone (cochlea). Undermasking: the non-test cochlea
 still hears the tone. The movie never claims a number the game does not use.
 
-**Sounds per scene** (all `Sfx`, at -8 to -16 dB): fanfare and two pops (meet), pop / note / ding (air), two boings,
-a whoosh and a chirp (wall), thunk / soft squeak / stamp (bone), squeak / whoosh / boing (ghost), pop / soft whoosh
-/ ding (mask), boing / click (under), whoosh / soft sad trombone (over), five blips and a sparkle (plateau),
+**Sounds per scene** (all `Sfx`, at -8 to -16 dB; retimed by the builders to land on the drawings): fanfare and two
+pops (meet), pop / note / ding (air), a thunk (the wall lands), two boings, a whoosh and a chirp (wall), thunk / soft
+squeak / stamp (bone), squeak / whoosh / boing / pop (ghost), pop / soft whoosh / ding (mask), boing and two clicks (the
+dial, under), whoosh / soft sad trombone (over), six blips, a sparkle and a ding, then two lower blips (plateau),
 a soft fanfare and two door knocks (outro).
 
-## 17. (v4) Builder checklist
+## 17. (v4) Builder checklist (done; integrated)
 
-| Who | What | Where |
-|---|---|---|
-| builder B (story) | Animate the ten sets of §16 on the stage (the v4 stage is a placeholder drawing per set with the props, labels and timing hooks: `t`, `duration`, `params`). Keep `SETS` and `show_scene()`; captions and cues stay in the data. Cartoon, readable at 1280x720, no vendor art. Check with `dev_explainer.tscn` | `story/explainers/explainer_stage.gd` |
-| builder B | Polish the left placement art if needed (it is the unmirrored drawing; tray bottom-left), the quick right placement, and the left 3D oscillator shot (`ear_left`) | `story/games/bone_placement.gd`, `world/clinic.gd` |
-| builder B | Day 2 board: the left `>` marks next to the right `[` on the reveal; the bridge stays on the right ear | `story/games/day2_board.gd` |
-| builder A | The `demo_tone` plan's look: TONE glowing as the only live control, the other controls dimmed, the Ghost's "Bone 5, air 50? BOO!" | `ui/audiometer/audiometer_screen.gd` |
-| builder A | The coach on the LEFT bone sheet (the first bone test is now the left ear): the route lesson (B), no masking talk (no gap on the left) | `ui/audiometer/*` |
-| integrator | Steve review of §3, §4 (v4 lines) and §16; `tools/movie_check.sh --day=2` (the movie's stings stay quiet) | |
+| Who | What | Where | State |
+|---|---|---|---|
+| builder B (story) | Animate the ten sets of §16 on the stage. Keep `SETS` and `show_scene()`; captions and cues stay in the data. Cartoon, readable at 1280x720, no vendor art. Check with `dev_explainer.tscn` | `story/explainers/explainer_stage.gd` | **done**: every set animated as a pure function of `t`; plus the generic data-only `card` set and the card fallback for unknown sets (`docs/ADDING_A_CHAPTER.md`), the scene title chip, the title's "Hoot's Movies" button |
+| builder B | Polish the left placement art if needed (it is the unmirrored drawing; tray bottom-left), the quick right placement, and the left 3D oscillator shot (`ear_left`) | `story/games/bone_placement.gd`, `world/clinic.gd` | the designer's v4 versions are in; checked in the rendered run (`bc_placement_left`, `day2_bone_placement_right`) |
+| builder B | Day 2 board: the left `>` marks next to the right `[` on the reveal; the bridge stays on the right ear | `story/games/day2_board.gd` | the designer's v4 version is in; checked on `day2_reveal` / `day2_bridge` and the golf card. `dev_day2.tscn --part=board` now builds v4 results (left `>`, right `[`) |
+| builder A | The `demo_tone` plan's look: TONE glowing as the only live control, the other controls dimmed, the Ghost's "Bone 5, air 50? BOO!" | `ui/audiometer/audiometer_screen.gd` | **done** (`CONTRACTS.md` §4.2 v4: banner, locks with "just TONE!", GHOST TEST badge, quest note, "?" bone ranges, the Ghost lands on her left `>`; integrator: no booth punch-in during the demo, it hid the callout) |
+| builder A | The coach on the LEFT bone sheet (the first bone test is now the left ear): the route lesson (B), no masking talk (no gap on the left) | `ui/audiometer/*` | **done** (`ui/tests/test_audiotron_v4.gd`); masked right bone's coach names the unmasked (left) bone as its start |
+| integrator | Steve review of §3, §4 (v4 lines) and §16; `tools/movie_check.sh --day=2` (the movie's stings stay quiet) | | movie_check run at integration; Steve's review pending |
+
+Known small points: the 1 kHz level cursor can overlap the 1 kHz "?" range a little during the demo; the optional
+250 Hz left bone bonus hole makes masked right bone ask for 250 Hz too (the rules see a gap there: one more plateau).

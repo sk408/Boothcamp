@@ -10,6 +10,8 @@ signal pressed_down
 signal released
 signal clicked
 signal right_clicked
+## (v4) A click on a locked button (it wiggles): the screen may say why.
+signal denied
 
 enum Icon { NONE, TRI_UP, TRI_DOWN, ARROW_LEFT, ARROW_RIGHT, STAMP, NO_RESP, EAR_RIGHT, EAR_LEFT, WAVES, KEYS, SWAP }
 
@@ -129,6 +131,7 @@ func _gui_input(event: InputEvent) -> void:
 				if locked:
 					wiggle()
 					Sfx.play(&"error", 1.0, -10.0)
+					denied.emit()
 				else:
 					_held = true
 					_animate_press(1.0)

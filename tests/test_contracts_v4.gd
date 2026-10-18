@@ -400,3 +400,83 @@ func test_results_show_left_bone() -> void:
 	var rows: Array = dd.get_script_constant_map()["GOLF_EXTRA_ROWS"]
 	assert_eq(rows[0], ["bc", "L  >", "left"], "golf card: left bone '>' row")
 	assert_has(rows, ["bc_masked", "R  [", "right"])
+
+
+# ---------------------------------------------------------------- (v4, builders) merged at integration
+
+## The wall scene's meter (docs/CHAPTER2.md §16): the soft beeps lose everything at the wall
+## ("fizzle!"), only the loud one arrives on the other side, 40 dB smaller.
+func test_masking_movie_wall_levels() -> void:
+	var wall: Dictionary = {}
+	for sc: Dictionary in Movies.movie("masking")["scenes"]:
+		if String(sc["id"]) == "wall":
+			wall = sc["params"]
+	var levels: Array = wall["levels"]
+	var ia := int(wall["ia"])
+	assert_true(levels.size() >= 2)
+	for i in levels.size() - 1:
+		assert_true(int(levels[i]) - ia <= 0, "%d dB fizzles at a %d dB wall" % [levels[i], ia])
+	assert_true(int(levels[-1]) - ia > 0, "the loud beep crosses")
+	for i in range(1, levels.size()):
+		assert_true(int(levels[i]) > int(levels[i - 1]), "the meter climbs")
+
+
+## The generic data-only "card" set, its limits, and the fallback for a set the stage does not know.
+func test_stage_card_set_and_fallback() -> void:
+	assert_has(Stage2D.SETS, &"card", "the generic card set")
+	var icons: Array = Stage2D.CARD_ICONS
+	for ic: String in ["", "snails", "ghost", "cloud", "note", "dial", "hoot"]:
+		assert_has(icons, ic, "card icon")
+	assert_eq(Movies.CARD_MAX_LINES, 4)
+	assert_eq(Movies.CARD_MAX_CHARS, 36)
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	for sc: Dictionary in [
+		{"id": "c", "set": "card", "title": "A card", "duration": 4.0,
+			"params": {"heading": "Hello", "lines": ["One", "Two"], "icon": "ghost", "tint": "#e9f4ff"}},
+		{"id": "x", "set": "no_such_set", "title": "Fallback", "duration": 4.0}]:
+		st.call("show_scene", sc)
+		for tt: float in [0.0, 1.0, 3.5]:
+			st.set("t", tt)
+			st.queue_redraw()
+			await wait_frames(1)
+		assert_eq(String(st.get("scene_title")), String(sc["title"]), "the scene title chip")
+
+
+## The title's "Hoot's Movies" button: a mouse shortcut, menu state only, plays the one movie from
+## the title (source "title") through the pause menu and lands back on the title.
+func test_title_movies_button() -> void:
+	Game.progress["movies_seen"] = []
+	var beats := {}
+	var cb := func(beat: StringName, info: Dictionary, solver: Callable) -> void: beats[beat] = [info, solver]
+	Events.awaiting_input.connect(cb)
+	var sources: Array = []
+	var cs := func(_id: String, src: String) -> void: sources.append(src)
+	Events.explainer_started.connect(cs)
+	var menu: CanvasLayer = (load(PAUSE_MENU) as PackedScene).instantiate()
+	add_node(menu)
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_node(title)
+	await wait_frames(3)
+	if beats.has(&"disclaimer_ok"):
+		(beats[&"disclaimer_ok"][1] as Callable).call()
+		await wait_seconds(0.5)
+	var b := title.find_child("MoviesButton", true, false) as Button
+	assert_true(b != null, "the title has a Hoot's Movies button")
+	assert_eq(b.focus_mode, Control.FOCUS_NONE, "never takes keyboard focus")
+	await wait_frames(1)
+	assert_true(b.visible, "shown in the menu state")
+	b.pressed.emit()
+	await wait_frames(3)
+	var p := tree.get_first_node_in_group("explainer_player")
+	assert_true(p != null and bool(p.call("is_playing")), "the movie plays from the title")
+	assert_eq(sources, ["title"], "source title")
+	assert_true(tree.paused, "the title waits paused")
+	p.call("skip_all")
+	await wait_frames(6)
+	assert_false(bool(menu.call("is_open")), "back on the title, the menu closed")
+	assert_false(tree.paused)
+	assert_eq(title.get("_state"), &"menu")
+	Events.awaiting_input.disconnect(cb)
+	Events.explainer_started.disconnect(cs)

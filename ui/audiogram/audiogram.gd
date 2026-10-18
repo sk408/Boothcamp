@@ -31,6 +31,10 @@ extends Control
 ##   masker_view  {} or {"freq", "db", "role": &"noise" | &"leak", "hot": bool}: on the masked
 ##                ear's chart a purple noise curtain down to the masker level "[35]"; on the test
 ##                ear's chart the noise leaking back (masker - rule IA), coral when it overmasks
+## (v4, builder A) bone_range  ear -> freq -> [lo_db, hi_db]: the poorer ear's bone before it is
+##                masked. Unmasked bone (from either mastoid) is the BETTER cochlea, so this ear's
+##                cochlea sits somewhere between it (lo) and this ear's air (hi): a dashed, softly
+##                blinking "?" capsule on the bone side of the frequency line ("mask to find it")
 
 signal draw_finished
 ## The player clicked the plot near a test frequency (AudiOtron uses it to jump there).
@@ -82,6 +86,12 @@ var masker_view: Dictionary = {}:
 	set(v):
 		if v != masker_view:
 			masker_view = v
+			queue_redraw()
+## (v4) ear -> freq -> [lo_db, hi_db]: the poorer ear's unknown bone (see the header). {} = off.
+var bone_range: Dictionary = {}:
+	set(v):
+		if v != bone_range:
+			bone_range = v
 			queue_redraw()
 ## (Polish) ear -> alpha 0..1: fade one ear's line and symbols (the Day 2 board's bridge dims the
 ## left ear so the eye compares right air with right bone). {} = both at full strength.
@@ -315,8 +325,8 @@ func _gui_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if not attention.is_empty() or not masker_view.is_empty():
-		queue_redraw()  # blinking symbols, the wobbling noise curtain
+	if not attention.is_empty() or not masker_view.is_empty() or not bone_range.is_empty():
+		queue_redraw()  # blinking symbols, the wobbling noise curtain, the "?" bone range
 	if not _animating:
 		return
 	var busy := false
@@ -428,9 +438,12 @@ func _draw() -> void:
 			continue
 		if show_gap:
 			_draw_gap(e)
+		_draw_bone_range(e)
 		_draw_ear(e)
 	if _attention_count() > 0:
 		_draw_attention_legend(r)
+	elif _bone_range_count() > 0:
+		_draw_bone_range_legend(r)
 	AoDraw.ring(self, r.grow(2.0), Color(Palette.INK, 0.55), 6, 2)
 
 
@@ -707,6 +720,60 @@ func _draw_gap(e: String) -> void:
 		AoDraw.text_c(self, tr.get_center(), tag, 11, Palette.PAPER if masked else Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
 		# (polish) a short cap per post, never a line along the bone marks (bone is never joined)
 		draw_line(top + Vector2(-9.0, 0), top + Vector2(9.0, 0), Color(col, 0.9), 3.0, true)
+
+
+## (v4) The poorer ear's unknown bone (bone_range): a dashed capsule from the unmasked bone (the
+## better cochlea: the lowest this cochlea could be) down to this ear's air (bone is never poorer
+## than air), on the bone side of the frequency line, with a "?" tag. It breathes softly.
+func _draw_bone_range(e: String) -> void:
+	var by_f: Dictionary = bone_range.get(e, {})
+	if by_f.is_empty():
+		return
+	var k := 0.75 if bool(Game.settings.get("reduced_motion", false)) else 0.5 + 0.5 * sin(_t * 4.0)
+	var col := Palette.SELECT_ORANGE
+	var fade := float(dim.get(e, 1.0))
+	for f: int in by_f:
+		var span: Array = by_f[f]
+		var lo := float(span[0])
+		var hi := float(span[1])
+		if hi - lo < 10.0:
+			continue
+		var x := freq_to_x(f) + UiDraw.symbol_offset(e, &"bc_masked", 17.0).x
+		var top := db_to_y(lo)
+		var bot := db_to_y(hi) - 11.0   # stop above the air mark
+		if bot - top < 16.0:
+			continue
+		var w := 14.0
+		AoDraw.rbox(self, Rect2(Vector2(x - w * 0.5, top - w * 0.5), Vector2(w, bot - top + w)), Color(Palette.SUNNY, (0.18 + 0.14 * k) * fade), 7)
+		var lc := Color(col, (0.5 + 0.4 * k) * fade)
+		for sx: float in [-w * 0.5, w * 0.5]:
+			AoDraw.dashed(self, Vector2(x + sx, top), Vector2(x + sx, bot), lc, 2.0, 5.0, 4.0)
+		draw_arc(Vector2(x, top), w * 0.5, PI, TAU, 10, lc, 2.0, true)
+		draw_arc(Vector2(x, bot), w * 0.5, 0.0, PI, 10, lc, 2.0, true)
+		var c := Vector2(x, (top + bot) * 0.5)
+		draw_circle(c, 10.0 + 1.5 * k, Color(Palette.PAPER, fade))
+		draw_arc(c, 10.0 + 1.5 * k, 0.0, TAU, 24, Color(col, fade), 2.5, true)
+		AoDraw.text_c(self, c + Vector2(0, 1), "?", 15, Color(col.darkened(0.15), fade), AoDraw.FONT_BOLD)
+
+
+func _bone_range_count() -> int:
+	var n := 0
+	for e: String in bone_range:
+		if ear == "both" or e == ear:
+			n += (bone_range[e] as Dictionary).size()
+	return n
+
+
+## "? = bone unknown: mask to find it", bottom-left inside the plot (like the assistant's legend).
+func _draw_bone_range_legend(r: Rect2) -> void:
+	var txt := "? = bone hiding here: mask to find it"
+	var w := AoDraw.text_size(txt, 11, AoDraw.FONT_BOLD).x + 30.0
+	var lr := Rect2(Vector2(r.position.x + 6.0, r.end.y - 26.0), Vector2(w, 20.0))
+	AoDraw.rbox(self, lr, Color(Palette.PAPER, 0.92), 10, 2, Palette.SELECT_ORANGE)
+	draw_circle(lr.position + Vector2(12, 10), 6.0, Palette.PAPER)
+	draw_arc(lr.position + Vector2(12, 10), 6.0, 0.0, TAU, 16, Palette.SELECT_ORANGE, 2.0, true)
+	AoDraw.text_c(self, lr.position + Vector2(12, 10.5), "?", 10, Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
+	AoDraw.text_l(self, lr.position + Vector2(22, 10), txt, 11, Palette.INK, AoDraw.FONT_BOLD)
 
 
 ## The masked ear's chart: a purple noise curtain at the test frequency down to the masker level.

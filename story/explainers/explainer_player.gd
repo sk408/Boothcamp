@@ -39,6 +39,8 @@ var movie: Dictionary = {}
 var source := ""
 var scene_index := -1
 var skipped := false
+## Dev scenes only (dev_explainer --from=): the scene to start at.
+var start_scene := 0
 var _playing := false
 var _next := false
 var _age := 0.0
@@ -103,7 +105,7 @@ func play(id: String, p_source: String = "menu") -> Dictionary:
 	Juice.bounce_in(_stage, 0.4)
 	Events.explainer_started.emit(id, source)
 	Events.awaiting_input.emit(&"explainer", {"movie": id, "title": String(movie.get("title", "")), "scenes": scenes.size(), "source": source}, skip_all)
-	for i in scenes.size():
+	for i in range(clampi(start_scene, 0, scenes.size() - 1), scenes.size()):
 		if skipped or not is_inside_tree():
 			break
 		await _play_scene(i, scenes[i])
@@ -154,6 +156,7 @@ func _play_scene(i: int, sc: Dictionary) -> void:
 	if not _caps.is_empty():
 		var last := String(_caps[-1])
 		_scene_len = maxf(dur, float(_cap_at[-1]) + last.length() / (CHARS_PER_SECOND * speed) + READ_S)
+	_stage.set("scene_no", i + 1)
 	_stage.call("show_scene", sc)
 	_dots.queue_redraw()
 	Events.explainer_scene.emit(movie_id, i, String(sc.get("id", "")))

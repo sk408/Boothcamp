@@ -361,12 +361,12 @@ plays "Hoot's masking movie" (storyboard in `docs/CHAPTER2.md` §16). How to add
 
 | Part | File | What it is |
 |---|---|---|
-| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id)`, `title(id)`, `total_s(id)`, `word_count(text)`, `validate(id, known_sets) -> PackedStringArray` |
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id)`, `title(id)`, `total_s(id)`, `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. **(v4, builders)** `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` also reports a `card` scene with more lines or longer lines |
 | Movie data | `story/explainers/movies/<id>.gd` | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` |
-| Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], caption_at: [s] (optional, default spread), teaches (the one idea), board (the animation brief, never shown), params (for the set), cues: [{t, sfx, pitch, vol_db}] (optional)}` |
-| Stage | `story/explainers/explainer_stage.gd` (Control) | `SETS` (the set ids it can draw), `show_scene(scene)`, and it animates by the `t` the player sets each frame. The v4 stage is a placeholder; builder B owns the animation |
+| Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (**(v4, builders)** the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
+| Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | `SETS` (the set ids it can draw), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes and a skipped scene leaves nothing behind. **(v4, builders)** Fully animated (the ten masking sets, `docs/CHAPTER2.md` §16). `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no stage code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. A `set` the stage does not know falls back to a card with the scene's title (never an error) |
 | Player | `res://story/explainers/explainer_player.tscn` (CanvasLayer 85) | see below |
-| Dev scene | `res://story/explainers/dev_explainer.tscn` | plays `--movie=<id>` (default masking) and shoots every scene (`explainer_<id>_<NN>_<scene>`) |
+| Dev scene | `res://story/explainers/dev_explainer.tscn` | plays `--movie=<id>` (default masking) and shoots every scene (`explainer_<id>_<NN>_<scene>`); **(v4, builders)** `--at=a,b` (shares of each scene), `--times=s,s` (seconds), `--from=<id or number>`, `--only`, `--menu`, `--title`, `--card-demo`, `--reduced-motion` (`tools/README.md`) |
 
 Player API (load by path, call by name):
 ```
@@ -376,6 +376,7 @@ func skip_scene() -> void       # next scene (Space / Enter / click on the scree
 func skip_all() -> void         # end the movie now (Esc / "Skip movie" / the beat's solver)
 func is_playing() -> bool
 var movie_id, movie, scene_index, skipped
+var start_scene := 0            # (v4, builders) dev scenes only (dev_explainer --from=): the first scene to play
 ```
 - **Beat and events.** `play()` emits `explainer_started`, then `awaiting_input(&"explainer", {movie, title, scenes,
   source}, skip_all)`, `explainer_scene` per scene, and at the end `Game.mark_movie_seen(id)`,
@@ -395,7 +396,11 @@ var movie_id, movie, scene_index, skipped
   first visit plays it; once `Game.is_movie_seen(id)`, Hoot offers it with a choice, best = skip). (2) The pause
   menu shows one "Watch <title>" button per movie of `Game.current_chapter_id` in a level (none on Day 1), and every
   movie on the title's Options; it hides itself, plays the movie (source `"pause"` / `"title"`) and comes back. No
-  `phase_changed` is emitted for replays. The buttons hide while a movie is already playing.
+  `phase_changed` is emitted for replays. The buttons hide while a movie is already playing. (3) **(v4, builders)**
+  The title menu's small **"Hoot's Movies"** button (node `MoviesButton`, bottom right, `FOCUS_NONE`, shown only in
+  the menu state; a mouse shortcut, keyboard players use Options): with one movie it opens the pause menu and runs
+  its `play_movie(id)` (source `"title"`, the title waits paused, Esc skips) and closes the menu after; with several
+  it opens the pause menu, whose Options list them all.
 
 ---------------------------------------------------------------------------------------------
 
@@ -510,11 +515,21 @@ How the screen behaves:
 | `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it |
 | `nothing_title` **(polish)** | the done title when the goal sheet needs nothing (default "NOTHING TO MASK!") |
 | `start_db` **(polish)** | the first level of a non-air plan instead of the textbook start (Day 2's optional 250 Hz bone "bonus hole" starts at 40, so the vibrotactile tickle lands) |
-| `demo_tone` **(v4)** | `{freq, db, title, max_tones := 3, idle_s := 6.0}`: the one-tone **Ghost demo**. The screen sits at `freq` / `db` with the masking deck hidden, scoring off and every control but TONE locked (keys and buttons); a sticky Hoot tip (`intro`) points at TONE. A heard tone (or the last try) ends it; a miss raises the tone 5 dB and asks again; if the player waits `idle_s`, Hoot presses TONE himself. A cross-heard answer flies the Ghost with `title` ("Bone 5, air 50? BOO!"). Nothing is stored, no `ear_completed`; its open measurement is dropped (`AudiometrySession.discard_open(ear, freq)`, core-internal) so it never starts a bone search; after 2.4 s it emits `audiometry_finished` and `test_finished` |
+| `demo_tone` **(v4)** | `{freq, db, title, max_tones := 3, idle_s := 6.0}`: the one-tone **Ghost demo**. The screen sits at `freq` / `db` with the masking deck hidden, scoring off and every control but TONE locked (keys and buttons); a sticky Hoot tip (`intro`) points at TONE. A heard tone (or the last try) ends it; a miss raises the tone 5 dB and asks again; if the player waits `idle_s`, Hoot presses TONE himself. A cross-heard answer flies the Ghost with `title` ("Bone 5, air 50? BOO!"). Nothing is stored, no `ear_completed`; its open measurement is dropped (`AudiometrySession.discard_open(ear, freq)`, core-internal) so it never starts a bone search; after 2.4 s it emits `audiometry_finished` and `test_finished`. **(v4, builders) The look:** a lavender "GHOST DEMO: ONE BEEP" banner; TONE beckons, every other deck button and Ask Hoot is dimmed, and a locked key or click wiggles it with a quiet error blip and a "just TONE!" chip; the test ear's card says "GHOST TEST" with no pips; the quest panel shows one token, no bar, and a note ("ONE beep, buzzer on her RIGHT. Nothing gets stored.", then "Heard at N dB... but by WHICH cochlea?"); no par, dance card, combo flame or booth punch-in (integrator: the punch-in hid the Ghost's callout); Hoot's own press shows a "Hoot's wing!" chip, a too-short press "A blip! Hold ..."; the Ghost flies onto the better ear's `>` mark and lingers 3 s. The locks and labels come back when it ends |
 
 **(v4)** Masked BONE measurements start at `ClinicRules.unmasked_bone()` (either mastoid), not only the test ear's
 own unmasked bone sheet. A `bc_masked` plan opens on the unmasked bone sheet (noise off, the player presses M); when
 that ear has no unmasked bone stamps of its own, its opening level is that same `unmasked_bone()` value too.
+**(v4, builders)** The masking light (`masking_needed_here`) compares with that same either-mastoid bone, so it is on
+for her right ear once only her left bone is measured, and off on the left. The coach names the start: "First masked
+beep at %d dB, the unmasked bone. Noise %d. Hold [key]." / "Start at the unmasked bone, %d dB: the better cochlea's.
+Tap [key] N." While the poorer ear's bone is unknown (the demo, and its `bc` / `bc_masked` plans with the deck), its
+chart shows dashed amber **"?" ranges** from the unmasked bone up to that ear's air (`Audiogram.bone_range`) wherever
+masked bone is needed and not yet stamped, with the legend "? = bone hiding here: mask to find it". The coached
+LEFT bone sheet (the route lesson, B) never mentions noise or masking and shows no blinking or "?".
+UI internals added for this (builder A, `ui/audiometer/`): `AoButton.denied` (signal: a locked button was clicked,
+after its wiggle and error blip), `AoEarCard.badge` ("TESTING" / "GHOST TEST"; no pips when `progress_total <= 0`),
+`AoQuestPanel.note` (multi-line; no bar when `total_count == 0`), `FxLayer.ghost(..., life := 2.0)`.
 
 The required measurements are those of the goal sheet: `ac` as below; `bc` = `bc_freqs`; masked sheets =
 `ClinicRules.masked_freqs_needed()` from what is stored so far (bone: gap > 10; air: AC - 40 >= the other
@@ -588,7 +603,8 @@ After a store, the screen moves to the next remaining frequency (the rule is in 
   "plateau": {"db": 10, "steps": 2, "needed": 3, "found": false, "start_mask": 25, "initial": 25, "points": [...]},  # masked sheets only, else {}
   "stored_tests": {"ac": {"right": {...}, "left": {...}}, "bc": {...}, "bc_masked": {...}, "ac_masked": {...}},
   # v4
-  "demo": false                                        # the one-tone Ghost demo is on (plan demo_tone): only TONE works
+  "demo": false                                        # the one-tone Ghost demo is on (plan demo_tone): only TONE works;
+                                                       #   "par" is 0 while it is on
 }
 ```
 
@@ -713,6 +729,8 @@ var attention: Dictionary                     # test -> ear -> freq -> true: the
 var show_gap: bool                            # the air-bone gap bridge (dashed "45?" posts on unmasked bone, solid on masked)
 var masker_view: Dictionary                   # the masker on this chart: {freq, db, ...} draws the noise curtain
 var dim: Dictionary                           # (polish) ear -> alpha (1 = normal): fades one ear's symbols, lines and layers
+var bone_range: Dictionary                    # (v4, builder A) ear -> freq -> [lo_db, hi_db]: a dashed amber "?" capsule
+                                              #   beside the air mark (unknown bone) + the legend "? = bone hiding here: mask to find it"
 ```
 
 What it draws:
@@ -770,7 +788,9 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
 - **(v3)** `AudiometrySession`: `configure(plan)`, `test`, `goal_test`, `transducer`, `air_transducer`, `mask_on`,
   `mask_db`, `set_transducer`, `set_mask`, `toggle_mask`, `step_mask`, `set_mask_level`, `masker_ear`, `test_for`,
   `initial_mask_db`, `overmask_limit_db` (bone: tone + IA; air: the test ear's best bone, or the nearest measured
-  bone frequency's, + IA), `masking_needed_here`, `mask_status`, `plateau_info`, `store_candidate` (the plateau
+  bone frequency's, + IA), `masking_needed_here` (**(v4)** bone: the ear's air vs `ClinicRules.unmasked_bone()`, else
+  `nontest_bone_estimate`), **(v4)** `discard_open(e, f)` (drops the open measurement, closes its tone record and
+  cancels any patient press or anticipation still on its way: the Ghost demo), `mask_status`, `plateau_info`, `store_candidate` (the plateau
   level, or the held level once `window_full(e, f)`), `window_full`, `results_view`; per-test sheets; `MASK_PAR_SLACK` 2 (masked par = textbook dance + 2).
 - **(polish)** `AudiometrySession`: `MASKED_GRACE_DB` 0 (a masked stamp is scored like any other: the simulator is
   calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); `instant_measure(ear, freq)
@@ -1029,7 +1049,9 @@ The bot saves:
   `day2_croissant`, `day2_goodbye`;
 - **(v4)** `explainer` (phase), `explainer_scene_2` (the bot's peek), `bc_placement_left`, `ghost_demo_right`,
   `audiometry_right_ghost_demo` (the demo's first tone), `day2_bone_placement_right` (the quick placement); the dev
-  scenes add `explainer_<id>_<NN>_<scene>` (`dev_explainer.tscn`) and `dev_day2_placement_left`,
+  scenes add `explainer_<id>_<NN>_<scene>` (`dev_explainer.tscn`; **(v4, builders)** extra moments of a scene
+  `explainer_<id>_<NN>_<scene>_t<seconds>`, `--menu`: `explainer_pause_menu`, `explainer_pause_replay`,
+  `explainer_pause_back`; `--title`: `explainer_title_*`; `--card-demo`: `explainer_card_*`) and `dev_day2_placement_left`,
   `dev_day2_slip_left_*`, `dev_day2_placed_left`, `dev_day2_oscillator_3d_left`, `dev_day2_placement_right_quick`
   (`dev_day2.tscn --part=placement`);
 - `audiometry_<ear>_first_tone`, `audiometry_<ear>_first_store`, `audiometry_<ear>_complete`;
@@ -1057,6 +1079,9 @@ The bot saves:
 - **(v3)** Stress test: `tools/monkey.tscn` mashes Day 1, or with `--day=2` Bonnie's five tests and the masking /
   route keys (invariants: noise dial 0-100, no masker while MASK is off or after a test). **(v4)** Day 2 runs six:
   right and left air, LEFT bone, the right Ghost demo (`demo_tone`), masked right bone, masked right air.
+  **(v4, integrator)** Before them it mashes Hoot's masking movie three ways (level-style without Esc: one scene at a
+  time to the end, frozen under the pause menu; with Esc / Skip: an accepted Esc ends it at once; the pause menu's
+  "Watch" replay: the menu comes back) and reports `movie_runs`.
 - Runner: `godot --headless --path . -s res://tests/run_tests.gd [-- --filter=word --verbose]`.
   Exit codes: 0 = green, 1 = failures, 2 = no tests.
 

@@ -167,17 +167,30 @@ var _chase_seen := false
 ## (Polish) The player has moved the noise dial at least once (the occlusion line explains first).
 var _mask_tapped := false
 ## (v4) Plan "demo_tone" (CONTRACTS.md §4.2 v4): the one-tone Cross-Hearing Ghost demo. {} = off.
-## Integrator stub: dial preset and locked, only TONE works, the first verdict ends the test (a miss:
-## up 5, again, at most DEMO_MAX_TONES), Hoot presses after "idle_s" without a press, nothing is
-## stored, scoring is off. Builder A owns the polish (LCD, quest panel, the BOO staging).
+## The dial is preset; TONE is the only live control (it beckons; every other deck button is dimmed
+## and wiggles with a "just TONE" tip); the first verdict ends the test (a miss: up 5, again, at
+## most DEMO_MAX_TONES); Hoot presses TONE after "idle_s" without a press; nothing is stored and
+## scoring is off. The look: a "GHOST TEST" badge on the test ear's card, the quest panel says one
+## beep and nothing stored, the poorer ear's unknown bone shows as "?" ranges (unmasked bone up to
+## its air), and a cross-heard answer flies the Ghost onto the better ear's bone mark, lingering.
 var _demo: Dictionary = {}
 var _demo_tones := 0
 var _demo_idle := 0.0
 var _demo_done := false
+var _demo_ghost := false           ## the demo tone was answered by the other cochlea
+var _demo_heard_db := -1
 const DEMO_MAX_TONES := 3
 const DEMO_IDLE_S := 6.0
 const DEMO_HOLD_S := 1.3
 const DEMO_END_S := 2.4
+const DEMO_GHOST_S := 3.0
+## Deck buttons the Ghost demo locks (TONE stays live; the masking deck is hidden).
+const DEMO_LOCKED: Array[String] = ["softer_button", "louder_button", "freq_down_button", "freq_up_button", "store_button", "no_response_button", "ear_right_button", "ear_left_button", "hint_button"]
+## Deck actions and their buttons, so a locked key press in the demo wiggles the right one.
+const DEMO_DENY_ACTIONS: Dictionary[StringName, String] = {
+	&"louder": "louder_button", &"softer": "softer_button", &"freq_up": "freq_up_button", &"freq_down": "freq_down_button",
+	&"store": "store_button", &"no_response": "no_response_button", &"ear_right": "ear_right_button", &"ear_left": "ear_left_button",
+}
 
 var _root: Control
 var _bg: Control
@@ -319,6 +332,9 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_demo_tones = 0
 	_demo_idle = 0.0
 	_demo_done = false
+	_demo_ghost = false
+	_demo_heard_db = -1
+	_apply_demo_locks(false)
 	if not _demo.is_empty():
 		_masking_ui = false
 		session.scoring = false
@@ -363,6 +379,9 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	if not _demo.is_empty():
 		# (v4) the Ghost demo: a sticky "hold TONE once" tip on the TONE pad, no coach
 		_coach_active = false
+		_apply_demo_locks(true)
+		_ff_banner.visible = true
+		_ff_banner.queue_redraw()
 		Hoot.say(intro if intro != "" else "ONE beep: hold %s." % _k(&"present_tone"), Hoot.HIGH, "tone_button", "", 0.0)
 		_refresh()
 		return
@@ -431,7 +450,7 @@ func get_state() -> Dictionary:
 		"multiplier": ClinicRules.combo_multiplier(session.combo),
 		"trail": trail,
 		"strokes": trail.size(),
-		"par": session.par_for(session.ear, session.freq) if not trail.is_empty() else 0,
+		"par": session.par_for(session.ear, session.freq) if not trail.is_empty() and _demo.is_empty() else 0,  # (v4) no par on the Ghost demo
 		"candidate_db": int(cand) if cand != null else -1,
 		"stimulus": ToneGenerator.STIMULUS_NAMES[_stim],
 		"hoot_turn": _auto_running,
@@ -469,7 +488,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _player_ok():
 		return
 	if not _demo.is_empty() and not (event.is_action(&"present_tone") and not event.is_echo()):
-		return  # (v4) the Ghost demo: only TONE is live
+		_demo_deny_key(event)   # (v4) the Ghost demo: only TONE is live
+		return
 	if event.is_action_pressed(&"present_tone"):
 		_buttons["tone_button"].show_press(true)
 		_hold_add("key")
@@ -545,6 +565,7 @@ func _tone_down() -> void:
 	if not _accepting or session == null or session.tone_on:
 		return
 	session.tone_down()
+	_demo_idle = 0.0
 	_tone.set_stimulus(_stim)
 	_tone.bone = session.transducer == &"bone"
 	_tone.start_tone(session.ear, session.freq, session.db)
@@ -565,6 +586,8 @@ func _tone_up() -> void:
 	session.tone_up()
 	_tone.stop_tone()
 	Events.tone_stopped.emit(session.ear, session.freq, session.db, dur)
+	if not _demo.is_empty() and session.last_short and not _demo_done:
+		Hoot.say("A blip! Hold %s until the ring turns green." % _k(&"present_tone"), Hoot.HIGH, "tone_button", "", 0.0)
 	_refresh()
 	_coach_update()
 
@@ -822,7 +845,7 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 	Events.patient_reaction.emit(kind, data)
 	if EMOTES.has(kind):
 		_booth.emote(EMOTES[kind])
-	if kind in PUNCH_KINDS and not _auto_running:
+	if kind in PUNCH_KINDS and not _auto_running and _demo.is_empty():   # (v4) the Ghost demo's callout stays clear
 		_punch_in(kind)
 	# v3 gags (visual only)
 	var bc := _booth.get_global_rect().get_center()
@@ -852,9 +875,17 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 						var lf := int(b_order[-1])   # the last bone mark and the air mark at the same pitch
 						if air.has(lf) and bone.has(lf):
 							title = "Bone %d, air %d? BOO!" % [int(bone[lf]), int(air[lf])]
+					var life := 2.0
 					if not _demo.is_empty():
-						title = String(_demo.get("title", title))   # (v4) the demo's own shout
-					_fx.ghost(from, to, title, "the %s cochlea may have heard it" % via.to_upper(), shout)
+						# (v4) the demo's own shout; the Ghost lands on the better ear's bone mark
+						title = String(_demo.get("title", title))
+						_demo_ghost = true
+						life = DEMO_GHOST_S
+						var vb := session.stored_thresholds(via, &"bc")
+						if vb.has(session.freq) and _cards.has(via):
+							to = (_cards[via] as AoEarCard).audiogram.get_point_global_position(via, session.freq, &"bc")
+							shout = to + Vector2(0, 84) if to.y + 130.0 < card_r.end.y else to + Vector2(0, -96)
+					_fx.ghost(from, to, title, "the %s cochlea may have heard it" % via.to_upper(), shout, life)
 					Sfx.play(&"whoosh", 1.3, -10.0)
 		&"tickle":
 			if not _auto_running:
@@ -1266,12 +1297,57 @@ func _demo_locked() -> bool:
 	return not _demo.is_empty()
 
 
+## Dim (lock) every deck button but TONE for the Ghost demo, or give them back (on = false: the ear
+## buttons follow the ear under test, Ask Hoot follows its feathers).
+func _apply_demo_locks(on: bool) -> void:
+	if _buttons.is_empty():
+		return
+	for id: String in DEMO_LOCKED:
+		var b: AoButton = _buttons[id]
+		b.locked = on
+		if on:
+			b.beckon = false
+		b.queue_redraw()
+	if not on:
+		(_buttons["ear_right_button"] as AoButton).locked = _ear != "right"
+		(_buttons["ear_left_button"] as AoButton).locked = _ear != "left"
+		(_buttons["hint_button"] as AoButton).locked = _feathers <= 0
+
+
+## A locked key in the Ghost demo: wiggle its button and say that only TONE works.
+func _demo_deny_key(event: InputEvent) -> void:
+	if _demo_done or not event.is_pressed() or event.is_echo():
+		return
+	for act: StringName in DEMO_DENY_ACTIONS:
+		if event.is_action_pressed(act):
+			var id: String = DEMO_DENY_ACTIONS[act]
+			(_buttons[id] as AoButton).wiggle()
+			Sfx.play(&"error", 1.0, -10.0)
+			_demo_only_tone(id)
+			get_viewport().set_input_as_handled()
+			return
+
+
+## A click on a locked deck button (AoButton.denied: it already wiggled).
+func _on_button_denied(id: String) -> void:
+	if not _demo.is_empty() and not _demo_done:
+		_demo_only_tone(id)
+
+
+## "just TONE!" over the refused button (the sticky tip on the beckoning TONE pad says why).
+func _demo_only_tone(id: String) -> void:
+	var b: AoButton = _buttons[id]
+	_fx.chip("just TONE!", b.get_global_rect().get_center() + Vector2(0, -58), Palette.PAPER, Palette.INK, 15, 0.8)
+
+
 ## A verdict in the demo: heard (or the last try) ends it; a miss nudges the tone up 5 and asks again.
 func _demo_verdict(rec: Dictionary) -> void:
 	if _demo_done:
 		return
 	_demo_tones += 1
 	_demo_idle = 0.0
+	if bool(rec.get("responded", false)):
+		_demo_heard_db = int(rec.get("db", session.db))
 	if bool(rec.get("responded", false)) or _demo_tones >= int(_demo.get("max_tones", DEMO_MAX_TONES)):
 		_demo_done = true
 		_finish_demo()
@@ -1285,6 +1361,7 @@ func _demo_verdict(rec: Dictionary) -> void:
 func _demo_hoot_press() -> void:
 	if _demo_done or not _accepting or session == null or session.tone_on:
 		return
+	_fx.chip("Hoot's wing!", _buttons["tone_button"].get_global_rect().get_center() + Vector2(0, -66), Palette.HOOT_FACE, Palette.INK, 18, 1.1)
 	_buttons["tone_button"].show_press(true)
 	_hold_add("demo")
 	await get_tree().create_timer(DEMO_HOLD_S, false).timeout
@@ -1310,6 +1387,10 @@ func _finish_demo() -> void:
 	session.discard_open(_ear, session.freq)   # its one tone opens no bone search
 	session.scoring = true
 	_demo = {}
+	_apply_demo_locks(false)
+	_ff_banner.visible = false
+	_layout()
+	_refresh()
 	var results := session.build_results()
 	Events.audiometry_finished.emit(results)
 	test_finished.emit(results)
@@ -1478,6 +1559,24 @@ func _auto_transducer(tr: StringName) -> void:
 func _draw_ff_banner() -> void:
 	var r := Rect2(Vector2.ZERO, _ff_banner.size)
 	AoDraw.rbox(_ff_banner, Rect2(r.position + Vector2(0, 4), r.size), Color(Palette.INK, 0.3), 18)
+	if not _demo.is_empty():
+		# (v4) the Ghost demo's label: a lavender banner with a tiny bedsheet ghost
+		AoDraw.rbox(_ff_banner, r, Color("#efeaf7"), 18, 3, Palette.INK)
+		var gc := Vector2(26.0, r.get_center().y + 1.0 + 2.0 * sin(Time.get_ticks_msec() / 220.0))
+		var sheet := PackedVector2Array()
+		for i in 9:
+			var a := PI + PI * i / 8.0
+			sheet.append(gc + Vector2(cos(a), sin(a)) * 11.0 + Vector2(0, -2))
+		for i in 5:
+			sheet.append(gc + Vector2(11.0 - 22.0 * i / 4.0, 10.0 + (3.0 if i % 2 == 0 else 0.0)))
+		_ff_banner.draw_colored_polygon(sheet, Palette.PAPER)
+		var ol := sheet.duplicate()
+		ol.append(sheet[0])
+		_ff_banner.draw_polyline(ol, Palette.INK, 2.0, true)
+		_ff_banner.draw_circle(gc + Vector2(-4, -4), 2.0, Palette.INK)
+		_ff_banner.draw_circle(gc + Vector2(4, -4), 2.0, Palette.INK)
+		AoDraw.text_l(_ff_banner, Vector2(46.0, r.get_center().y), "GHOST DEMO: ONE BEEP", 17, Palette.PLUM.darkened(0.2), AoDraw.FONT_BOLD)
+		return
 	AoDraw.rbox(_ff_banner, r, Palette.HOOT_FACE, 18, 3, Palette.INK)
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in 3:
@@ -1497,6 +1596,12 @@ func _update_dance() -> void:
 			any_hit = true
 	_dance.masked = ClinicRules.test_is_masked(session.test)
 	_dance.climbing = not any_hit and not _dance.masked
+	if not _demo.is_empty():
+		# (v4) the Ghost demo is one beep, not a dance: nothing to point at
+		if _dance.lit() >= 0:
+			_dance.clear()
+		_dance_key = ""
+		return
 	if recs.is_empty():
 		if _dance.lit() >= 0:
 			_dance.clear()  # a fresh pitch: nothing to point at until the first answer
@@ -1632,21 +1737,38 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 	match act:
 		&"present":
 			if recs.is_empty():
+				if _from_unmasked_bone() and session.db == session.recommended_start(session.ear, session.freq):
+					# (v4) Day 2: the start is the other mastoid's unmasked bone; name it
+					return ["First masked beep at %d dB, the unmasked bone. Noise %d. Hold %s." % [session.db, session.mask_db, _k(&"present_tone")], "tone_button", "mpresent0"]
 				return ["First masked beep: hold %s at %d dB, noise %d." % [_k(&"present_tone"), session.db, session.mask_db], "tone_button", "mpresent0"]
 			return ["Beep again: %d dB tone, %d dB noise. Hold %s." % [session.db, session.mask_db, _k(&"present_tone")], "tone_button", "mpresent%d" % recs.size()]
 		&"louder":
 			if a.get("then", &"") == &"store":
 				return ["Back up to %d dB, the plateau level." % int(a["target_db"]), "louder_button", "mto_store%d" % session.db]
 			if recs.is_empty():
-				return ["Start at the unmasked threshold: tap %s %s." % [_k(&"louder"), times], "louder_button", "mstart%d" % session.db]
+				return [_masked_start_text(int(a["target_db"]), &"louder", times), "louder_button", "mstart%d" % session.db]
 			return ["Missed! Masked dance: tone UP 5, same noise. Tap %s." % _k(&"louder"), "louder_button", "mup%d_%d" % [recs.size(), session.db]]
 		&"softer":
 			if a.get("then", &"") == &"store":
 				return ["Back down to %d dB, the plateau level." % int(a["target_db"]), "softer_button", "mto_store%d" % session.db]
-			return ["Start at the unmasked threshold: tap %s %s." % [_k(&"softer"), times], "softer_button", "mstart%d" % session.db]
+			return [_masked_start_text(int(a["target_db"]), &"softer", times), "softer_button", "mstart%d" % session.db]
 		&"store":
 			return ["Flat line! %d dB held through 15 dB more noise. Press %s to STORE." % [session.db, _k(&"store")], "store_button", "mstore%d" % recs.size()]
 	return []
+
+
+## (v4) Where a masked search starts. Masked bone starts at the UNMASKED bone, which on Day 2 was
+## measured on the other mastoid (the better cochlea answers either way), so say so.
+func _masked_start_text(target_db: int, key: StringName, times: String) -> String:
+	if _from_unmasked_bone():
+		return "Start at the unmasked bone, %d dB: the better cochlea's. Tap %s %s." % [target_db, _k(key), times]
+	return "Start at the unmasked threshold: tap %s %s." % [_k(key), times]
+
+
+## (v4) Masked bone on an ear with no unmasked bone of its own: it starts at the unmasked bone
+## measured on the other mastoid (ClinicRules.unmasked_bone()).
+func _from_unmasked_bone() -> bool:
+	return session.test == &"bc_masked" and not session.stored_thresholds(session.ear, &"bc").has(session.freq)
 
 
 ## The occlusion part of a starting noise level tm (0 when there is none): tm - non-test air - 10.
@@ -1721,7 +1843,7 @@ func _process(delta: float) -> void:
 	if _ff_banner != null and _ff_banner.visible:
 		_ff_banner.queue_redraw()
 	var mult := ClinicRules.combo_multiplier(session.combo) if session != null else 1
-	var target_flame := 0.0 if session == null or session.combo == 0 else 18.0 + 9.0 * mult
+	var target_flame := 0.0 if session == null or session.combo == 0 or not _demo.is_empty() else 18.0 + 9.0 * mult
 	tb.flame_px = move_toward(tb.flame_px, target_flame, delta * 120.0)
 	tb.flame_heat = clampf((mult - 1) / 4.0, 0.0, 1.0)
 
@@ -1756,7 +1878,11 @@ func _refresh() -> void:
 		card.audiogram.set_cursor(int(st["freq"]), int(st["db"]), k == e and bool(st["accepting_input"]))
 		if session != null:
 			var pr := session.ear_progress(k) if k == _ear or session.goal_test == &"ac" else session.ear_progress(k, &"ac")
+			if not _demo.is_empty() and k == _ear:
+				pr = [0, 0]   # (v4) the Ghost demo stamps nothing: no pips
 			card.set_progress(pr[0], pr[1])
+		card.badge = "GHOST TEST" if not _demo.is_empty() and k == _ear else "TESTING"
+	_dance.modulate.a = 0.4 if not _demo.is_empty() else 1.0   # (v4) one beep, no dance: dimmed like the deck
 	_refresh_overlays(st)
 	_status.set_points(int(st["points"]))
 	_refresh_quest(st)
@@ -1768,6 +1894,10 @@ func _refresh() -> void:
 			(_buttons[id] as AoButton).beckon = id == light
 		var cand := int(st["candidate_db"])
 		(_buttons["store_button"] as AoButton).beckon = light == "store_button" or (cand >= 0 and cand == int(st["db"]) and not bool(st["tone_on"]) and bool(st["accepting_input"]))
+		if not _demo.is_empty():
+			# (v4) the Ghost demo: TONE is the only live control, and it says so
+			(_buttons["store_button"] as AoButton).beckon = false
+			(_buttons["tone_button"] as AoButton).beckon = not _demo_done and not bool(st["tone_on"]) and bool(st["accepting_input"])
 	_update_dance()
 	Events.audiometer_state_changed.emit(st)
 
@@ -1812,6 +1942,9 @@ func _refresh_overlays(st: Dictionary) -> void:
 		var ag := card.audiogram
 		ag.show_gap = _masking_ui
 		ag.attention = _assistant(k) if _masking_ui and k == _ear else {}
+		# (v4) the poorer ear's bone, unknown until masked: "?" from the unmasked bone up to its air
+		var br := _bone_range(k) if k == _ear and (not _demo.is_empty() or (_masking_ui and session.goal_test in [&"bc", &"bc_masked"])) else {}
+		ag.bone_range = {k: br} if not br.is_empty() else {}
 		var mv := {}
 		if on and k == me:
 			mv = {"freq": int(st["freq"]), "db": int(st["mask_db"]), "role": &"noise"}
@@ -1836,6 +1969,25 @@ func _assistant(e: String) -> Dictionary:
 				flagged[f] = true
 		if not flagged.is_empty():
 			out[pair[0]] = {e: flagged}
+	return out
+
+
+## (v4) The poorer ear's unknown bone, for its chart: freq -> [lo, hi] wherever the rules want
+## masked bone (this ear's air vs unmasked bone from EITHER mastoid) and no masked stamp exists
+## yet. lo = that unmasked bone (the better cochlea: this cochlea can be no better), hi = this ear's
+## air (bone is never poorer than air). An ear with its own unmasked bone marks shows those instead.
+func _bone_range(e: String) -> Dictionary:
+	var v := session.results_view()
+	var air := ClinicRules.best_thresholds(v, e, false)
+	var own := session.stored_thresholds(e, &"bc")
+	var masked := session.stored_thresholds(e, &"bc_masked")
+	var out := {}
+	for f: int in ClinicRules.masked_freqs_needed(v, e, &"bc_masked", session.air_transducer):
+		if masked.has(f) or own.has(f) or not air.has(f):
+			continue
+		var ub: Variant = ClinicRules.unmasked_bone(v, f)
+		if ub != null:
+			out[f] = [int(ub), int(air[f])]
 	return out
 
 
@@ -1864,6 +2016,22 @@ func _refresh_mask_buttons(st: Dictionary) -> void:
 func _refresh_quest(st: Dictionary) -> void:
 	if session == null:
 		_quest.set_plan(_ear, [], 0, 7)
+		return
+	_quest.note = ""
+	if not _demo.is_empty():
+		# (v4) the Ghost demo: one token, no bar, and what it is for
+		_quest.title = "GHOST TEST"
+		_quest.test = &"bc"
+		var f := int(_demo.get("freq", ClinicRules.START_FREQ))
+		_quest.set_plan(_ear, [{"freq": f, "label": _hz(f), "done": false, "db": 0, "current": not _demo_done, "retest": false, "nr": false}], 0, 0)
+		if not _demo_done:
+			_quest.note = _say("ONE beep, buzzer on {his} %s.\nNothing gets stored.") % _ear.to_upper()
+		elif _demo_ghost:
+			_quest.note = "Heard at %d dB...\nbut by WHICH cochlea?" % _demo_heard_db
+		elif _demo_heard_db >= 0:
+			_quest.note = "Heard at %d dB.\nNothing stored." % _demo_heard_db
+		else:
+			_quest.note = "No hand this time.\nNothing stored."
 		return
 	_quest.title = QUEST_TITLES.get(session.goal_test, "TEST PLAN")
 	_quest.test = session.goal_test
@@ -1923,7 +2091,7 @@ func _refresh_keys() -> void:
 	var hint: AoButton = _buttons.get("hint_button")
 	if hint != null:
 		hint.text = "Ask Hoot x%d" % _feathers
-		hint.locked = _feathers <= 0
+		hint.locked = _feathers <= 0 or not _demo.is_empty()
 	if session != null and _coach_active:
 		_coach_key = ""
 		_coach_update()
@@ -2073,6 +2241,7 @@ func _make_button(id: String, text: String, icon: AoButton.Icon, color: Color, a
 				on_click.call())
 	_root.add_child(b)
 	_buttons[id] = b
+	b.denied.connect(func() -> void: _on_button_denied(id))
 	if anchor:
 		Hoot.register_anchor(id, b)
 	return b
@@ -2119,8 +2288,9 @@ func _layout() -> void:
 	_quest.size = Vector2(col_w, mid_h - spot_h - dance_h - 6.0)
 	_dance.position = Vector2(vp.x - m - col_w, mid_y + mid_h - dance_h)
 	_dance.size = Vector2(col_w, dance_h)
-	_ff_banner.size = Vector2(250.0, 44.0)
-	_ff_banner.position = Vector2(_lcd.position.x + (_lcd.size.x - 250.0) * 0.5, y_top + top_h - 22.0)
+	var fw := 250.0 if _demo.is_empty() else 290.0   # (v4) "GHOST DEMO: ONE BEEP" is a little longer
+	_ff_banner.size = Vector2(fw, 44.0)
+	_ff_banner.position = Vector2(_lcd.position.x + (_lcd.size.x - fw) * 0.5, y_top + top_h - 22.0)
 	_deck.position = Vector2(m, bottom_y)
 	_deck.size = Vector2(vp.x - m * 2.0, bottom_h)
 	_layout_deck(Rect2(_deck.position, _deck.size))

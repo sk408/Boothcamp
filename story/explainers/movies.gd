@@ -15,10 +15,16 @@ const MAX_CAPTION_WORDS := 18
 ## A movie should stay a short (CHAPTER2.md: about 60-100 s).
 const MIN_TOTAL_S := 45.0
 const MAX_TOTAL_S := 110.0
-## Keys every scene must have. Optional: "caption_at" (seconds per caption, default spread evenly),
-## "params" (set-specific), "cues" ([{t, sfx, pitch, vol_db}] Sfx stings, quiet).
+## Keys every scene must have. Optional: "title" (the scene's numbered chip on the screen),
+## "caption_at" (seconds per caption, default spread evenly), "params" (set-specific),
+## "cues" ([{t, sfx, pitch, vol_db}] Sfx stings, quiet), "board" (the animation brief, never shown).
+## A scene needs no new stage code when it uses the generic set "card" (a title card from data:
+## params {heading, lines, line_at, icon, hoot, tint}, see explainer_stage.gd _set_card()).
 const SCENE_KEYS: Array[String] = ["id", "set", "duration", "captions", "teaches"]
 const MOVIE_KEYS: Array[String] = ["id", "title", "subtitle", "chapter", "narrator", "scenes"]
+## The generic "card" set: at most this many lines, each this many characters (they never wrap).
+const CARD_MAX_LINES := 4
+const CARD_MAX_CHARS := 36
 
 
 static func ids() -> Array[String]:
@@ -100,6 +106,13 @@ static func validate(id: String, known_sets: Array = []) -> PackedStringArray:
 				bad.append("%s/%s: caption over %d words: %s" % [id, sid, MAX_CAPTION_WORDS, c])
 		if float(sc.get("duration", 0.0)) < 3.0:
 			bad.append("%s/%s: shorter than 3 s" % [id, sid])
+		if String(sc.get("set", "")) == "card":
+			var lines: Array = (sc.get("params", {}) as Dictionary).get("lines", [])
+			if lines.size() > CARD_MAX_LINES:
+				bad.append("%s/%s: a card shows %d lines at most" % [id, sid, CARD_MAX_LINES])
+			for ln: Variant in lines:
+				if String(ln).length() > CARD_MAX_CHARS:
+					bad.append("%s/%s: card line over %d characters: %s" % [id, sid, CARD_MAX_CHARS, ln])
 	var total := total_s(id)
 	if total < MIN_TOTAL_S or total > MAX_TOTAL_S:
 		bad.append("%s: %.0f s long (keep it %.0f-%.0f s)" % [id, total, MIN_TOTAL_S, MAX_TOTAL_S])

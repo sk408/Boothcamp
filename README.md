@@ -6,17 +6,16 @@ You take his history, look in his ears, explain the test, put the earphones on, 
 pure-tone air-conduction test on both ears with the AudiOtron 3000, read the audiogram, crack the
 case, and get a sneak peek of his first hearing aids. One visit takes about 10 to 15 minutes.
 
-**Day 2** brings Bonnie Bunsworth, a baker whose right ear has gone "all underwater". It opens
-with **Hoot's masking movie**, a 90-second cartoon (skip it with Esc, or one scene at a time with
-Space; replay it from the pause menu). You test her right ear by air (Hoot coaches the first beep
-and runs the rest), watch Hoot's montage of her normal left ear, put the bone oscillator on her
-BETTER (left) mastoid and test her bone there first, then move it to her right mastoid for one
-tone and meet the Cross-Hearing Ghost (her left cochlea answers), mask the left ear with the
-plateau dance for bone and then for air, and stamp the referral to the ear doctor (a conductive
-loss with normal bone). About 14 minutes.
-Every day is open from the start: pick one on the title's **Days** card, in any order. The
-suggested day wears an **UP NEXT** ribbon, and after Day 1 The Daily Decibel stamps UP NEXT! and
-**Next: Day 2** goes straight on. Progress is saved.
+**Day 2** brings Bonnie Bunsworth, a baker whose right ear has gone "all underwater". It opens with
+**Hoot's masking movie**, a 90-second cartoon (skip it with Esc, or one scene at a time with Space;
+replay it from the pause menu or the title's **Hoot's Movies** button). You test her right ear by
+air (Hoot coaches the first beep and runs the rest), watch Hoot's montage of her normal left ear,
+put the bone oscillator on her BETTER (left) mastoid and test her bone there first, then move it to
+her right mastoid for one tone and meet the Cross-Hearing Ghost (her left cochlea answers), mask the
+left ear with the plateau dance for bone and then for air, and stamp the referral to the ear doctor
+(a conductive loss with normal bone). About 14 minutes. Every day is open from the start: pick one
+on the title's **Days** card, in any order. The suggested day wears an **UP NEXT** ribbon, and after
+Day 1 The Daily Decibel stamps UP NEXT! and **Next: Day 2** goes straight on. Progress is saved.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you

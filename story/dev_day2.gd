@@ -285,11 +285,9 @@ func _results() -> Dictionary:
 	var ac := [250, 500, 1000, 2000, 4000, 8000]
 	var right := {"freqs": _sheet(p, "right", ac, false), "ac_masked": _sheet(p, "right", [250, 500, 1000, 2000], false),
 		"bc": {}, "bc_masked": _sheet(p, "right", [500, 1000, 2000, 4000], true)}
-	var unm := {}
-	for f: int in [500, 1000, 2000, 4000]:
-		unm[f] = {"stored_db": p.get_bc_threshold("left", f), "true_db": p.get_bc_threshold("left", f), "no_response": false}
-	right["bc"] = unm
-	var res := {"patient_id": "bonnie", "ears": {"right": right, "left": {"freqs": _sheet(p, "left", ac, false)}}}
+	# (v4) Unmasked bone is measured on the LEFT (better) mastoid ('>'); the right ear has masked bone only.
+	var left := {"freqs": _sheet(p, "left", ac, false), "bc": _sheet(p, "left", [500, 1000, 2000, 4000], true)}
+	var res := {"patient_id": "bonnie", "ears": {"right": right, "left": left}}
 	var thr := ClinicRules.best_thresholds(res, "right", false)
 	var bone := ClinicRules.best_thresholds(res, "right", true)
 	right["hearing_type"] = ClinicRules.hearing_type(thr, bone)

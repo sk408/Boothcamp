@@ -13,6 +13,7 @@ const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
 const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
+const Movies := preload("res://story/explainers/movies.gd")
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -31,6 +32,8 @@ var _font: Font
 var _starting := false
 var _idle := 0.0
 var _reset_armed := false
+## (v4) "Hoot's Movies": a small mouse shortcut to the cartoon explainers (keyboard: Options).
+var _movies_btn: Button
 # v3: the day picker (polish: a scrolling grid for any number of days)
 var _days_card: PanelContainer
 var _menu_buttons: Array[Button] = []
@@ -91,6 +94,8 @@ func _process(delta: float) -> void:
 			_show_disclaimer()
 	_logo.queue_redraw()
 	queue_redraw()
+	if _movies_btn != null:
+		_movies_btn.visible = _state == &"menu"
 	if _state == &"days":
 		for b: Button in _day_cards:
 			b.queue_redraw()
@@ -397,6 +402,23 @@ func _on_quit() -> void:
 	Events.quit_requested.emit(0)
 
 
+## (v4) Hoot's Movies: with one movie it plays right away (through the pause menu, so the title
+## waits paused and Esc skips it), then the title is back; with several, Options lists them all.
+func _on_movies() -> void:
+	if _state != &"menu":
+		return
+	var pm := get_tree().get_first_node_in_group("pause_menu")
+	if pm == null:
+		return
+	_idle = 0.0
+	pm.call("open")
+	var ids := Movies.ids()
+	if ids.size() == 1:
+		await pm.call("play_movie", ids[0])
+		if is_inside_tree():
+			pm.call("close")
+
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event.is_pressed():
 		_idle = 0.0
@@ -495,6 +517,22 @@ func _build() -> void:
 		v.add_child(b)
 		_buttons.append(b)
 	_menu_buttons = _buttons.duplicate()
+	if not Movies.ids().is_empty():
+		_movies_btn = UiKit.button("Hoot's Movies", &"", Vector2(214, 46))
+		_movies_btn.name = "MoviesButton"
+		_movies_btn.add_theme_font_size_override("font_size", 20)
+		_movies_btn.focus_mode = Control.FOCUS_NONE
+		_movies_btn.tooltip_text = "Replay Hoot's cartoon explainers (also under Options)"
+		_movies_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		_movies_btn.offset_left = -240.0
+		_movies_btn.offset_right = -26.0
+		_movies_btn.offset_top = -FOOTER_H - 62.0
+		_movies_btn.offset_bottom = -FOOTER_H - 16.0
+		_movies_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		_movies_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		_movies_btn.pressed.connect(_on_movies)
+		_movies_btn.visible = false
+		root.add_child(_movies_btn)
 	if UiKit.show_key_hints():
 		var hr := UiKit.hint_row([["Up", "Down"], "+", ["Enter"], "or click"], 15)
 		hr.alignment = BoxContainer.ALIGNMENT_CENTER

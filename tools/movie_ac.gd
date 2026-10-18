@@ -8,6 +8,8 @@ extends Node
 ##
 ## (v3) --day=2: Bonnie's right ear through Day 2's tests (air by Hoot at x8, then unmasked bone,
 ## masked bone and masked air played by the bot), logging every tone with its transducer and every
+## (v4) in the v4 order: both airs, unmasked bone on her LEFT mastoid, the one-tone Ghost demo on the
+## right mastoid (plan demo_tone), then masked right bone (noise in the left ear) and masked right air;
 ## masker change (MOVIE_MASK). The Sfx, Music and Voice buses are MUTED in this mode, so the capture
 ## holds only the ToneGenerator's output and tools/analyze_movie_bc.py can check it exactly: tone
 ## channel and level, the bone cross-feed, and the masker (non-test ear only, level, ceiling).
@@ -77,14 +79,22 @@ func _day2() -> void:
 	var plans: Array = [
 		["right", {"test": "ac", "hoot_turn_after": 0}],
 		["left", {"test": "ac", "hoot_turn_after": 0}],
-		["right", {"test": "bc", "masking_controls": true, "hoot_turn_after": 99}],
+		["left", {"test": "bc", "masking_controls": true, "hoot_turn_after": 99}],
+		["right", {"test": "bc", "bc_freqs": [1000], "masking_controls": false, "hoot_turn_after": 99, "demo_tone": {}}],
 		["right", {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 99}],
 		["right", {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 99}],
 	]
 	for p: Array in plans:
-		var plan: Dictionary = p[1]
+		var plan: Dictionary = (p[1] as Dictionary).duplicate()
+		if plan.has("demo_tone"):
+			# (v4) the Ghost demo: one tone 5 dB above her measured left bone, as level_bonnie plays it
+			var lb := ClinicRules.sheet_thresholds(screen.call("get_results"), "left", &"bc")
+			var ddb := int(lb.get(1000, 5)) + ClinicRules.LEVEL_STEP_DB
+			plan["demo_tone"] = {"freq": 1000, "db": ddb, "title": "Bone %d? BOO!" % ddb}
 		if String(plan["test"]) == "bc":
-			clinic.call("put_on_bone_oscillator", "right")
+			clinic.call("put_on_bone_oscillator", String(p[0]))
+		elif String(plan["test"]) == "bc_masked":
+			clinic.call("put_on_masking_phone", "left")
 		elif String(plan["test"]) == "ac_masked":
 			clinic.call("take_off_bone_oscillator")
 			clinic.call("put_on_earphones", true)
