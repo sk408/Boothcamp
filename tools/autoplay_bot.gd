@@ -10,8 +10,9 @@ extends Node
 ##    same search on bone, and the plateau ("Hood") dance on masked sheets with toggle_mask and
 ##    mask_louder / mask_softer: heard -> noise +5, missed -> tone +5, store after 3 noise steps
 ##    with the same answer. It reads only get_state() (what the screen shows) and its own stamps.
-##  - (v4) Hoot's masking movie (beat "explainer"): keys press Space (next scene) then Esc (skip);
-##    --mouse clicks "Next scene" then "Skip movie". The Ghost demo (get_state().demo): hold TONE
+##  - (v4) Hoot's masking movie (beat "explainer"): keys press Space (advance like dialogue) until
+##    scene 2, then Esc (skip); --mouse clicks "Next" then "Skip movie". The masking recap card
+##    (one scene) the same way. The Ghost demo (get_state().demo): hold TONE
 ##    once (again if she misses); it stores nothing and emits no ear_completed, so the bot also
 ##    treats Events.audiometry_finished as the end of a test.
 ##  - Screenshots at each phase and key moments; prints AUTOPLAY_RESULT {json}; quits.
@@ -198,7 +199,7 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 		await _pick_via_days(info)
 		return
 	if beat == &"explainer" and not _mouse:
-		await _keys_explainer(solver)
+		await _keys_explainer(solver, info)
 		return
 	if _mouse:
 		await _mouse_beat(beat, info)
@@ -209,18 +210,30 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 		push_warning("AutoplayBot: beat %s has no valid solver" % beat)
 
 
-## (v4) Hoot's movie with real keys: Space (next scene), a peek at scene 2, then Esc (skip it all).
-## The solver is the fallback when the keys did not end it.
-func _keys_explainer(solver: Callable) -> void:
-	await _tap(&"advance_dialogue")
-	await _wait(1.6)
-	await _shot("explainer_scene_2")
+## (v4) Hoot's movie with real keys: Space advances like dialogue (finish the caption, the next
+## caption, the next scene) until scene 2 shows, a peek at it, then Esc (skip it all). The solver
+## is the fallback when the keys did not end it. A one-scene recap: one Space, the peek, Esc.
+func _keys_explainer(solver: Callable, info: Dictionary = {}) -> void:
+	var p := get_tree().get_first_node_in_group("explainer_player")
+	for i in 4:
+		if p == null or not bool(p.call("is_playing")) or int(p.get("scene_index")) >= 1:
+			break
+		await _tap(&"advance_dialogue")
+		await _wait(0.3)
+	await _wait(1.3)
+	await _shot(_explainer_shot(info))
 	await _tap(&"ui_cancel")
 	await _wait(0.6)
-	var p := get_tree().get_first_node_in_group("explainer_player")
+	p = get_tree().get_first_node_in_group("explainer_player")
 	if p != null and bool(p.call("is_playing")) and solver.is_valid():
 		push_warning("AutoplayBot: Esc did not skip the movie; using the solver")
 		solver.call()
+
+
+## The peek's shot name: explainer_scene_2 for the day's movie, explainer_<id> for a recap.
+func _explainer_shot(info: Dictionary) -> String:
+	var id := String(info.get("movie", "masking"))
+	return "explainer_scene_2" if id == "masking" else "explainer_%s" % id
 
 
 # ---------------------------------------------------------------- audiometry
@@ -723,11 +736,17 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 			var targets: Array = info.get("targets", ["mastoid_target_right"])
 			await _drag(_anchor_center("oscillator"), _anchor_center(String(targets[0])))
 		&"explainer":
-			# (v4) Hoot's movie: "Next scene" once, then "Skip movie"
-			await _click_text("Next scene")
-			await _wait(1.6)
-			await _shot("explainer_scene_2")
-			await _click_text("Skip movie")
+			# (v4) Hoot's movie: "Next" (advances like dialogue) until scene 2 shows, then "Skip movie"
+			var p := get_tree().get_first_node_in_group("explainer_player")
+			for i in 4:
+				if p == null or not bool(p.call("is_playing")) or int(p.get("scene_index")) >= 1:
+					break
+				await _click((p.get("_next_btn") as Control).get_global_rect().get_center())   # a real click on "Next"
+				await _wait(0.3)
+			await _wait(1.3)
+			await _shot(_explainer_shot(info))
+			if p != null and bool(p.call("is_playing")):
+				await _click_text("Skip movie")
 		&"referral_stamp":
 			await _click(_anchor_center("referral_stamp"))
 		&"chapter_select":

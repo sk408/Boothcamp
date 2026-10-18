@@ -6,13 +6,19 @@ extends CanvasLayer
 ##
 ## Usage (story):  var p: CanvasLayer = load(PLAYER).instantiate(); add_child(p)
 ##                 var r: Dictionary = await p.call("play", "masking", "day_start"); p.queue_free()
-## r = {"movie", "skipped", "scenes_seen", "source"}; the signal `finished` carries the same.
-## Controls: Space / Enter / a click on the screen = next scene; Esc = skip the movie; buttons
-## "Next scene" and "Skip movie" for the mouse. P still pauses (when the game is not paused already).
+## r = {"movie", "skipped", "scenes_seen", "source", "watched"}; the signal `finished` carries the same.
+## Controls (polish: like the dialogue box): Space / Enter / a click on the screen / the "Next" button
+## = advance(): finish the typing, else the scene's next caption, else the next scene. Esc and the
+## "Skip movie" button = skip the movie. P (or the "II" button) pauses when the game is not paused
+## already. The last scene's button says "Start the day" (day start) or "Done" (replays).
+## Seen: Game.mark_movie_seen(id) only once the movie reached its "seen_at" scene (default: the last
+## one), so an early Esc plays it again next visit ("watched" in the result).
 ## Beat: Events.awaiting_input(&"explainer", {movie, title, scenes, source}, skip_all).
 ## Events: explainer_started, explainer_scene (every scene), explainer_finished. Game.mark_movie_seen().
 ## Process mode INHERIT: under a level it pauses with the game; under the pause menu (ALWAYS) it
 ## plays while the game stays paused. Layer 85: above the Hoot bubble (80), below the pause menu (90).
+## Music: ducked while it plays through Sfx.music_duck(on, owner) (reference-counted owners), so a
+## replay over the AudiOtron never brings the marimba back, and freeing it mid-play undoes its duck.
 ## Sounds: Sfx stings at -6 dB or softer, Hoot's voice syllables (-24 dBFS peaks): never loud, and
 ## the masking noise itself is only drawn (CONTRACTS.md §1.3).
 
@@ -57,6 +63,7 @@ var _talk := false
 var _rng := RandomNumberGenerator.new()
 var _voice_players: Array[AudioStreamPlayer] = []
 var _voice_next := 0
+var _seen_at := 0      # the scene index that counts as "seen" (movie key "seen_at", default the last)
 
 var _root: Control
 var _backdrop: Control
@@ -67,6 +74,7 @@ var _title: Label
 var _dots: Control
 var _next_btn: Button
 var _skip_btn: Button
+var _pause_btn: Button
 var _hints: HBoxContainer
 
 
@@ -79,6 +87,21 @@ func _ready() -> void:
 
 func is_playing() -> bool:
 	return _playing
+
+
+## Freed mid-play (P during the day-start movie, then Quit to title): undo the music duck and leave
+## the group, so nothing stays silent or "playing".
+func _exit_tree() -> void:
+	if _playing:
+		_playing = false
+		_duck(false)
+	if is_in_group("explainer_player"):
+		remove_from_group("explainer_player")
+
+
+func _duck(on: bool) -> void:
+	if Sfx.has_method("music_duck"):
+		Sfx.music_duck(on, "explainer:%d" % get_instance_id())
 
 
 ## (coroutine) Play a movie to the end (or until skipped). Returns the result dictionary.
@@ -99,9 +122,14 @@ func play(id: String, p_source: String = "menu") -> Dictionary:
 	visible = true
 	add_to_group("explainer_player")
 	_title.text = "%s: %s" % [String(movie.get("title", "")), String(movie.get("subtitle", ""))]
+	_seen_at = scenes.size() - 1
+	var seen_id := String(movie.get("seen_at", ""))
+	for k in scenes.size():
+		if String((scenes[k] as Dictionary).get("id", "")) == seen_id:
+			_seen_at = k
+	_stage.call("use_movie", movie)   # a movie may bring its own sets (MOVIE.stage, CONTRACTS.md §3.4)
 	_refresh_hints()
-	if Sfx.has_method("music_duck"):
-		Sfx.music_duck(true)
+	_duck(true)
 	Juice.bounce_in(_stage, 0.4)
 	Events.explainer_started.emit(id, source)
 	Events.awaiting_input.emit(&"explainer", {"movie": id, "title": String(movie.get("title", "")), "scenes": scenes.size(), "source": source}, skip_all)
@@ -112,20 +140,43 @@ func play(id: String, p_source: String = "menu") -> Dictionary:
 	_playing = false
 	if is_in_group("explainer_player"):
 		remove_from_group("explainer_player")
-	if Sfx.has_method("music_duck"):
-		Sfx.music_duck(false)
-	Game.mark_movie_seen(id)
+	_duck(false)
+	var watched := scene_index >= _seen_at
+	if watched:
+		Game.mark_movie_seen(id)
 	Events.explainer_finished.emit(id, skipped)
 	Events.input_resolved.emit(&"explainer")
-	var r := {"movie": id, "skipped": skipped, "scenes_seen": scene_index + 1, "source": source}
+	var r := {"movie": id, "skipped": skipped, "scenes_seen": scene_index + 1, "source": source, "watched": watched}
 	finished.emit(r)
 	return r
 
 
-## Next scene (Space / Enter / click / the "Next scene" button).
+## Next scene now (dev tools and tests; players use advance()).
 func skip_scene() -> void:
 	if _playing:
 		_next = true
+
+
+## (polish) Space / Enter / a click / the "Next" button, like the dialogue box: finish the caption
+## being typed; else jump to the scene's next caption (the drawing jumps with it: _scene_t moves to
+## that caption's time, and the cues in between are skipped, never played in a burst); else the
+## next scene (on the last scene: the end of the movie, watched).
+func advance() -> void:
+	if not _playing:
+		return
+	if _cap_i >= 0 and _caption.visible_characters >= 0 and _caption.visible_characters < _caption.text.length():
+		_caption.visible_characters = -1
+		_talk = false
+		return
+	if _cap_i + 1 < _caps.size():
+		var at := float(_cap_at[_cap_i + 1])
+		if at > _scene_t:
+			_scene_t = at
+			while _cue_i < _cues.size() and float((_cues[_cue_i] as Dictionary).get("t", 0.0)) < at - 0.05:
+				_cue_i += 1
+			_stage.set("t", _scene_t)
+		return
+	skip_scene()
 
 
 ## Skip the rest of the movie (Esc / the "Skip movie" button / the beat's solver).
@@ -159,6 +210,8 @@ func _play_scene(i: int, sc: Dictionary) -> void:
 	_stage.set("scene_no", i + 1)
 	_stage.call("show_scene", sc)
 	_dots.queue_redraw()
+	var last := i == (movie.get("scenes", []) as Array).size() - 1
+	_next_btn.text = ("Start the day" if source == "day_start" else "Done") if last else "Next"
 	Events.explainer_scene.emit(movie_id, i, String(sc.get("id", "")))
 	while _scene_t < _scene_len and not _next:
 		if not is_inside_tree():
@@ -201,6 +254,7 @@ func _process(delta: float) -> void:
 			Sfx.play(StringName(String(cue["sfx"])), float(cue.get("pitch", 1.0)), minf(float(cue.get("vol_db", -10.0)), CUE_MAX_DB))
 	_face.queue_redraw()
 	_backdrop.queue_redraw()
+	_pause_btn.visible = not get_tree().paused
 
 
 func _input(event: InputEvent) -> void:
@@ -215,7 +269,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_cancel"):
 		skip_all()
 	elif event.is_action_pressed(&"advance_dialogue") or event.is_action_pressed(&"ui_accept"):
-		skip_scene()
+		advance()
 	else:
 		return
 	Sfx.play(&"blip", 1.3, -12.0)
@@ -240,7 +294,7 @@ func _refresh_hints() -> void:
 	for c in _hints.get_children():
 		c.queue_free()
 	if UiKit.show_key_hints():
-		_hints.add_child(UiKit.hint_panel([[Game.key_label(&"advance_dialogue")], "or click: next scene", ["Esc"], "skip the movie"], 15))
+		_hints.add_child(UiKit.hint_panel([[Game.key_label(&"advance_dialogue")], "or click: next", ["Esc"], "skip the movie", ["P"], "pause"], 15))
 
 
 # ---------------------------------------------------------------- layout
@@ -253,7 +307,7 @@ func _build() -> void:
 	_backdrop.gui_input.connect(func(e: InputEvent) -> void:
 		var mb := e as InputEventMouseButton
 		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _age >= INPUT_GRACE_S:
-			skip_scene())
+			advance())
 	_root.add_child(_backdrop)
 	_stage = Stage2D.new()
 	_stage.anchor_left = 0.5
@@ -320,12 +374,21 @@ func _build() -> void:
 	_hints = HBoxContainer.new()
 	_hints.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(_hints)
-	_next_btn = UiKit.button("Next scene", &"", Vector2(170, 46))
-	_next_btn.pressed.connect(skip_scene)
+	_next_btn = UiKit.button("Next", &"", Vector2(170, 46))
+	_next_btn.pressed.connect(advance)
 	row.add_child(_next_btn)
 	_skip_btn = UiKit.button("Skip movie", &"AccentButton", Vector2(170, 46))
 	_skip_btn.pressed.connect(skip_all)
 	row.add_child(_skip_btn)
+	# (polish) the mouse's pause: the level's pause menu (the movie freezes with the game under it)
+	_pause_btn = UiKit.button("II", &"GhostButton", Vector2(46, 46))
+	_pause_btn.tooltip_text = "Pause (P)"
+	_pause_btn.add_theme_font_override("font", UiKit.font(700))
+	_pause_btn.pressed.connect(func() -> void:
+		var pm := get_tree().get_first_node_in_group("pause_menu")
+		if pm != null and not get_tree().paused:
+			pm.call("open"))
+	row.add_child(_pause_btn)
 	var bus: StringName = AudioSafety.VOICE_BUS if AudioServer.get_bus_index(AudioSafety.VOICE_BUS) >= 0 else &"Master"
 	for i in 3:
 		var p := AudioStreamPlayer.new()
