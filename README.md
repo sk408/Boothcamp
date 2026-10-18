@@ -15,6 +15,14 @@ Every day is open from the start: pick one on the title's **Days** card, in any 
 suggested day wears an **UP NEXT** ribbon, and after Day 1 The Daily Decibel stamps UP NEXT! and
 **Next: Day 2** goes straight on. Progress is saved.
 
+**Day 3** brings Mike Lenders, a forklift driver who says he can't hear a thing since a forklift
+beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his beeps, then you find
+his speech recognition threshold (SRT) on the new SPEECH screen: go through the two-part words
+first, present them softer and softer, score what Mike actually says, and find the softest level
+where he repeats half of them. His words come back far better than his beeps, so you present the
+clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests, with
+his doctor told about the sudden loss.
+
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
@@ -50,6 +58,16 @@ options). Closing the window saves and quits.
 | **PgUp** / **PgDn**, or **Shift+Up** / **Shift+Down** (Day 2) | Noise louder / softer, 5 dB per tap |
 | **Esc** or **P** | Pause and options |
 
+| Key | SPEECH screen (Day 3) |
+|---|---|
+| **Space** | Present the next word (the TALK lamp lights while it plays) |
+| **Up** / **Down** | Louder / softer, 5 dB per tap |
+| **Right**, **+** or **=** | He repeated it: CORRECT |
+| **Left** or **-** | He missed it (silence, half the word, or the wrong word): MISSED |
+| **S** or **Enter** | Store the SRT |
+| **M** | Speech noise in the other ear on / off |
+| **H** | Show or hide the key hints |
+
 Prefer Up = softer? Click **Up = LOUDER** on the AudiOtron (or use the pause menu) to swap the
 two arrows. Everywhere else: Space or Enter continues dialogue, Up / Down or 1 to 4 picks an
 answer, and every screen says which keys it uses.
@@ -64,6 +82,8 @@ and drag the evidence onto the case file. On Day 2, click the **AIR | BONE** swi
 noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp. On
 the title's **Days** card, click a day; the mouse wheel scrolls the grid when there are more days
 than fit.
+On Day 3, click a word card to drop it, click **PRESENT**, **CORRECT**, **MISSED**, **LOUDER**,
+**SOFTER**, **STORE** and **MASK** on the SPEECH screen, and drag a clue onto Mike's claim.
 
 ### The AudiOtron in one breath
 
@@ -148,6 +168,30 @@ Symbols follow the usual audiogram conventions: O / X for air, < / > for unmaske
 The masking noise is synthesized narrowband noise, quiet and capped like the beeps, and it
 always lights the NOISE box and the booth squiggles, so Day 2 is playable without sound too.
 
+### Day 3: what it teaches
+
+- **Spondees:** two-part words said with equal stress on both parts (rainbow, doorbell), chosen
+  because they are about equally easy to hear. Go through them first at a comfortable level, and
+  drop any word the patient doesn't know.
+- **The SRT (speech recognition threshold):** start about 15 dB above the pure-tone average
+  (PTA: the average of the beeps at 500, 1000 and 2000 Hz); repeated = down 10, missed = up 5,
+  and another word at the same level is fine; the SRT is the softest level where at least two
+  words and half of them come back, with fewer than half right 5 dB below it. Score only what the
+  patient said: half a word is a miss.
+- **PTA/SRT agreement:** a reliable SRT lands within about 6 dB of the PTA (12 is fair). The
+  direction matters: Mike's SRT is about 40 dB better than his beeps, a classic sign of a
+  non-organic loss; an SRT worse than the PTA points to the instructions, language, word
+  recognition or a sloping loss instead.
+- **Never accuse:** most non-organic losses aren't fibs (stress, worry, even a real loss
+  underneath). Gather the clues (the agreement, the whispered coffee, clear canals), stay kind,
+  recheck, refer for objective tests, and tell his doctor about the sudden loss. The game never
+  calls Mike a liar.
+
+The words are an original list written for the game, shown on screen as you play: no list, order
+or recording is copied, and every word is checked against ASHA (1988) Appendices A-C and CID W-1.
+Each word plays as a quiet murmur through the same safety limits as the beeps; a recording can
+replace it later, and nothing depends on hearing it.
+
 ## Build from source
 
 Requires [Godot 4.7.2](https://godotengine.org) (standard build, GDScript only) and, for the
@@ -161,6 +205,7 @@ tools/autoplay_check.sh                             # a bot plays the whole leve
 tools/autoplay_check.sh --day=2                     # ...Day 2 (bone and masking)
 tools/autoplay_check.sh --day=2 --upgrades=insert_earphones   # ...Day 2 with inserts
 tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Days card
+tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
@@ -179,5 +224,7 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
   audiometry, the masking dilemma (both ears with big gaps), and a "something's not right, refer
   to a doctor" case. Day 2's design and rules are in `docs/CHAPTER2.md`.
 - A real fitting level: choosing a target, adjusting gain by frequency, and the follow-up visit.
-- Speech-in-noise screening and counselling choices that change how the visit ends.
+- More speech tests: word recognition (Day 4) and a party-noise test (Day 5). The speech rules
+  are in `docs/SPEECH.md`, Day 3's design in `docs/CHAPTER3.md`.
+- Counselling choices that change how the visit ends.
 - More upgrades for the clinic, and a practice booth with random patients.

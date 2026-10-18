@@ -7,6 +7,8 @@ extends CanvasLayer
 ## Beat: results_continue. Left alone for IDLE_S (a booth display), it returns to the title.
 ## (v3) Day-aware: headlines per chapter, "Vol. <day>", the shop item of that day (Game.SHOP_ITEMS)
 ## and a "Next day" button (key N, returns "next") once the next chapter is open.
+## (Speech) On a speech day (audiometry results with "speech", CONTRACTS.md §9.5) column 2 is the
+## word golf card instead: per ear the stored SRT, the PTA, the agreement chip and words vs par.
 
 signal _continued
 
@@ -39,6 +41,14 @@ const CHAPTER_HEADLINES: Dictionary = {
 		"C": "NOISE MOSTLY IN THE RIGHT EAR, CONFIRMS OWL",
 		"Do-over": "BONNIE BACK TOMORROW WITH CROISSANTS; GHOST STILL AT LARGE",
 	},
+	# (Speech) Day 3 (Mike): forklift and needle puns, never an accusation
+	"mike": {
+		"S": "TRAINEE'S SRT LIFTS THE CASE; NEEDLE CLUNKS, NOBODY BLAMED",
+		"A": "FORKLIFT LEGEND HEARS \"GLAZED\" FROM THE HALLWAY",
+		"B": "SPEECH TEST DELIVERS THE GOODS, PALLET BY PALLET",
+		"C": "SOME WORDS FELL OFF THE FORKLIFT, CONFIRMS OWL",
+		"Do-over": "MIKE BACK TOMORROW; NECK BRACE OPTIONAL",
+	},
 }
 const CHAPTER_SUBHEADS: Dictionary = {
 	"bonnie": {
@@ -48,12 +58,20 @@ const CHAPTER_SUBHEADS: Dictionary = {
 		"C": "Some masked beeps went astray. Remember: heard means noise up 5.",
 		"Do-over": "Masking is the trickiest trick in the booth. Everyone overmasks once.",
 	},
+	"mike": {
+		"S": "Words and beeps disagreed by a mile. Recheck and objective tests booked, kindly.",
+		"A": "Poor agreement, recorded without blame. Objective tests next. The donuts were glazed.",
+		"B": "Words bracketed, needle read, referral stamped. One more lap of the dance, says Hoot.",
+		"C": "A few words went astray. Remember: got it, down 10; missed it, up 5.",
+		"Do-over": "Speech testing is a whole new dance. Everyone steps on a toe once.",
+	},
 }
 const MEDAL_COLORS: Dictionary = {"gold": Color("#ffc93c"), "silver": Color("#c9ced8"), "bronze": Color("#d99a5b")}
 const MEDAL_BEATS: Array[Array] = [["history", "Chat"], ["otoscopy", "Peek"], ["earphones", "Phones"], ["evidence", "Evidence"]]
 ## (v3) Medal rows per chapter (chapters not listed use MEDAL_BEATS).
 const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
+	"mike": [["history", "Chat"], ["instructions", "Explain"], ["familiarize", "Words"], ["evidence", "Case"], ["referral", "Next"]],
 }
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, ear] (_row_tag draws the
 ## row's audiogram symbol).
@@ -63,6 +81,19 @@ const GOLF_COLORS: Dictionary = {
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),
 	&"hoot": Color("#8a6a4a"),
 }
+## (Speech) PTA/SRT agreement chip colours.
+const AGREE_COLORS: Dictionary = {&"good": Color("#2f9e73"), &"fair": Color("#e08a1c"), &"poor": Color("#e5383b")}
+## (Speech) A C on a speech day: the subhead names the slip that actually happened (the most
+## frequent speech technique error; ties go to the first listed), else SPEECH_C_CLEAN.
+const SPEECH_C_SUBHEADS: Dictionary = {
+	"srt_store_no_bracket": "An SRT went in before its bracket. Two right, then under half 5 dB below.",
+	"srt_store_wrong_level": "An SRT went in off its bracket. Store the softest level with half or more right.",
+	"misscored": "A few scores missed what was said. Half a word, a wrong word or silence: all misses.",
+	"srt_wrong_step": "A few words went astray. Remember: got it, down 10; missed it, up 5; four words a level at most.",
+	"srt_start": "The words started at the wrong level. Begin at the PTA plus 15.",
+	"speech_marathon": "A marathon of words. Bracket quickly and store: patients tire.",
+}
+const SPEECH_C_CLEAN := "Clean steps, but a long road. Bracket quickly, then store the softest level."
 
 var _paper: PanelContainer
 var _coins_label: Label
@@ -292,7 +323,8 @@ func _build(s: Dictionary) -> void:
 	var l1 := UiKit.label("Vol. %d  -  Booth Camp Edition" % maxi(1, int(s.get("day", 1))), 14, Palette.INK_SOFT, 600)
 	l1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(l1)
-	top.add_child(UiKit.label("Weather: 100% chance of beeps", 14, Palette.INK_SOFT, 600))
+	var aud0: Dictionary = s.get("audiometry", {})
+	top.add_child(UiKit.label("Weather: scattered spondees, clearing later" if _is_speech(aud0) else "Weather: 100% chance of beeps", 14, Palette.INK_SOFT, 600))
 	var mast := UiKit.label("THE DAILY DECIBEL", 58, Palette.INK, 700)
 	mast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(mast)
@@ -308,7 +340,10 @@ func _build(s: Dictionary) -> void:
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
 	var subs: Dictionary = s.get("subheads", CHAPTER_SUBHEADS.get(cid, SUBHEADS))
-	var sub := UiKit.label(subs.get(grade, ""), 18, Palette.INK_SOFT, 500)
+	var sub_text := String(subs.get(grade, ""))
+	if grade == "C" and not s.has("subheads") and _is_speech(aud0):
+		sub_text = speech_c_subhead(aud0)
+	var sub := UiKit.label(sub_text, 18, Palette.INK_SOFT, 500)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
 	_rule(v, 2)
@@ -358,23 +393,26 @@ func _build(s: Dictionary) -> void:
 	vr.color = Color(Palette.INK, 0.5)
 	vr.custom_minimum_size.x = 2
 	cols.add_child(vr)
-	# --- column 2: golf card
+	# --- column 2: golf card (Speech: the word golf card on a speech day)
 	var c2 := VBoxContainer.new()
 	c2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	c2.add_theme_constant_override("separation", 4)
 	cols.add_child(c2)
-	c2.add_child(UiKit.label("SPORTS: THE BEEP GOLF CARD", 16, Palette.INK, 700))
-	c2.add_child(UiKit.label(_par_caption(s.get("audiometry", {})), 14, Palette.INK_SOFT, 500))
-	c2.add_child(_golf_card(s.get("audiometry", {})))
 	var aud: Dictionary = s.get("audiometry", {})
-	var retest := _retest_line(aud)
-	if retest != "":
-		var rl := UiKit.label(retest, 14, Palette.INK, 600)
-		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		c2.add_child(rl)
-	var hoot_beeps := int(aud.get("hoot_presentations", 0))
-	var facts := UiKit.label("Your beeps: %d%s   -   False alarms: %d   -   Best combo: %d" % [int(aud.get("presentations", 0)), ("  (Hoot: %d)" % hoot_beeps) if hoot_beeps > 0 else "", int(aud.get("false_alarms", 0)), int(aud.get("max_combo", 0))], 15, Palette.INK_SOFT, 500)
-	c2.add_child(facts)
+	if _is_speech(aud):
+		_speech_column(c2, aud["speech"] as Dictionary)
+	else:
+		c2.add_child(UiKit.label("SPORTS: THE BEEP GOLF CARD", 16, Palette.INK, 700))
+		c2.add_child(UiKit.label(_par_caption(aud), 14, Palette.INK_SOFT, 500))
+		c2.add_child(_golf_card(aud))
+		var retest := _retest_line(aud)
+		if retest != "":
+			var rl := UiKit.label(retest, 14, Palette.INK, 600)
+			rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			c2.add_child(rl)
+		var hoot_beeps := int(aud.get("hoot_presentations", 0))
+		var facts := UiKit.label("Your beeps: %d%s   -   False alarms: %d   -   Best combo: %d" % [int(aud.get("presentations", 0)), ("  (Hoot: %d)" % hoot_beeps) if hoot_beeps > 0 else "", int(aud.get("false_alarms", 0)), int(aud.get("max_combo", 0))], 15, Palette.INK_SOFT, 500)
+		c2.add_child(facts)
 	var wanted := PanelContainer.new()
 	wanted.add_theme_stylebox_override("panel", UiKit.style(Color("#fffaf0"), Palette.INK, 6, 2, 0, 8))
 	var wl := UiKit.label("WANTED: people who like puzzles AND people. Hearing care professionals do this every day. Ask at this booth!", 14, Palette.INK, 600)
@@ -643,3 +681,96 @@ func _golf_card(res: Dictionary) -> Control:
 			cv.add_child(g)
 			grid.add_child(cell)
 	return grid
+
+
+# ---------------------------------------------------------------- (Speech) the word golf card
+
+## A speech day: the results carry stored speech sheets (§9.5).
+static func _is_speech(aud: Dictionary) -> bool:
+	var sp: Variant = aud.get("speech", {})
+	if not (sp is Dictionary):
+		return false
+	return not ((sp as Dictionary).get("srt", {}) as Dictionary).is_empty()
+
+
+func _speech_column(c2: VBoxContainer, sp: Dictionary) -> void:
+	c2.add_child(UiKit.label("SPORTS: THE WORD GOLF CARD", 16, Palette.INK, 700))
+	c2.add_child(UiKit.label("SRT per ear vs the PTA from the beeps. Words vs par; brown = Hoot's.", 14, Palette.INK_SOFT, 500))
+	c2.add_child(_speech_card(sp))
+	var al := UiKit.label("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor: recheck and refer." % [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)], 14, Palette.INK, 600)
+	al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	c2.add_child(al)
+	var half := 0
+	var srt: Dictionary = sp.get("srt", {})
+	for e: Variant in srt:
+		half += int((srt[e] as Dictionary).get("half_words", 0))
+	var hoot_words := int(sp.get("hoot_presentations", 0))
+	var facts := UiKit.label("Your words: %d%s   -   Half-words: %d   -   Best combo: %d" % [int(sp.get("presentations", 0)), ("  (Hoot: %d)" % hoot_words) if hoot_words > 0 else "", half, int(sp.get("max_combo", 0))], 15, Palette.INK_SOFT, 500)
+	c2.add_child(facts)
+
+
+## One row per ear: stored SRT, PTA, agreement chip (with the gap), words vs par, golf.
+func _speech_card(sp: Dictionary) -> Control:
+	var grid := GridContainer.new()
+	grid.columns = 6
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 4)
+	for h: String in ["", "SRT", "PTA", "Agreement", "Words", "Golf"]:
+		var l := UiKit.label(h, 13, Palette.INK_SOFT, 700)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		grid.add_child(l)
+	var srt: Dictionary = sp.get("srt", {})
+	for e: String in ["right", "left"]:
+		if not srt.has(e):
+			continue
+		var sh: Dictionary = srt[e]
+		var tag := UiKit.label("R" if e == "right" else "L", 17, Palette.ear_color(e), 700)
+		tag.custom_minimum_size = Vector2(22, 0)
+		grid.add_child(tag)
+		var pta := float(sh.get("pta", NAN))
+		var ag := StringName(String(sh.get("agreement", "")))
+		var golf := StringName(String(sh.get("golf", "")))
+		var strokes := int(sh.get("strokes", 0))
+		var hoot_n := maxi(0, int(sh.get("words", strokes)) - strokes)
+		grid.add_child(_speech_cell("%d dB" % int(sh.get("stored_db", 0)), "stored", Palette.ear_color(e)))
+		grid.add_child(_speech_cell("-" if is_nan(pta) else "%d dB" % roundi(pta), "beeps", Color(Palette.INK, 0.45)))
+		grid.add_child(_speech_cell(String(ag).to_upper() if ag != &"" else "-", "%d dB apart" % absi(int(sh.get("diff", 0))), AGREE_COLORS.get(ag, Color(Palette.INK, 0.3))))
+		grid.add_child(_speech_cell("%d / %d" % [strokes, int(sh.get("par", 0))], ("+%d by Hoot" % hoot_n) if hoot_n > 0 else "words / par", Color(Palette.INK, 0.45)))
+		if not bool(sh.get("by_hoot", false)) and not SpeechScreen.is_bracketed(sh):
+			# no golf for an SRT stored off its bracket ("par" would praise it)
+			grid.add_child(_speech_cell("no bracket", "", Color(Palette.INK, 0.3)))
+		else:
+			grid.add_child(_speech_cell(String(golf).replace("_", " ").replace("double ", "2x ").replace("triple ", "3x ") if golf != &"" else "-", "", GOLF_COLORS.get(golf, Color(Palette.INK, 0.3))))
+	return grid
+
+
+## (Speech) The C-grade subhead from the speech results' technique errors (SPEECH_C_SUBHEADS).
+static func speech_c_subhead(aud: Dictionary) -> String:
+	var counts: Dictionary = {}
+	for e: Variant in ((aud.get("speech", {}) as Dictionary).get("technique_errors", []) as Array):
+		var k := String((e as Dictionary).get("kind", ""))
+		if SPEECH_C_SUBHEADS.has(k):
+			counts[k] = int(counts.get(k, 0)) + 1
+	var best := ""
+	for k: String in SPEECH_C_SUBHEADS:
+		if int(counts.get(k, 0)) > int(counts.get(best, 0)):
+			best = k
+	return String(SPEECH_C_SUBHEADS[best]) if best != "" else SPEECH_C_CLEAN
+
+
+func _speech_cell(main: String, small: String, col: Color) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(88, 44)
+	cell.add_theme_stylebox_override("panel", UiKit.style(Color(col, 0.14), col, 6, 2, 0, 2))
+	var cv := VBoxContainer.new()
+	cv.add_theme_constant_override("separation", -4)
+	cv.alignment = BoxContainer.ALIGNMENT_CENTER
+	cell.add_child(cv)
+	var n := UiKit.label(main, 16, Palette.INK, 700)
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cv.add_child(n)
+	if small != "":
+		var g := UiKit.label(small, 10, col.darkened(0.2), 600)
+		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cv.add_child(g)
+	return cell

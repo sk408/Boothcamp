@@ -106,6 +106,11 @@ func _ready() -> void:
 		_progress())
 	for sig: Signal in [Events.dialogue_line, Events.audiometer_state_changed, Events.tone_stopped, Events.scene_changed]:
 		sig.connect(func(_a: Variant = null, _b: Variant = null, _c: Variant = null, _d: Variant = null) -> void: _progress())
+	# (Speech, §9.9) the SPEECH screen's progress; its beats come through awaiting_input like any other
+	for sig: Signal in [Events.speech_started, Events.speech_response, Events.speech_scored, Events.speech_state_changed]:
+		sig.connect(func(_a: Variant = null, _b: Variant = null, _c: Variant = null, _d: Variant = null, _e: Variant = null) -> void: _progress())
+	Events.speech_presented.connect(_on_speech_presented)
+	Events.speech_stored.connect(_on_speech_stored)
 	_mouse = Game.cli_flag("mouse")
 	_via_days = Game.cli_flag("via-days")
 	Events.scene_changed.connect(func(path: String, _n: Node) -> void:
@@ -237,6 +242,31 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 		_shot_flags["quip_right"] = true
 		await _wait(2.2)
 		await _shot("audiometry_right_mid_test")
+
+
+# ---------------------------------------------------------------- speech (§9.9)
+
+func _on_speech_presented(ear: String, test: StringName, db: int, _item: Dictionary) -> void:
+	_progress()
+	var key := "speech_%s_%s_first_word" % [ear, test]
+	if not _shot_flags.has(key):
+		_shot_flags[key] = true
+		await Events.speech_response   # this word's answer: the bubble is up
+		await _wait(0.3)
+		await _shot(key)
+	if not _shot_flags.has("speech_%s_low" % ear) and db <= 40:
+		_shot_flags["speech_%s_low" % ear] = true
+		await Events.speech_response
+		await _wait(0.3)
+		await _shot("speech_%s_%s_descent" % [ear, test])
+
+
+func _on_speech_stored(ear: String, test: StringName, sheet: Dictionary) -> void:
+	_progress()
+	print("BOT speech stored %s %s at %d dB (true %d, words %d, par %d, %s, agreement %s)" % [test, ear, int(sheet.get("stored_db", -99)),
+		int(sheet.get("true_db", -99)), int(sheet.get("words", 0)), int(sheet.get("par", 0)), str(sheet.get("golf", "")), str(sheet.get("agreement", ""))])
+	await _wait(1.0)
+	await _shot("speech_%s_%s_stored" % [ear, test])
 
 
 func _on_ear_completed(ear: String, _r: Dictionary) -> void:
@@ -666,8 +696,25 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 				return
 			await _click(btn.get_global_rect().get_center())
 		_:
+			if info.get("mouse", null) is Dictionary:
+				await _mouse_route(info["mouse"] as Dictionary)
+				return
 			_mouse_misses.append("beat " + String(beat))
 			push_warning("AutoplayBot(mouse): no mouse route for beat " + String(beat))
+
+
+## (Speech, §9.9) A beat that says how a player would solve it with the mouse:
+## {click: anchor} | {drag: [from_anchor, to_anchor]} | {text: "visible text prefix"}.
+func _mouse_route(m: Dictionary) -> void:
+	if m.has("click"):
+		await _click(_anchor_center(String(m["click"])))
+	elif m.has("drag"):
+		var d: Array = m["drag"]
+		await _drag(_anchor_center(String(d[0])), _anchor_center(String(d[1])))
+	elif m.has("text"):
+		await _click_text(String(m["text"]))
+	else:
+		_mouse_misses.append("mouse route " + str(m))
 
 
 func _mouse_results_continue() -> void:
@@ -805,6 +852,7 @@ func _finish() -> void:
 	var problems: PackedStringArray = []
 	var ears: Dictionary = res.get("ears", {})
 	_check_v3(res, report, problems)
+	_check_speech(res, report, problems)
 	for ear: String in ["right", "left"]:
 		if not ears.has(ear) or not bool((ears[ear] as Dictionary).get("complete", false)):
 			problems.append("%s ear incomplete" % ear)
@@ -934,3 +982,33 @@ func _fail(code: int, why: String) -> void:
 		print("SCRIPT ERROR: ", m)
 	await _shot("stuck_" + String(_phase))
 	Events.quit_requested.emit(code)
+
+
+## (Speech, §9.9) Every stored speech measurement within 10 dB of the truth; on a speech day both
+## ears have an SRT; on Day 3 (Mike) the PTA/SRT agreement comes out poor in both ears.
+func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var sp: Dictionary = res.get("speech", {})
+	var chapter := String(_summary.get("chapter_id", Game.current_chapter_id))
+	var speech_day := chapter == "mike"
+	if sp.is_empty():
+		if speech_day:
+			problems.append("no speech results on a speech day")
+		return
+	var out := {}
+	for t: String in ["srt", "wrs", "sin"]:
+		var per: Dictionary = sp.get(t, {})
+		for e: Variant in per:
+			var sh: Dictionary = per[e]
+			out["%s_%s" % [t, e]] = [sh.get("stored_db", -99), sh.get("true_db", -99), sh.get("agreement", ""), sh.get("words", 0), sh.get("par", 0)]
+			if absi(int(sh.get("stored_db", -99)) - int(sh.get("true_db", 99))) > 10:
+				problems.append("%s %s off by more than 10 dB" % [t, e])
+	report["speech"] = out
+	report["speech_scores"] = {"accuracy": snappedf(float(sp.get("accuracy", 0.0)), 0.001), "technique": snappedf(float(sp.get("technique", 0.0)), 0.001),
+		"efficiency": snappedf(float(sp.get("efficiency", 0.0)), 0.001)}
+	if chapter == "mike":
+		var srt: Dictionary = sp.get("srt", {})
+		for e: String in ["right", "left"]:
+			if not srt.has(e):
+				problems.append("Day 3: no %s SRT" % e)
+			elif StringName(String((srt[e] as Dictionary).get("agreement", ""))) != &"poor":
+				problems.append("Day 3: %s PTA/SRT agreement is not poor" % e)

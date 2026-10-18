@@ -28,7 +28,8 @@ so branches don't collide.
   Reuse the AudiOtron look (`Palette`, `UiDraw`, `Juice`) and `Audiogram` for plotting SRT/PTA; don't fork the tone screen.
 - Logic: `core/speech/` (session, scoring, a `SpeechRules` static class). Keep speech constants there, not in `ClinicRules`.
 - Word lists and sentences: `core/speech/material/*.json`, **original text only** (no NU-6, W-22, CID, AudiTec or
-  QuickSIN words or sentences). Recordings, when they exist, go in `assets/speech/<list_id>/<item_id>.ogg`; every item
+  QuickSIN words or sentences). Recordings, when they exist, go in `assets/speech/<list_id>/<item_id>.wav`
+  (uncompressed 8- or 16-bit PCM, WAV only: `docs/SPEECH.md` §7); every item
   must also work as on-screen text so the game plays before any audio is recorded.
 - Speech levels follow the same safety path (`AudioSafety`) as tones.
 

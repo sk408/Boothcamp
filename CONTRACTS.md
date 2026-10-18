@@ -87,7 +87,8 @@ Additions from the Chapter 2 builders, merged at integration, are marked **(v3, 
   `Events.masker_changed`. Nothing depends on the player hearing the tone or the noise.
 - **The patient's answers come from the simulator** (`core/`), never from the player's ears.
 - **The start of the game shows the notice "This is a game, not a hearing test."** (title screen, phase `disclaimer`).
-- **Speech audiometry is not in this slice.**
+- **(Speech) Speech audiometry** (Days 3-5) follows the same rules: original material only, every word lights the
+  TALK lamp, levels go through `AudioSafety.speech_to_rms()` and noise through the masker mapping (§9.6).
 
 ---------------------------------------------------------------------------------------------
 
@@ -995,10 +996,241 @@ camera). Related calls: `unregister_anchor`, `has_anchor`, `anchor_screen_rect(i
 - The AudiOtron reserves its right-hand column.
 - With no hint, the bubble sits top-right below the HUD (y ≈ 176). Screens that need that area should set a hint.
 
+---------------------------------------------------------------------------------------------
+
+## §9 Speech audiometry (Days 3-5)
+
+The speech chapters add a second test screen, the **SPEECH** screen, next to the AudiOtron. Rules and numbers:
+`docs/SPEECH.md` (`SpeechRules` in `core/speech/speech_rules.gd`); chapter designs: `docs/CHAPTER3.md` (Day 3, Mike,
+SRT: the speech recognition threshold, ASHA's preferred term), later `CHAPTER4.md` (WRS) and `CHAPTER5.md` (speech in
+noise). Additions are marked **(Speech)** where they touch earlier sections. Days 1, 2 and 6-9 behave exactly as before.
+
+| Path | Owner | Contents |
+|---|---|---|
+| `core/speech/**` | speech thread | `SpeechRules`, `SpeechMaterial`, `SpeechSim`, `SpeechSession`, `SpeechVoice`, `material/*.json` |
+| `ui/speech/**` | speech thread | `SpeechScreen` (`speech_screen.tscn`) and its widgets |
+| `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | the Day 3 level and its board |
+
+**Shared-file changes (Speech).** Mostly additions. The lines that change in place are Mike or speech branches that
+leave every other day as it was, plus one removed rule:
+- `CONTRACTS.md` §1.3: the line **"Speech audiometry is not in this slice."** was removed and replaced by the
+  **(Speech) Speech audiometry** rule (original material, TALK lamp, `AudioSafety.speech_to_rms()`); plus this §9.
+- Added only: `autoload/game.gd` (the `mike` chapter: Day 3, `requires: bonnie` as the suggested order only, `face`,
+  `tint`, teaches "Speech recognition threshold"; the `familiarize` / `speech` phases), `autoload/events.gd` (the
+  `speech_*` signals, at the end under `# --- mike / speech ---`), `autoload/audio_safety.gd` (`SPEECH_OFFSET_DB`,
+  `SPEECH_CEILING_DBFS`, `speech_to_rms()`, `speech_ceiling()`), `core/patient_profile.gd` (`speech`, default `{}`
+  so every existing patient behaves as before; `SPEECH_KEYS`, `speech_value()` and its validation),
+  `project.godot` / `tools/setup_input_map.gd` (`speech_correct`, `speech_incorrect`, the project-wide WAV import
+  default, §9.6), `story/voice.gd`, `world/clinic.gd` (Mike), `tools/autoplay_bot.gd` (the generic mouse route and
+  the speech sanity checks), `world/tests/test_clinic.gd`, and the new `tests/test_contracts_speech.gd`.
+- Changed in place, other days unchanged: `story/daily_decibel.gd` (column 2 and the weather line branch on the
+  speech results), `world/characters/bean.gd` (the shirt block moves inside a `vest` branch for Mike),
+  `world/characters/face_rig.gd` (Mike's face; one comment reworded), `story/portraits.gd` and
+  `tests/test_chapters.gd` (their tables gain Mike; the header comment changes), `story/pause_menu.gd` and
+  `story/hud.gd` (the speech phase hides the pause corner and the tracker, like the audiometry phase), `story/dialogue_box.gd` (Mike's display name "Mike
+  Lenders"), `story/tests/test_story.gd` (Mike in the voice-bank check; a new Day 3 card test), `export_presets.cfg` (the material JSON in,
+  `story/dev_day3.*` out), `tools/scene_shot.sh` (positional parsing, so `--` and options can come anywhere),
+  `tools/README.md` (Day 3 in the commands and exit codes), `README.md` (Day 3 and speech in the overview; the
+  "not in this slice" speech-in-noise bullet goes) and `docs/ADDING_A_CHAPTER.md` (recordings are WAV only).
+
+### §9.1 PatientProfile.speech
+
+`@export var speech: Dictionary = {}` (all keys optional; anything missing comes from the audiogram):
+`srt` {ear: dB HL}, `srt_offset` {ear: dB}, `half_words` (0..1, share of SRT misses given as half a word, default
+0.15), `wrs_max` {ear: %}, `rollover` {ear: {after, drop_per_10db}}, `neural` {ear: bool}, `snr_loss` (dB),
+`directional_benefit` (dB). `speech_value(key, ear := "", default)` reads one; `SPEECH_KEYS` lists them and
+`validate()` rejects unknown keys. Day 3: `core/patients/mike.tres` (voluntary tones about 70 dB, `srt` 30 / 30,
+`half_words` 0.6, tags `non_organic`, `speech`, `chapter_3`).
+
+### §9.2 Material (`SpeechMaterial`, static)
+
+`res://core/speech/material/<list_id>.json`: `{id, title, kind: "spondee" | "monosyllable" | "sentence", original: true,
+items: [...]}`. Spondee items `{id, text, parts: [a, b], mishears: [...]}`. Every list is written for the game: no
+list, order or recording is copied; every word is checked against ASHA (1988) Appendices A-C and CID W-1
+(`core/tests/test_speech_core.gd` holds those lists whole and rejects any match, ignoring case, spaces and hyphens). Functions: `load_list(id)`, `items(id)`, `item(list, item)`,
+`title(id)`, `kind(id)`, `list_ids()`, `validate(list)`, `recording_path(list, item)` (`""` = none),
+`half_word(item, first_part)`. Day 3 uses `spondee_a` (16 words).
+
+### §9.3 SpeechSim (RefCounted, `core/speech/speech_sim.gd`)
+
+`SpeechSim.new(profile, seed)`. `true_srt(ear)`, `cochlear_srt(ear)`, `half_word_share()`, `p_srt(ear, level)`,
+`respond_srt(ear, level, item, others) -> {text, correct, kind, heard_by, delay_s, p}` (`kind`: `&"correct"`,
+`&"half"`, `&"wrong"`, `&"silence"`). Condition vars set by the session: `transducer`, `mask_db` (speech noise in the
+other ear, -1 = off). Unmasked speech also reaches the other cochlea (real IA softer).
+
+### §9.4 SpeechSession (RefCounted, `core/speech/speech_session.gd`)
+
+Pure logic for every speech test of one visit (both ears); the screen owns all timing.
+- Setup: `SpeechSession.new(profile, seed)`, `configure(plan)` (keys below: `test`, `list`, `words`, `exclude`,
+  `tones`, `transducer`, `level`, `low_start_ok`), `begin(ear, coached)` (the dial goes to the PTA rounded to 5 dB,
+  or `level`). `low_start_ok` (bool, default false): a first SRT word at least 10 dB below the PTA
+  (`SRT_LOW_START_BELOW_PTA_DB`) is the clean `srt_low_start` instead of an `srt_start` error (an ascending start;
+  the dial's default at the PTA does not count); the level sets it once suspicion of a
+  non-organic loss is on screen, never from the hidden `non_organic` tag. A start above the window stays an error.
+- Controls: `step_level(dir)`, `set_level(db)`, `set_mask(on)`, `toggle_mask()`, `present() -> trial` (`{}` when
+  refused: a word still needs its score, the ear is done, or no words), `score(correct) -> trial`, `store() -> sheet`.
+- Queries: `next_item()`, `candidate()` (`SpeechRules.NO_SRT` -1 = not bracketed), `pta_for(ear)`,
+  `recommended_start()`, `masking_needed_here()`, `mask_level()`, `is_done()`, `trials_for()`,
+  `recommended_action() -> {action, target_db}` (`&"score_correct"`, `&"score_missed"`, `&"louder"`, `&"softer"`,
+  `&"mask_toggle"`, `&"present"`, `&"store"`, `&"none"`; it uses only what the player can see), `textbook_target()`.
+- `scoring` (false during Hoot's turn: his words and store are not scored), `tip_text(kind)`,
+  `agreement_tip(agreement, diff) -> String` (Hoot's line after a store: `AGREEMENT_TIPS` keys `good`, `fair_better`,
+  `fair_worse`, `poor_better`, `poor_worse`; `diff` = SRT - PTA, below zero = the SRT is better).
+- The step rule (`SpeechRules.srt_step_verdict(db, correct, next_db, words_here)`): down 10 (5 tolerated) after a
+  correct word, up 5 after a miss, and another word at the same level is `&"tolerated"` (after a hit or a miss)
+  while fewer than `SpeechRules.SRT_MAX_WORDS_PER_LEVEL` (4) words were given at that level in this ear; the 5th is
+  `&"wrong"`. `_check_step` counts the words.
+- Signals: `technique(kind, data)`, `combo_changed(n, multiplier)`, `reaction(kind, data)`, `stored(ear, test, sheet)`.
+- `get_state()`: `test, ear, db, min_db, max_db, list_id, list_title, next_word, words_left, pta, pta_right,
+  pta_left, recommended_start, candidate_db, trail [{db, scored, kind, by_hoot}], strokes, awaiting_score,
+  current {word, said, db, scored}, mask_on, mask_db, mask_ear, masking_needed, transducer, done, stored_db,
+  agreement, diff, combo, multiplier, points, presentations, scoring`.
+- Statics: `merge_results(tones, speech)`, `scored_tone_stamps(tones)`, `tone_results_from(profile)` (demo / test
+  tone results, every stamp by Hoot).
+
+**Speech technique kinds** (`Events.technique_event`, data `{ear, freq: -1, test, db, ...}`; errors carry `message`):
+
+| kind | type | when |
+|---|---|---|
+| `srt_start` | error | the first word is outside PTA + 10..25; a first word at least 10 dB below the PTA is clean with `low_start_ok` (data: expected, pta) |
+| `srt_wrong_step` | error | not "got it: down 10 (5 tolerated); missed: up 5", nor another word at the same level (up to 4 there) (expected, got, prev_db, prev_correct, words_here) |
+| `misscored` | error | the score differs from what the patient said (said, said_kind, scored) |
+| `srt_store_no_bracket` | error | stored before a level scored 2+ right and half or more with the level 5 below under half |
+| `srt_store_wrong_level` | error | stored a level other than that one (candidate) |
+| `speech_marathon` | error | more than 3x par words in one measurement (once) |
+| `speech_textbook`, `srt_good_start`, `srt_store_ok` | clean | combo +1, points |
+| `srt_low_start` | clean | a first word at least 10 dB below the PTA with plan `low_start_ok`: combo +1, 10 points, Hoot's line in `message` ("Starting low and coming up: smart when answers look exaggerated.") |
+| `birdie` / `eagle` / `albatross` | observation | the SRT hole's golf |
+| `srt_stored`, `srt_agreement` | observation | after a store (agreement, diff, pta); `srt_agreement` carries Hoot's verdict line |
+| `half_word`, `cross_heard_speech`, `speech_mask_needed`, `score_first` | observation | lessons (once each) |
+
+### §9.5 Results
+
+The SPEECH screen's `test_finished(results)` and `get_results()` give the **merged** visit results: the tone results
+(§5.1) handed in as `plan.tones`, plus `"speech"`, with `accuracy`, `technique`, `efficiency`, `score`, `grade`
+recomputed over the scored tone stamps and the scored speech sheets (an SRT weighs as 3 stamps; Hoot's work counts
+for neither). The tone-only numbers stay under `"tone_scores"`. Story passes it to `Game.set_audiometry_results()`.
+
+```
+"speech": {
+  "srt": {"right": {...sheet...}, "left": {...}}, "wrs": {}, "sin": {},
+  "pta": {"right": 71.7, "left": 73.3}, "tests": ["srt"], "scored_sheets": 2,
+  "presentations": 24, "hoot_presentations": 6, "max_combo": 18, "points": 900, "checks": 50, "clean_checks": 49,
+  "technique_errors": [{kind, ear, freq: -1, test, db, message}],
+  "accuracy": 0.9, "technique": 0.98, "efficiency": 0.92, "score": 93.1, "grade": "A"
+}
+sheet (SRT) = {ear, test: "srt", list_id, stored_db, true_db, error_db, accuracy, candidate_db,
+  bracketed (candidate_db != NO_SRT and stored_db == candidate_db: the UI and story praise only these), pta, pta_method,
+  agreement (&"good" / &"fair" / &"poor"), diff (SRT - PTA), start_db, recommended_start, strokes (player words),
+  words (all), par, golf (fair golf, &"hoot" for Hoot's), golf_raw, clean, errors, trials [{n, db, item_id, word,
+  said, kind, correct, scored, mask_db, by_hoot, delay_s, heard_by}], masked, mask_db, transducer, by_hoot, coached,
+  half_words (count)}
+```
+`true_db` and `trials[].correct` / `kind` are truth: scoring and the reveal only.
+
+### §9.6 SpeechVoice (Node, `core/speech/speech_voice.gd`) and safety
+
+`play_item(ear, list_id, item, hl) -> seconds`, `stop()`, `is_playing()`, `set_level(hl)`, `start_noise(ear, db_em)`,
+`set_noise(db_em)`, `stop_noise()`, `render(frames)` (pure DSP). Words: a synthesized murmur (one voiced syllable per
+part), or a recording at `res://assets/speech/<list_id>/<item_id>.wav` (WAV only, imported uncompressed), in the test ear
+only, levelled over its speech. The uncompressed import is `project.godot`'s `[importer_defaults]` wav
+`compress/mode` 0: a **project-wide** default, so every WAV in the project imports uncompressed. RMS from
+`AudioSafety.speech_to_rms(hl)` (`SPEECH_OFFSET_DB` -9, RMS ceiling `SPEECH_CEILING_DBFS` -27), every sample through
+`clamp_sample()`. Speech noise: speech-shaped noise in the other ear through `masker_to_rms()` and
+`clamp_masker_sample()`. Every word lights the TALK lamp; nothing depends on hearing it.
+
+### §9.7 SPEECH screen: `res://ui/speech/speech_screen.tscn` (`class_name SpeechScreen`)
+
+A `CanvasLayer` (layer 20), built in code in the AudiOtron's visual language. The story adds it as a child, calls
+`start_test()` once per ear and awaits `test_finished`. It keeps its session between ears.
+
+```
+signal test_finished(results: Dictionary)          # §9.5 merged results
+func start_test(patient: PatientProfile, ear: String, coached: bool, plan := {}) -> void
+func get_state() -> Dictionary                      # §9.4 keys + accepting_input, talking, answer_shown, hoot_turn, coached, patient_id, quick_visit
+func get_results() -> Dictionary                    # §9.5
+func demo_start() -> void                           # standalone: Mike, tones from his profile, coached right-ear SRT
+```
+
+**Plan keys:** `test` ("srt"), `tones` (§5.1 results; required for the PTA), `list`, `words`, `exclude`, `level`,
+`transducer`, `low_start_ok` (§9.4), `hoot_turn_after` (words the player scores before Hoot finishes the ear at x8 with
+quick visit on; 0 = Hoot runs it all; missing = never), `intro`, `hoot_turn_text`, `show_agreement` (default true),
+`done_title`, `fresh_session` (this ear on a new session, for Hoot's recheck: the player's session, with its sheets
+and points, comes back on the next `start_test` without it).
+
+**Statics:** `SpeechScreen.is_bracketed(sheet) -> bool` (the sheet's `bracketed`, else worked out from `candidate_db`
+and `stored_db`), `SpeechScreen.golf_text(sheet) -> [callout, small line]` ("Oops!" / "check Hoot's tip" after a slip
+or an unbracketed store; "Clean!" for a clean run over par, never "Par!").
+
+**Behaviour.**
+- It is **not** the AudiOtron: never `Stage.register_audiometer`, never `audiometry_started`. It joins the group
+  `speech_screen` and turns the booth view on while in the tree.
+- One word: PRESENT (`present_tone`, Space, or the button) plays the word (TALK lamp, `SpeechVoice`), then after the
+  patient's delay his answer appears in a speech bubble (`Events.dialogue_line(patient short name, said)` for lip
+  sync, except silence). The player scores it: CORRECT (`speech_correct`) or MISSED (`speech_incorrect`). Level
+  (`louder` / `softer`, so the key style applies) is locked while a word plays. STORE (`store`) stores the dial
+  level as the SRT. MASK (`toggle_mask`) is speech noise in the other ear at level - 20.
+- It shows the word card (next word), the answer bubble, the level trail ("SRT ladder") with a PTA line, the per-level
+  tally and, for SRT, the **agreement meter** (a needle over good / fair / poor that clunks into place on store).
+- Coaching (`coached`): sticky Hoot tips with ghost-hand anchors walk the first ear (start at PTA + 15, present,
+  score what he said, down 10 / up 5, store). Errors, and clean kinds that carry one (`srt_low_start`), show the
+  `message` tip. On the coached ear STORE before a bracket only warns: it never stores off the bracket.
+- Feedback after a store: the word card's line, the golf callout and the fanfare praise only a bracketed (or
+  Hoot's) store. "The tell": once per visit, the first word rightly scored as repeated 30 dB (`TELL_GAP_DB`) or more
+  below the ear's PTA gets Hoot's note, his hand on `agreement_meter` (never on the answer being judged); on the
+  coached ear the coach's tip comes back after it.
+- Hoot's turn (`hoot_turn_after`): banner, `Engine.time_scale` x8 restored after, `session.scoring = false`, he
+  follows `recommended_action()` through the screen's own controls.
+- Finishing an ear: input stops, then `Events.speech_finished(results)` and `test_finished(results)`.
+- **Blocking beat** (§3.2): whenever it waits for the player (not during Hoot's turn) it emits
+  `Events.awaiting_input(&"speech", info, solver)`, info `{ear, test, action, mouse: {click: <anchor id>}}`. The solver
+  sends the recommended action as a real `InputEventAction` (pressed, then released); a stale solver does nothing.
+- On exit it clears its tips and bubble hint. Pause: a small "II" pill opens the pause menu; the pause menu hides its
+  own corner button while a `speech_screen` node is in the tree.
+
+**Anchors** (`Hoot.register_anchor`): `speech_present_button`, `speech_correct_button`, `speech_incorrect_button`,
+`speech_louder_button`, `speech_softer_button`, `speech_store_button`, `speech_mask_button`, `speech_word_card`,
+`speech_response`, `speech_ladder`, `agreement_meter`.
+
+**Events it emits:** `speech_started`, `speech_presented`, `speech_response`, `speech_scored`, `speech_stored`,
+`speech_state_changed` (every change), `speech_finished`; plus `technique_event` (forwarded from the session),
+`combo_changed`, `patient_reaction` (`nod` correct, `confused` silence, `squint` half word, `cross_heard`).
+
+**Input actions (Speech):** `speech_correct` (Right, Keypad +, =), `speech_incorrect` (Left, Keypad -, -); reused:
+`present_tone`, `louder`, `softer`, `store`, `toggle_mask`, `toggle_key_hints` (§4.7).
+
+### §9.8 Story and flow (Day 3, `story/level_mike.gd`)
+
+Phases: `intro`, `history`, `otoscopy`, `instructions`, `audiometry` {right, ac} / {left, ac} (Hoot runs the tones:
+`hoot_turn_after` 0), `familiarize` (go through the words; a word Mike doesn't know is dropped), `speech` {ear, test:
+"srt"} for right (coached) and left, `evidence` (OBJECTION!), `referral`, `results`. New blocking beats:
+`familiarize_cards` (info {mouse}), `objection_present` (info {targets, mouse: {drag: [clue, target]}}; solver
+presents the strongest clue), `referral_stamp` (reused). Every SRT plan sets `low_start_ok` once Hoot's coffee
+whisper has been on screen. After the right ear, when the player's SRT can't show the mismatch (not poor, not
+better than the PTA, or not stored at its bracket), Hoot reruns that ear by the book on a fresh session
+(`fresh_session`, `hoot_turn_after` 0); the board (`board_sheet()`) uses his recheck, the results keep the player's
+sheet for the grade. The SRT-vs-PTA measurement is always the strongest clue. Chapter: `Game.CHAPTERS` id `mike`, day 3, requires `bonnie`
+(the suggested order only: any chapter can be picked). Medals: `history`, `instructions`, `familiarize`, `evidence`,
+`referral`. Anchors: `word_card_<item id>` (familiarize), `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+`clue_canals` (evidence), `referral_stamp`. Without the SPEECH scene the level lets Hoot say the words (unscored), so
+the visit still ends.
+
+### §9.9 Autoplay (Speech)
+
+- The bot treats `speech` beats like every other beat (waits, then calls the solver); with `--mouse` any beat whose
+  info carries `mouse` is played by its route: `{click: anchor}`, `{drag: [from_anchor, to_anchor]}` or
+  `{text: "visible text prefix"}`.
+- Progress also comes from the `speech_*` signals. Sanity (exit 4): every stored SRT within 10 dB of the truth, both
+  ears stored on a speech day, and on Day 3 a poor PTA/SRT agreement.
+- Screenshots: `speech_<ear>_srt_first_word`, `speech_<ear>_srt_descent`, `speech_<ear>_srt_stored`,
+  `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`, `day3_glazed`.
+
+---------------------------------------------------------------------------------------------
+
 ## §11 Cases (patient case files, Days 6 onward)
 
 Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from the JSON by `tools/case_scripts.py`).
-(§9 and §10 are left free for the chapters in flight, so the section numbers don't collide when branches merge.)
+(§9 is speech, Days 3-5; §10 is left free for a chapter in flight, so section numbers don't collide when branches merge.)
 
 **Files.**
 

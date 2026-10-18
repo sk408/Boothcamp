@@ -28,6 +28,13 @@ const SFX_PEAK_DBFS := -18.0
 const MASKER_OFFSET_DB := -6.0
 const MASKER_CEILING_DBFS := -24.0
 
+## (Speech, CONTRACTS.md §9) Words (the murmur or a recording) play with their RMS this far below
+## a tone at the same dial number, so their peaks (about 12 dB above the RMS) land near the tone's;
+## the RMS never exceeds SPEECH_CEILING_DBFS and every sample still goes through clamp_sample().
+## Speech noise and party babble use the masker mapping (masker_to_rms, clamp_masker_sample).
+const SPEECH_OFFSET_DB := -9.0
+const SPEECH_CEILING_DBFS := -27.0
+
 const TONES_BUS := &"Tones"
 const SFX_BUS := &"Sfx"
 const MUSIC_BUS := &"Music"
@@ -71,3 +78,14 @@ static func masker_ceiling() -> float:
 static func clamp_masker_sample(v: float) -> float:
 	var c := masker_ceiling()
 	return clamp_sample(clampf(v, -c, c))
+
+
+## (Speech) Simulated speech level (dB HL) -> target RMS amplitude (0..1) of a word.
+## Generators must still clamp every sample with clamp_sample().
+static func speech_to_rms(hl: float) -> float:
+	var rms_db := clampf(DBFS_AT_0_HL + DBFS_PER_DB_HL * hl + SPEECH_OFFSET_DB, FLOOR_DBFS, SPEECH_CEILING_DBFS)
+	return pow(10.0, rms_db / 20.0)
+
+
+static func speech_ceiling() -> float:
+	return pow(10.0, SPEECH_CEILING_DBFS / 20.0)

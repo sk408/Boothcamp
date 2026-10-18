@@ -29,9 +29,13 @@ func after_each() -> void:
 
 
 func test_registry() -> void:
-	assert_true(Game.chapters().size() >= 2, "Days 1 and 2, plus any later chapters")
+	# Days 1-2, then the speech days (3+); later chapters may add more
+	assert_true(Game.chapters().size() >= 3, "Days 1 and 2, the speech days, plus any later chapters")
 	var d1 := Game.chapter_for_day(1)
 	var d2 := Game.chapter_for_day(2)
+	var d3 := Game.chapter_for_day(3)
+	assert_eq(d3["id"], "mike")
+	assert_eq(d3["requires"], "bonnie", "speech follows Day 2 (the suggested order)")
 	assert_eq(d1["id"], "gus")
 	assert_eq(d2["id"], "bonnie")
 	assert_eq(d1["title"], "Day 1: Grandpa Gus")
@@ -42,6 +46,8 @@ func test_registry() -> void:
 	assert_eq(Game.chapter_for_patient("bonnie")["day"], 2)
 	for p: StringName in [&"chapter_select", &"bc_placement", &"masking", &"referral"]:
 		assert_has(Game.PHASES, p, "v3 phase")
+	for p: StringName in [&"familiarize", &"speech"]:
+		assert_has(Game.PHASES, p, "speech phase")
 
 
 ## (polish) Steve's rule: every chapter is open from the start, in any order.
@@ -51,7 +57,7 @@ func test_every_day_open_from_the_start() -> void:
 	for c: Dictionary in Game.chapters():
 		assert_true(Game.is_chapter_unlocked(String(c["id"])), "open: " + String(c["id"]))
 		all_ids.append(String(c["id"]))
-	assert_eq(Game.unlocked_chapter_ids(), all_ids)
+	assert_eq(Game.unlocked_chapter_ids(), all_ids, "every chapter, in day order")
 	assert_eq(Game.suggested_chapter_id(), "gus", "a fresh save suggests Day 1")
 	assert_eq(Game.next_chapter_id(), "gus")
 	assert_false(Game.DEFAULT_SETTINGS.has("unlock_all_days"), "no demo unlock setting any more")
@@ -124,9 +130,10 @@ func test_any_order() -> void:
 	Game.begin_visit("gus")
 	var s2 := Game.finish_visit()
 	assert_eq(s2["next_chapter_id"], "bonnie", "Day 1 done: Next is Day 2 (already played)")
-	for id: String in ids.slice(2):
-		Game.begin_visit(id)
-		Game.finish_visit()
+	# the days in between, in order: each one's Next is the day after it
+	for i in range(1, ids.size() - 1):
+		Game.begin_visit(ids[i])
+		assert_eq(Game.finish_visit()["next_chapter_id"], ids[i + 1], "Next after " + ids[i])
 	Game.begin_visit(last)
 	var s3 := Game.finish_visit()
 	assert_eq(s3["next_chapter_id"], "", "the last day with every day done: no Next")

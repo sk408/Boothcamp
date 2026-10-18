@@ -21,6 +21,10 @@ const KEYS := {
 	"transducer_air": [KEY_A, KEY_6],
 	"transducer_bone": [KEY_B, KEY_8],
 	"toggle_key_hints": [KEY_H],
+	# Speech (Days 3-5, CONTRACTS.md §9.7): score the word the patient said. Space presents the
+	# word (present_tone), Up / Down set the level (louder / softer), S stores, M is speech noise.
+	"speech_correct": [KEY_RIGHT, KEY_KP_ADD, KEY_EQUAL],
+	"speech_incorrect": [KEY_LEFT, KEY_KP_SUBTRACT, KEY_MINUS],
 	"advance_dialogue": [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER],
 	"pause": [KEY_ESCAPE, KEY_P],
 }
