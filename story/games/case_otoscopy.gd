@@ -29,7 +29,7 @@ const FLAKE_SHAPE: Array[float] = [1.0, 0.62, 0.92, 0.55, 0.86, 0.7]
 const FLUID := Color("#e0a64a")
 const FLUID_LINE := Color("#c98a2e")
 ## Bubbles (level frame: x, y, radius): one at the fluid line, the rest under it, clear of the malleus handle.
-const BUBBLES: Array[Vector3] = [Vector3(-68, -26, 8), Vector3(-42, 14, 12), Vector3(-76, 36, 7), Vector3(50, 0, 10), Vector3(78, 30, 6), Vector3(-14, 58, 11), Vector3(40, 60, 8)]
+const BUBBLES: Array[Vector3] = [Vector3(-68, -32, 8), Vector3(-42, 14, 12), Vector3(-76, 36, 7), Vector3(50, 0, 10), Vector3(78, 30, 6), Vector3(-14, 58, 11), Vector3(40, 60, 8)]
 
 var view := "clear"
 
@@ -168,7 +168,7 @@ func _draw_fluid() -> void:
 
 ## The fluid line's height (level frame): edges creep up the wall, a tiny ripple rides along it.
 func _meniscus_y(x: float, t: float) -> float:
-	return -40.0 + 9.0 * (1.0 - pow(x / 100.0, 2.0)) + sin(x * 0.08 + t * 2.0) * 1.2
+	return -46.0 + 9.0 * (1.0 - pow(x / 100.0, 2.0)) + sin(x * 0.08 + t * 2.0) * 1.2
 
 
 # ---------------------------------------------------------------- the drum frame

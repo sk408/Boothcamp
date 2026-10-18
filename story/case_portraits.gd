@@ -6,7 +6,8 @@ extends RefCounted
 ## Look keys used: skin, nose, cardigan, shirt, accent, hair, hair_style (tufts / bun / beehive / none),
 ## mustache, brows, glasses (round / cateye / perched / none), glasses_color, face (doris and bonnie
 ## faces get lashes and a pearl necklace), extras (headband, cap, captain_cap, drumsticks, pizza_box,
-## spiky_hair, band_tee, puppet), portrait_bg, name_color, and a colour per extra (e.g. "headband").
+## spiky_hair, band_tee, puppet, beekeeper_hat, bee, pillbox_hat, neck_scarf), portrait_bg, name_color,
+## and a colour per extra (e.g. "headband", "beekeeper_hat", "pillbox_hat", "neck_scarf").
 ## A case's extra speakers ("voices", e.g. Chip) can ask for "portrait": "cookie" instead.
 
 const CaseData := preload("res://story/case_data.gd")
@@ -54,6 +55,8 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 		var bolt := PackedVector2Array([c + Vector2(-r * 0.05, r * 0.6), c + Vector2(r * 0.1, r * 0.6), c + Vector2(r * 0.02, r * 0.7),
 			c + Vector2(r * 0.12, r * 0.7), c + Vector2(-r * 0.08, r * 0.88), c + Vector2(-r * 0.01, r * 0.75), c + Vector2(-r * 0.1, r * 0.75)])
 		ci.draw_colored_polygon(bolt, _col(lk, "accent", Color("#e5383b")))
+	elif extras.has("neck_scarf"):
+		_draw_neck_scarf(ci, c, r, _col(lk, "neck_scarf", Color("#ff7a59")))
 	elif lady:
 		for i in 7:
 			var a := lerpf(-1.0, 1.0, i / 6.0)
@@ -133,6 +136,10 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 		ci.draw_rect(Rect2(top.position + Vector2(0, top.size.y * 0.62), Vector2(top.size.x, top.size.y * 0.38)), Color("#1f3a5f"))
 		_outlined_ellipse(ci, h + Vector2(0, -hr * 0.6), Vector2(hr * 0.86, hr * 0.13), INK.lightened(0.15), 2.0)
 		UiDraw.star(ci, h + Vector2(0, -hr * 1.0), hr * 0.16, Palette.SUNNY)
+	if extras.has("beekeeper_hat"):
+		_draw_beekeeper_hat(ci, h, hr, _col(lk, "beekeeper_hat", Color("#efe9d2")))
+	if extras.has("pillbox_hat"):
+		_draw_pillbox_hat(ci, h, hr, _col(lk, "pillbox_hat", Color("#0f766e")))
 	# face
 	for s: float in [-1.0, 1.0]:
 		var e := h + Vector2(hr * 0.36 * s, -hr * 0.04)
@@ -164,6 +171,8 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 			ci.draw_line(a, b, Color("#e9c48a"), 4.0, true)
 			ci.draw_circle(b, 4.5, INK)
 			ci.draw_circle(b, 3.0, Color("#f6e1b3"))
+	if extras.has("bee"):
+		_draw_bee(ci, h + Vector2(hr * 1.32, 0.0), r)
 
 
 ## Chip: a chocolate-chip cookie puppet with a bite out of his head, googly eyes and a felt mouth.
@@ -194,6 +203,120 @@ static func _draw_cookie_puppet(ci: CanvasItem, c: Vector2, r: float, talk_open:
 		_ellipse(ci, cc + Vector2(0, cr * 0.44), Vector2(cr * 0.16, cr * 0.08), Color("#ff6f8a"))
 	else:
 		ci.draw_arc(cc + Vector2(0, cr * 0.16), cr * 0.34, 0.4, PI - 0.4, 12, INK, 4.0, true)
+
+
+## A beekeeper's straw hat: a wide brim, a woven dome, and the mesh veil rolled up round the crown.
+static func _draw_beekeeper_hat(ci: CanvasItem, h: Vector2, hr: float, straw: Color) -> void:
+	var weave := straw.darkened(0.15)
+	var brim := h + Vector2(0, -hr * 0.66)
+	_outlined_ellipse(ci, brim, Vector2(hr * 1.55, hr * 0.22), straw, 2.5)
+	var ring := PackedVector2Array()
+	for i in 13:
+		var a := PI * i / 12.0
+		ring.append(brim + Vector2(cos(a) * hr * 1.2, sin(a) * hr * 0.13))
+	ci.draw_polyline(ring, weave, 2.0, true)
+	var dc := h + Vector2(0, -hr * 0.72)
+	var dr := Vector2(hr * 0.72, hr * 0.78)
+	var dome := PackedVector2Array()
+	for i in 17:
+		var a := PI + PI * i / 16.0
+		dome.append(dc + Vector2(cos(a) * dr.x, sin(a) * dr.y))
+	_poly_outlined(ci, dome, straw)
+	for k: float in [0.3, 0.55]:
+		var half := dr.x * sqrt(1.0 - k * k) - 3.0
+		ci.draw_line(dc + Vector2(-half, -dr.y * k), dc + Vector2(half, -dr.y * k), weave, 2.0, true)
+	# the veil, rolled up: a puffy grey band with a mesh of dots
+	var roll := Rect2(h + Vector2(-hr * 0.84, -hr * 0.92), Vector2(hr * 1.68, hr * 0.3))
+	UiDraw.rounded_rect(ci, roll.grow(2.5), INK, int(hr * 0.16))
+	UiDraw.rounded_rect(ci, roll, Color("#cfd4da"), int(hr * 0.14))
+	for ix in 9:
+		for iy in 2:
+			var p := roll.position + Vector2(roll.size.x * (ix + 0.5 + 0.5 * iy) / 9.5, roll.size.y * (0.32 + 0.38 * iy))
+			ci.draw_circle(p, maxf(1.0, hr * 0.035), Color("#8f979f"))
+
+
+## A cabin-crew pillbox hat, tilted on one side of the head in front of the bun, with a darker band
+## and a little gold wings badge.
+static func _draw_pillbox_hat(ci: CanvasItem, h: Vector2, hr: float, col: Color) -> void:
+	var tilt := -0.3
+	var p := h + Vector2(-hr * 0.3, -hr * 1.02)
+	var w := hr * 0.5
+	var side := hr * 0.4
+	var ey := hr * 0.14
+	# the side: down the left, round the front, up the right, back over the top
+	var body := PackedVector2Array()
+	for i in 13:
+		var a := PI - PI * i / 12.0
+		body.append(p + Vector2(cos(a) * w, side * 0.5 + sin(a) * ey).rotated(tilt))
+	for i in 13:
+		var a := -PI * i / 12.0
+		body.append(p + Vector2(cos(a) * w, -side * 0.5 + sin(a) * ey).rotated(tilt))
+	ci.draw_colored_polygon(body, col)
+	var band := PackedVector2Array()
+	for i in 13:
+		var a := PI - PI * i / 12.0
+		band.append(p + Vector2(cos(a) * w, side * 0.5 + sin(a) * ey).rotated(tilt))
+	for i in 13:
+		var a := PI * i / 12.0
+		band.append(p + Vector2(cos(a) * w, side * 0.18 + sin(a) * ey).rotated(tilt))
+	ci.draw_colored_polygon(band, col.darkened(0.25))
+	# the outline last, so the band doesn't eat half of it along the bottom
+	var rim := body.duplicate()
+	rim.append(body[0])
+	ci.draw_polyline(rim, INK, 3.0, true)
+	_ellipse(ci, p + Vector2(0, -side * 0.5).rotated(tilt), Vector2(w * 0.94, ey * 0.75), col.lightened(0.12), tilt)
+	# the wings badge
+	var badge := p + Vector2(0, hr * 0.08).rotated(tilt)
+	var gold := Color("#ffd23f")
+	for sd: float in [-1.0, 1.0]:
+		_ellipse(ci, badge + Vector2(hr * 0.12 * sd, -hr * 0.01).rotated(tilt), Vector2(hr * 0.11, hr * 0.04), gold, tilt - 0.25 * sd)
+	ci.draw_circle(badge, hr * 0.07 + 1.5, INK)
+	ci.draw_circle(badge, hr * 0.07, gold)
+
+
+## A silk scarf round the collar (it hides the pearls), knotted to one side with two tails.
+static func _draw_neck_scarf(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	var band := PackedVector2Array()
+	var stripe := PackedVector2Array()
+	for i in 9:
+		var t := i / 8.0
+		band.append(c + Vector2(lerpf(-r * 0.34, r * 0.34, t), r * (0.44 + 0.02 * sin(PI * t))))
+		stripe.append(c + Vector2(lerpf(-r * 0.33, r * 0.33, t), r * (0.5 + 0.05 * sin(PI * t))))
+	for i in 9:
+		var t := 1.0 - i / 8.0
+		band.append(c + Vector2(lerpf(-r * 0.34, r * 0.34, t), r * (0.56 + 0.08 * sin(PI * t))))
+	_poly_outlined(ci, band, col)
+	ci.draw_polyline(stripe, col.lightened(0.4), 2.0, true)
+	var knot := c + Vector2(r * 0.15, r * 0.6)
+	_outlined_ellipse(ci, knot + Vector2(r * 0.09, r * 0.14), Vector2(r * 0.055, r * 0.13), col.darkened(0.08), 2.5, -0.45)
+	_outlined_ellipse(ci, knot + Vector2(-r * 0.01, r * 0.16), Vector2(r * 0.055, r * 0.13), col.darkened(0.08), 2.5, 0.2)
+	_outlined_ellipse(ci, knot, Vector2(r * 0.075, r * 0.065), col, 2.5)
+
+
+## Gerald the bee, hovering by the head: a striped body, buzzing wings, a stinger and a dotted trail.
+static func _draw_bee(ci: CanvasItem, at: Vector2, r: float) -> void:
+	var still := bool(Game.settings.get("reduced_motion", false))
+	var t := 0.0 if still else Time.get_ticks_msec() / 1000.0
+	var p := at + Vector2(cos(t * 2.2) * r * 0.05, sin(t * 4.4) * r * 0.035)
+	var body := Vector2(r * 0.13, r * 0.095)
+	var black := Color("#2b2b2b")
+	for k in 3:
+		ci.draw_circle(p + Vector2(r * (0.2 + 0.08 * k), r * (0.04 + 0.03 * sin(k * 1.7 + t * 3.0))), maxf(1.0, r * 0.018), Color(INK, 0.35))
+	# stinger at the back (he faces the head, on the left)
+	var sting := PackedVector2Array([p + Vector2(body.x * 0.8, -body.y * 0.3), p + Vector2(body.x * 1.35, 0), p + Vector2(body.x * 0.8, body.y * 0.3)])
+	ci.draw_colored_polygon(sting, black)
+	var flap := 0.55 + 0.45 * absf(sin(t * 30.0))
+	for sd: float in [-1.0, 1.0]:
+		_outlined_ellipse(ci, p + Vector2(r * 0.03 * sd, -body.y * 1.15), Vector2(r * 0.065, r * 0.1 * flap), Color("#eaf6ff"), 2.0, 0.45 * sd)
+	_outlined_ellipse(ci, p, body, Color("#ffd23f"), 2.0)
+	for k: float in [-0.1, 0.4]:
+		_ellipse(ci, p + Vector2(body.x * k, 0), Vector2(body.x * 0.16, body.y * 0.92), black)
+	var head := p + Vector2(-body.x * 1.05, -body.y * 0.1)
+	ci.draw_circle(head, body.y * 0.78, black)
+	ci.draw_circle(head + Vector2(-body.y * 0.25, -body.y * 0.2), maxf(1.0, body.y * 0.22), WHITE)
+	for sd: float in [-1.0, 1.0]:
+		var base := head + Vector2(body.y * 0.2 * sd, -body.y * 0.6)
+		ci.draw_line(base, base + Vector2(-body.y * (0.5 - 0.3 * sd), -body.y * 0.75), black, 1.5, true)
 
 
 static func _draw_glasses(ci: CanvasItem, lk: Dictionary, h: Vector2, hr: float) -> void:

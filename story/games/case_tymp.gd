@@ -290,6 +290,8 @@ func _draw_ribbons() -> void:
 		if k <= 0.0:
 			continue
 		var d: Dictionary = (_curves[ear] as Dictionary)["data"]
+		if String(d.get("type", "")) != "B" or not d.has("ecv_ml"):
+			continue    # that ear was swept again with a non-flat reading
 		var top_left := plot.position + Vector2(22, 52 + RIBBON_GAP * int(rb["row"]))
 		_draw_ribbon(ear, CaseRules.ecv_band(float(d["ecv_ml"])), top_left, k)
 
