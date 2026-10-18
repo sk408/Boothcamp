@@ -946,6 +946,9 @@ The bot saves:
   clinic oscillator, the `bc_placement` / `referral_stamp` beats, `Hud.set_steps`).
 - **(v3)** Stress test: `tools/monkey.tscn` mashes Day 1, or with `--day=2` Bonnie's five tests and the masking /
   route keys (invariants: noise dial 0-100, no masker while MASK is off or after a test).
+  **(Speech)** With `--day=3` it mashes Mike's SPEECH screen and the Day 3 board (invariants: the dial in range, the
+  speech noise only with MASK on, other ear, mask level, never in Hoot's turn; the board's steps all end right).
+  Any other day is refused (exit 2), never played as Day 1; `tools/movie_check.sh` refuses the same way.
 - Runner: `godot --headless --path . -s res://tests/run_tests.gd [-- --filter=word --verbose]`.
   Exit codes: 0 = green, 1 = failures, 2 = no tests.
 
@@ -1143,7 +1146,9 @@ only, levelled over its speech. The uncompressed import is `project.godot`'s `[i
 not only speech recordings (fine today: no other WAVs; a later WAV that should be compressed needs its own import
 setting). RMS from `AudioSafety.speech_to_rms(hl)` (`SPEECH_OFFSET_DB` -9, RMS ceiling `SPEECH_CEILING_DBFS` -27), every sample through
 `clamp_sample()`. Speech noise: speech-shaped noise in the other ear through `masker_to_rms()` and
-`clamp_masker_sample()`. Every word lights the TALK lamp; nothing depends on hearing it.
+`clamp_masker_sample()`. Every word lights the TALK lamp; nothing depends on hearing it. `tools/movie_check.sh --day=3`
+records Mike's SRT with speech noise and `tools/analyze_movie_audio.py --speech` measures both (word and noise
+channel, level, ceiling; tools/README.md).
 
 ### §9.7 SPEECH screen: `res://ui/speech/speech_screen.tscn` (`class_name SpeechScreen`)
 
