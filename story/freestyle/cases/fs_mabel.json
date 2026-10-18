@@ -1,0 +1,92 @@
+{
+	"id": "fs_mabel",
+	"patient_id": "fs_mabel",
+	"speaker": "Mabel",
+	"stars": 1,
+	"teaser": "Forty years of shushing. Now the whole world whispers back.",
+	"look": {
+		"face": "doris", "skin": "#f0c7a8", "skin_shade": "#d4a585", "nose": "#e3a98a",
+		"cardigan": "#6b7f2e", "pants": "#3d3a4b", "shirt": "#f6efe0", "accent": "#b23a48", "shoes": "#5a3b2a",
+		"hair": "#d9d6df", "hair_style": "bun", "mustache": false, "brows": false,
+		"glasses": "perched", "glasses_color": "#b23a48", "walker": false, "prop": "",
+		"extras": [],
+		"portrait_bg": "#e9f1d6", "name_color": "#566b1c"
+	},
+	"voice": {"f0": 195.0, "wobble": 0.09, "roll": 0.62, "vowels": ["o", "a", "e", "u", "a", "i"]},
+	"hello": [
+		["Mabel", "Mabel Shush. Forty years a school librarian. My whole career was telling people to be quiet."],
+		["Mabel", "And now, at last, the whole world has listened. Everyone whispers. Especially my grandchildren."]
+	],
+	"answers": {
+		"which_ear": {"say": "Both the same, dear. Equally hopeless, I'm afraid.", "note": "Both ears seem the same"},
+		"onset": {"say": "Slowly. Over years, like a library book nobody returns. Nothing sudden.", "note": "Slow over years, nothing sudden"},
+		"ringing": {"say": "A faint hiss in both ears, mostly at bedtime. Like a radiator. It doesn't bother me much.", "note": "Mild hiss in both ears, at bedtime"},
+		"red_flags": {"say": "No pain, no drips, no dizzy spells. My ears are very well behaved. Unlike Year Nine.", "note": "No pain, drainage or dizziness"},
+		"noise": {"say": "Noise? I ran a LIBRARY. The loudest thing in it was me. Shhh!", "note": "No loud noise: a quiet library career"},
+		"ear_history": {"say": "Never. Not one infection, no operations, no accidents. Not even a paper cut on my ear.", "note": "No infections, surgery or injuries"},
+		"family": {"say": "My mother had an ear trumpet. She used to wave it at the vicar.", "note": "Her mother had hearing loss"},
+		"health": {"say": "Blood pressure tablets, and a touch of arthritis in my shushing finger.", "note": "Blood pressure tablets, mild arthritis"},
+		"aids": {"say": "Never. My daughter booked today. She says I'm loud AND wrong about what people said.", "note": "Never worn hearing aids"},
+		"hardest": {"say": [
+			"Restaurants. All that clatter, and every word turns to porridge.",
+			"And my grandchildren. Their little voices just vanish. I turn the telly up; my daughter turns it down."
+		], "note": "Restaurants, grandkids' voices, loud TV"}
+	},
+	"key_questions": ["red_flags", "onset", "which_ear", "hardest"],
+	"otoscopy": {
+		"canal": "average-sized",
+		"right": {"view": "clear", "caption": "Mabel's RIGHT ear: a tidy canal, a pearly eardrum. Neat as a card catalogue."},
+		"left": {"view": "clear", "caption": "Mabel's LEFT ear: just as tidy. Not a speck of wax out of place."},
+		"note": "Canals clear, eardrums normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -15, "peak_ml": 0.6, "ecv_ml": 1.4},
+		"left": {"type": "A", "peak_daPa": -10, "peak_ml": 0.7, "ecv_ml": 1.3},
+		"note": "Tymp: type A both ears"
+	},
+	"decision": "fit",
+	"decision_lines": {
+		"fit": "Fit! Slow, matching ears, no red flags, and she's missing the consonants. A classic first fitting.",
+		"refer": "Refer for what? Slow over years, ears that match, healthy eardrums, no air-bone gap. No red flags.",
+		"today": "Nothing sudden here. It crept in over years, like dust on the top shelf.",
+		"clear": "No aids? Her high pitches sit near 60 dB. That's a real loss, and aids help."
+	},
+	"why": {
+		"prompt": "Why is Mabel ready for hearing aids today?",
+		"options": [
+			["A slow, matching loss in both ears, and no red flags.", true, "Exactly! Gradual, even and safe to fit. That's the classic first fitting."],
+			["She's 74: everyone her age needs hearing aids.", false, "Age decides nothing. Plenty of 74-year-olds hear fine. Her chart and her history decide."],
+			["Bone matched air, so it's the inner ear.", false, "True, and no gap clears one red flag. But sudden or one-sided inner-ear losses still need a doctor."],
+			["Hearing aids will switch off her ringing.", false, "They often make ringing less noticeable, but no promises. She's fitted for her hearing."]
+		]
+	},
+	"debrief": [
+		["Hoot", "A textbook first fitting: slow, matching, sloping down to the high pitches. No red flags, so fit."],
+		["Hoot", "Vowels are low and loud. Consonants like s, f and th are high and soft. She misses those."],
+		["Hoot", "Family tips: face her, get her attention first, pick a quiet table, and turn on TV subtitles."]
+	],
+	"goodbye": [
+		{"do": "hearing_aids"},
+		{"react": "cheer"},
+		["Mabel", "Oh my. I can hear my cardigan rustle. Was the world always this NOISY?"],
+		["Hoot", "Wear them all day. Your brain needs a few weeks to relearn the high pitches."],
+		["Mabel", "Quiet please, everyone. Mabel can hear you now."],
+		{"react": "wave"}
+	],
+	"paper": {
+		"headlines": {
+			"S": "SHUSH! LIBRARIAN HEARS EVERY WHISPER AGAIN",
+			"A": "MABEL CHECKS OUT HEARING AIDS, NO LATE FEES",
+			"B": "LIBRARIAN FITTED; A FEW STAMPS OVERDUE",
+			"C": "CHART RETURNED LATE AND DOG-EARED",
+			"Do-over": "HEARING CHECK OVERDUE; PLEASE RENEW"
+		},
+		"subheads": {
+			"S": "A slow, matching, sloping loss and no red flags: a textbook first fitting, charted cleanly.",
+			"A": "Gradual, even and safe to fit. The grandchildren's consonants are back on the shelf.",
+			"B": "The right call, though a few stamps wandered. Check every tone in both ears.",
+			"C": "High pitches carry the consonants, so chart every one of them, right up to 8k.",
+			"Do-over": "A slow, matching loss with no red flags means fit. Mabel will be back, quietly."
+		}
+	}
+}

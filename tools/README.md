@@ -23,6 +23,8 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | **(cases)** Days 6 to 9, the case files (history, otoscopy, tymp, audiometry, the call), keys or mouse only | `tools/autoplay_check.sh --day=6` (or 7, 8, 9) / add `--mouse`; Quick visit off: add `--full` | ~30 s each |
 | **(cases)** A case picked from the Days grid by mouse | `tools/autoplay_check.sh --save=/abs/s.json --via-days --mouse --pick=marina` (or rocco, dash, ginger) | ~30 s |
 | **(cases)** `docs/CASE_SCRIPTS.md` matches the case JSON (regenerate it: drop `--check`) | `python3 tools/case_scripts.py --check` | ~1 s |
+| **(freestyle)** One walk-in from the waiting room, keys or mouse only (any `fs_` id from `FsData.CASE_IDS`); Quick visit off: add `--full` | `tools/autoplay_check.sh --scene=res://story/freestyle/waiting_room.tscn --freestyle=fs_penny` / add `--mouse` | ~60 s |
+| **(freestyle)** From the title's Freestyle button, like a player | `tools/autoplay_check.sh --via-freestyle --freestyle=fs_penny --mouse` | ~60 s |
 | Rendered autoplay with screenshots at every phase | `tools/shots.sh /abs/out/dir` (Day 2: add `--day=2`) | ~5 min (Day 2 ~13 min) |
 | Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` (Day 2's five tests and the masking keys: add `--day=2`) | ~10 s (Day 2 ~20 s) |
 | **(v3)** Day 2 set pieces without playing (bone placement with a wrong spot, the oscillator on Bonnie, the board's reveal, bridge and stamp on made-up results) | `tools/scene_shot.sh res://story/dev_day2.tscn /abs/out/dir "60" 30` (the scene takes its own shots) | ~2 min |
@@ -116,6 +118,8 @@ Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `ri
 | `--unlock-all` | **(v3)** accepted and ignored since the polish pass: every day is always open |
 | `--keep-save` | **(v3)** with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 on one `--save=`) |
 | `--via-days` | **(v3)** with `--autoplay`: start from the title's Days card (`--pick=`, `--expect-days=`, `--expect-suggested=`; with `--mouse` the bot scrolls the grid with the wheel; see CONTRACTS.md §7.1) |
+| `--freestyle=<id>` | **(freestyle)** the walk-in to play (the waiting room's pick and the runner's case; CONTRACTS.md §12) |
+| `--via-freestyle` | **(freestyle)** with `--autoplay`: start from the title's Freestyle button |
 
 Scenes with a `demo_start()` for `--scene`:
 - `res://ui/audiometer/audiometer_screen.tscn`: a coached right-ear test of Gus;
@@ -123,6 +127,7 @@ Scenes with a `demo_start()` for `--scene`:
 - `res://story/dev_day2.tscn` **(v3)**: Day 2's set pieces (see above). A dev tool: never reachable from the game.
 - `res://story/dev_day3.tscn` **(Speech)**: Day 3's set pieces (see above). Also a dev tool, excluded from the export.
 - `res://ui/speech/speech_screen.tscn` **(Speech)**: a coached right-ear SRT of Mike (see above).
+- `res://story/freestyle/waiting_room.tscn` **(freestyle)**: the walk-in clinic's waiting room (add `--freestyle=<id>`).
 - `res://tools/monkey.tscn`: the stress test (`--day=2` for Day 2).
 
 ## Generators (one-off, foundation-owned)

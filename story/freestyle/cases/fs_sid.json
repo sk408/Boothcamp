@@ -1,0 +1,89 @@
+{
+	"id": "fs_sid",
+	"patient_id": "fs_sid",
+	"speaker": "Sid",
+	"stars": 1,
+	"teaser": "His hearing aid just died. He's worn them since he was six.",
+	"look": {
+		"face": "gus", "skin": "#c68642", "skin_shade": "#a86b32", "nose": "#b8763c",
+		"cardigan": "#2f6b3a", "pants": "#2c3e50", "shirt": "#f28c28", "accent": "#f28c28", "shoes": "#3a3a3a",
+		"hair": "#1e1a17", "hair_style": "tufts", "mustache": true, "brows": true,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["headband"], "headband": "#f28c28",
+		"portrait_bg": "#e4f5d4", "name_color": "#2f6b3a"
+	},
+	"voice": {"f0": 118.0, "wobble": 0.05, "roll": 0.7, "vowels": ["o", "a", "i", "o", "e", "a"]},
+	"hello": [
+		["Sid", "Sid Sprocket, bike mechanic. My left hearing aid died on Tuesday. Seven years old, rest in peace."],
+		["Sid", "I've worn them since I was six. Without them, it's like riding on two flat tyres."]
+	],
+	"answers": {
+		"which_ear": {"say": "Same both sides. Always has been, since I was a kid.", "note": "Both ears the same, always"},
+		"onset": {"say": ["Since I was tiny. Aids at six, and it hasn't budged in years.", "My last test, four years back, matched the one before."], "note": "Since early childhood; no change in years"},
+		"ringing": {"say": "None. Quiet as a well-oiled chain.", "note": "No ringing"},
+		"red_flags": {"say": "No pain, no gunk, no spinning. The only thing broken is the hearing aid.", "note": "No pain, drainage or dizziness"},
+		"noise": {"say": "The shop compressor's a beast. Earmuffs on for that, always.", "note": "Shop compressor; wears earmuffs for it"},
+		"ear_history": {"say": "No infections, no ops, no knocks. The ear doctor checked me loads as a kid. Nothing to fix, just aids.", "note": "No infections or ops; ear doctor saw him young"},
+		"family": {"say": "Grandad wore aids from young, and my auntie. We Sprockets say 'pardon?' a lot.", "note": "Grandad and an aunt had early hearing loss"},
+		"health": {"say": "Fit as a fiddle. I ride to work. No pills, just energy bars.", "note": "Healthy, no medicines"},
+		"aids": {"say": ["Since I was six! This pair's seven years old.", "The left one died Tuesday. The right one's wheezing too."], "note": "Aids since age 6; this pair is 7 years old"},
+		"hardest": {"say": "Without aids? Everywhere. With these old ones, the shop radio plus customers is tough.", "note": "Old aids struggle with shop noise"}
+	},
+	"key_questions": ["red_flags", "onset", "which_ear", "aids"],
+	"otoscopy": {
+		"canal": "roomy",
+		"right": {"view": "clear", "caption": "Sid's RIGHT ear: a roomy, clean canal and a healthy, pearly eardrum."},
+		"left": {"view": "clear", "caption": "Sid's LEFT ear: the same. Roomy, clean, not a speck of wax."},
+		"note": "Roomy canals clear, eardrums normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -5, "peak_ml": 0.9, "ecv_ml": 1.7},
+		"left": {"type": "A", "peak_daPa": -15, "peak_ml": 1.0, "ecv_ml": 1.8},
+		"note": "Tymp: type A both ears"
+	},
+	"decision": "fit",
+	"decision_lines": {
+		"fit": "Fit! Lifelong, steady, matching ears, no red flags. New aids, and his wheels keep turning.",
+		"refer": "Refer for what? No red flags, no gap, no change, ears that match. He needs new aids.",
+		"today": "Nothing sudden here. His hearing hasn't changed in years. Only his hearing aid died.",
+		"clear": "No aids needed? A moderate loss in both ears says otherwise. And his old ones just died!"
+	},
+	"why": {
+		"prompt": "Why is it safe to fit Sid with new hearing aids?",
+		"options": [
+			["The same steady loss in both ears, no gap, no red flags.", true, "Right! Lifelong, unchanged, matching, sensorineural, no red flags. That's a fit."],
+			["He has worn hearing aids since he was six.", false, "Old aids aren't a free pass. A sudden change or a red flag still means a doctor."],
+			["A loss from childhood never changes.", false, "It can! A sudden drop, or one ear slipping, would send him to a doctor first."],
+			["His tympanograms were both type A.", false, "Type A says the eardrums move well. It can't tell you he needs aids."]
+		]
+	},
+	"debrief": [
+		["Hoot", "Aids before doesn't mean skip the checks. Look, ask and test, every visit, every time."],
+		["Hoot", "Bone sat right on air, no gap: that's what shows it's sensorineural. Air alone can't tell."],
+		["Hoot", "A sudden or fast drop, or one ear slipping behind, means a doctor first. Not today."]
+	],
+	"goodbye": [
+		{"do": "hearing_aids"},
+		["Sid", "Whoa! I can hear the freewheel ticking. Crisp as a new chain!"],
+		{"react": "cheer"},
+		["Hoot", "Earmuffs on for that compressor, Sid. Protect the hearing you've got."],
+		["Sid", "The old right one goes in the spares drawer. Every good mechanic keeps spares!"],
+		{"react": "wave"}
+	],
+	"paper": {
+		"headlines": {
+			"S": "FULL SERVICE FOR SID'S EARS; NEW AIDS FITTED",
+			"A": "SID SPROCKET SHIFTS UP A GEAR WITH NEW AIDS",
+			"B": "SID FITTED; A FEW STAMPS SLIPPED THEIR CHAIN",
+			"C": "SID ROLLS OUT, BUT THE WORKUP HAD A PUNCTURE",
+			"Do-over": "SID'S VISIT SENT BACK TO THE WORKSHOP"
+		},
+		"subheads": {
+			"S": "Lifelong, steady and matching, no red flags: a clean fit after a full check.",
+			"A": "Old aids are no shortcut. Look, ask, test, then fit.",
+			"B": "The fit was right; a few stamps wandered. Bone on air still proves the type.",
+			"C": "Bone conduction tells sensorineural from conductive. Run it every time.",
+			"Do-over": "Sid will be back. Bring the otoscope, the questions and the bone buzzer."
+		}
+	}
+}

@@ -1,0 +1,97 @@
+{
+	"id": "fs_buck",
+	"patient_id": "fs_buck",
+	"speaker": "Buck",
+	"stars": 2,
+	"teaser": "Forty years of duck hunting. Now the ducks sneak up on him.",
+	"look": {
+		"face": "gus", "skin": "#e8b48f", "skin_shade": "#c9916c", "nose": "#da9a76",
+		"cardigan": "#8a6a3b", "pants": "#56614a", "shirt": "#b03a2e", "accent": "#2e7d5b", "shoes": "#3b2f24",
+		"hair": "#aaa49b", "hair_style": "tufts", "mustache": true, "brows": true,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": [],
+		"portrait_bg": "#d6ebe3", "name_color": "#8a5a1f"
+	},
+	"voice": {"f0": 104.0, "wobble": 0.05, "roll": 0.72, "vowels": ["a", "u", "o", "a", "e", "u"]},
+	"hello": [
+		["Buck", "Buck Shotwell. Forty years in a duck blind, every frosty dawn I could get."],
+		["Buck", "Lately the ducks sneak up on me. And the wife says my left ear's gone on strike."]
+	],
+	"answers": {
+		"which_ear": {"say": "The left, no contest. The phone lives on my right ear these days.", "note": "Worse on the left; phone lives on the right"},
+		"onset": {"say": "Slow. Crept up over the years, like fog on the marsh. Nothing sudden.", "note": "Slow over years, nothing sudden"},
+		"ringing": {"say": "A high whine in both ears. Louder on the left. Like a mosquito that never lands.", "note": "Whine in both ears, louder on the left"},
+		"red_flags": {"say": "No pain, no leaking, no spinning. Steady as a wooden decoy.", "note": "No pain, drainage or dizziness"},
+		"noise": {"say": [
+			"Forty years of duck hunting. Twelve-gauge on my right shoulder.",
+			"Earplugs? Never. Figured I'd miss the ducks talking."
+		], "note": "40 years of shotguns, right-handed, no plugs"},
+		"ear_history": {"say": "Never had an ear infection. No operations, never took a knock to the head.", "note": "No infections, surgery or injuries"},
+		"family": {"say": "My dad got a bit deaf. Mind you, he ran a sawmill for thirty years.", "note": "Dad had some loss; he ran a sawmill"},
+		"health": {"say": "Fit as a fiddle. One little pill for cholesterol. That's the lot.", "note": "Cholesterol tablet, otherwise healthy"},
+		"aids": {"say": "Never. The wife's been on at me for years. My retriever doesn't nag.", "note": "Never worn hearing aids"},
+		"hardest": {"say": [
+			"The wife, when she sits on my left in the truck.",
+			"And at dawn I can't hear the wings whistle any more. The ducks are on me before I see 'em."
+		], "note": "Wife on his left side; can't hear duck wings"}
+	},
+	"key_questions": ["red_flags", "which_ear", "onset", "noise"],
+	"otoscopy": {
+		"canal": "average-sized",
+		"right": {"view": "clear", "caption": "Buck's RIGHT ear: a clean canal and a pearly, healthy eardrum. Not a feather in sight."},
+		"left": {"view": "clear", "caption": "Buck's LEFT ear: just as clean and healthy. It looks exactly like the right one."},
+		"note": "Canals clear, eardrums normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.7, "ecv_ml": 1.4},
+		"left": {"type": "A", "peak_daPa": -5, "peak_ml": 0.8, "ecv_ml": 1.5},
+		"note": "Tymp: type A both ears"
+	},
+	"decision": "refer",
+	"decision_lines": {
+		"fit": "Not yet! A left ear this much worse is a red flag. Doctor first, then fit.",
+		"refer": "Refer! The shotgun likely did it, but ears this lopsided need a doctor's all-clear first.",
+		"today": "Nothing sudden: it crept in over forty seasons. A doctor soon, not today.",
+		"clear": "No aids? His left ear sits near 60 dB up high. He needs help, after the doctor."
+	},
+	"why": {
+		"prompt": "Why does Buck see a doctor before hearing aids?",
+		"options": [
+			["His left ear is much worse than his right.", true, "Right! A clear difference between ears is a red flag, even when gunfire likely explains it."],
+			["Unmasked bone showed a gap in his left ear.", false, "That 'gap' was his right cochlea answering. Masked bone sat on the air: no gap."],
+			["Ringing in both ears is a red flag.", false, "Ringing in both ears is common with noise. Ringing in ONE ear only is the flag."],
+			["Hearing loss from shooting always needs a doctor.", false, "Not always. Matching noise loss in both ears can be fitted. Here it's the mismatch that flags."]
+		]
+	},
+	"debrief": [
+		["Hoot", "Shooter's ear is real: the ear nearer the muzzle takes the blast. For right-handers, that's the left."],
+		["Hoot", "But a lopsided loss is a red flag until a doctor clears it. Even with a good excuse."],
+		["Hoot", "Earplugs AND earmuffs, every shot from now on. The damage so far stays; more is preventable."]
+	],
+	"goodbye": [
+		{"do": "letter"},
+		["Hoot", "Here's a letter for the ear doctor, with your chart. Once you're cleared, come back and we fit."],
+		["Buck", "A doctor for my ears? Fine. Long as nobody tells me to quit hunting."],
+		{"hoot": "wing_up"},
+		["Hoot", "Keep hunting! Just plug AND muff. Electronic muffs even let you hear the ducks coming."],
+		{"react": "nod"},
+		["Buck", "Muffs that let the ducks through? Sold. See you after the doctor, owl."],
+		{"react": "wave"}
+	],
+	"paper": {
+		"headlines": {
+			"S": "BUCK STOPS HERE: LOPSIDED EARS SEE DOCTOR",
+			"A": "DUCK HUNTER REFERRED; EARMUFFS IN SEASON",
+			"B": "BUCK REFERRED; A FEW STAMPS FLEW THE NEST",
+			"C": "CHART WINGED, NOT BAGGED, SAYS OWL",
+			"Do-over": "SITTING DUCK: BUCK'S WORKUP NEEDS A RESHOOT"
+		},
+		"subheads": {
+			"S": "Left far worse than right, masked bone on the left, and a doctor before any fitting.",
+			"A": "Shooter's ear is real, but a lopsided loss still sees a doctor first.",
+			"B": "The right call, though a few stamps strayed: mask the bone when one ear is much worse.",
+			"C": "Unmasked bone hears the better cochlea, so mask it to type the poorer ear.",
+			"Do-over": "A lopsided loss means a doctor first, gunfire or not; Buck will be back at dawn."
+		}
+	}
+}

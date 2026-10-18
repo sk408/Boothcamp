@@ -21,6 +21,8 @@ const PHASES: Array[StringName] = [
 	&"familiarize", &"speech",
 	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
 	&"tymp", &"decision",
+	# freestyle (docs/FREESTYLE.md): the waiting room, the tool tray, the chart question, the debrief
+	&"freestyle_room", &"freestyle_tray", &"freestyle_chart", &"freestyle_debrief",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.

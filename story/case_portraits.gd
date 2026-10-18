@@ -23,6 +23,13 @@ static func look(who: String) -> Dictionary:
 	return _looks[who]
 
 
+## (freestyle) A speaker whose look lives outside the chapter cases (the walk-in clinic's patients,
+## story/freestyle/fs_data.gd). Chapter cases are still found by name; this only adds to them.
+static func register(who: String, lk: Dictionary) -> void:
+	if who != "" and not lk.is_empty():
+		_looks[who] = lk
+
+
 static func has(who: String) -> bool:
 	return who != "" and not look(who).is_empty()
 

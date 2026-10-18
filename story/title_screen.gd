@@ -13,6 +13,7 @@ const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
 const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
+const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -387,6 +388,16 @@ func _days_nav(dx: int, dy: int) -> void:
 			_set_hl(back)
 
 
+## (freestyle, docs/FREESTYLE.md) The walk-in clinic: practice outside the story.
+func _on_freestyle() -> void:
+	if _state != &"menu" or _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"click")
+	Events.goto_scene.emit(FREESTYLE_SCENE)
+
+
 func _on_options() -> void:
 	var pm := get_tree().get_first_node_in_group("pause_menu")
 	if pm:
@@ -479,12 +490,14 @@ func _build() -> void:
 	var play_txt := "Play"
 	if _has_progress():
 		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
-	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Options", _on_options]]
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Freestyle", _on_freestyle], ["Options", _on_options]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
 	specs.append(["Quit", _on_quit])
+	# (freestyle) six buttons: a little shorter so the card still clears the safety footer
+	var btn_h := 48.0 if specs.size() <= 5 else 42.0
 	for spec: Array in specs:
-		var b := UiKit.button(spec[0], &"", Vector2(340, 48))
+		var b := UiKit.button(spec[0], &"", Vector2(340, btn_h))
 		b.set_meta("label", spec[0])
 		b.add_theme_font_size_override("font_size", 24)
 		b.pressed.connect(spec[1])

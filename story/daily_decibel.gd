@@ -490,7 +490,7 @@ func _build(s: Dictionary) -> void:
 		nb.tooltip_text = String(Game.chapter(String(s.get("next_chapter_id", ""))).get("title", ""))
 		nb.pressed.connect(_next_day)
 		btns.add_child(nb)
-	var ctxt := "Back to the title"
+	var ctxt := String(s.get("continue_text", "Back to the title"))   # (freestyle) "Back to the waiting room"
 	var cont := UiKit.button(ctxt + ("  [T]" if primary_next else "  [%s]" % Game.key_label(&"advance_dialogue")) if hints else ctxt, &"" if primary_next else &"AccentButton", Vector2(250, 40 if primary_next else 50))
 	cont.pressed.connect(_continue)
 	btns.add_child(cont)

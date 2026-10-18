@@ -147,3 +147,22 @@ Requests for the integrator and the title owner:
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
 - **Tests:** `story/tests/test_cases.gd` (14 tests). `python3 tools/case_scripts.py --check` fails if
   `docs/CASE_SCRIPTS.md` is out of date with the case JSON.
+
+## Freestyle (the walk-in clinic; freestyle branch; CONTRACTS.md §12, docs/FREESTYLE.md)
+
+Everything is in `story/freestyle/` plus `core/patients/fs_*.tres`. Changes to shared files are additive:
+
+- **Title menu.** A **Freestyle** button between Days and Options. With **New player** that makes six buttons, so
+  `btn_h` drops from 48 to 42 when there are more than five (the card still clears the safety footer). If another
+  branch adds a menu button too (for example a movies button), keep both and check the card still clears the footer.
+- **Game.PHASES** gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief` (append after the
+  speech and cases blocks).
+- **CasePortraits.register(who, look)**: walk-ins aren't chapters, so the waiting room registers their looks.
+- **Daily Decibel**: the summary's optional `continue_text` labels the main button ("Back to the waiting room");
+  default unchanged.
+- **Autoplay bot**: with `--mouse` it clicks `continue_text` and treats the summary's `continue_scene` like the title;
+  new `--via-freestyle` (title -> Freestyle); the report gains `freestyle`. `_open_days()` now calls the shared
+  `_open_title_button(text)`.
+- **Reused**: `story/games/case_tymp.gd` (the cases tympanometer), the AudiOtron's plans, `CaseRules`, `ClinicRules`.
+  No second tympanometer.
+- **Tests:** `story/tests/test_freestyle.gd`.
