@@ -80,7 +80,7 @@
 		"quiz": {
 			"prompt": "Skye says it just needs a good pop. What does the tymp say?",
 			"options": [
-				["Fluid behind the drum: flat, normal volume.", true, ""],
+				["Fluid behind the drum: it can't move.", true, ""],
 				["Just pressure: a peak moved left.", false, "That would be type C: a peak moved left. Hers has no peak at all."],
 				["A wax plug blocking the probe.", false, "A plug makes the canal volume tiny. Hers is a normal 1.1, like her right."]
 			]
@@ -136,7 +136,7 @@
 		"lines": {
 			"refer": "Fluid behind one eardrum in a grown-up: a doctor this week, before Friday's flight.",
 			"fit": "No hearing aids for a puddle! A doctor first: it often clears.",
-			"today": "Bone's normal and no spinning: middle ear, not inner ear. Soon, not today."
+			"today": "Bone's normal: middle ear, not inner ear. Soon, not today."
 		}
 	},
 	"clue_pick": {
@@ -169,7 +169,7 @@
 		["Skye", "And Friday's flight?"],
 		["Hoot", "Ask the doctor before you fly. Landing with a blocked ear can really hurt."],
 		["Hoot", "Pain, fever, drips, dizziness, or hearing getting worse? See a doctor that day."],
-		["Hoot", "Once it clears, we retest. Still down then? Then we talk hearing aids."],
+		["Hoot", "Once it clears, we retest. Still down then? Back to the doctor first."],
 		{"react": "cheer"},
 		["Skye", "Ding-dong! Cabin crew, doors to doctor. Thank you for flying Booth Camp!"]
 	],

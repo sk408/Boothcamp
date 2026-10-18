@@ -20,7 +20,7 @@ const EXPECTED: Dictionary = {
 }
 ## The conductive cases: case id -> the ear with the gap.
 const CONDUCTIVE: Dictionary = {"wax": "right", "fluid": "left"}
-## The air frequencies a case plan stamps (no half-octave is needed in any case).
+## The octaves every case plan stamps in air (_stamped adds the half-octaves a chart asks for).
 const STAMPED: Array[int] = [250, 500, 1000, 2000, 4000, 8000]
 const BOT_PREFIX := 18   # the mouse bot clicks an option by its first 18 characters
 
@@ -244,7 +244,15 @@ func test_finding_sources_are_checked() -> void:
 
 # ---------------------------------------------------------------- batch 2: conductive cases, retest
 
-## A results dict from a patient's truth, as perfect stamps: air at STAMPED in both ears, unmasked
+## The air frequencies a plan stamps on an ear: STAMPED, plus each half-octave whose neighbours in the
+## truth differ by ClinicRules.INTEROCTAVE_DIFF_DB or more (Rocco's 3k and 6k, Ginger's 750).
+func _stamped(p: PatientProfile, ear: String) -> Array[int]:
+	var out: Array[int] = STAMPED.duplicate()
+	out.append_array(ClinicRules.required_interoctaves(CaseData.truth(p, ear)))
+	return out
+
+
+## A results dict from a patient's truth, as perfect stamps: air at _stamped in both ears, unmasked
 ## bone (the better cochlea: bone IA is 0) on bc_ears at BC_REQUIRED, and masked bone (the ear's
 ## own) where masked_bone. wobble: [ear, sheet, freq, dB] adds dB to one stamp.
 func _perfect(p: PatientProfile, bc_ears: PackedStringArray, masked_bone: bool, wobble: Array = []) -> Dictionary:
@@ -252,7 +260,7 @@ func _perfect(p: PatientProfile, bc_ears: PackedStringArray, masked_bone: bool, 
 	for ear: String in ["right", "left"]:
 		var other := "left" if ear == "right" else "right"
 		var e := {"freqs": {}, "bc": {}, "bc_masked": {}, "ac_masked": {}}
-		for f: int in STAMPED:
+		for f: int in _stamped(p, ear):
 			(e["freqs"] as Dictionary)[f] = {"stored_db": p.get_threshold(ear, f)}
 		if bc_ears.has(ear):
 			for f: int in ClinicRules.BC_REQUIRED:
@@ -334,7 +342,7 @@ func test_conductive_cases_mask_bone_not_air() -> void:
 		# one wandering stamp never adds masked air
 		for e: String in ["right", "left"]:
 			for sheet: String in ["freqs", "bc"]:
-				for f: int in STAMPED:
+				for f: int in _stamped(p, e):
 					for d: int in [-5, 5]:
 						var rw := _perfect(p, bc_ears, true, [e, sheet, f, d])
 						for chk: String in ["right", "left"]:
@@ -433,10 +441,17 @@ func test_tymp_and_plug_rules_are_checked() -> void:
 		["a retest look with a bad view", func(c: Dictionary) -> void: c["retest"]["otoscopy"]["view"] = "foggy", "retest otoscopy: view"],
 		["a retest tymp in the grey zone", func(c: Dictionary) -> void: c["retest"]["tymp"]["right"] = {"type": "B", "peak_daPa": 0, "peak_ml": 0.05, "ecv_ml": 0.8}, "grey zone"],
 		["a bad retest script", func(c: Dictionary) -> void: (c["retest"]["payoff"] as Array).append({"do": "confetti"}), "unknown do"],
+		["a bad red-flag card kind", func(c: Dictionary) -> void: c["red_flags"]["card_kind"] = "purple", "red_flags.card_kind"],
+		["more proof cards than the board holds", func(c: Dictionary) -> void: c["clue_pick"]["decoys"] = ["a", "b", "c", "d", "e", "f"], "fit on the board"],
 	]
 	for t: Array in cases:
 		var got := _wax_problems(t[1])
 		assert_true(got.contains(String(t[2])), "%s is reported (got: %s)" % [t[0], got])
+	# a card with no text is never dealt, so it can't be the proof that is always on the board
+	var c := _case("wax").duplicate(true)
+	c["otoscopy"]["clue"] = ""
+	c["clue_pick"]["answers"] = ["wax_plug", "gap"]
+	assert_true("; ".join(CaseData.validate(c)).contains("always on the board"), "an empty proof card is caught")
 
 
 func test_validate_survives_broken_files() -> void:
@@ -457,6 +472,9 @@ func test_validate_survives_broken_files() -> void:
 		func(c: Dictionary) -> void: c["paper"]["wrong_first"] = ["fit"],
 		func(c: Dictionary) -> void: c["evidence"]["answer"] = "one",
 		func(c: Dictionary) -> void: c["evidence"]["wrong"] = "nope",
+		func(c: Dictionary) -> void: c["audiometry"][0]["montage"] = "true",
+		func(c: Dictionary) -> void: c["tymp"]["quiz"]["options"][0][1] = "true",
+		func(c: Dictionary) -> void: c["red_flags"]["extra_clues"] = null,
 	]
 	for i in breaks.size():
 		var got := _wax_problems(breaks[i])
@@ -495,7 +513,7 @@ func test_findings_conditions() -> void:
 	assert_true(LevelCase.finding_shows("conductive", mk.call(&"unknown", gap_air, {}), wax, "right", false), "unknown falls back to the truth")
 	assert_false(LevelCase.finding_shows("conductive", mk.call(&"unknown", gap_air, {}), gus, "right", false), "Gus's truth is not conductive")
 	assert_true(LevelCase.finding_shows("abg_flag", mk.call(&"conductive", gap_air, gap_bone), gus, "right", false), "the measured gap")
-	assert_false(LevelCase.finding_shows("abg_flag", mk.call(&"conductive", gap_air, {500: 30, 1000: 10, 2000: 10, 4000: 10}), wax, "right", false), "14 at 500 is no flag")
+	assert_false(LevelCase.finding_shows("abg_flag", mk.call(&"conductive", gap_air, {500: 30, 1000: 10, 2000: 10, 4000: 10}), wax, "right", false), "10 at 500 is no flag (needs 15)")
 	assert_true(LevelCase.finding_shows("abg_flag", mk.call(&"unknown", gap_air, {}), wax, "right", false), "no bone: the truth")
 	assert_true(LevelCase.finding_shows("asymmetric", {}, gus, "right", true))
 	assert_false(LevelCase.finding_shows("symmetric", {}, gus, "right", true))
@@ -544,10 +562,14 @@ func test_wrong_first_headlines() -> void:
 
 
 func test_merge_retest() -> void:
-	var first := {"ears": {"right": {"pta": 35}, "left": {"pta": 5}}, "score": 80}
-	var second := {"ears": {"right": {"pta": 10}, "left": {}}}
+	var first := {"ears": {"right": {"pta": 35, "bc": {1000: {"stored_db": 10}}, "best_bc": {1000: 10}},
+		"left": {"pta": 5}}, "score": 80}
+	var second := {"ears": {"right": {"pta": 10, "bc": {}, "hearing_type": &"normal"}, "left": {}}}
 	var shown := LevelCase.merge_retest(first, second, PackedStringArray(["right"]))
 	assert_eq(int((shown["ears"]["right"] as Dictionary)["pta"]), 10, "the retested ear is today's")
+	assert_eq(int(shown["ears"]["right"]["bc"][1000]["stored_db"]), 10, "air climbs back to the visit's bone, still on the chart")
+	assert_eq(int(shown["ears"]["right"]["best_bc"][1000]), 10, "the visit's best bone too")
+	assert_eq(shown["ears"]["right"]["hearing_type"], &"normal", "the type is today's")
 	assert_eq(int((shown["ears"]["left"] as Dictionary)["pta"]), 5, "the other ear is the visit's")
 	assert_eq(int(first["ears"]["right"]["pta"]), 35, "the visit's results are untouched")
 	(shown["ears"]["right"] as Dictionary)["pta"] = 99

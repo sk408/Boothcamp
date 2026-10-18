@@ -83,7 +83,7 @@
 		"quiz": {
 			"prompt": "His right is flat. What does the canal volume say?",
 			"options": [
-				["Blocked: flat, with a tiny canal volume.", true, ""],
+				["Blocked: the probe is pressed against wax.", true, ""],
 				["Fluid behind the eardrum.", false, "Fluid gives a flat line with a NORMAL canal volume. His is tiny: 0.4 mL."],
 				["A hole in the eardrum.", false, "A hole makes the canal volume BIG. His is tiny: the probe met wax."]
 			]

@@ -29,6 +29,8 @@ const WHENS: PackedStringArray = ["", "symmetric", "asymmetric", "conductive", "
 const VIEWS: PackedStringArray = ["clear", "wax", "fluid"]
 ## A clue card's colour: a plain clue or a red flag.
 const KINDS: PackedStringArray = ["clue", "flag"]
+## The case file's card limit (CaseBoard.MAX_CARDS reads this): the proof cards and decoys must fit.
+const MAX_CARDS := 9
 ## The owl's emotes (mirrors world/characters/owl.gd emote(); world is asked for a constant).
 const HOOT_EMOTES: PackedStringArray = ["hop", "cheer", "wing_up", "facepalm", "nod", "gasp"]
 ## Plan keys a case test step may pass straight to the AudiOtron (audiometer_screen.gd start_test).
@@ -283,28 +285,36 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("voice %s is not an object" % v)
 	for pair: Array in scripts(c):
 		out.append_array(_check_script(pair[1], String(pair[0]), speakers))
+	# the tags of the cards every visit deals (the runner skips a card with empty text)
 	var tags := {}
 	for cl: Variant in c.get("always_clues", []):
 		if not cl is Dictionary or not (cl as Dictionary).get("text", null) is String:
 			out.append("always_clues: each needs a text")
 			continue
-		tags[String((cl as Dictionary).get("tag", ""))] = true
+		_deal(tags, (cl as Dictionary).get("tag", ""), (cl as Dictionary)["text"])
 		out.append_array(_check_kind((cl as Dictionary).get("kind", "clue"), "always_clues"))
 	var rf: Dictionary = c["red_flags"]
 	out.append_array(_check_history(c, speakers, String(rf["tag"])))
-	tags[String(rf["tag"])] = true
-	for ex: Variant in rf.get("extra_clues", []):
+	_deal(tags, rf["tag"], rf["clue"])
+	out.append_array(_check_kind(rf.get("card_kind", "clue"), "red_flags.card_kind"))
+	if rf.has("clue_kind"):
+		out.append_array(_check_kind(rf["clue_kind"], "red_flags.clue_kind"))
+	var extras: Variant = rf.get("extra_clues", [])
+	if not extras is Array:
+		out.append("red_flags.extra_clues must be a list")
+		extras = []
+	for ex: Variant in extras:
 		if not ex is Dictionary or not (ex as Dictionary).get("text", null) is String:
 			out.append("red_flags.extra_clues: each needs a text")
 			continue
-		tags[String((ex as Dictionary).get("tag", ""))] = true
+		_deal(tags, (ex as Dictionary).get("tag", ""), (ex as Dictionary)["text"])
 		out.append_array(_check_kind((ex as Dictionary).get("kind", "clue"), "red_flags.extra_clues"))
 	var oto: Dictionary = c["otoscopy"]
-	tags[String(oto["tag"])] = true
+	_deal(tags, oto["tag"], oto["clue"])
 	out.append_array(_check_otoscopy(oto, "otoscopy"))
 	out.append_array(_check_kind(oto.get("kind", "clue"), "otoscopy"))
 	var ty: Dictionary = c["tymp"]
-	tags[String(ty["tag"])] = true
+	_deal(tags, ty["tag"], ty["clue"])
 	out.append_array(_check_tymp(ty, "tymp"))
 	if ty.get("quiz", null) is Dictionary:
 		var rights := 0
@@ -312,7 +322,9 @@ static func validate(c: Dictionary) -> PackedStringArray:
 		for o: Variant in (qopts if qopts is Array else []):
 			if not o is Array or (o as Array).size() < 2:
 				out.append("tymp quiz option needs [text, right, line]")
-			elif bool((o as Array)[1]):
+			elif not (o as Array)[1] is bool:
+				out.append("tymp quiz option: right must be true or false")
+			elif (o as Array)[1]:
 				rights += 1
 		if rights != 1:
 			out.append("tymp quiz needs exactly one right option")
@@ -328,7 +340,7 @@ static func validate(c: Dictionary) -> PackedStringArray:
 		if not WHENS.has(when):
 			out.append("finding %s: when must be one of %s" % [fd["tag"], ", ".join(WHENS)])
 		elif when == "":
-			tags[String(fd["tag"])] = true
+			_deal(tags, fd["tag"], fd["text"])
 		if not CLUE_SOURCES.has(String(fd.get("src", "test"))):
 			out.append("finding %s: src must be one of %s" % [fd["tag"], ", ".join(CLUE_SOURCES)])
 		out.append_array(_check_kind(fd.get("kind", "clue"), "finding " + String(fd["tag"])))
@@ -385,6 +397,8 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("clue_pick.%s must be an object" % key)
 	if cp.has("decoys") and not cp["decoys"] is Array:
 		out.append("clue_pick.decoys must be a list")
+	elif (cp["answers"] as Array).size() + (cp.get("decoys", []) as Array).size() > MAX_CARDS:
+		out.append("clue_pick: answers + decoys fit on the board (%d cards at most)" % MAX_CARDS)
 	var paper: Dictionary = c["paper"]
 	for g: String in GRADES:
 		if not (paper["headlines"] as Dictionary).get(g, null) is String:
@@ -395,6 +409,12 @@ static func validate(c: Dictionary) -> PackedStringArray:
 	if c.has("retest"):
 		out.append_array(_check_retest(c["retest"], pid))
 	return out
+
+
+## A card the runner deals on every visit: its tag counts for the clue pick (empty text never shows).
+static func _deal(tags: Dictionary, tag: Variant, text: Variant) -> void:
+	if text is String and String(text) != "":
+		tags[String(tag)] = true
 
 
 ## v is the JSON type t (TYPE_FLOAT also takes a whole number; ANY_TEXT a String or a list).
@@ -511,7 +531,7 @@ static func _check_plan(plan: Array, where: String, air_only: bool) -> PackedStr
 				else " steps are ac or bc (masked tests are added by the rules)"))
 		if not _is_type(pd.get("hoot_turn_after", 0), TYPE_FLOAT):
 			out.append(where + ": hoot_turn_after must be a number")
-		elif bool(pd.get("montage", false)) and int(pd.get("hoot_turn_after", 0)) != 0:
+		elif pd.get("montage", false) is bool and pd.get("montage", false) and int(pd.get("hoot_turn_after", 0)) != 0:
 			out.append(where + ": montage is Hoot's alone (hoot_turn_after 0)")
 		for k: String in PLAN_KEYS:
 			if pd.has(k) and not pd[k] is bool:

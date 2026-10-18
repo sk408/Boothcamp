@@ -52,6 +52,8 @@ const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bo
 const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
 ## The retest's chart when its measured type is not the story's.
 const RETEST_NEUTRAL := "Much better with the plug out. A few stamps wandered: in clinic, we'd recheck those."
+## What the retest board keeps from the first visit on a retested ear: its bone.
+const RETEST_KEEPS: Array[String] = ["bc", "bc_masked", "best_bc"]
 
 var case_id := ""
 var case_data: Dictionary = {}
@@ -981,8 +983,10 @@ func _retest() -> void:
 	var rt: Dictionary = case_data["retest"]
 	var first_results := results.duplicate(true)
 	var first_patient := patient
+	var first_comfort := Game.get_comfort()
 	_phase(&"retest")
 	hud.call("set_step", &"retest")
+	hud.call("clear_notes")   # two days on: the first visit's sticky notes are history
 	clinic.call("focus_camera", &"door", 0.0)
 	await _props().call("play", "later", String(rt.get("card", "LATER")))
 	_shot("retest_later")
@@ -1029,21 +1033,30 @@ func _retest() -> void:
 	results = first_results
 	patient = first_patient
 	Game.set_audiometry_results(first_results)   # the score is the first visit's
+	if Game.get_comfort() < first_comfort:   # hearts lost on the victory lap don't count either
+		Game.gain_comfort("retest_unscored", first_comfort - Game.get_comfort())
 	Game.set_visit_flag("retested", true)
 	Game.set_visit_flag("retest_type", String(measured))
 	hud.call("complete_step", &"retest")
 
 
 ## The chart the retest board shows: a deep copy of the first visit's results with each retested ear
-## replaced by a copy of the retest's. Neither input changes.
+## replaced by a copy of the retest's, keeping the first visit's bone on it (the retest is air only:
+## air climbs back to that bone). Neither input changes.
 static func merge_retest(first: Dictionary, second: Dictionary, ears: PackedStringArray) -> Dictionary:
 	var out := first.duplicate(true)
 	if not out.get("ears", null) is Dictionary:
 		out["ears"] = {}
+	var out_ears: Dictionary = out["ears"]
 	var second_ears: Dictionary = second.get("ears", {})
 	for ear: String in ears:
 		if second_ears.has(ear):
-			(out["ears"] as Dictionary)[ear] = (second_ears[ear] as Dictionary).duplicate(true)
+			var fresh := (second_ears[ear] as Dictionary).duplicate(true)
+			var old: Dictionary = out_ears.get(ear, {})
+			for k: String in RETEST_KEEPS:
+				if old.has(k):
+					fresh[k] = old[k]
+			out_ears[ear] = fresh
 	return out
 
 

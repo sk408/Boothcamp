@@ -15,17 +15,28 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CASES = ROOT / "story" / "cases"
 GAME = ROOT / "autoload" / "game.gd"
 RUNNER = ROOT / "story" / "level_case.gd"
+RULES = ROOT / "core" / "cases" / "case_rules.gd"
 OUT = ROOT / "docs" / "CASE_SCRIPTS.md"
 CALLS = {"fit": "FIT", "refer": "REFER", "today": "DOCTOR TODAY"}
-# CaseRules: a flat tymp's canal volume reads blocked below TYMP_BLOCKED_ECV, a hole above the adult band
-TYMP_BLOCKED_ECV = 0.6
-TYMP_ADULT_ECV_MAX = 2.0
 WHEN_LABELS = {
     "symmetric": "if the ears match",
     "asymmetric": "if the ears differ",
     "conductive": "only when the chart reads conductive",
     "abg_flag": "only with a gap of 15+ at 500, 1k and 2k",
 }
+
+
+def rules_number(pattern):
+    """A number from core/cases/case_rules.gd, so this page reads a flat tymp the way the game does."""
+    m = re.search(pattern, RULES.read_text(encoding="utf-8"))
+    if not m:
+        sys.exit(f"case_scripts.py: {pattern} not found in {RULES}")
+    return float(m.group(1))
+
+
+# CaseRules: a flat tymp's canal volume reads blocked below TYMP_BLOCKED_ECV, a hole above the adult band
+TYMP_BLOCKED_ECV = rules_number(r"const TYMP_BLOCKED_ECV := ([\d.]+)")
+TYMP_ADULT_ECV_MAX = rules_number(r"const TYMP_ADULT_ECV := Vector2\([\d.]+, ([\d.]+)\)")
 
 
 def runner_line(name):
@@ -59,22 +70,22 @@ def case_order():
     return ids
 
 
-def script(lines, out):
+def script(lines, out, indent=""):
     for e in lines:
         if isinstance(e, list) and len(e) == 2:
-            out.append(f"- **{e[0]}:** {e[1]}")
+            out.append(f"{indent}- **{e[0]}:** {e[1]}")
         elif isinstance(e, dict):
             if "do" in e:
-                out.append(f"- *({e['do'].replace('_', ' ')})*")
+                out.append(f"{indent}- *({e['do'].replace('_', ' ')})*")
             if "react" in e:
-                out.append(f"- *(patient: {e['react']})*")
+                out.append(f"{indent}- *(patient: {e['react']})*")
             if "hoot" in e:
-                out.append(f"- *(Hoot: {e['hoot'].replace('_', ' ')})*")
+                out.append(f"{indent}- *(Hoot: {e['hoot'].replace('_', ' ')})*")
             if "choose" in e:
                 ch = e["choose"]
-                out.append(f"- **Choice:** {ch.get('prompt', '')}")
+                out.append(f"{indent}- **Choice:** {ch.get('prompt', '')}")
                 for o in ch.get("options", []):
-                    out.append(f"  - {o[0]} ({o[1]} pts): Hoot: {o[2]}")
+                    out.append(f"{indent}  - {o[0]} ({o[1]} pts): Hoot: {o[2]}")
 
 
 def reply_text(r):
@@ -130,7 +141,8 @@ def render(c):
     if "quiz" in ty:
         out.append(f"Question: **{ty['quiz']['prompt']}**")
         for o in ty["quiz"]["options"]:
-            out.append(f"- {'(right) ' if o[1] else ''}{o[0]}" + (f": Hoot: {o[2]}" if o[2] else ""))
+            line = o[2] if len(o) > 2 else ""
+            out.append(f"- {'(right) ' if o[1] else ''}{o[0]}" + (f": Hoot: {line}" if line else ""))
     else:
         if ty["right"]["type"] == ty["left"]["type"]:
             asks = [f"What type are both of {sp}'s tympanograms?"]
@@ -225,10 +237,12 @@ def plan(steps, out):
         elif p.get("hoot_turn_after", 0) == 0:
             who = "Hoot at x8"
         else:
-            who = f"player for {p['hoot_turn_after']} stamps, then Hoot"
+            n = p["hoot_turn_after"]
+            who = f"player for {n} stamp{'' if n == 1 else 's'}, then Hoot"
         out.append(f"- {p['ear'].title()} {p['test'].upper()} ({who}): \"{p.get('intro', '')}\"")
-        for e in p.get("before", []):
-            out.append(f"  - before: **{e[0]}:** {e[1]}")
+        if p.get("before"):
+            out.append("  - before:")
+            script(p["before"], out, "    ")
 
 
 def retest(rt, out):
@@ -254,11 +268,7 @@ def retest(rt, out):
     out.append("")
     out.append(f"- *(the new chart flies up over the old one, dashed \"{rv.get('label', 'BEFORE')}\": {rv.get('title', '')})*")
     out.append("- When the measured %s ear agrees with the story:" % rv["ear"])
-    for e in rv.get("lines", []):
-        if isinstance(e, list) and len(e) == 2:
-            out.append(f"  - **{e[0]}:** {e[1]}")
-        elif isinstance(e, dict) and "react" in e:
-            out.append(f"  - *(patient: {e['react']})*")
+    script(rv.get("lines", []), out, "  ")
     out.append(f"- Otherwise: **Hoot:** {runner_line('RETEST_NEUTRAL')}")
     out.append("")
     script(rt.get("payoff", []), out)

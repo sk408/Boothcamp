@@ -34,7 +34,7 @@ const FILE_SCALE := 0.56
 const FILE_CHART_AT := Vector2(22, 86)
 const GRID := Rect2(528, 86, 730, 276)
 const GRID_COLS := 3
-const MAX_CARDS := 9
+const MAX_CARDS := CaseData.MAX_CARDS
 const TRAY_Y := 384.0
 const STAMP_SIZE := Vector2(300, 112)
 const STAMP_COLORS: Dictionary[StringName, Color] = {&"fit": Color("#2f9e73"), &"refer": Color("#2d6cdf"), &"today": Color("#e5383b")}
@@ -1052,7 +1052,7 @@ func _draw_cork(rest: Vector2, gap_px: float) -> void:
 	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## Water from the air line up to just under the bone line, with a wobbly surface, bubbles that rise
+## Water from the air line up to just under the bone symbols, with a wobbly surface, bubbles that rise
 ## and pop, and a rubber duck riding the surface up. xs: the band's sample positions (may be empty).
 func _draw_water(xs: PackedFloat32Array, air_line: PackedVector2Array, bone_line: PackedVector2Array, x_duck: float) -> void:
 	var s := _sc()
@@ -1064,7 +1064,8 @@ func _draw_water(xs: PackedFloat32Array, air_line: PackedVector2Array, bone_line
 	if xs.size() >= 2:
 		for x: float in xs:
 			var ya := _line_y(air_line, x)
-			var yb := minf(_line_y(bone_line, x) + 7.0 * s, ya)
+			# just under the bone symbols: half a bracket (8.5) + its stroke (2) + the wobble (4.5) + the surface line (1.5)
+			var yb := minf(_line_y(bone_line, x) + 17.0 * s, ya)
 			var wob := (sin(x * 0.07 / s + _t * 3.0) * 3.0 + sin(x * 0.15 / s - _t * 2.2) * 1.5) * s * rise
 			surf.append(Vector2(x, minf(lerpf(ya, yb, rise) + wob, ya - 1.0)))
 			bed.append(Vector2(x, ya))

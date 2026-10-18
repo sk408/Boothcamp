@@ -132,7 +132,8 @@ static func tymp_normal(tymp: Dictionary) -> bool:
 ## What a flat (type B) tympanogram means, read with the canal volume (mL): normal volume = fluid
 ## behind the eardrum (&"fluid"); tiny (under TYMP_BLOCKED_ECV) = wax or the probe against the canal
 ## wall (&"blocked"); large = a hole in the eardrum or an open ear tube (&"hole"). Compare with the
-## other ear.
+## other ear. The 0.6-0.9 grey zone reads &"fluid" here, while ecv_band (the gadget's chip) says LOW:
+## no case uses it (CaseData.validate).
 static func tymp_b_reading(ecv_ml: float) -> StringName:
 	if ecv_ml < TYMP_BLOCKED_ECV:
 		return &"blocked"

@@ -47,7 +47,7 @@ Ginger's puppet Chip heckles (her lips don't move), her nine-year-old chart prov
 family history is the tempting wrong clue. Barnaby brings his wallet ("hearing aid time!"), the otoscope finds a
 wall of wax, and two days later he walks back in with the plug in a jar ("EXHIBIT A") for a retest whose chart flies
 up over the waxy one; his bee Gerald waits outside during the tests. Skye talks in in-flight announcements, tries to
-pop her ear by pinching her nose, and her referral folds into a paper plane that lands on an EAR DOCTOR runway.
+pop her ear ("Hnnnngh!"), and her referral folds into a paper plane that lands on an EAR DOCTOR runway.
 
 **The four "where is it stuck" days** (Hoot's framing for the conductive cases):
 
@@ -248,7 +248,7 @@ easily the eardrum moves (a peak where it moves best). Teaching numbers (`CaseRu
 | A | a normal mountain | -100 to +50 daPa | 0.3-1.7 | the eardrum moves normally (no fluid, no blockage) |
 | As | a shallow hill | normal | under 0.3 | stiff (otosclerosis-like) |
 | Ad | a skyscraper | normal | over 1.7 | very floppy |
-| B | flat, no peak (under 0.1 mL) | none | none | read with the canal volume: tiny (under 0.6 mL, `TYMP_BLOCKED_ECV`): wax or the probe against the canal wall ("blocked"); normal (0.9-2.0 mL): fluid behind the eardrum; large (over 2.0): a hole in the eardrum or an open ear tube. 0.6-0.9 is a grey zone ("LOW: look again") that no case uses. Compare with the other ear. (`CaseRules.tymp_b_reading`, `ecv_band`) |
+| B | flat, no peak (under 0.1 mL) | none | none | read with the canal volume: tiny (under 0.6 mL, `TYMP_BLOCKED_ECV`): wax or the probe against the canal wall ("blocked"); normal (0.9-2.0 mL): fluid behind the eardrum; large (over 2.0): a hole in the eardrum or an open ear tube. 0.6-0.9 is a grey zone: the gadget's chip says LOW (look again), while `tymp_b_reading` still reads it as fluid (only under 0.6 is "blocked"); no case uses it. Compare with the other ear. (`CaseRules.tymp_b_reading`, `ecv_band`) |
 | C | a mountain moved left | below -100 daPa | normal | negative pressure (Eustachian tube) |
 
 The shaded box is the normal range (-100 to +50 daPa, 0.3 to 1.7 mL, compensated). Ear canal volume is printed
@@ -320,7 +320,7 @@ normal); softening drops for a few days, then a gentle rinse or suction; no cott
 the retest, "if it hadn't come back with the wax out, the doctor would look deeper" and "some ears just make lots of
 wax". Skye, an ear doctor this week; in grown-ups, one-sided fluid gets a doctor's look, back of the nose too; it
 often clears by itself, or the doctor can drain it; ask the doctor before flying; pain, fever, drips, dizziness or
-worse hearing mean a doctor that day; once it clears, a retest, and hearing aids only if it's still down.
+worse hearing mean a doctor that day; once it clears, a retest, and back to the doctor first if it's still down.
 
 ## 8. Clinical rules (`CaseRules`, teaching defaults for Steve to check)
 
@@ -345,7 +345,8 @@ worse hearing mean a doctor that day; once it clears, a retest, and hearing aids
 - Visit flags: `case_id`, `decision_first` (the first stamp), `decision` (the right call), `decision_tries`,
   `clue_tries`, `tymp_tip_tries`, `asked_red_flags`; with a retest, `retested` and `retest_type` (the measured type).
 - The retest is a victory lap: no medal, its stamps unscored; the first visit's results are restored before
-  `finish_visit`.
+  `finish_visit`, and any comfort heart lost during the retest is given back. Its chart keeps the first visit's bone on
+  the retested ear, so air can be seen climbing back to it.
 
 ## 10. Open questions for Steve
 
@@ -381,7 +382,7 @@ worse hearing mean a doctor that day; once it clears, a retest, and hearing aids
     ("take away the plug and air climbs to bone") and the clue pick (the plug, the tiny-volume tymp, the gap cards
     prove it; "one ear only" and "sudden" don't).
 14. Skye: REFER, "a doctor this week, before Friday's flight", with "In grown-ups, fluid on one side gets a doctor's
-    look, back of the nose too"? Does "Bone's normal and no spinning: middle ear, not inner ear. Soon, not today."
+    look, back of the nose too"? Does "Bone's normal: middle ear, not inner ear. Soon, not today."
     rightly rule out inner-ear barotrauma, and does "an ache with the cold, gone now" count as the FDA "pain" flag?
 15. Skye's picture: a flat 30-40 dB conductive loss, a B with a 1.1 mL canal, a dull amber drum with bubbles and a
     fluid line, no cone of light. Consistent, or would a resolving effusion more often be type C? And the quiz option

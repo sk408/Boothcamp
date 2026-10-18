@@ -60,7 +60,8 @@ Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
 - Right AC (player for 6 stamps, then Hoot): "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"
 - Left AC (Hoot at x8): "Left ear at Hoot speed. Same pattern?"
 - Right BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
-  - before: **Hoot:** Now the bone buzzer, on his right: is it the middle ear, or deeper?
+  - before:
+    - **Hoot:** Now the bone buzzer, on his right: is it the middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
 After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
@@ -181,7 +182,8 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
 - Right AC (Hoot at x8): "Better ear first, like the pros. I'll zip through the right!"
 - Left AC (player for 8 stamps, then Hoot): "Left ear's all yours. Keep an eye on the low pitches!"
 - Left BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
-  - before: **Hoot:** Now the bone buzzer, on her left. Watch out for the Ghost!
+  - before:
+    - **Hoot:** Now the bone buzzer, on her left. Watch out for the Ghost!
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
 After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
@@ -235,7 +237,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - C: **SOME BEEPS LOST AT SEA, CONFIRMS OWL** Watch the low pitches, and compare with old results.
 - Do-over: **MARINA BACK TOMORROW, FIRST MATE AT THE WHEEL; BRINGS FISH PIE** Spinning plus one ear: always a doctor first.
 - First stamp FIT (S to C): **TRAINEE NEARLY FITS A SPINNING CAPTAIN; OWL GRABS THE WHEEL** Dizziness and a one-sided, changing loss: a doctor looks first.
-- First stamp DOCTOR TODAY (S to C): **MARINA RUSHED TO DOCTOR; HER HEARING HAD ALREADY COME BACK** Her hearing dips with spells and returns: soon, not today.
+- First stamp DOCTOR TODAY (S to C): **MARINA RUSHED TO DOCTOR; DOCTOR SAYS THIS WEEK WAS FINE** Her hearing dips with spells and returns: soon, not today.
 
 ## Dash Delgado's Case (`sudden`)
 
@@ -299,7 +301,8 @@ Question: **Dash says it's wax. Does the tymp agree?**
 - Left AC (Hoot at x8): "Better ear first, like the pros. Left at Hoot speed!"
 - Right AC (player for 3 stamps, then Hoot): "Right ear's yours. Start at 1k, as always."
 - Right BC (Hoot at x8): "Bone check at Hoot speed: where is the trouble?"
-  - before: **Hoot:** Wax would block air but not bone. The bone buzzer will tell us!
+  - before:
+    - **Hoot:** Wax would block air but not bone. The bone buzzer will tell us!
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
 After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
@@ -416,7 +419,8 @@ Question: **Is her middle ear the problem?**
 - Right AC (player for 7 stamps, then Hoot): "Right ear's yours. Watch the middle pitches!"
 - Left AC (Hoot at x8): "Left ear at Hoot speed. Same shape?"
 - Right BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
-  - before: **Hoot:** Now the bone buzzer: middle ear, or deeper?
+  - before:
+    - **Hoot:** Now the bone buzzer: middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
 After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
@@ -523,7 +527,7 @@ Caption: *Barnaby's RIGHT ear: a roomy canal... packed solid with wax.* (view: w
 Tip: large (roomy canal). Right: type B, flat, canal 0.4 mL: reads blocked. Left: type A, peak -10 daPa, 0.8 mL, canal 1.5 mL.
 
 Question: **His right is flat. What does the canal volume say?**
-- (right) Blocked: flat, with a tiny canal volume.
+- (right) Blocked: the probe is pressed against wax.
 - Fluid behind the eardrum.: Hoot: Fluid gives a flat line with a NORMAL canal volume. His is tiny: 0.4 mL.
 - A hole in the eardrum.: Hoot: A hole makes the canal volume BIG. His is tiny: the probe met wax.
 
@@ -538,7 +542,8 @@ Question: **His right is flat. What does the canal volume say?**
 - Left AC (Hoot's montage): "Better ear first, like the pros. Hoot's montage: the left in a flash!"
 - Right AC (player for 2 stamps, then Hoot): "Right ear's yours: the side that went quiet. Start at 1k."
 - Right BC (Hoot at x8): "Bone at Hoot speed. Is the inner ear behind that plug okay?"
-  - before: **Hoot:** Bone skips the canal and the middle ear. If the cochlea's fine, bone will say so.
+  - before:
+    - **Hoot:** Bone skips the canal and the middle ear. If the cochlea's fine, bone will say so.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
 After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
@@ -616,7 +621,7 @@ Tymp again (the tip seals, no question): Right: type A, peak -10 daPa, 0.7 mL, c
   - Even lower than before. (0 pts): Hoot: Removing a plug shouldn't hurt hearing. Think about his bone!
 - **Hoot:** Same deal: press for every beep. Let's see what the wax was hiding.
 
-- Right AC (player for 1 stamps, then Hoot): "Right ear again! You take 1k. Where will it land this time?"
+- Right AC (player for 1 stamp, then Hoot): "Right ear again! You take 1k. Where will it land this time?"
 
 - *(the new chart flies up over the old one, dashed "WITH WAX": UNPLUGGED!)*
 - When the measured right ear agrees with the story:
@@ -688,7 +693,7 @@ Caption: *Skye's LEFT ear: an average-sized canal, no wax... and a dull, amber e
 Tip: medium (average-sized canal). Right: type A, peak -15 daPa, 0.7 mL, canal 1.2 mL. Left: type B, flat, canal 1.1 mL: reads fluid.
 
 Question: **Skye says it just needs a good pop. What does the tymp say?**
-- (right) Fluid behind the drum: flat, normal volume.
+- (right) Fluid behind the drum: it can't move.
 - Just pressure: a peak moved left.: Hoot: That would be type C: a peak moved left. Hers has no peak at all.
 - A wax plug blocking the probe.: Hoot: A plug makes the canal volume tiny. Hers is a normal 1.1, like her right.
 
@@ -702,7 +707,8 @@ Question: **Skye says it just needs a good pop. What does the tymp say?**
 - Right AC (Hoot's montage): "Better ear first. Hoot's montage on the right: fasten your seatbelts!"
 - Left AC (player for 2 stamps, then Hoot): "Left ear's yours: the underwater side. Start at 1k."
 - Left BC (Hoot at x8): "Bone at Hoot speed. Does her inner ear hear fine?"
-  - before: **Hoot:** Bone buzzer on her left. Bone skips the middle ear. Watch for the Ghost!
+  - before:
+    - **Hoot:** Bone buzzer on her left. Bone skips the middle ear. Watch for the Ghost!
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
 After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
@@ -728,7 +734,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 ### The call
 - **FIT**: No hearing aids for a puddle! A doctor first: it often clears.
 - **REFER** (right): Fluid behind one eardrum in a grown-up: a doctor this week, before Friday's flight.
-- **DOCTOR TODAY**: Bone's normal and no spinning: middle ear, not inner ear. Soon, not today.
+- **DOCTOR TODAY**: Bone's normal: middle ear, not inner ear. Soon, not today.
 
 **Present the evidence: why this week, and not TODAY?**
 - Proof cards (tags): tymp_fluid, amber_drum, gap. Right: Exactly! It's the middle ear: a doctor this week, before she flies. Not today.
@@ -753,7 +759,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - **Skye:** And Friday's flight?
 - **Hoot:** Ask the doctor before you fly. Landing with a blocked ear can really hurt.
 - **Hoot:** Pain, fever, drips, dizziness, or hearing getting worse? See a doctor that day.
-- **Hoot:** Once it clears, we retest. Still down then? Then we talk hearing aids.
+- **Hoot:** Once it clears, we retest. Still down then? Back to the doctor first.
 - *(patient: cheer)*
 - **Skye:** Ding-dong! Cabin crew, doors to doctor. Thank you for flying Booth Camp!
 

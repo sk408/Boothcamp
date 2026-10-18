@@ -78,9 +78,10 @@ Requests for the integrator and the title owner:
   on the LEFT ear). Its rows are now `[sheet key, ear]`: the old label column was never read (`_row_tag` draws the
   symbol) and its U+25A1 square is not in Fredoka, so it was dropped at the integrator's request.
 - **Notice to builder B: `story/games/case_otoscopy.gd`** extends `otoscopy.gd` and overrides `_draw_canal` (it
-  draws the wax plug or the fluid on top of your healthy drum), reading `view_center`, `VIEW_R`, `ear` and
-  `_canal`, and calls `show_clear`. Please keep those names, or publish `show_view(ear, view, caption)` and the
-  cases will switch to it.
+  draws the wax plug or the fluid on top of your healthy drum), reading `view_center`, `ear` and `_canal`, and
+  calls `show_clear`. It also copies your drum's geometry from `_draw_canal` (centre offset (-6, 6), radii 112 x 98,
+  tilt -0.25, colour #c9c6cf, cone of light (8, 8) / (56, 74) / (26, 84)). Please keep those names, and tell us if
+  the drum changes (or expose those numbers as constants and the cases will read them).
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
@@ -93,5 +94,5 @@ Requests for the integrator and the title owner:
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
   Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (35 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Tests:** `story/tests/test_cases.gd` (32 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the suite, so a stale `docs/CASE_SCRIPTS.md` fails the run.

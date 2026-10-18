@@ -21,6 +21,8 @@ const LIGHTHOUSE_AT := Vector2(1110, 330)
 const SEA_Y := 380.0
 const CAL_AT := Vector2(640, 280)
 const CAL_FIRST_DAY := 12
+## Pages the calendar crosses off (the wax retest's card says TWO DAYS LATER).
+const LATER_PAGES := 2
 const JAR_AT := Vector2(640, 300)
 const JAR_OUT_T := 2.2  ## when the jar slides away (it has landed by 0.6, then holds 1.6 s)
 const JAR_SPARKLES: Array[Vector2] = [Vector2(-122, -70), Vector2(118, -104), Vector2(126, 36), Vector2(-116, 80), Vector2(8, -150)]
@@ -96,10 +98,11 @@ func play(kind: String, text: String = "") -> void:
 			_kind = ""
 		"later":
 			Sfx.play(&"pop", 0.8, -8.0)
-			for i in 3:
+			for i in LATER_PAGES:
 				await get_tree().create_timer(0.25, false).timeout
 				Sfx.play(&"pen", 1.0 + 0.15 * i, -8.0)
-			await get_tree().create_timer(0.2, false).timeout
+			# the whoosh and the stamp land at 0.95 s and 1.07 s, the times _draw_later draws them
+			await get_tree().create_timer(0.95 - 0.25 * LATER_PAGES, false).timeout
 			Sfx.play(&"whoosh", 1.5, -10.0)
 			await get_tree().create_timer(0.12, false).timeout
 			Sfx.play(&"stamp", 1.0, -2.0)
@@ -445,7 +448,7 @@ func _bounce_out(p: float) -> float:
 	return 7.5625 * q * q + 0.984375
 
 
-## The time-skip card: a desk calendar drops in, three pages get a red X and flip up, then the
+## The time-skip card: a desk calendar drops in, LATER_PAGES pages get a red X and flip up, then the
 ## caption (_text, or "LATER") stamps on with a jolt; it slides up and away once _out_t runs.
 func _draw_later() -> void:
 	var c := _canvas
@@ -462,11 +465,11 @@ func _draw_later() -> void:
 		c.draw_line(Vector2(-86, 106 + i * 5), Vector2(86, 106 + i * 5), Palette.INK_SOFT, 2.0, true)
 	# the top page gets its X, then flips up to the rings and shows the next day under it
 	var done := 0
-	for i in 3:
+	for i in LATER_PAGES:
 		if _t >= 0.5 + 0.25 * i:
 			done += 1
-	var turn := clampf((_t - 0.35 - 0.25 * done) / 0.15, 0.0, 1.0) if done < 3 else 0.0
-	var scrawl := clampf((_t - 0.25 - 0.25 * done) / 0.1, 0.0, 1.0) if done < 3 else 0.0
+	var turn := clampf((_t - 0.35 - 0.25 * done) / 0.15, 0.0, 1.0) if done < LATER_PAGES else 0.0
+	var scrawl := clampf((_t - 0.25 - 0.25 * done) / 0.1, 0.0, 1.0) if done < LATER_PAGES else 0.0
 	if turn > 0.0:
 		_draw_cal_page(at, CAL_FIRST_DAY + done + 1, 0.0, 1.0, 0.0)
 	_draw_cal_page(at, CAL_FIRST_DAY + done, scrawl, 1.0 - turn, turn)
