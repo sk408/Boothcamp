@@ -12,6 +12,13 @@ her air test, then you put the bone oscillator on her mastoid, find out why unma
 the ear doctor (a conductive loss with normal bone). Day 2 opens when Day 1 is done, or straight
 away with **Unlock all days (demo)** on the title's **Days** card. Progress is saved.
 
+**Day 3** brings Mike "Totally Deaf" Lenders, a forklift driver who says he can't hear a thing
+since a forklift beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his
+beeps, then you run the speech test on the new SPEECH screen: go through the two-part words
+first, present them softer and softer, score what Mike actually says, and find the level where he
+repeats half of them (the SRT). His words come back far better than his beeps, so you present
+the clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests.
+
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
@@ -47,6 +54,16 @@ options). Closing the window saves and quits.
 | **PgUp** / **PgDn**, or **Shift+Up** / **Shift+Down** (Day 2) | Noise louder / softer, 5 dB per tap |
 | **Esc** or **P** | Pause and options |
 
+| Key | SPEECH screen (Day 3) |
+|---|---|
+| **Space** | Present the next word (the TALK lamp lights while it plays) |
+| **Up** / **Down** | Louder / softer, 5 dB per tap |
+| **Right**, **+** or **=** | He repeated it: CORRECT |
+| **Left** or **-** | He missed it (silence, half the word, or the wrong word): MISSED |
+| **S** or **Enter** | Store the SRT |
+| **M** | Speech noise in the other ear on / off |
+| **H** | Show or hide the key hints |
+
 Prefer Up = softer? Click **Up = LOUDER** on the AudiOtron (or use the pause menu) to swap the
 two arrows. Everywhere else: Space or Enter continues dialogue, Up / Down or 1 to 4 picks an
 answer, and every screen says which keys it uses.
@@ -59,6 +76,8 @@ readout. Click the audiogram or a test-plan token to jump to that frequency. The
 pauses. In the story, click to continue, click an answer, drag the earphone cups onto Gus's ears
 and drag the evidence onto the case file. On Day 2, click **AIR** / **BONE** and **MASK**, the
 noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp.
+On Day 3, click a word card to drop it, click **PRESENT**, **CORRECT**, **MISSED**, **LOUDER**,
+**SOFTER**, **STORE** and **MASK** on the SPEECH screen, and drag a clue onto Mike's claim.
 
 ### The AudiOtron in one breath
 
@@ -119,6 +138,22 @@ Symbols follow the usual audiogram conventions: O / X for air, < / > for unmaske
 The masking noise is synthesized narrowband noise, quiet and capped like the beeps, and it
 always lights the NOISE box and the booth squiggles, so Day 2 is playable without sound too.
 
+### Day 3: what it teaches
+
+- **Spondees:** two-part words with equal stress on both halves (cupcake, doorbell). Go through
+  them first at a comfortable level, and drop any word the patient doesn't know.
+- **The SRT:** start about 15 dB above the pure-tone average (PTA); repeated = down 10, missed =
+  up 5; the SRT is the softest level where at least half the words come back, with the level
+  5 dB below it missed. Score only what the patient said: half a word is a miss.
+- **PTA/SRT agreement:** an honest SRT lands within about 6 dB of the PTA (12 is fair). Mike's
+  SRT is about 40 dB better than his beeps, a classic sign of a non-organic loss.
+- **Never accuse:** gather the clues (the agreement, the whispered coffee, clear canals), stay
+  kind, and refer for a recheck and objective tests. The game never calls Mike a liar.
+
+The words are an original list written for the game, shown on screen as you play. Each word
+plays as a quiet murmur through the same safety limits as the beeps; a recording can replace it
+later, and nothing depends on hearing it.
+
 ## Build from source
 
 Requires [Godot 4.7.2](https://godotengine.org) (standard build, GDScript only) and, for the
@@ -130,6 +165,7 @@ godot --headless --path . --import                  # first time, or after addin
 tools/run_tests.sh                                  # unit tests (exit 0 = green)
 tools/autoplay_check.sh                             # a bot plays the whole level headless
 tools/autoplay_check.sh --day=2                     # ...Day 2 (bone and masking)
+tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
@@ -148,5 +184,7 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
   audiometry, the masking dilemma (both ears with big gaps), and a "something's not right, refer
   to a doctor" case. Day 2's design and rules are in `docs/CHAPTER2.md`.
 - A real fitting level: choosing a target, adjusting gain by frequency, and the follow-up visit.
-- Speech-in-noise screening and counselling choices that change how the visit ends.
+- More speech tests: word recognition (Day 4) and a party-noise test (Day 5). The speech rules
+  are in `docs/SPEECH.md`, Day 3's design in `docs/CHAPTER3.md`.
+- Counselling choices that change how the visit ends.
 - More upgrades for the clinic, and a practice booth with random patients.

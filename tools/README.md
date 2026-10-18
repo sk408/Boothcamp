@@ -19,6 +19,7 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | ...with another seed, or the swapped key style | `tools/autoplay_check.sh --seed=7 --affinity` | |
 | Headless mouse-only playthrough (real clicks and drags only, ends back on the title) | `tools/mouse_check.sh` | ~10 s |
 | **(v3)** Day 2 (Bonnie: bone, masking, referral), keys or mouse only | `tools/autoplay_check.sh --day=2` / `tools/autoplay_check.sh --day=2 --mouse` | ~25 s |
+| **(Speech)** Day 3 (Mike: SRT on the SPEECH screen, the OBJECTION! board, the recheck stamp), keys or mouse only | `tools/autoplay_check.sh --day=3` / `tools/autoplay_check.sh --day=3 --mouse` | ~15 s |
 | Rendered autoplay with screenshots at every phase | `tools/shots.sh /abs/out/dir` (Day 2: add `--day=2`) | ~5 min (Day 2 ~13 min) |
 | Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` (Day 2's five tests and the masking keys: add `--day=2`) | ~10 s (Day 2 ~20 s) |
 | **(v3)** Day 2 set pieces without playing (bone placement with a wrong spot, the oscillator on Bonnie, the board's reveal, bridge and stamp on made-up results) | `tools/scene_shot.sh res://story/dev_day2.tscn /abs/out/dir "60" 30` (the scene takes its own shots) | ~2 min |
@@ -26,6 +27,8 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | Boot one scene and take timed screenshots | `tools/scene_shot.sh res://world/clinic.tscn /abs/out/dir "1,3.5"` | ~20 s |
 | Windows build: `build/BoothCamp.exe` with the PCK embedded, plus `build/BoothCamp-win64.zip` (exe, README, font licence) | `tools/export_win.sh` (add `--xz` for an .xz too) | ~1 min |
 | Audio-safety movie: record both ears (Movie Maker AVI) and check routing, levels and the -12 dBFS ceiling per tone | `tools/movie_check.sh /abs/out/dir` | ~5 min |
+| **(Speech)** Day 3 set pieces without playing (Mike in the clinic, the word cards and the dropped word, OBJECTION!, the stamp, the paper, the Days row) | `tools/scene_shot.sh res://story/dev_day3.tscn /abs/out/dir "1" 40` (add `--part=world`, `board`, `paper` or `title` after `--` for one part) | ~1 min |
+| **(Speech)** The SPEECH screen alone: a coached right-ear SRT of Mike | `tools/scene_shot.sh res://ui/speech/speech_screen.tscn /abs/out/dir "2,6,12,20" 24` (extras after `--`: `--demo-play`, `--demo-ear=left`, `--demo-uncoached`, `--demo-hoot=N`) | ~1 min |
 | **(v3)** Day 2 audio-safety movie: Bonnie's air, bone, masked bone and masked air with UI sounds muted; `tools/analyze_movie_bc.py` checks tone channel and level, the bone cross-feed (-10 dB) and the masker (other ear only, level, -24 dBFS cap); prints `AUDIO_CHECK PASS` | `tools/movie_check.sh /abs/out/dir --day=2` | ~20 min |
 | **(v3)** AudiOtron Day 2 teaching states (bone route, Ghost, masking deck, plateau, overmasking, finished audiogram) | `timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://ui/dev/dev_audiotron_day2.tscn --shots=/abs/dir --fresh` (add `--resolution 1920x1080` before `--` and a 1920x1080 xvfb screen for full HD) | ~3 min |
 | **(v3)** Chapter select by real input: fresh save (Day 2 locked and refused), then Day 2 after Day 1 on the same save | `tools/autoplay_check.sh --save=/abs/s.json --via-days --expect-days=gus --try-locked=bonnie` then `tools/autoplay_check.sh --save=/abs/s.json --keep-save --via-days --mouse --expect-days=gus,bonnie --pick=bonnie` (or `--toggle-unlock` on a fresh save) | ~30 s |
@@ -67,7 +70,7 @@ Exit codes:
 | 0 | ok |
 | 2 | stalled: no progress for 120 game seconds; a `stuck_<phase>.png` shot is taken |
 | 3 | overall timeout |
-| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k and masked air present |
+| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k and masked air present. **(Speech)** Every stored speech sheet within 10 dB of the truth; on Day 3 both SRTs stored and a poor PTA/SRT agreement |
 | 5 | script errors were logged during the run |
 | 6 | `--mouse` only: a mouse target was not found on screen |
 
@@ -79,8 +82,13 @@ Screenshots are named `NN_<name>.png`:
   shots carry the test when it is not plain air: `audiometry_right_bc`, `audiometry_right_bc_masked_first_store`,
   `audiometry_right_ac_masked_hoot_turn`, and `audiometry_right_plateau` (the first plateau found).
 
+**(Speech)** Speech shots: `speech_<ear>_srt_first_word`, `speech_<ear>_srt_descent` (the first word at 40 dB or
+softer), `speech_<ear>_srt_stored`; Day 3 adds `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`,
+`day3_glazed`.
+
 Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `right_abg`, `right_type` and
-`plateaus_found`.
+`plateaus_found`. **(Speech)** Speech days add `speech` (per ear: stored and true SRT, PTA, agreement, words and
+par) and `speech_scores`.
 
 `run.log` in the output directory holds the full log.
 
@@ -99,7 +107,7 @@ Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `ri
 | `--fresh` | reset the save first |
 | `--save=user://x.json` | use another save file (`--scene=` runs default to `user://save_scene.json`, never the player's save) |
 | `--mouse` | with `--autoplay`: drive everything with real mouse events (the mouse-only path) |
-| `--day=N` / `--chapter=id` | **(v3)** start that chapter (`--day=2` = Bonnie) and treat it as unlocked for this run; with `--autoplay` the bot plays it |
+| `--day=N` / `--chapter=id` | **(v3)** start that chapter (`--day=2` = Bonnie, `--day=3` = Mike) and treat it as unlocked for this run; with `--autoplay` the bot plays it |
 | `--unlock-all` | **(v3)** every day open for this run (the save's "Unlock all days (demo)" setting is not changed) |
 | `--keep-save` | **(v3)** with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 on one `--save=`) |
 | `--via-days` | **(v3)** with `--autoplay`: start from the title's Days card (`--pick=`, `--try-locked=`, `--toggle-unlock`, `--expect-days=`; see CONTRACTS.md §7.1) |
@@ -108,6 +116,8 @@ Scenes with a `demo_start()` for `--scene`:
 - `res://ui/audiometer/audiometer_screen.tscn`: a coached right-ear test of Gus;
 - `res://world/clinic.tscn`: a walk-in showcase.
 - `res://story/dev_day2.tscn` **(v3)**: Day 2's set pieces (see above). A dev tool: never reachable from the game.
+- `res://story/dev_day3.tscn` **(Speech)**: Day 3's set pieces (see above). Also a dev tool, excluded from the export.
+- `res://ui/speech/speech_screen.tscn` **(Speech)**: a coached right-ear SRT of Mike (see above).
 - `res://tools/monkey.tscn`: the stress test (`--day=2` for Day 2).
 
 ## Generators (one-off, foundation-owned)
