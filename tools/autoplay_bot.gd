@@ -247,11 +247,13 @@ func _on_speech_presented(ear: String, test: StringName, db: int, _item: Diction
 	var key := "speech_%s_%s_first_word" % [ear, test]
 	if not _shot_flags.has(key):
 		_shot_flags[key] = true
-		await _wait(1.6)   # the answer bubble is up by then
+		await Events.speech_response   # this word's answer: the bubble is up
+		await _wait(0.3)
 		await _shot(key)
 	if not _shot_flags.has("speech_%s_low" % ear) and db <= 40:
 		_shot_flags["speech_%s_low" % ear] = true
-		await _wait(1.6)
+		await Events.speech_response
+		await _wait(0.3)
 		await _shot("speech_%s_%s_descent" % [ear, test])
 
 

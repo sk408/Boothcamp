@@ -4,9 +4,9 @@ extends Node
 ##  - Every word plays as a short synthesized murmur (voiced syllables on formant-shaped harmonics),
 ##    one syllable per part of the word, in the test ear's channel only.
 ##  - A recording dropped at res://assets/speech/<list_id>/<item_id>.wav replaces the murmur
-##    (16-bit PCM, mono or stereo, any rate), scaled to the same safe level and clamped sample by
-##    sample. An .ogg plays through an AudioStreamPlayer on the Tones bus (its -12 dB limiter),
-##    centred, at the same RMS.
+##    (8- or 16-bit PCM, mono or stereo, any rate; project.godot imports WAVs uncompressed), in
+##    the test ear only, scaled to the same safe level over its speech (not its silence or room
+##    noise) and clamped sample by sample. A file the voice can't decode plays the murmur.
 ##  - Speech noise for masking: speech-shaped noise in the OTHER ear, masker mapping and clamp.
 ##  - Level ALWAYS goes through AudioSafety.speech_to_rms() (words) and masker_to_rms() (noise), and
 ##    every sample through AudioSafety.clamp_sample() / clamp_masker_sample(). Nothing is ever loud.
@@ -34,7 +34,6 @@ var noise_db: float = 0.0
 
 var _player: AudioStreamPlayer
 var _playback: AudioStreamGeneratorPlayback
-var _rec_player: AudioStreamPlayer
 var _buf := PackedFloat32Array()   ## the current word, unit RMS over its voiced part
 var _pos := 0
 var _n_ramp := 0.0
@@ -43,6 +42,7 @@ var _lp1 := 0.0
 var _lp2 := 0.0
 var _n_rng := RandomNumberGenerator.new()
 static var _murmur_cache: Dictionary = {}
+static var _warned: Dictionary = {}
 static var _noise_norm := 0.0
 ## Generators of freed voices, kept a while longer. The engine's generator playback points at its
 ## stream without holding it, and a player freed while playing is mixed once more (its fade-out)
@@ -61,9 +61,6 @@ func _ready() -> void:
 	add_child(_player)
 	_player.play()
 	_playback = _player.get_stream_playback() as AudioStreamGeneratorPlayback
-	_rec_player = AudioStreamPlayer.new()
-	_rec_player.bus = _bus()
-	add_child(_rec_player)
 
 
 func _notification(what: int) -> void:
@@ -86,20 +83,14 @@ func play_item(p_ear: String, list_id: String, it: Dictionary, hl: float) -> flo
 	var path := SpeechMaterial.recording_path(list_id, String(it.get("id", "")))
 	if path != "":
 		var stream: Variant = load(path)
-		if stream is AudioStreamWAV:
-			var pcm := wav_to_mono(stream as AudioStreamWAV)
-			if not pcm.is_empty():
-				_buf = normalised(pcm)
-				_pos = 0
-				return _buf.size() / MIX_RATE
-		elif stream is AudioStream:
-			# OGG and friends: centred, through the Tones limiter, at the speech RMS (assumes the
-			# -1 dBFS-peak recording sits about 15 dB lower in RMS)
-			_rec_player.stream = stream as AudioStream
-			_rec_player.volume_db = linear_to_db(AudioSafety.speech_to_rms(hl)) + 15.0 - 1.0
-			_rec_player.volume_db = minf(_rec_player.volume_db, AudioSafety.SPEECH_CEILING_DBFS + 14.0)
-			_rec_player.play()
-			return (stream as AudioStream).get_length()
+		var pcm := wav_to_mono(stream as AudioStreamWAV) if stream is AudioStreamWAV else PackedFloat32Array()
+		if not pcm.is_empty():
+			_buf = normalised_speech(pcm)
+			_pos = 0
+			return _buf.size() / MIX_RATE
+		if not _warned.has(path):
+			_warned[path] = true
+			push_warning("SpeechVoice: can't decode %s (needs an uncompressed 8- or 16-bit WAV); the murmur plays" % path)
 	_buf = murmur(syllables_for(it), String(it.get("id", "")).hash())
 	_pos = 0
 	return _buf.size() / MIX_RATE
@@ -108,12 +99,10 @@ func play_item(p_ear: String, list_id: String, it: Dictionary, hl: float) -> flo
 func stop() -> void:
 	_buf = PackedFloat32Array()
 	_pos = 0
-	if _rec_player != null and _rec_player.playing:
-		_rec_player.stop()
 
 
 func is_playing() -> bool:
-	return _pos < _buf.size() or (_rec_player != null and _rec_player.playing)
+	return _pos < _buf.size()
 
 
 func set_level(hl: float) -> void:
@@ -206,14 +195,53 @@ static func normalised(pcm: PackedFloat32Array) -> PackedFloat32Array:
 	return out
 
 
-## A 16-bit PCM WAV as mono floats at MIX_RATE (nearest-sample resampling). Empty if unsupported.
+## Window length and gate for normalised_speech(): 20 ms windows; a window counts as speech when it
+## is within SPEECH_GATE_DB of the loudest one.
+const SPEECH_WINDOW_S := 0.02
+const SPEECH_GATE_DB := 35.0
+
+
+## A recording scaled to unit RMS over its speech: the 20 ms windows within SPEECH_GATE_DB of the
+## loudest window. Leading silence, pauses and room noise don't pull the level up.
+static func normalised_speech(pcm: PackedFloat32Array) -> PackedFloat32Array:
+	var win := maxi(1, int(SPEECH_WINDOW_S * MIX_RATE))
+	var energies := PackedFloat32Array()
+	var loudest := 0.0
+	for start in range(0, pcm.size(), win):
+		var e := 0.0
+		var n := mini(win, pcm.size() - start)
+		for i in n:
+			e += pcm[start + i] * pcm[start + i]
+		e /= float(n)
+		energies.append(e)
+		loudest = maxf(loudest, e)
+	if loudest <= 0.0:
+		return pcm
+	var gate := loudest * pow(10.0, -SPEECH_GATE_DB / 10.0)
+	var sum := 0.0
+	var count := 0
+	for e: float in energies:
+		if e >= gate:
+			sum += e
+			count += 1
+	var k := 1.0 / sqrt(sum / count)
+	var out := PackedFloat32Array()
+	out.resize(pcm.size())
+	for i in pcm.size():
+		out[i] = pcm[i] * k
+	return out
+
+
+## An uncompressed 8- or 16-bit WAV as mono floats at MIX_RATE (nearest-sample resampling).
+## Empty if unsupported (compressed imports: IMA ADPCM, QOA).
 static func wav_to_mono(w: AudioStreamWAV) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
-	if w == null or w.format != AudioStreamWAV.FORMAT_16_BITS:
+	if w == null or (w.format != AudioStreamWAV.FORMAT_16_BITS and w.format != AudioStreamWAV.FORMAT_8_BITS):
 		return out
+	var bytes := 2 if w.format == AudioStreamWAV.FORMAT_16_BITS else 1
 	var data := w.data
 	var ch := 2 if w.stereo else 1
-	var frames := data.size() / (2 * ch)
+	var frames := data.size() / (bytes * ch)
 	if frames <= 0:
 		return out
 	var ratio := float(w.mix_rate) / MIX_RATE
@@ -223,7 +251,10 @@ static func wav_to_mono(w: AudioStreamWAV) -> PackedFloat32Array:
 		var fi := mini(int(i * ratio), frames - 1)
 		var acc := 0.0
 		for c in ch:
-			acc += float(data.decode_s16((fi * ch + c) * 2)) / 32768.0
+			if bytes == 2:
+				acc += float(data.decode_s16((fi * ch + c) * 2)) / 32768.0
+			else:
+				acc += float(data.decode_s8(fi * ch + c)) / 128.0
 		out[i] = acc / ch
 	return out
 

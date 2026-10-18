@@ -109,7 +109,7 @@ func test_half_words() -> void:
 	var it := SpeechMaterial.item("spondee_a", "cupcake")
 	assert_eq(SpeechMaterial.half_word(it, false), "...cake?")
 	assert_eq(SpeechMaterial.half_word(it, true), "Cup...?")
-	assert_eq(SpeechMaterial.recording_path("spondee_a", "cupcake"), "")
+	assert_eq(SpeechMaterial.recording_path("spondee_a", "__no_such_word__"), "", "no file, no recording")
 
 
 # ---------------------------------------------------------------- patient
@@ -160,8 +160,26 @@ func test_cross_hearing_and_masking() -> void:
 		p.thresholds_left[f] = 5
 	var sim := SpeechSim.new(p, 9)
 	assert_true(sim.p_srt("right", 90) > 0.9, "crossed to the left cochlea")
+	var it := {"id": "x", "text": "cupcake", "parts": ["cup", "cake"]}
+	var crossed := 0
+	for i in 40:
+		if sim.respond_srt("right", 90, it)["heard_by"] == &"cross":
+			crossed += 1
+	assert_true(crossed > 30, "the dead ear's words are the other cochlea's (%d/40)" % crossed)
 	sim.mask_db = SpeechRules.speech_mask_level(90)
 	assert_true(sim.p_srt("right", 90) < 0.05, "speech noise keeps the left ear busy")
+
+
+## A word the test ear hears itself is never blamed on the other ear (no Ghost, no "mask!" tip),
+## even when loud speech would also reach the other cochlea: Mike's first words at 85 / 90 dB.
+func test_cross_credit_only_when_the_test_ear_missed() -> void:
+	var sim := SpeechSim.new(_mike(), 5)
+	var it := {"id": "x", "text": "cupcake", "parts": ["cup", "cake"]}
+	assert_true(sim.p_srt_cross("left", 90) > 0.5, "90 dB does reach his right cochlea")
+	for ear: String in ["right", "left"]:
+		for i in 60:
+			var a := sim.respond_srt(ear, 90 if ear == "left" else 85, it)
+			assert_ne(a["heard_by"], &"cross", "%s ear's own word blamed on the other ear" % ear)
 
 
 # ---------------------------------------------------------------- session
@@ -249,7 +267,8 @@ func test_state_keys() -> void:
 func test_voice_is_quiet_and_in_one_ear() -> void:
 	var v := SpeechVoice.new()
 	add_node(v)
-	var it := SpeechMaterial.item("spondee_a", "rainbow")
+	# an id no list uses, so this always measures the murmur even after recordings are dropped in
+	var it := {"id": "__murmur_test", "text": "rainbow", "parts": ["rain", "bow"]}
 	var dur := v.play_item("right", "spondee_a", it, 120.0)
 	assert_between(dur, 0.4, 1.2)
 	var out := v.render(int(dur * SpeechVoice.MIX_RATE) + 100)
@@ -270,6 +289,51 @@ func test_voice_is_quiet_and_in_one_ear() -> void:
 		assert_true(absf(x.x) <= AudioSafety.masker_ceiling() + 1e-6)
 		rms += x.x * x.x
 	assert_true(sqrt(rms / n.size()) > 0.001, "speech noise plays")
+
+
+## A dropped-in recording: 16- and 8-bit PCM decode to mono (stereo averaged, resampled), the level
+## is set by the speech, not by the silence around it, and compressed imports are refused.
+func test_recordings_decode_and_level() -> void:
+	var tone := PackedFloat32Array()
+	for i in 11025:   # 0.25 s of a 300 Hz tone at 0.5 peak, between 0.5 s of silence on each side
+		tone.append(0.5 * sin(TAU * 300.0 * i / 44100.0))
+	var silence := PackedFloat32Array()
+	silence.resize(22050)
+	var pcm := silence + tone + silence
+	var w16 := AudioStreamWAV.new()
+	w16.format = AudioStreamWAV.FORMAT_16_BITS
+	w16.mix_rate = 44100
+	w16.stereo = true
+	var b16 := PackedByteArray()
+	b16.resize(pcm.size() * 4)
+	for i in pcm.size():
+		b16.encode_s16(i * 4, int(pcm[i] * 32767.0))
+		b16.encode_s16(i * 4 + 2, int(pcm[i] * 32767.0))
+	w16.data = b16
+	var mono := SpeechVoice.wav_to_mono(w16)
+	assert_near(float(mono.size()), pcm.size() / 2.0, 2.0, "44.1 kHz resampled to 22.05 kHz")
+	var w8 := AudioStreamWAV.new()
+	w8.format = AudioStreamWAV.FORMAT_8_BITS
+	w8.mix_rate = 22050
+	var b8 := PackedByteArray()
+	b8.resize(pcm.size())
+	for i in pcm.size():
+		b8.encode_s8(i, int(pcm[i] * 127.0))
+	w8.data = b8
+	assert_eq(SpeechVoice.wav_to_mono(w8).size(), pcm.size(), "8-bit decodes too")
+	var qoa := AudioStreamWAV.new()
+	qoa.format = AudioStreamWAV.FORMAT_QOA
+	assert_true(SpeechVoice.wav_to_mono(qoa).is_empty(), "a compressed import is refused (the murmur plays)")
+	# the speech part comes out at unit RMS whatever the padding (a sine of peak 0.5 has RMS 0.354)
+	var lv := SpeechVoice.normalised_speech(mono)
+	var sum := 0.0
+	var n := 0
+	for x: float in lv:
+		if absf(x) > 0.05:
+			sum += x * x
+			n += 1
+	assert_near(sqrt(sum / n), 1.0, 0.15, "unit RMS over the speech, not the silence")
+	assert_eq(ProjectSettings.get_setting("importer_defaults/wav", {}).get("compress/mode", -1), 0, "WAVs import uncompressed")
 
 
 func test_speech_level_mapping() -> void:

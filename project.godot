@@ -37,6 +37,12 @@ window/stretch/aspect="expand"
 theme/custom="res://assets/theme/main_theme.tres"
 theme/custom_font="res://assets/fonts/fredoka-500.woff2"
 
+[importer_defaults]
+
+wav={
+"compress/mode": 0
+}
+
 [input]
 
 present_tone={

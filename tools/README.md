@@ -26,11 +26,11 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | **(polish)** The title with progress and the paper's Next (fresh Days card, Day 2 UP NEXT after Day 1, the menu after Day 1 and with both days done, the paper after Day 2 played first) | `timeout 300 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://story/dev_day2.tscn --shots=/abs/out/dir --part=title --quit-at=25` (`--part=placement` / `board` / `world` shoot one part; the default runs world, placement and board) | ~30 s |
 | Play the full visit without Hoot's quick-visit turn (or force it with `--quick`) | add `--full` after `--` | |
 | **(polish)** Own shop items for the run (Day 2 with insert earphones: no masked air needed, the level skips it) | `tools/autoplay_check.sh --day=2 --upgrades=insert_earphones` | ~25 s |
-| Boot one scene and take timed screenshots | `tools/scene_shot.sh res://world/clinic.tscn /abs/out/dir "1,3.5"` | ~20 s |
+| Boot one scene and take timed screenshots (anything after a `--` goes to the scene) | `tools/scene_shot.sh res://world/clinic.tscn /abs/out/dir "1,3.5"` | ~20 s |
 | Windows build: `build/BoothCamp.exe` with the PCK embedded, plus `build/BoothCamp-win64.zip` (exe, README, font licence) | `tools/export_win.sh` (add `--xz` for an .xz too) | ~1 min |
 | Audio-safety movie: record both ears (Movie Maker AVI) and check routing, levels and the -12 dBFS ceiling per tone | `tools/movie_check.sh /abs/out/dir` | ~5 min |
-| **(Speech)** Day 3 set pieces without playing (Mike in the clinic, the word cards and the dropped word, OBJECTION!, the stamp, the paper, the Days grid) | `tools/scene_shot.sh res://story/dev_day3.tscn /abs/out/dir "1" 40` (add `--part=world`, `board`, `paper` or `title` after `--` for one part) | ~1 min |
-| **(Speech)** The SPEECH screen alone: a coached right-ear SRT of Mike | `tools/scene_shot.sh res://ui/speech/speech_screen.tscn /abs/out/dir "2,6,12,20" 24` (extras after `--`: `--demo-play`, `--demo-ear=left`, `--demo-uncoached`, `--demo-hoot=N`) | ~1 min |
+| **(Speech)** Day 3 set pieces without playing (Mike in the clinic, the word cards and the dropped word, OBJECTION!, the stamp, the paper, the Days grid) | `tools/scene_shot.sh res://story/dev_day3.tscn /abs/out/dir "1" 40` (one part: add `-- --part=board`; parts `world`, `board`, `paper`, `title`) | ~1 min |
+| **(Speech)** The SPEECH screen alone: a coached right-ear SRT of Mike | `tools/scene_shot.sh res://ui/speech/speech_screen.tscn /abs/out/dir "2,6,12,20" 24` (extras after a `--`, e.g. `... 24 -- --demo-play --demo-ear=left`; also `--demo-uncoached`, `--demo-hoot=N`) | ~1 min |
 | **(v3)** Day 2 audio-safety movie: Bonnie's air, bone, masked bone and masked air with UI sounds muted; `tools/analyze_movie_bc.py` checks tone channel and level, the bone cross-feed (-10 dB) and the masker (other ear only, level, -24 dBFS cap); prints `AUDIO_CHECK PASS` | `tools/movie_check.sh /abs/out/dir --day=2` | ~20 min |
 | **(v3)** AudiOtron Day 2 teaching states (bone route, Ghost, masking deck, plateau, overmasking, finished audiogram) | `timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://ui/dev/dev_audiotron_day2.tscn --shots=/abs/dir --fresh` (add `--resolution 1920x1080` before `--` and a 1920x1080 xvfb screen for full HD) | ~3 min |
 | **(v3)** Chapter select by real input (polish: every day open, any order): Day 2 straight from a fresh save, then Day 1 by mouse on the same save (Day 1 still UP NEXT) | `tools/autoplay_check.sh --save=/abs/s.json --via-days --expect-days=gus,bonnie --expect-suggested=gus --pick=bonnie` then `tools/autoplay_check.sh --save=/abs/s.json --keep-save --via-days --mouse --expect-suggested=gus --pick=gus` | ~30 s |
@@ -90,8 +90,7 @@ softer), `speech_<ear>_srt_stored`; Day 3 adds `day3_familiarize`, `day3_objecti
 `day3_glazed`.
 
 Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `right_abg`, `right_type` and
-`plateaus_found`. **(Speech)** Speech days add `speech` (per ear: stored and true SRT, PTA, agreement, words and
-par) and `speech_scores`.
+`plateaus_found`. **(Speech)** Speech days add `speech` (`<test>_<ear>`: `[stored, true, agreement, words, par]`) and `speech_scores`.
 
 `run.log` in the output directory holds the full log.
 

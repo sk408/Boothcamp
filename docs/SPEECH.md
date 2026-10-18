@@ -135,10 +135,12 @@ otherwise estimated from the audiogram). Directional microphones (aided, Day 5's
 
 ## 7. Recordings (later)
 
-Drop files at `assets/speech/<list_id>/<item_id>.wav` (16-bit PCM, mono, any rate) or `.ogg`, normalised to a
--1 dBFS peak. For sentences, `<item_id>` is the sentence id (e.g. `p1_3`). `SpeechVoice` uses a recording when it
-exists and the synthesized murmur otherwise; recordings are scaled to the same safe level as the murmur and
-clamped sample by sample (WAV) or through the Tones bus limiter (OGG). Babble for the party test can be dropped
+Drop files at `assets/speech/<list_id>/<item_id>.wav` (16-bit PCM, mono, any rate; 8-bit and stereo work too).
+WAV only: the voice decodes it into the test ear's channel, which a streamed `.ogg` could not do, and
+`project.godot` imports WAVs uncompressed. For sentences, `<item_id>` is the sentence id (e.g. `p1_3`).
+`SpeechVoice` uses a recording when it exists and the synthesized murmur otherwise. A recording is scaled to the
+same safe level as the murmur, measured over its speech (20 ms windows within 35 dB of the loudest), so silence
+and room noise don't make it louder, and clamped sample by sample. Babble for the party test can be dropped
 in as `assets/speech/babble/babble.wav` (four voices reading unrelated text). The game stays fully playable
 without any of it.
 

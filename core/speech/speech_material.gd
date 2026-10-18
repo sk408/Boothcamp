@@ -8,12 +8,13 @@ extends RefCounted
 ##   spondee item:      {"id", "text", "parts": [first, second], "mishears": [funny wrong words]}
 ##   monosyllable item: {"id", "text", "key_sound", "foils": [3 words that differ in the key sound]}
 ##   sentence item:     {"id", "text", "key_words": [5 words]}
-## Recordings are optional: res://assets/speech/<list_id>/<item_id>.ogg or .wav (§7 of docs/SPEECH.md).
+## Recordings are optional: res://assets/speech/<list_id>/<item_id>.wav (§7 of docs/SPEECH.md). WAV only:
+## the voice decodes it into the test ear's channel, which a streamed .ogg could not do.
 
 const DIR := "res://core/speech/material/"
 const RECORDINGS_DIR := "res://assets/speech/"
 const KINDS: Array[StringName] = [&"spondee", &"monosyllable", &"sentence"]
-const RECORDING_EXTS: PackedStringArray = ["ogg", "wav"]
+const RECORDING_EXTS: PackedStringArray = ["wav"]
 
 static var _cache: Dictionary = {}
 

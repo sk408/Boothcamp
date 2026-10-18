@@ -119,8 +119,10 @@ func respond_srt(ear: String, level: int, it: Dictionary, others: Array = []) ->
 	var heard := rng.randf() < p
 	var out := {"correct": heard, "heard_by": &"", "p": p}
 	if heard:
-		# which cochlea got it (for the Ghost and the lesson): proportional to their chances
-		last_heard_by = &"cross" if rng.randf() * (pa + pb) >= pa else &"test"
+		# which cochlea got it (for the Ghost and the lesson): the test ear whenever it would have
+		# heard the word itself; "cross" only for a word the other cochlea alone caught
+		# (P = (1 - pa) * pb / p), since crossed speech only matters when the test ear missed
+		last_heard_by = &"cross" if rng.randf() * p >= pa else &"test"
 		out["heard_by"] = last_heard_by
 		out["kind"] = &"correct"
 		out["text"] = String(it.get("text", "?")).capitalize() + ("!" if p > 0.9 else ".")

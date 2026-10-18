@@ -268,6 +268,9 @@ func _air_transducer() -> StringName:
 func _tone_test(ear: String, plan: Dictionary) -> void:
 	plan["air_transducer"] = _air_transducer()
 	_phase(&"audiometry", {"ear": ear, "test": "ac"})
+	# Hoot runs both ears today, whatever the quick-visit setting (plan hoot_turn_after 0); set it
+	# per ear, since the pause menu's Quick visit toggle updates the screen in between
+	screen.set("quick_visit", true)
 	screen.call("start_test", patient, ear, false, plan)
 	var r: Dictionary = await screen.test_finished
 	tones = r
@@ -285,8 +288,6 @@ func _tones() -> void:
 	await _wait(0.6)
 	screen = (load(AUDIOMETER_SCENE) as PackedScene).instantiate() as CanvasLayer
 	add_child(screen)
-	# Hoot runs both ears today, whatever the quick-visit setting (plan hoot_turn_after 0)
-	screen.set("quick_visit", true)
 	var cam: Camera3D = clinic.call("get_main_camera")
 	cam.current = false
 	await _tone_test("right", {"test": "ac", "hoot_turn_after": 0,
@@ -424,9 +425,10 @@ func _speech() -> void:
 	clinic.call("focus_camera", &"face", 0.6)
 	var sheet := srt_sheet("right")
 	var agreement := StringName(String(sheet.get("agreement", "")))
-	var gap := absi(int(sheet.get("diff", 0)))
+	var diff := int(sheet.get("diff", 0))   # SRT - PTA: below zero, his words beat his beeps
+	var gap := absi(diff)
 	if agreement == &"poor":
-		await _say("Hoot", "SRT should sit within 6 dB of the PTA. His is %d dB better. Poor agreement!" % gap)
+		await _say("Hoot", "SRT should sit within 6 dB of the PTA. His is %d dB %s. Poor agreement!" % [gap, "better" if diff < 0 else "worse"])
 		_react(&"confused")
 		await _say("Mike", "Poor? Poor is bad, right? Bad is good for my form... I mean, oh no.")
 	else:
@@ -480,7 +482,7 @@ func _on_speech_response(ear: String, test: StringName, db: int, answer: Diction
 	if is_nan(pta) or pta - float(db) < float(TELL_GAP_DB):
 		return
 	_tell_said = true
-	Hoot.say("He's repeating words %d dB below his beeps. Hmm!" % SpeechRules.snap5(pta - float(db)), Hoot.HIGH, "speech_response", "mike_tell")
+	Hoot.say("He's repeating words %d dB below his beeps. Hmm!" % SpeechRules.snap5(pta - float(db)), Hoot.HIGH, "speech_response", "speech_tell")
 
 
 # ---------------------------------------------------------------- 9. evidence: OBJECTION!
@@ -497,7 +499,7 @@ func objection_cards() -> Array:
 	var gap := absi(srt - pta_i)
 	var claim := {
 		"quote": "I can't hear ANYTHING", "who": "Mike Lenders, 41, forklift driver", "speaker": "Mike",
-		"verdict": "Words came back %d dB softer than his beeps." % gap,
+		"verdict": ("Words came back %d dB softer than his beeps." % gap) if srt < pta_i else ("Words needed %d dB more than his beeps." % gap),
 		"note": "%s agreement: recheck, and record the facts kindly." % agreement.capitalize(),
 	}
 	var clues: Array[Dictionary] = [
@@ -531,7 +533,12 @@ func _evidence(b: Control) -> void:
 	Game.record_medal("evidence", "gold" if first == "srt_pta" else ("silver" if first == "coffee" else "bronze"))
 	await _wait(1.0)
 	var sheet := srt_sheet("right")
-	await _say("Hoot", "Real measurements! Words at %d dB, beeps at %d. The two tests disagree." % [int(sheet.get("stored_db", 30)), roundi(float(sheet.get("pta", 72.0)))])
+	var words_beeps := "Real measurements! Words at %d dB, beeps at %d." % [int(sheet.get("stored_db", 30)), roundi(float(sheet.get("pta", 72.0)))]
+	if String(sheet.get("agreement", "poor")) == "poor":
+		await _say("Hoot", words_beeps + " The two tests disagree.")
+	else:
+		await _say("Hoot", words_beeps)
+		await _say("Hoot", "They agree on paper, but that SRT went in before a bracket.")
 	await _say("Hoot", "We don't know WHY yet. And we don't guess.")
 	hud.call("complete_step", &"case")
 

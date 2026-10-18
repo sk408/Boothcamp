@@ -16,15 +16,15 @@ var ear: String = "right"
 var trail: Array = []
 var dial_db: int = 40
 var pta: float = NAN
-var candidate: int = -1
+var candidate: int = SpeechRules.NO_SRT
 var talking: bool = false
 var accepting: bool = false
 ## The softest level the player scored "repeated" (-1 = none): the gap wash under the PTA line.
-var provisional: int = -1
+var provisional: int = SpeechRules.NO_SRT
 var _lo := 20.0
 var _hi := 100.0
 var _t := 0.0
-var _stamp_db := -1
+var _stamp_db := SpeechRules.NO_SRT
 var _stamp_t := -1.0
 var _plot := Rect2()
 
@@ -52,7 +52,7 @@ func stamp(db: int) -> void:
 
 
 func clear_stamp() -> void:
-	_stamp_db = -1
+	_stamp_db = SpeechRules.NO_SRT
 	_stamp_t = -1.0
 
 
@@ -152,12 +152,12 @@ func _draw() -> void:
 	AoDraw.text_c(self, Vector2(_plot.position.x - 22.0, _plot.position.y - 13.0), "dB HL", 10, Palette.INK_SOFT, AoDraw.FONT_BOLD)
 	var row_h := absf(_y(0.0) - _y(float(ROW_DB)))
 	# the gap between the beeps and the words (the non-organic tell): a soft coral wash
-	if provisional >= 0 and not is_nan(pta) and pta - float(provisional) > float(SpeechRules.AGREE_FAIR_DB):
+	if provisional != SpeechRules.NO_SRT and not is_nan(pta) and pta - float(provisional) > float(SpeechRules.AGREE_FAIR_DB):
 		var ya := clampf(_y(pta), _plot.position.y, _plot.end.y)
 		var yb := clampf(_y(float(provisional)), _plot.position.y, _plot.end.y)
 		draw_rect(Rect2(Vector2(_plot.position.x, ya), Vector2(_plot.size.x, yb - ya)), Color(Palette.CORAL, 0.09))
 	# the bracketed SRT
-	if candidate >= 0:
+	if candidate != SpeechRules.NO_SRT:
 		var yc := _y(float(candidate))
 		AoDraw.rbox(self, Rect2(Vector2(_plot.position.x, yc - row_h * 0.5), Vector2(_plot.size.x, row_h)), Color(Palette.MINT, 0.22), 4)
 	# PTA line
@@ -227,14 +227,14 @@ func _draw() -> void:
 		AoDraw.rbox(self, cr, fill, int(h * 0.5), 2, Color(Palette.INK, 0.6))
 		AoDraw.text_c(self, cr.get_center(), "%d of %d" % [right, total], 11 if h >= 15.0 else 10, Palette.INK, AoDraw.FONT_BOLD)
 	# the SRT bracket and label
-	if candidate >= 0:
+	if candidate != SpeechRules.NO_SRT:
 		var y1 := _y(float(candidate))
 		var y2 := _y(float(candidate - ROW_DB))
 		var bx := _plot.end.x + 4.0
 		draw_line(Vector2(bx, y1), Vector2(bx, y2), Palette.MINT.darkened(0.25), 3.0)
 		draw_line(Vector2(bx - 5.0, y1), Vector2(bx, y1), Palette.MINT.darkened(0.25), 3.0)
 		draw_line(Vector2(bx - 5.0, y2), Vector2(bx, y2), Palette.MINT.darkened(0.25), 3.0)
-		if _stamp_db < 0:   # once stored, the stamp says it
+		if _stamp_db == SpeechRules.NO_SRT:   # once stored, the stamp says it
 			var lt := "SRT %d" % candidate
 			var lw := AoDraw.text_size(lt, 13, AoDraw.FONT_BOLD).x + 16.0
 			var lr := Rect2(Vector2(_plot.position.x + 66.0, y1 - row_h * 0.5 - 22.0), Vector2(lw, 20.0))
@@ -251,7 +251,7 @@ func _draw() -> void:
 		var px := _dot_pos(i, 0).x
 		AoDraw.text_c(self, Vector2(px, r.end.y - 14.0), "%d" % (i + 1), 11, Palette.INK_SOFT, AoDraw.FONT_SEMI)
 	# the stored SRT's stamp
-	if _stamp_db >= 0 and _stamp_t >= 0.0:
+	if _stamp_db != SpeechRules.NO_SRT and _stamp_t >= 0.0:
 		_draw_stamp()
 
 

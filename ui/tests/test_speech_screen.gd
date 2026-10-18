@@ -16,6 +16,10 @@ var _saved_path := ""
 var _saved_scale := 1.0
 var _saved_quick := true
 var _saved_hints := true
+var _saved_rng_state := 0
+## The screen seeds each patient from Game.rng: a fixed seed per test keeps the SRTs (and the
+## +/- 5 dB checks below) the same on every run.
+const RNG_SEED := 1234
 
 
 func before_each() -> void:
@@ -26,11 +30,20 @@ func before_each() -> void:
 	_saved_quick = bool(Game.settings.get("quick_visit", true))
 	_saved_hints = bool(Game.settings.get("show_key_hints", true))
 	Game.begin_visit("mike")
+	_saved_rng_state = Game.rng.state
+	Game.rng.seed = RNG_SEED
 	Engine.time_scale = TEST_SPEED
 
 
 func after_each() -> void:
+	# take the screens out of the tree first: a screen in Hoot's x8 turn restores the time scale it
+	# saved as it leaves, and that must not land after ours
+	for n: Node in tree.get_nodes_in_group("speech_screen"):
+		if n.get_parent() != null:
+			n.get_parent().remove_child(n)
+			n.queue_free()
 	Engine.time_scale = _saved_scale
+	Game.rng.state = _saved_rng_state
 	Game.set_key_style("otosuite")
 	Game.set_setting("quick_visit", _saved_quick)
 	Game.set_setting("show_key_hints", _saved_hints)
@@ -285,11 +298,13 @@ func test_beat_solvers_finish_an_ear() -> void:
 		assert_true(Hoot.has_anchor(click))
 		assert_true((beats[0][1] as Callable).is_valid())
 	var used := 0
+	var calls := 0
 	var t0 := Time.get_ticks_msec()
 	while finished.is_empty() and Time.get_ticks_msec() - t0 < 30000:
 		if beats.size() > used:
 			used = beats.size()
 			(beats[used - 1][1] as Callable).call()
+			calls += 1
 		await wait_frames(1)
 	Events.awaiting_input.disconnect(cb)
 	assert_false(finished.is_empty(), "calling the solvers finishes the ear")
@@ -298,7 +313,8 @@ func test_beat_solvers_finish_an_ear() -> void:
 	var sheet: Dictionary = (((finished[0] as Dictionary)["speech"] as Dictionary)["srt"] as Dictionary).get("left", {})
 	assert_near(float(sheet.get("stored_db", -99)), 30.0, 5.0)
 	assert_eq(StringName(String(sheet.get("agreement", ""))), &"poor")
-	# one beat per idle point: the solver count matches the moves (no duplicates for one state)
+	# one beat per idle point: every beat was answered by its own solver call (none doubled up)
+	assert_eq(beats.size(), calls, "one beat per idle point")
 	var actions := {}
 	for b: Array in beats:
 		actions[String((b[0] as Dictionary)["action"])] = true
@@ -320,14 +336,16 @@ func test_stale_solver_is_a_noop() -> void:
 	if not got:
 		Events.awaiting_input.disconnect(cb)
 		return
-	var first: Callable = beats[0][1]
+	var first: Callable = beats[0][1]   # never called: the player moves on by key instead
 	var db0 := s.session.db
-	first.call()
+	await tap_action(&"louder")
 	var moved: bool = await _wait_until(func() -> bool: return s.session.db == db0 + 5 and beats.size() >= 2, 5.0)
-	assert_true(moved, "the solver pressed LOUDER")
-	first.call()   # stale: the state moved on
+	assert_true(moved, "the key pressed LOUDER and a new beat came")
+	var trials := s.session.trials_for().size()
+	first.call()   # stale: the state moved on since it was handed out
 	await wait_frames(6)
 	assert_eq(s.session.db, db0 + 5, "a stale solver does nothing")
+	assert_eq(s.session.trials_for().size(), trials, "and presents nothing")
 	var second: Callable = beats[beats.size() - 1][1]
 	second.call()
 	second.call()  # the same solver twice: one press

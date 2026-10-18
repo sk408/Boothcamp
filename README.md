@@ -172,8 +172,8 @@ always lights the NOISE box and the booth squiggles, so Day 2 is playable withou
 - **Spondees:** two-part words with equal stress on both halves (cupcake, doorbell). Go through
   them first at a comfortable level, and drop any word the patient doesn't know.
 - **The SRT:** start about 15 dB above the pure-tone average (PTA); repeated = down 10, missed =
-  up 5; the SRT is the softest level where at least half the words come back, with the level
-  5 dB below it missed. Score only what the patient said: half a word is a miss.
+  up 5; the SRT is the softest level where at least half the words come back, with fewer than
+  half right 5 dB below it. Score only what the patient said: half a word is a miss.
 - **PTA/SRT agreement:** an honest SRT lands within about 6 dB of the PTA (12 is fair). Mike's
   SRT is about 40 dB better than his beeps, a classic sign of a non-organic loss.
 - **Never accuse:** gather the clues (the agreement, the whispered coffee, clear canals), stay

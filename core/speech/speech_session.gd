@@ -23,7 +23,7 @@ signal stored(ear: String, test: StringName, sheet: Dictionary)
 const TIPS: Dictionary[StringName, String] = {
 	&"srt_start": "Start at {his} PTA plus 15: easy words first, then work down.",
 	&"srt_wrong_step": "Got it: down 10. Missed: up 5. Same dance as the beeps!",
-	&"srt_store_no_bracket": "Not bracketed yet! Find the level 5 dB below where {he} misses half or more.",
+	&"srt_store_no_bracket": "Not bracketed yet! 5 dB below, {he} must get fewer than half right.",
 	&"srt_store_wrong_level": "SRT: the softest level with two right and half or more. Check the trail!",
 	&"misscored": "Score what {he} SAID. Half a word, a different word, or silence: all misses.",
 	&"speech_marathon": "Long word lists tire patients out. Bracket quickly and store!",

@@ -4,7 +4,7 @@ extends Node
 ## the title's Days row, with a screenshot at each step. Results are made up from Mike's profile
 ## (Hoot's textbook run); no audiometry runs here.
 ##   tools/scene_shot.sh res://story/dev_day3.tscn /abs/dir "1" 40   (shots come from the script)
-## Add --part=world, --part=board, --part=paper or --part=title to shoot one part (default: all).
+## Add -- --part=world (or board, paper, title) after the quit time to shoot one part (default: all).
 
 const Hud := preload("res://story/hud.gd")
 const MikeBoard := preload("res://story/games/mike_board.gd")

@@ -1082,7 +1082,10 @@ func _coach_text(a: Dictionary) -> Array:
 			var key := _k(act)
 			var bid: String = ACTION_BUTTONS[act]
 			if n == 0:
-				return [_say("{His} PTA is %d. Start 15 above: tap %s %s to %d dB.") % [roundi(pta), key, times, target_db], bid, "start%d" % session.db]
+				# the PTA rounded to the dial's 5 dB steps, as on the LCD's START chip (72 -> 70 + 15 = 85)
+				var base := SpeechRules.snap5(pta)
+				var said_pta := ("%d" % base) if roundi(pta) == base else ("%d: call it %d" % [roundi(pta), base])
+				return [_say("{His} PTA is %s. Start 15 above: tap %s %s to %d dB.") % [said_pta, key, times, target_db], bid, "start%d" % session.db]
 			var cand := session.candidate()
 			if cand != SpeechRules.NO_SRT and target_db == cand:
 				return ["Bracketed at %d dB! Go back: tap %s %s." % [cand, key, times], bid, "back%d" % session.db]
@@ -1110,7 +1113,7 @@ func _coach_text(a: Dictionary) -> Array:
 				line = "A different word is a miss! Score it MISSED: press %s."
 			return [line % key2, "speech_incorrect_button", "score%d" % n]
 		&"store":
-			return ["Bracketed! %d dB: 2+ right, a miss 5 below. Press %s to STORE." % [session.db, _k(&"store")], "speech_store_button", "store%d" % n]
+			return ["Bracketed! %d dB: 2+ right, under half 5 below. Press %s to STORE." % [session.db, _k(&"store")], "speech_store_button", "store%d" % n]
 		&"mask_toggle":
 			return ["This loud, speech can cross over. Press %s: speech noise in the other ear." % _k(&"toggle_mask"), "speech_mask_button", "mask%d" % n]
 	return ["", "", ""]
@@ -1160,13 +1163,13 @@ func _sync_bubble_hint() -> void:
 		Hoot.set_bubble_hint(r)
 
 
-## The softest level the player scored "repeated" (-1 = none): the provisional SRT.
+## The softest level the player scored "repeated" (SpeechRules.NO_SRT = none): the provisional SRT.
 static func _provisional(trail: Array) -> int:
-	var lo := -1
+	var lo := SpeechRules.NO_SRT
 	for tr: Dictionary in trail:
 		if tr["scored"] != null and bool(tr["scored"]):
 			var d := int(tr["db"])
-			if lo < 0 or d < lo:
+			if lo == SpeechRules.NO_SRT or d < lo:
 				lo = d
 	return lo
 
@@ -1248,7 +1251,7 @@ func _refresh_buttons(st: Dictionary) -> void:
 		elif _coach_active:
 			want = id == _coach_action_button()
 		elif id == "speech_store_button":
-			want = int(st["candidate_db"]) >= 0 and int(st["candidate_db"]) == int(st["db"]) and not awaiting and not busy
+			want = int(st["candidate_db"]) != SpeechRules.NO_SRT and int(st["candidate_db"]) == int(st["db"]) and not awaiting and not busy
 		elif id == "speech_mask_button":
 			want = bool(st["masking_needed"]) and not on and not busy
 		if can_score and not _auto_running and (id == "speech_correct_button" or id == "speech_incorrect_button"):

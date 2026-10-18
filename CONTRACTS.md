@@ -1097,7 +1097,8 @@ sheet (SRT) = {ear, test: "srt", list_id, stored_db, true_db, error_db, accuracy
 
 `play_item(ear, list_id, item, hl) -> seconds`, `stop()`, `is_playing()`, `set_level(hl)`, `start_noise(ear, db_em)`,
 `set_noise(db_em)`, `stop_noise()`, `render(frames)` (pure DSP). Words: a synthesized murmur (one voiced syllable per
-part), or a recording at `res://assets/speech/<list_id>/<item_id>.wav` (or `.ogg`), in the test ear only; RMS from
+part), or a recording at `res://assets/speech/<list_id>/<item_id>.wav` (WAV only, imported uncompressed), in the test ear
+only, levelled over its speech; RMS from
 `AudioSafety.speech_to_rms(hl)` (`SPEECH_OFFSET_DB` -9, RMS ceiling `SPEECH_CEILING_DBFS` -27), every sample through
 `clamp_sample()`. Speech noise: speech-shaped noise in the other ear through `masker_to_rms()` and
 `clamp_masker_sample()`. Every word lights the TALK lamp; nothing depends on hearing it.

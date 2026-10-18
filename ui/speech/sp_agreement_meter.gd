@@ -23,9 +23,9 @@ const BAND_COLORS: Dictionary[StringName, Color] = {&"good": Color("#5bc8a3"), &
 const BAND_WORDS: Dictionary[StringName, String] = {&"good": "GOOD", &"fair": "FAIR", &"poor": "POOR"}
 
 var pta: float = NAN
-var provisional: int = -1
+var provisional: int = SpeechRules.NO_SRT
 var testing: bool = false
-var srt: int = -1
+var srt: int = SpeechRules.NO_SRT
 var agreement: StringName = &""
 var _needle := 0.0
 var _vel := 0.0
@@ -47,8 +47,8 @@ func _ready() -> void:
 
 ## A fresh ear: needle at rest, no verdict (the trace keeps scrolling).
 func reset() -> void:
-	srt = -1
-	provisional = -1
+	srt = SpeechRules.NO_SRT
+	provisional = SpeechRules.NO_SRT
 	agreement = &""
 	testing = false
 	_locking = false
@@ -60,7 +60,7 @@ func reset() -> void:
 func set_reading(p_pta: float, p_provisional: int, p_testing: bool) -> void:
 	if _locking or _locked:
 		return
-	if p_provisional != provisional and p_provisional >= 0:
+	if p_provisional != provisional and p_provisional != SpeechRules.NO_SRT:
 		_vel += _rng.randf_range(-1.6, 1.6)   # a new word: the needle twitches
 	pta = p_pta
 	provisional = p_provisional
@@ -87,8 +87,8 @@ func reading_db() -> float:
 	if is_nan(pta):
 		return 0.0
 	if _locking or _locked:
-		return absf(float(srt) - pta) if srt >= SpeechRules.MIN_DB else 0.0
-	if provisional >= 0:
+		return absf(float(srt) - pta) if srt != SpeechRules.NO_SRT else 0.0
+	if provisional != SpeechRules.NO_SRT:
 		return maxf(0.0, pta - float(provisional))
 	return 0.0
 
@@ -230,7 +230,7 @@ func _draw() -> void:
 		status = "..."
 	elif is_nan(pta):
 		status = "no PTA yet"
-	elif provisional < 0:
+	elif provisional == SpeechRules.NO_SRT:
 		status = "waiting for words"
 	else:
 		status = "testing" + ".".repeat(1 + int(_t * 3.0) % 3)
@@ -245,9 +245,9 @@ func _draw() -> void:
 		var srt_txt := "--"
 		if _locking or _locked:
 			srt_txt = "%d" % srt
-		elif provisional >= 0:
+		elif provisional != SpeechRules.NO_SRT:
 			srt_txt = "~%d" % provisional
-		var apart := "--" if is_nan(pta) or (provisional < 0 and not _locked and not _locking) else "%d" % int(round(reading_db()))
+		var apart := "--" if is_nan(pta) or (provisional == SpeechRules.NO_SRT and not _locked and not _locking) else "%d" % int(round(reading_db()))
 		var band := band_for(reading_db()) if _locked else &""
 		var cells: Array = [["PTA", "--" if is_nan(pta) else "%d" % int(round(pta)), Palette.LCD_TEXT],
 			["SRT", srt_txt, Palette.LCD_TEXT],
@@ -297,7 +297,7 @@ func _draw_bulb(c: Vector2) -> void:
 	if _locked and agreement != &"":
 		col = BAND_COLORS.get(agreement, Palette.LCD_DIM)
 		lit = 1.0 if agreement != &"poor" else 0.55 + 0.45 * sin(_t * 9.0)
-	elif testing and not is_nan(pta) and provisional >= 0:
+	elif testing and not is_nan(pta) and provisional != SpeechRules.NO_SRT:
 		col = BAND_COLORS.get(band_for(reading_db()), Palette.LCD_DIM)
 		lit = 0.45
 	if lit > 0.0:
