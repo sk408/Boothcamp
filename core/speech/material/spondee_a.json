@@ -3,7 +3,7 @@
 	"title": "Spondee list A",
 	"kind": "spondee",
 	"original": true,
-	"note": "Written for Booth Camp. Everyday two-part words, not taken from any published speech test.",
+	"note": "Written for Booth Camp: everyday two-part words said with equal stress on both parts. No list, order or recording is copied; every word is checked against ASHA (1988) Appendices A-C and CID W-1.",
 	"items": [
 		{"id": "lighthouse", "text": "lighthouse", "parts": ["light", "house"], "mishears": ["night house", "light... mouse?"]},
 		{"id": "rainbow", "text": "rainbow", "parts": ["rain", "bow"], "mishears": ["train toe", "rain... crow?"]},

@@ -1,7 +1,7 @@
 class_name SpBubble
 extends Control
 ## SpBubble: the patient's answer, in a big comic speech bubble under the booth window (ui/speech
-## only). Only the words he said ("Cupcake!", "...cake?", "Huh?"): it never says whether that was
+## only). Only the words he said ("Rainbow!", "...bow?", "Huh?"): it never says whether that was
 ## right. listen() shows thinking dots while he answers, show_answer() pops the text in, mark()
 ## adds a small tick or cross badge: what the PLAYER scored. The tail points up at the booth.
 
