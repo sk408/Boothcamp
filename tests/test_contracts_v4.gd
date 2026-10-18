@@ -175,26 +175,96 @@ func test_player_beat_solver_and_events() -> void:
 	assert_true(bool(got.get("resolved", false)), "input_resolved(explainer)")
 	assert_eq(result.get("skipped", false), true)
 	assert_eq(result.get("movie", ""), "masking")
-	assert_true(Game.is_movie_seen("masking"), "seen once it ends, skipped or not")
+	assert_eq(result.get("watched", true), false, "skipped in scene 1: not watched")
+	assert_false(Game.is_movie_seen("masking"), "(polish) an early skip is not 'seen': it plays again next visit")
 	assert_true(tree.get_first_node_in_group("explainer_player") == null, "out of the group after")
 
 
+## (polish) Space / Enter advance like the dialogue box: finish the caption, else the scene's next
+## caption (never thrown away), else the next scene. Esc skips it all.
 func test_player_keys_space_next_esc_skip() -> void:
 	var p := _player()
 	await wait_frames(1)
 	p.call("play", "masking", "test")
-	await wait_seconds(0.4)   # past the input grace
+	await wait_seconds(0.5)   # past the input grace; scene 1's only caption is typing
 	assert_eq(int(p.get("scene_index")), 0)
+	var cap: Label = p.get("_caption")
+	assert_true(cap.visible_characters >= 0 and cap.visible_characters < cap.text.length(), "the caption is still typing")
 	await tap_action(&"advance_dialogue")
-	await wait_frames(2)
-	assert_eq(int(p.get("scene_index")), 1, "Space / Enter: next scene")
+	assert_eq(int(p.get("scene_index")), 0, "the first Space finishes the caption")
+	assert_eq(cap.visible_characters, -1, "the whole caption shows")
 	await tap_action(&"ui_accept")
-	await wait_frames(2)
-	assert_eq(int(p.get("scene_index")), 2, "ui_accept: next scene")
+	assert_eq(int(p.get("scene_index")), 1, "then Enter: the next scene (scene 1 has one caption)")
+	p.call("skip_scene")
+	await wait_frames(3)
+	assert_eq(int(p.get("scene_index")), 2, "the wall scene: two captions")
+	var wall_caps: Array = (Movies.movie("masking")["scenes"] as Array)[2]["captions"]
+	for i in 4:
+		if int(p.get("_cap_i")) >= 1:
+			break
+		await tap_action(&"advance_dialogue")
+	assert_eq(int(p.get("scene_index")), 2, "Space never skips the second caption")
+	assert_eq(int(p.get("_cap_i")), 1, "it jumps to the second caption")
+	assert_eq(cap.text, String(wall_caps[1]))
+	assert_true(float(p.get("_scene_t")) >= 5.5, "the drawing jumps with the caption")
+	await tap_action(&"advance_dialogue")
+	if cap.visible_characters != -1:
+		await tap_action(&"advance_dialogue")
+	await tap_action(&"advance_dialogue")
+	assert_eq(int(p.get("scene_index")), 3, "after the last caption: the next scene")
 	await tap_action(&"ui_cancel")
 	await wait_frames(3)
 	assert_false(bool(p.call("is_playing")), "Esc skips the movie")
 	assert_true(bool(p.get("skipped")))
+
+
+## (polish) Seen = reached the movie's "seen_at" scene (masking: the plateau); the last scene's
+## button says "Start the day" (day start) or "Done" (replays).
+func test_player_seen_at_and_last_button() -> void:
+	Game.progress["movies_seen"] = []
+	var p := _player()
+	await wait_frames(1)
+	var next_btn: Button = p.get("_next_btn")
+	var n := MASKING_SCENES.size()
+	var plateau := MASKING_SCENES.find("plateau")
+	assert_eq(String(Movies.movie("masking").get("seen_at", "")), "plateau")
+	var result := {}
+	var run := func(src: String) -> void:
+		result.clear()
+		result.merge(await p.call("play", "masking", src))
+	p.set("start_scene", plateau - 1)
+	run.call("day_start")
+	await wait_frames(2)
+	assert_eq(next_btn.text, "Next")
+	p.call("skip_all")
+	await wait_frames(3)
+	assert_eq(result.get("watched", true), false, "Esc before the plateau scene")
+	assert_false(Game.is_movie_seen("masking"), "not seen: it plays again next visit")
+	p.set("start_scene", plateau)
+	run.call("day_start")
+	await wait_frames(2)
+	p.call("skip_all")
+	await wait_frames(3)
+	assert_eq(result.get("watched", false), true, "Esc in the plateau scene still counts")
+	assert_true(Game.is_movie_seen("masking"), "seen")
+	p.set("start_scene", n - 1)
+	run.call("day_start")
+	await wait_frames(2)
+	assert_eq(next_btn.text, "Start the day", "the day-start movie's last button")
+	for i in 5:
+		if not bool(p.call("is_playing")):
+			break
+		next_btn.pressed.emit()   # the caption, its typing, then the end
+		await wait_frames(2)
+	await wait_frames(2)
+	assert_false(bool(p.call("is_playing")), "the last Next ends the movie")
+	assert_eq(result.get("skipped", true), false, "played to the end")
+	p.set("start_scene", n - 1)
+	run.call("pause")
+	await wait_frames(2)
+	assert_eq(next_btn.text, "Done", "a replay's last button")
+	p.call("skip_all")
+	await wait_frames(3)
 
 
 func test_player_buttons_for_the_mouse() -> void:
@@ -204,12 +274,18 @@ func test_player_buttons_for_the_mouse() -> void:
 	await wait_frames(2)
 	var next_btn: Button = p.get("_next_btn")
 	var skip_btn: Button = p.get("_skip_btn")
-	assert_eq(next_btn.text, "Next scene")
+	var pause_btn: Button = p.get("_pause_btn")
+	assert_eq(next_btn.text, "Next")
 	assert_eq(skip_btn.text, "Skip movie")
 	assert_eq(next_btn.focus_mode, Control.FOCUS_NONE, "buttons never take focus")
-	next_btn.pressed.emit()
-	await wait_frames(2)
-	assert_eq(int(p.get("scene_index")), 1, "Next scene button")
+	assert_eq(pause_btn.focus_mode, Control.FOCUS_NONE, "buttons never take focus")
+	assert_true(pause_btn.visible, "(polish) a pause button for the mouse")
+	for i in 3:
+		if int(p.get("scene_index")) >= 1:
+			break
+		next_btn.pressed.emit()
+		await wait_frames(2)
+	assert_eq(int(p.get("scene_index")), 1, "Next button (advances like Space)")
 	skip_btn.pressed.emit()
 	await wait_frames(3)
 	assert_false(bool(p.call("is_playing")), "Skip movie button")
@@ -221,19 +297,18 @@ func test_pause_menu_movie_button() -> void:
 	var menu: CanvasLayer = (load(PAUSE_MENU) as PackedScene).instantiate()
 	add_node(menu)
 	await wait_frames(1)
-	var btns: Dictionary = menu.get("_movie_btns")
-	assert_has(btns, "masking", "one Watch button per movie")
-	var b: Button = btns["masking"]
-	assert_eq(b.text, "Watch Hoot's masking movie")
 	Game.current_chapter_id = "gus"
 	menu.call("open")
 	await wait_frames(1)
-	assert_false(b.visible, "Day 1's pause menu does not change")
+	assert_true(menu.call("movie_button") == null, "Day 1's pause menu does not change")
 	menu.call("close")
 	Game.current_chapter_id = "bonnie"
 	menu.call("open")
 	await wait_frames(1)
-	assert_true(b.visible, "Day 2's pause menu offers the movie")
+	var b: Button = menu.call("movie_button")
+	assert_true(b != null and b.visible, "Day 2's pause menu offers the movie")
+	assert_eq(b.text, "Watch Hoot's masking movie", "one movie here: its own Watch button")
+	assert_false(menu.call("movie_ids_here").has("masking_recap"), "never the recap")
 	var replay := func() -> void: await menu.call("play_movie", "masking")
 	replay.call()
 	await wait_frames(3)
@@ -413,10 +488,11 @@ func test_masking_movie_wall_levels() -> void:
 			wall = sc["params"]
 	var levels: Array = wall["levels"]
 	var ia := int(wall["ia"])
+	var lefty := int(wall["lefty_hears"])
 	assert_true(levels.size() >= 2)
 	for i in levels.size() - 1:
-		assert_true(int(levels[i]) - ia <= 0, "%d dB fizzles at a %d dB wall" % [levels[i], ia])
-	assert_true(int(levels[-1]) - ia > 0, "the loud beep crosses")
+		assert_true(int(levels[i]) - ia < lefty, "%d - %d is below Lefty's %d: fizzle" % [levels[i], ia, lefty])
+	assert_true(int(levels[-1]) - ia >= lefty, "the loud beep crosses and Lefty hears it")
 	for i in range(1, levels.size()):
 		assert_true(int(levels[i]) > int(levels[i - 1]), "the meter climbs")
 
@@ -480,3 +556,231 @@ func test_title_movies_button() -> void:
 	assert_eq(title.get("_state"), &"menu")
 	Events.awaiting_input.disconnect(cb)
 	Events.explainer_started.disconnect(cs)
+
+
+# ---------------------------------------------------------------- (polish) review fixes
+
+## The music duck is reference-counted by owner: a movie replayed over the AudiOtron leaves the
+## booth quiet, and a movie freed mid-play (P, then Quit to title) gives its duck back.
+func test_music_duck_owners() -> void:
+	var before: Array = Sfx.music_duck_owners()
+	var screen: Node = (load(AUDIOMETER) as PackedScene).instantiate()
+	add_node(screen)
+	await wait_frames(2)
+	assert_true(Sfx.is_music_ducked(), "the AudiOtron ducks the music")
+	var p := _player()
+	await wait_frames(1)
+	p.call("play", "masking", "pause")
+	await wait_frames(2)
+	assert_eq(Sfx.music_duck_owners().size(), before.size() + 2, "two owners now")
+	p.call("skip_all")
+	await wait_frames(3)
+	assert_true(Sfx.is_music_ducked(), "the movie ended over the AudiOtron: still ducked")
+	screen.queue_free()
+	await wait_frames(2)
+	assert_eq(Sfx.music_duck_owners(), before, "the AudiOtron gave its duck back")
+	var p2 := _player()
+	await wait_frames(1)
+	p2.call("play", "masking", "day_start")
+	await wait_frames(2)
+	assert_true(Sfx.is_music_ducked(), "the movie ducks the music")
+	p2.queue_free()
+	await wait_frames(2)
+	assert_eq(Sfx.music_duck_owners(), before, "freed mid-play: its duck is undone")
+	assert_true(tree.get_first_node_in_group("explainer_player") == null, "and it left the group")
+	Sfx.music_duck(true, "test")
+	Sfx.music_duck(true, "test")
+	Sfx.music_duck(false, "test")
+	assert_eq(Sfx.music_duck_owners(), before, "one key = one owner, however often it ducks")
+
+
+## Plan "masking_deck": false keeps the AIR | BONE route but no MASKING group (unmasked bone).
+func test_masking_deck_off_keeps_the_route() -> void:
+	var screen: Node = (load(AUDIOMETER) as PackedScene).instantiate()
+	add_node(screen)
+	await wait_frames(2)
+	Game.begin_visit("bonnie")
+	screen.call("start_test", Game.load_patient("bonnie"), "left", false,
+		{"test": "bc", "bc_freqs": [1000], "masking_controls": true, "masking_deck": false, "hoot_turn_after": 99})
+	await wait_frames(2)
+	var st: Dictionary = screen.call("get_state")
+	assert_true(bool(st["masking_controls"]), "the route buttons stay")
+	assert_false(bool(st["masking_deck"]), "no masking deck")
+	var btns: Dictionary = screen.get("_buttons")
+	for id: String in ["mask_softer_button", "mask_toggle_button", "mask_louder_button"]:
+		assert_false((btns[id] as Control).visible, "%s hidden" % id)
+	for id: String in ["transducer_air_button", "transducer_bone_button"]:
+		assert_true((btns[id] as Control).visible, "%s shown" % id)
+	var db0 := int(st["mask_db"])
+	await tap_action(&"toggle_mask")
+	await tap_action(&"mask_louder")
+	st = screen.call("get_state")
+	assert_false(bool(st["mask_on"]), "M does nothing without the deck")
+	assert_eq(int(st["mask_db"]), db0, "PgUp does nothing without the deck")
+	screen.call("start_test", Game.load_patient("bonnie"), "right", false,
+		{"test": "bc_masked", "bc_freqs": [1000], "masking_controls": true, "hoot_turn_after": 99})
+	await wait_frames(2)
+	assert_true(bool((screen.call("get_state") as Dictionary)["masking_deck"]), "masked bone: the deck is back (default)")
+	assert_true((btns["mask_toggle_button"] as Control).visible)
+	var src := (load("res://story/level_bonnie.gd") as GDScript).source_code
+	assert_eq(src.count("\"masking_deck\": false"), 2, "the left bone and the bonus hole")
+
+
+## The "Hoot's Movies" list grows with the game: five made-up movies on one day, a vertical list
+## that fits a 720p window, keys pick a row and it scrolls, Enter plays it, the list comes back.
+func test_movie_list_layout_many_movies() -> void:
+	var base := Movies.movie("masking")
+	for i in 5:
+		var m := base.duplicate(true)
+		m["id"] = "fake_list_%d" % i
+		m["title"] = "Hoot's fake movie number %d with a long title" % (i + 1)
+		m["subtitle"] = "Subtitle %d" % i
+		m.erase("seen_at")
+		Movies.extra[String(m["id"])] = m
+	var menu: CanvasLayer = (load(PAUSE_MENU) as PackedScene).instantiate()
+	add_node(menu)
+	await wait_frames(1)
+	Game.current_chapter_id = "bonnie"
+	menu.call("open")
+	await wait_frames(2)
+	var b: Button = menu.call("movie_button")
+	assert_true(b != null and b.text.begins_with("Hoot's Movies"), "six movies here: one list button")
+	var card: Control = menu.get("_card")
+	var vp := tree.root.get_visible_rect().grow(1.0)
+	assert_true(vp.encloses(card.get_global_rect()), "the menu card still fits: %s" % card.get_global_rect())
+	b.pressed.emit()
+	await wait_frames(3)
+	assert_true(bool(menu.call("is_movie_list_open")))
+	var rows: Array = menu.call("movie_list_rows")
+	assert_eq(rows.size(), 6, "masking + five")
+	var list_card: Control = menu.get("_list_card")
+	assert_true(vp.encloses(list_card.get_global_rect()), "the list fits a 720p window: %s" % list_card.get_global_rect())
+	var x0 := (rows[0]["row"] as Control).get_global_rect().position.x
+	for r: Dictionary in rows:
+		var rc := (r["row"] as Control).get_global_rect()
+		assert_near(rc.position.x, x0, 0.5, "one column")
+		assert_true(rc.size.y >= 60.0 and rc.size.x <= list_card.size.x, "a full row")
+	var y1 := (rows[1]["row"] as Control).get_global_rect().position.y
+	assert_true(y1 > (rows[0]["row"] as Control).get_global_rect().position.y, "rows go DOWN, not across")
+	var scroll: ScrollContainer = menu.get("_list_scroll")
+	await wait_seconds(0.3)
+	for i in 5:
+		var ev := InputEventKey.new()
+		ev.keycode = KEY_DOWN
+		ev.physical_keycode = KEY_DOWN
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		await wait_frames(1)
+		ev = ev.duplicate() as InputEventKey
+		ev.pressed = false
+		Input.parse_input_event(ev)
+		await wait_frames(1)
+	await wait_frames(3)
+	assert_eq(int(menu.get("_list_hl")), 5, "Down picks the rows")
+	assert_true(scroll.scroll_vertical > 0, "the list scrolls to the picked row")
+	var started := []
+	var cs := func(id: String, _src: String) -> void: started.append(id)
+	Events.explainer_started.connect(cs)
+	var enter := InputEventKey.new()
+	enter.keycode = KEY_ENTER
+	enter.physical_keycode = KEY_ENTER
+	enter.pressed = true
+	Input.parse_input_event(enter)
+	await wait_frames(1)
+	var enter_up := enter.duplicate() as InputEventKey
+	enter_up.pressed = false
+	Input.parse_input_event(enter_up)
+	await wait_frames(3)
+	Events.explainer_started.disconnect(cs)
+	assert_eq(started, ["fake_list_4"], "Enter plays the picked movie")
+	var p := tree.get_first_node_in_group("explainer_player")
+	if p != null:
+		p.call("skip_all")
+	await wait_frames(4)
+	assert_true(bool(menu.call("is_movie_list_open")), "the list comes back after the movie")
+	menu.call("close_movie_list")
+	assert_false(bool(menu.call("is_movie_list_open")))
+	assert_true(bool(menu.call("is_open")), "Back: the menu")
+	menu.call("close")
+	Movies.extra.clear()
+
+
+## The integrator's hook (CONTRACTS.md §3.4): MOVIE.stage names the movie's own sets script
+## (extending story/explainers/explainer_sets.gd); the stage draws those sets with the same inputs,
+## and validate() accepts them.
+func test_movie_sets_hook() -> void:
+	Movies.extra["fake_hook"] = "res://tests/fixtures/fake_movie.gd"
+	var Fake: GDScript = load("res://tests/fixtures/fake_movie_sets.gd")
+	assert_eq(Movies.own_sets("fake_hook"), [&"fake_word", &"fake_snail"] as Array[StringName], "the script's SETS")
+	var bad := Movies.validate("fake_hook", Stage2D.SETS)
+	assert_true(bad.is_empty(), "validate accepts its own sets: %s" % ", ".join(bad))
+	var broken := Movies.movie("fake_hook")
+	(broken["scenes"] as Array)[0]["set"] = "no_such_set"
+	Movies.extra["fake_broken"] = broken
+	broken["id"] = "fake_broken"
+	assert_false(Movies.validate("fake_broken", Stage2D.SETS).is_empty(), "an unknown set is still caught")
+	broken["stage"] = "res://tests/fixtures/nope_sets.gd"
+	assert_false(Movies.validate("fake_broken", Stage2D.SETS).is_empty(), "a missing sets script is caught")
+	assert_false(Movies.for_chapter("bonnie").has("fake_hook"), "a short is not listed for replay")
+	# the stage delegates to it
+	Fake.set("drawn", [])
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	st.call("use_movie", Movies.movie("fake_hook"))
+	assert_eq(st.call("movie_set_ids"), [&"fake_word", &"fake_snail"] as Array[StringName])
+	var scenes: Array = Movies.movie("fake_hook")["scenes"]
+	st.call("show_scene", scenes[0])
+	st.set("t", 1.5)
+	st.queue_redraw()
+	await wait_frames(2)
+	var drawn: Array = Fake.get("drawn")
+	assert_true(not drawn.is_empty(), "the stage drew the movie's own set")
+	if not drawn.is_empty():
+		var last: Array = drawn[-1]
+		assert_eq(String(last[0]), "fake_word")
+		assert_near(float(last[1]), 1.5, 0.001, "same t")
+		assert_near(float(last[2]), 4.0, 0.001, "same duration")
+		assert_eq(String(last[3]), "HOOK!", "same params")
+	st.call("show_scene", scenes[1])
+	st.set("t", 2.0)
+	st.queue_redraw()
+	await wait_frames(2)
+	drawn = Fake.get("drawn")
+	assert_eq(String((drawn[-1] as Array)[0]), "fake_snail", "the second set, with the stage's own helpers")
+	# the player plays it end to end through the hook
+	var p := _player()
+	await wait_frames(1)
+	var r := {}
+	var run := func() -> void: r.merge(await p.call("play", "fake_hook", "test"))
+	run.call()
+	for i in 12:
+		if not bool(p.call("is_playing")):
+			break
+		p.call("skip_scene")
+		await wait_frames(2)
+	await wait_frames(2)
+	assert_eq(int(r.get("scenes_seen", 0)), 3, "all three scenes played")
+	# without the movie's script, its sets fall back to a card (never a blank screen)
+	st.call("use_movie", {})
+	st.call("show_scene", scenes[0])
+	var n_before := (Fake.get("drawn") as Array).size()
+	st.queue_redraw()
+	await wait_frames(2)
+	assert_eq((Fake.get("drawn") as Array).size(), n_before, "no sets script: the card fallback")
+	Movies.extra.clear()
+
+
+## The masking recap: a "short" card that the masking phase plays, never in a replay list.
+func test_masking_recap_short() -> void:
+	assert_true(Movies.has("masking_recap"))
+	assert_true(Movies.is_short("masking_recap"))
+	var bad := Movies.validate("masking_recap", Stage2D.SETS)
+	assert_true(bad.is_empty(), "validate: %s" % ", ".join(bad))
+	assert_between(Movies.total_s("masking_recap"), 10.0, 15.0, "10-15 s")
+	assert_false(Movies.replay_ids().has("masking_recap"), "not on the title's list")
+	assert_eq(Movies.for_chapter("bonnie"), ["masking"] as Array[String], "not in Day 2's replay")
+	var src := (load("res://story/level_bonnie.gd") as GDScript).source_code
+	var at_mask := src.find("func _masking() -> void:")
+	assert_true(src.find("await _recap()", at_mask) > at_mask, "the masking phase plays it")
+	assert_true(src.contains("Rewatch it any time"), "a day-start skip says where the movie lives")

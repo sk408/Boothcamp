@@ -403,7 +403,8 @@ func _on_quit() -> void:
 
 
 ## (v4) Hoot's Movies: with one movie it plays right away (through the pause menu, so the title
-## waits paused and Esc skips it), then the title is back; with several, Options lists them all.
+## waits paused and Esc skips it), then the title is back; with several, the pause menu's movie
+## list opens on its own (day, title, length per row; Back or Esc returns to the title).
 func _on_movies() -> void:
 	if _state != &"menu":
 		return
@@ -411,12 +412,14 @@ func _on_movies() -> void:
 	if pm == null:
 		return
 	_idle = 0.0
-	pm.call("open")
-	var ids := Movies.ids()
+	var ids := Movies.replay_ids()
 	if ids.size() == 1:
+		pm.call("open")
 		await pm.call("play_movie", ids[0])
 		if is_inside_tree():
 			pm.call("close")
+	elif ids.size() > 1:
+		pm.call("open_movie_list", true)
 
 
 func _input(event: InputEvent) -> void:
@@ -517,7 +520,7 @@ func _build() -> void:
 		v.add_child(b)
 		_buttons.append(b)
 	_menu_buttons = _buttons.duplicate()
-	if not Movies.ids().is_empty():
+	if not Movies.replay_ids().is_empty():
 		_movies_btn = UiKit.button("Hoot's Movies", &"", Vector2(214, 46))
 		_movies_btn.name = "MoviesButton"
 		_movies_btn.add_theme_font_size_override("font_size", 20)

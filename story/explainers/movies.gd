@@ -3,18 +3,27 @@ extends RefCounted
 ## A movie is DATA (a scene list) in story/explainers/movies/<id>.gd (`const MOVIE: Dictionary`);
 ## the player (story/explainers/explainer_player.tscn) types the captions, fires the cues and asks the
 ## stage (story/explainers/explainer_stage.gd) to animate each scene's "set". Adding a movie = one file
-## in movies/ plus one line here (docs/ADDING_A_CHAPTER.md, "Hoot's movies").
+## in movies/ plus one line here (docs/ADDING_A_CHAPTER.md, "Hoot's movies"); a movie may bring
+## its own scene sets (MOVIE.stage, story/explainers/explainer_sets.gd).
 ## Usage (story-internal): const Movies := preload("res://story/explainers/movies.gd")
-##   Movies.movie("masking") -> Dictionary, Movies.for_chapter("bonnie") -> ["masking"]
+##   Movies.movie("masking") -> Dictionary, Movies.for_chapter("bonnie") -> ["masking"],
+##   Movies.replay_ids() -> every movie the replay lists show (not the "short" recaps)
 
 const MOVIES: Dictionary = {
 	"masking": "res://story/explainers/movies/masking.gd",
+	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
 }
+## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
+## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.
+static var extra: Dictionary = {}
 ## Every caption line is a Hoot line: 18 words or fewer (like Hoot.MAX_WORDS for tips).
 const MAX_CAPTION_WORDS := 18
 ## A movie should stay a short (CHAPTER2.md: about 60-100 s).
 const MIN_TOTAL_S := 45.0
 const MAX_TOTAL_S := 110.0
+## A "short": true movie is a recap (5-30 s): played by its level, never listed for replay.
+const SHORT_MIN_S := 5.0
+const SHORT_MAX_S := 30.0
 ## Keys every scene must have. Optional: "title" (the scene's numbered chip on the screen),
 ## "caption_at" (seconds per caption, default spread evenly), "params" (set-specific),
 ## "cues" ([{t, sfx, pitch, vol_db}] Sfx stings, quiet), "board" (the animation brief, never shown).
@@ -22,6 +31,9 @@ const MAX_TOTAL_S := 110.0
 ## params {heading, lines, line_at, icon, hoot, tint}, see explainer_stage.gd _set_card()).
 const SCENE_KEYS: Array[String] = ["id", "set", "duration", "captions", "teaches"]
 const MOVIE_KEYS: Array[String] = ["id", "title", "subtitle", "chapter", "narrator", "scenes"]
+## Optional movie keys: "seen_at" (the scene id that counts as seen, default the last), "short"
+## (a recap: see SHORT_MIN_S), "stage" (the movie's own sets script, extending
+## story/explainers/explainer_sets.gd: CONTRACTS.md §3.4).
 ## The generic "card" set: at most this many lines, each this many characters (they never wrap).
 const CARD_MAX_LINES := 4
 const CARD_MAX_CHARS := 36
@@ -31,30 +43,83 @@ static func ids() -> Array[String]:
 	var out: Array[String] = []
 	for k: String in MOVIES:
 		out.append(k)
+	for k: String in extra:
+		if not out.has(k):
+			out.append(k)
 	return out
 
 
+static func _source(id: String) -> Variant:
+	if extra.has(id):
+		return extra[id]
+	return MOVIES.get(id, null)
+
+
 static func has(id: String) -> bool:
-	return MOVIES.has(id) and ResourceLoader.exists(String(MOVIES[id]))
+	var src: Variant = _source(id)
+	if src is Dictionary:
+		return true
+	return src is String and ResourceLoader.exists(String(src))
 
 
 ## The movie's data (a deep copy of its file's MOVIE const), {} when unknown.
 static func movie(id: String) -> Dictionary:
 	if not has(id):
 		return {}
-	var sc: Script = load(String(MOVIES[id])) as Script
+	var src: Variant = _source(id)
+	if src is Dictionary:
+		return (src as Dictionary).duplicate(true)
+	var sc: Script = load(String(src)) as Script
 	if sc == null:
 		return {}
 	var m: Variant = sc.get_script_constant_map().get("MOVIE", {})
 	return (m as Dictionary).duplicate(true) if m is Dictionary else {}
 
 
-## The movies a chapter (Game.CHAPTERS id) plays and offers for replay, in registry order.
-static func for_chapter(chapter_id: String) -> Array[String]:
+## A recap ("short": true): played by its level, never listed for replay.
+static func is_short(id: String) -> bool:
+	return bool(movie(id).get("short", false))
+
+
+## The movies a chapter (Game.CHAPTERS id) offers for replay, in registry order (recaps only with
+## include_short).
+static func for_chapter(chapter_id: String, include_short: bool = false) -> Array[String]:
 	var out: Array[String] = []
 	for id: String in ids():
-		if String(movie(id).get("chapter", "")) == chapter_id:
+		var m := movie(id)
+		if String(m.get("chapter", "")) == chapter_id and (include_short or not bool(m.get("short", false))):
 			out.append(id)
+	return out
+
+
+## Every movie the replay lists show (the pause menu's and the title's "Hoot's Movies"): all but
+## the recaps, in registry order.
+static func replay_ids() -> Array[String]:
+	var out: Array[String] = []
+	for id: String in ids():
+		if not is_short(id):
+			out.append(id)
+	return out
+
+
+## The chapter's day label for the replay list ("Day 2"), "" when unknown.
+static func day_label(id: String) -> String:
+	var c: Dictionary = Game.chapter(String(movie(id).get("chapter", "")))
+	return "Day %d" % int(c["day"]) if c.has("day") else ""
+
+
+## The movie's own set ids from its sets script (MOVIE.stage), [] when it has none.
+static func own_sets(id: String) -> Array[StringName]:
+	var out: Array[StringName] = []
+	var path := String(movie(id).get("stage", ""))
+	if path == "" or not ResourceLoader.exists(path):
+		return out
+	var sc := load(path) as GDScript
+	if sc == null or not sc.can_instantiate():
+		return out
+	var o: Variant = sc.new()
+	if o is Object and (o as Object).has_method("set_ids"):
+		out.assign((o as Object).call("set_ids"))
 	return out
 
 
@@ -75,8 +140,9 @@ static func word_count(text: String) -> int:
 	return text.split(" ", false).size()
 
 
-## Problems with a movie's data ([] = fine): missing keys, unknown stage sets, caption length,
-## running time. tests/test_explainers.gd runs it on every registered movie.
+## Problems with a movie's data ([] = fine): missing keys, unknown stage sets (known_sets: the
+## stage's built-in SETS; the movie's own sets script adds its SETS), caption length, running time.
+## tests/test_contracts_v4.gd runs it on every registered movie.
 static func validate(id: String, known_sets: Array = []) -> PackedStringArray:
 	var bad: PackedStringArray = []
 	var m := movie(id)
@@ -87,6 +153,27 @@ static func validate(id: String, known_sets: Array = []) -> PackedStringArray:
 			bad.append("%s: missing %s" % [id, k])
 	if String(m.get("id", "")) != id:
 		bad.append("%s: id says %s" % [id, m.get("id", "")])
+	var sets: Array = known_sets.duplicate()
+	if m.has("stage"):
+		var path := String(m["stage"])
+		var mine := own_sets(id)
+		if not ResourceLoader.exists(path):
+			bad.append("%s: stage script %s not found" % [id, path])
+		elif mine.is_empty():
+			bad.append("%s: stage script %s is not an explainer_sets.gd with a SETS list" % [id, path])
+		else:
+			var probe: Object = (load(path) as GDScript).new()
+			for sid: StringName in mine:
+				if not probe.has_method("_set_%s" % sid):
+					bad.append("%s: stage script has no _set_%s()" % [id, sid])
+		if not sets.is_empty():
+			sets.append_array(mine)
+	if m.has("seen_at"):
+		var found := false
+		for sc: Dictionary in m.get("scenes", []):
+			found = found or String(sc.get("id", "")) == String(m["seen_at"])
+		if not found:
+			bad.append("%s: seen_at %s is not a scene" % [id, m["seen_at"]])
 	var seen: Dictionary = {}
 	for sc: Dictionary in m.get("scenes", []):
 		var sid := String(sc.get("id", "?"))
@@ -96,7 +183,7 @@ static func validate(id: String, known_sets: Array = []) -> PackedStringArray:
 		if seen.has(sid):
 			bad.append("%s: two scenes called %s" % [id, sid])
 		seen[sid] = true
-		if not known_sets.is_empty() and not known_sets.has(StringName(String(sc.get("set", "")))):
+		if not sets.is_empty() and not sets.has(StringName(String(sc.get("set", "")))):
 			bad.append("%s/%s: unknown set %s" % [id, sid, sc.get("set", "")])
 		var caps: Array = sc.get("captions", [])
 		if caps.is_empty():
@@ -114,6 +201,8 @@ static func validate(id: String, known_sets: Array = []) -> PackedStringArray:
 				if String(ln).length() > CARD_MAX_CHARS:
 					bad.append("%s/%s: card line over %d characters: %s" % [id, sid, CARD_MAX_CHARS, ln])
 	var total := total_s(id)
-	if total < MIN_TOTAL_S or total > MAX_TOTAL_S:
-		bad.append("%s: %.0f s long (keep it %.0f-%.0f s)" % [id, total, MIN_TOTAL_S, MAX_TOTAL_S])
+	var lo := SHORT_MIN_S if bool(m.get("short", false)) else MIN_TOTAL_S
+	var hi := SHORT_MAX_S if bool(m.get("short", false)) else MAX_TOTAL_S
+	if total < lo or total > hi:
+		bad.append("%s: %.0f s long (keep it %.0f-%.0f s)" % [id, total, lo, hi])
 	return bad

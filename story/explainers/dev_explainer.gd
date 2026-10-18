@@ -12,7 +12,11 @@ extends Node
 ## "Hoot's Movies" button: shoot it, click it, shoot the replay over the title, Esc, shoot the title
 ## back; prints EXPLAINER_TITLE {...}), --card-demo (only the generic "card" set with made-up data,
 ## each icon, and the fallback for an unknown set: explainer_card_*), --reduced-motion (the setting
-## on, for this run only).
+## on, for this run only), --extra-movie=res://path/movie.gd[,...] (register more movie files for
+## this run, e.g. res://tests/fixtures/fake_movie.gd with its own sets script; then --movie=<its id>),
+## --list (only the "Hoot's Movies" list with five made-up movies: shoot it (explainer_movie_list),
+## Down x4 (explainer_movie_list_down, scrolled), Enter plays the fifth, Esc, the list back
+## (explainer_movie_list_back); prints EXPLAINER_LIST {...}).
 ## Add --speed=2 to halve the wait.
 ## The first shot of a scene is named explainer_<id>_<NN>_<scene> (CONTRACTS.md §7.3); extra ones
 ## add _t<seconds>.
@@ -23,6 +27,17 @@ const Movies := preload("res://story/explainers/movies.gd")
 
 
 func demo_start() -> void:
+	for path: String in Game.cli_value("extra-movie", "").split(",", false):
+		var sc := load(path) as Script
+		var m: Variant = sc.get_script_constant_map().get("MOVIE", {}) if sc != null else {}
+		if m is Dictionary and (m as Dictionary).has("id"):
+			Movies.extra[String((m as Dictionary)["id"])] = path
+		else:
+			push_warning("dev_explainer: --extra-movie=%s is not a movie file" % path)
+	if Game.cli_flag("list"):
+		await _list_path()
+		Events.quit_requested.emit(0)
+		return
 	if Game.cli_flag("title"):
 		await _title_path()
 		Events.quit_requested.emit(0)
@@ -118,8 +133,12 @@ func _menu_path(menu: Node) -> void:
 	Events.screenshot_requested.emit("explainer_pause_replay")
 	await _wait(0.4)
 	if p != null:
-		await _tap(&"advance_dialogue")
-		await _wait(0.3)
+		# Space advances like dialogue: finish the caption, else the next one, else the next scene
+		for i in 3:
+			if int(p.get("scene_index")) >= 1:
+				break
+			await _tap(&"advance_dialogue")
+			await _wait(0.3)
 		out["space_next"] = int(p.get("scene_index")) == 1
 		var done := [false]
 		var on_done := func(_id: String, skipped: bool) -> void: done[0] = skipped
@@ -243,3 +262,82 @@ func _card_demo() -> void:
 	await _wait(0.15)
 	Events.screenshot_requested.emit("explainer_card_fallback")
 	await _wait(0.25)
+
+
+## --list: the pause menu's "Hoot's Movies" list as a later game will show it (five made-up movies
+## on two days), by keys: Down x4 scrolls, Enter plays the fifth over the paused game, Esc skips it,
+## the list comes back, Esc returns to the menu.
+func _list_path() -> void:
+	var base := Movies.movie("masking")
+	var fakes := [["gus", "Hoot's air movie", "Beeps and snails"], ["gus", "Hoot's otoscope movie", "Look before you beep"],
+		["bonnie", "Hoot's bone movie", "Good vibrations"], ["bonnie", "Hoot's plateau movie", "Flat is where it's at"],
+		["bonnie", "Hoot's overmasking movie", "Too much shhh"]]
+	for i in fakes.size():
+		var m := base.duplicate(true)
+		m["id"] = "fake_%d" % i
+		m["chapter"] = fakes[i][0]
+		m["title"] = fakes[i][1]
+		m["subtitle"] = fakes[i][2]
+		m.erase("seen_at")
+		Movies.extra[String(m["id"])] = m
+	Game.current_chapter_id = "bonnie"
+	var out := {"rows": 0, "button": "", "fits": true, "down_hl": -1, "played": "", "back": false, "menu_back": false}
+	var menu := get_tree().get_first_node_in_group("pause_menu")
+	if menu == null:
+		print("EXPLAINER_LIST ", JSON.stringify(out))
+		return
+	var bg := ColorRect.new()
+	bg.color = Palette.WALL
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+	menu.call("open")
+	await _wait(0.6)
+	var mb: Button = menu.call("movie_button")
+	out["button"] = mb.text if mb != null else ""
+	Events.screenshot_requested.emit("explainer_movie_list_menu")
+	await _wait(0.3)
+	if mb != null:
+		await _click(mb.get_global_rect().get_center())
+	await _wait(0.6)
+	var rows: Array = menu.call("movie_list_rows")
+	out["rows"] = rows.size()
+	var vp := get_viewport().get_visible_rect()
+	for r: Dictionary in rows:
+		var rc := (r["row"] as Control).get_global_rect()
+		out["fits"] = bool(out["fits"]) and rc.size.x <= vp.size.x and rc.position.x >= 0.0 and rc.end.x <= vp.end.x
+	Events.screenshot_requested.emit("explainer_movie_list")
+	await _wait(0.3)
+	for i in 4:
+		await _key(KEY_DOWN)
+	await _wait(0.4)
+	out["down_hl"] = int(menu.get("_list_hl"))
+	Events.screenshot_requested.emit("explainer_movie_list_down")
+	await _wait(0.3)
+	var started := [""]
+	var on_start := func(id: String, _src: String) -> void: started[0] = id
+	Events.explainer_started.connect(on_start)
+	await _key(KEY_ENTER)
+	await _wait(1.5)
+	out["played"] = started[0]
+	Events.explainer_started.disconnect(on_start)
+	await _tap(&"ui_cancel")
+	await _wait(0.8)
+	out["back"] = bool(menu.call("is_movie_list_open"))
+	Events.screenshot_requested.emit("explainer_movie_list_back")
+	await _wait(0.3)
+	await _tap(&"ui_cancel")
+	await _wait(0.5)
+	out["menu_back"] = bool(menu.call("is_open")) and not bool(menu.call("is_movie_list_open"))
+	menu.call("close")
+	Movies.extra.clear()
+	print("EXPLAINER_LIST ", JSON.stringify(out))
+
+
+func _key(code: Key) -> void:
+	for pressed: bool in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = code
+		ev.physical_keycode = code
+		ev.pressed = pressed
+		Input.parse_input_event(ev)
+		await _wait(0.1)

@@ -11,7 +11,7 @@ extends Node
 ## A, B). Extra invariants: the noise dial stays in 0..100 dB EM, the masker only plays while
 ## MASK is on, and no masker is left playing after a test.
 ## (v4) --day=2 first mashes Hoot's masking movie three ways (story/explainers/, CONTRACTS.md §3.4):
-## (1) as a level plays it (a pausable parent) with Space / Enter / clicks / Next scene / P but no
+## (1) as a level plays it (a pausable parent) with Space / Enter / clicks / Next / P / II but no
 ## Esc: it must step one scene at a time to the end, not skipped, and P must freeze it; (2) the same
 ## plus Esc and "Skip movie": an accepted Esc ends it at once; (3) the pause menu's "Watch Hoot's
 ## masking movie" replay (a real click) with the same keys: the menu comes back. Invariants: the
@@ -212,7 +212,7 @@ func _run_movie(style: int) -> void:
 			return
 		pm.call("open")
 		await get_tree().create_timer(0.4, true, false, true).timeout
-		var btn: Button = (pm.get("_movie_btns") as Dictionary).get(MOVIE_ID)
+		var btn: Button = pm.call("movie_button")
 		if btn == null or not btn.is_visible_in_tree():
 			_problem("pause menu: no visible 'Watch' button on Day 2")
 			pm.call("close")

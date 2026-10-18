@@ -6,10 +6,13 @@ extends CanvasLayer
 ## "Up = SOFTER (swapped)" (setting "affinity"). Player-facing text never names a vendor.
 ## Keyboard: Up/Down pick a row, Left/Right adjust, Enter toggles / presses, Esc closes. It opens
 ## on the Resume button, and Space does nothing here (a held beep key must never flip a setting).
-## (v4) Replays of Hoot's movies (story/explainers/, CONTRACTS.md §3.4): one "Watch <title>" button
-## per movie of the current chapter (in a level) or every movie (on the title's Options). The movie
-## plays over the paused game (the player is our child, so it inherits PROCESS_MODE_ALWAYS); the menu
-## comes back when it ends. Hidden while a movie is already playing.
+## (v4) Replays of Hoot's movies (story/explainers/, CONTRACTS.md §3.4): the movies "here" are the
+## current chapter's (in a level) or every movie (on the title's Options), never the "short" recaps.
+## One movie here: a "Watch <title>" button. Two or more: a "Hoot's Movies..." button that opens a
+## small vertical list (day, title, length per row; Up/Down + Enter, or the mouse; it scrolls; Esc or
+## Back returns to the menu): open_movie_list(). The movie plays over the paused game (the player is
+## our child, so it inherits PROCESS_MODE_ALWAYS); the menu (or the list) comes back when it ends.
+## Hidden while a movie is already playing.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Movies := preload("res://story/explainers/movies.gd")
@@ -32,8 +35,18 @@ var _in_audiometry := false
 var _opened_t := 0
 var _btns: Array[Button] = []
 var _btn_hl := 0
-var _movie_btns: Dictionary = {}    # (v4) movie id -> its "Watch ..." button
+var _watch_btn: Button              # (v4) "Watch <title>": exactly one movie here
+var _watch_id := ""
+var _movies_btn: Button             # (polish) "Hoot's Movies...": two or more here (opens the list)
 var _movie_playing := false         # (v4) a replay is on screen (the menu waits, hidden)
+var _list_root: Control             # (polish) the movie list (over the dimmed game, instead of the card)
+var _list_card: PanelContainer
+var _list_scroll: ScrollContainer
+var _list_box: VBoxContainer
+var _list_rows: Array[Dictionary] = []   # [{id, row: PanelContainer}]
+var _list_hl := 0
+var _list_back: Button
+var _list_standalone := false       # opened straight from the title's "Hoot's Movies": Back closes all
 
 
 func _ready() -> void:
@@ -55,7 +68,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _movie_playing:
 		return   # the movie has its own keys (Esc skips it); the menu comes back after
 	if event.is_action_pressed(&"pause") and not event.is_echo():
-		if _open:
+		if is_movie_list_open():
+			if Time.get_ticks_msec() - _opened_t >= 250:
+				close_movie_list()
+		elif _open:
 			close()
 		else:
 			open()
@@ -68,6 +84,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		return  # the key that opened the menu (or a stray tap right after) does nothing
 	var k := event as InputEventKey
 	var enter := k != null and (k.keycode == KEY_ENTER or k.keycode == KEY_KP_ENTER)
+	if is_movie_list_open():
+		if event.is_action_pressed(&"ui_down"):
+			_list_set_hl(mini(_list_hl + 1, _list_rows.size() - 1))
+		elif event.is_action_pressed(&"ui_up"):
+			_list_set_hl(maxi(_list_hl - 1, 0))
+		elif enter and _list_hl >= 0 and _list_hl < _list_rows.size():
+			play_movie(String(_list_rows[_list_hl]["id"]))
+		elif k != null and k.keycode == KEY_SPACE:
+			pass  # swallowed, as everywhere in this menu
+		elif event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
+			close_movie_list()
+		else:
+			return
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"ui_down"):
 		_set_hl((_hl + 1) % _rows.size())
 	elif event.is_action_pressed(&"ui_up"):
@@ -93,6 +124,8 @@ func open() -> void:
 	var on_title := _on_title()
 	_title.text = "Options" if on_title else "Paused"
 	_quit_title_btn.visible = not on_title
+	_list_root.visible = false
+	_card.visible = true
 	_update_movie_buttons()
 	_refresh()
 	_btn_hl = 0
@@ -120,19 +153,147 @@ func is_open() -> bool:
 	return _open
 
 
-## (v4) The movies this menu offers: the current chapter's in a level, all of them on the title.
+## (v4) The movies this menu offers: the current chapter's in a level, all of them on the title
+## (never the "short" recaps).
 func movie_ids_here() -> Array[String]:
 	if _on_title():
-		return Movies.ids()
+		return Movies.replay_ids()
 	if get_tree().get_first_node_in_group("explainer_player") != null:
 		return [] as Array[String]   # one movie at a time (P during the day-start movie)
 	return Movies.for_chapter(Game.current_chapter_id)
 
 
+## The menu's movie button now: "Watch <title>" (one movie here), "Hoot's Movies..." (two or
+## more), or null (none). Tests, tools/monkey.gd.
+func movie_button() -> Button:
+	if _watch_btn.visible:
+		return _watch_btn
+	if _movies_btn.visible:
+		return _movies_btn
+	return null
+
+
 func _update_movie_buttons() -> void:
 	var here := movie_ids_here()
-	for id: String in _movie_btns:
-		(_movie_btns[id] as Button).visible = here.has(id) and not _movie_playing
+	var one := here.size() == 1 and not _movie_playing
+	_watch_id = here[0] if one else ""
+	_watch_btn.visible = one
+	if one:
+		_watch_btn.text = "Watch %s" % Movies.title(_watch_id)
+		_watch_btn.tooltip_text = "%s (about %d s; Esc skips it)" % [Movies.title(_watch_id), int(Movies.total_s(_watch_id))]
+	_movies_btn.visible = here.size() >= 2 and not _movie_playing
+	if _btn_hl >= _visible_buttons().size():
+		_btn_hl = 0
+
+
+# ---------------------------------------------------------------- (polish) the movie list
+
+func is_movie_list_open() -> bool:
+	return _open and _list_root != null and _list_root.visible
+
+
+## Open the "Hoot's Movies" list: one row per movie here. standalone (the title's button): Back
+## and Esc close the whole menu instead of returning to it.
+func open_movie_list(standalone: bool = false) -> void:
+	if not _open:
+		open()
+	_list_standalone = standalone
+	for c in _list_box.get_children():
+		c.queue_free()
+	_list_rows.clear()
+	for id: String in movie_ids_here():
+		_add_list_row(id)
+	_card.visible = false
+	_list_root.visible = true
+	_list_hl = 0
+	_list_set_hl(0, false)
+	_opened_t = Time.get_ticks_msec()
+	_list_scroll.scroll_vertical = 0
+	Juice.bounce_in(_list_card, 0.3)
+	Sfx.play(&"pop", 1.1, -8.0)
+
+
+func close_movie_list() -> void:
+	if _list_root == null or not _list_root.visible:
+		return
+	_list_root.visible = false
+	_card.visible = true
+	_opened_t = Time.get_ticks_msec()
+	Sfx.play(&"click", 0.9, -8.0)
+	if _list_standalone:
+		_list_standalone = false
+		close()
+
+
+## The list's rows (tests): [{id, row}].
+func movie_list_rows() -> Array[Dictionary]:
+	return _list_rows
+
+
+func _add_list_row(id: String) -> void:
+	var row := PanelContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.custom_minimum_size = Vector2(0, 66)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 14)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(h)
+	var day := UiKit.label(Movies.day_label(id), 17, Palette.INK, 700)
+	day.custom_minimum_size = Vector2(70, 0)
+	day.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	day.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_theme_stylebox_override("panel", UiKit.style(Palette.SUNNY, Palette.INK, 12, 3, 0, 6))
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.add_child(day)
+	h.add_child(chip)
+	var names := VBoxContainer.new()
+	names.add_theme_constant_override("separation", 0)
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var m := Movies.movie(id)
+	var t1 := UiKit.label(String(m.get("title", id)), 21, Palette.INK, 700)
+	t1.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	t1.clip_text = true
+	names.add_child(t1)
+	var t2 := UiKit.label(String(m.get("subtitle", "")), 16, Palette.INK_SOFT, 600)
+	t2.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	t2.clip_text = true
+	names.add_child(t2)
+	h.add_child(names)
+	var secs := int(roundf(Movies.total_s(id)))
+	var len_l := UiKit.label("%d:%02d" % [secs / 60, secs % 60], 18, Palette.INK_SOFT, 700)
+	len_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(len_l)
+	var play_l := UiKit.label("Watch", 18, Palette.INK, 700)
+	play_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(play_l)
+	for c: Control in [day, t1, t2, len_l, play_l]:
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var idx := _list_rows.size()
+	row.mouse_entered.connect(func() -> void:
+		if _list_hl != idx:
+			_list_set_hl(idx, false))
+	row.gui_input.connect(func(e: InputEvent) -> void:
+		var mb := e as InputEventMouseButton
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			play_movie(id))
+	row.tooltip_text = "%s (about %d s; Esc skips it)" % [String(m.get("title", id)), secs]
+	_list_box.add_child(row)
+	_list_rows.append({"id": id, "row": row})
+
+
+func _list_set_hl(i: int, sound: bool = true) -> void:
+	_list_hl = i
+	for j in _list_rows.size():
+		var on := j == i
+		(_list_rows[j]["row"] as PanelContainer).add_theme_stylebox_override("panel",
+			UiKit.style(Color("#fff1b8") if on else Palette.PAPER, Palette.INK if on else Color(Palette.INK, 0.25), 14, 3 if on else 2, 0, 10))
+	if i >= 0 and i < _list_rows.size():
+		_list_scroll.ensure_control_visible.call_deferred(_list_rows[i]["row"] as Control)
+	if sound:
+		Sfx.play(&"blip", 1.4, -12.0)
 
 
 ## (v4, coroutine) Replay a movie from the menu. Returns the player's result.
@@ -151,6 +312,8 @@ func play_movie(id: String) -> Dictionary:
 		_root.visible = true
 		_update_movie_buttons()
 		_refresh()
+		if _list_root.visible:
+			Juice.bounce_in(_list_card, 0.3)
 		_opened_t = Time.get_ticks_msec()   # the key that ended the movie does nothing here
 		Juice.bounce_in(_card, 0.3)
 	_update_corner()
@@ -393,14 +556,19 @@ func _build() -> void:
 	resume.pressed.connect(close)
 	row.add_child(resume)
 	_btns.append(resume)
-	for id: String in Movies.ids():
-		var mb := UiKit.button("Watch %s" % Movies.title(id), &"", Vector2(300, 52))
-		mb.tooltip_text = "%s (about %d s; Esc skips it)" % [Movies.title(id), int(Movies.total_s(id))]
-		mb.pressed.connect(func() -> void: play_movie(id))
-		mb.visible = false
-		row.add_child(mb)
-		_btns.append(mb)
-		_movie_btns[id] = mb
+	_watch_btn = UiKit.button("Watch", &"", Vector2(300, 52))
+	_watch_btn.pressed.connect(func() -> void:
+		if _watch_id != "":
+			play_movie(_watch_id))
+	_watch_btn.visible = false
+	row.add_child(_watch_btn)
+	_btns.append(_watch_btn)
+	_movies_btn = UiKit.button("Hoot's Movies...", &"", Vector2(220, 52))
+	_movies_btn.tooltip_text = "Replay Hoot's cartoon explainers"
+	_movies_btn.pressed.connect(func() -> void: open_movie_list())
+	_movies_btn.visible = false
+	row.add_child(_movies_btn)
+	_btns.append(_movies_btn)
 	_quit_title_btn = UiKit.button("Quit to title", &"", Vector2(180, 52))
 	_quit_title_btn.pressed.connect(func() -> void:
 		close()
@@ -412,6 +580,7 @@ func _build() -> void:
 	_hint_box = HBoxContainer.new()
 	_hint_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(_hint_box)
+	_build_movie_list(center)
 
 	# small always-on pause button for mouse players (hidden on the title screen)
 	_corner = UiKit.button("II", &"GhostButton", Vector2(46, 46))
@@ -426,3 +595,39 @@ func _build() -> void:
 	_corner.add_theme_font_size_override("font_size", 20)
 	_corner.pressed.connect(open)
 	add_child(_corner)
+
+
+## (polish) The "Hoot's Movies" list: a card the width of a phone in landscape, rows that scroll
+## past about five, Back at the bottom.
+func _build_movie_list(center: CenterContainer) -> void:
+	_list_root = CenterContainer.new()
+	_list_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_list_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_list_root.visible = false
+	center.get_parent().add_child(_list_root)
+	_list_card = UiKit.panel(Palette.PAPER, Palette.INK, 28)
+	_list_card.custom_minimum_size = Vector2(680, 0)
+	_list_root.add_child(_list_card)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	_list_card.add_child(v)
+	var head := UiKit.label("Hoot's Movies", 32, Palette.INK, 700)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	_list_scroll = ScrollContainer.new()
+	_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_list_scroll.custom_minimum_size = Vector2(640, 5 * 72)
+	_list_scroll.follow_focus = false
+	v.add_child(_list_scroll)
+	_list_box = VBoxContainer.new()
+	_list_box.add_theme_constant_override("separation", 6)
+	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list_scroll.add_child(_list_box)
+	var foot := HBoxContainer.new()
+	foot.alignment = BoxContainer.ALIGNMENT_CENTER
+	foot.add_theme_constant_override("separation", 16)
+	v.add_child(foot)
+	_list_back = UiKit.button("Back", &"", Vector2(160, 48))
+	_list_back.pressed.connect(close_movie_list)
+	foot.add_child(_list_back)
+	foot.add_child(UiKit.hint_row([["Up", "Down"], "choose", ["Enter"], "watch", ["Esc"], "back"], 14))
