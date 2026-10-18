@@ -62,9 +62,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   (`pta_line()`, best two when `SpeechRules.pta_method` says so).
 - **SPEECH screen:** one instance for both ears (`start_test(patient, ear, coached, plan)`, then
   `await test_finished`); plan `{test: "srt", tones, list: "spondee_a", words: the 12 familiarised ids,
-  exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after: 8`
-  (`LEFT_SOLO_WORDS`: enough to reach his first miss below the SRT) on the left ear with quick
-  visit on. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
+  exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after_up`
+  with `hoot_turn_after: 12` (`LEFT_SOLO_WORDS`, the cap) on the left ear with quick visit on: the
+  player scores down to his first miss below the SRT and the word stepped up 5 after it, then Hoot
+  finishes the bracket. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
   the hidden `non_organic` tag). Mike's response button is put away first (`hold_response_button(false)`).
   Hoot defines the SRT before the words. "The tell" lives in the SPEECH screen only (§9.7; the level no
   longer listens to `speech_response`). If the SPEECH scene is missing, Hoot runs the words himself

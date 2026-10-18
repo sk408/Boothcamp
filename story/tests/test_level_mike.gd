@@ -296,7 +296,10 @@ func test_speech_plans_and_pta() -> void:
 	assert_true(String(r["intro"]).split(" ", false).size() <= 18)
 	assert_false((r["tones"] as Dictionary).is_empty(), "tones for the PTA")
 	assert_eq(int(l.get("hoot_turn_after", -1)), LevelMike.LEFT_SOLO_WORDS, "quick visit: Hoot finishes the left ear")
-	assert_true(LevelMike.LEFT_SOLO_WORDS >= 7, "the solo ear reaches the bracket (first miss, then up 5)")
+	assert_true(bool(l.get("hoot_turn_after_up", false)),
+		"the player's words run to the first miss and the step back up 5; Hoot finishes the bracket")
+	assert_true(LevelMike.LEFT_SOLO_WORDS >= 9, "the cap leaves room: eight words down to the first miss (90 to 20), then up 5")
+	assert_true(String(l["intro"]).contains("90"), "PTA 75 + 15 = 90: " + String(l["intro"]))
 	assert_true(String(l["intro"]).split(" ", false).size() <= 18)
 	assert_false(bool(r.get("low_start_ok", true)), "no low start before the whisper is on screen")
 	lv.set("_whisper_seen", true)

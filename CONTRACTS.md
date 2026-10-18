@@ -1165,7 +1165,9 @@ func demo_start() -> void                           # standalone: Mike, tones fr
 
 **Plan keys:** `test` ("srt"), `tones` (§5.1 results; required for the PTA), `list`, `words`, `exclude`, `level`,
 `transducer`, `low_start_ok` (§9.4), `hoot_turn_after` (words the player scores before Hoot finishes the ear at x8 with
-quick visit on; 0 = Hoot runs it all; missing = never), `intro`, `hoot_turn_text`, `show_agreement` (default true),
+quick visit on; 0 = Hoot runs it all; missing = never), `hoot_turn_after_up` (with `hoot_turn_after`: Hoot also takes
+over once the player has scored the word stepped up after a miss, the bracket's first "missed: up 5"; the count
+stays the cap), `intro`, `hoot_turn_text`, `show_agreement` (default true),
 `done_title`, `fresh_session` (this ear on a new session, for Hoot's recheck: the player's session, with its sheets
 and points, comes back on the next `start_test` without it).
 

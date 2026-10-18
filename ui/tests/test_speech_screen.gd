@@ -420,6 +420,30 @@ func test_hoot_turn_after_two_words() -> void:
 		assert_eq(int(sheet.get("strokes", -1)), 2, "the player's two words")
 
 
+## Plan hoot_turn_after_up (Day 3's solo left ear): the player keeps the ear through a miss and
+## the word stepped up after it, then Hoot finishes the bracket; the count stays the cap.
+func test_hoot_turn_after_the_step_up() -> void:
+	Game.set_setting("quick_visit", true)
+	var s := _screen()
+	s.quick_visit = true
+	s.start_test(_mike(), "left", false, _plan({"hoot_turn_after": 12, "hoot_turn_after_up": true, "level": 40}))
+	# the player's own scores drive it: missed at 40, missed again at 40 (no step up yet), up 5, then any score
+	for move: StringName in [&"present_tone", &"speech_incorrect", &"present_tone", &"speech_incorrect", &"louder", &"present_tone"]:
+		var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
+		assert_true(ok)
+		if not ok:
+			return
+		assert_false(bool(s.get_state()["hoot_turn"]), "still the player's ear before the step-up word is scored (%s)" % move)
+		await tap_action(move)
+	var shown: bool = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(shown)
+	assert_eq(int(s.get_state()["db"]), 45, "the word stepped up 5")
+	await tap_action(&"speech_correct")
+	await wait_frames(2)
+	assert_true(bool(s.get_state()["hoot_turn"]), "Hoot takes over once the step-up word is scored")
+	assert_eq(int(s.get("_player_words")), 3, "after three of the player's words, well under the cap of 12")
+
+
 func test_hoot_turn_stops_when_the_screen_leaves() -> void:
 	Game.set_setting("quick_visit", true)
 	var s := _screen()

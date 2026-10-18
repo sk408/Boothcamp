@@ -11,8 +11,8 @@ extends Node
 ## A, B). Extra invariants: the noise dial stays in 0..100 dB EM, the masker only plays while
 ## MASK is on, and no masker is left playing after a test.
 ## (Speech) --day=3: Mike's Day 3 instead: the SPEECH screen (the coached right ear, Hoot's recheck
-## of it on a fresh session at x8, then the left ear with Hoot's x8 turn after LevelMike's
-## LEFT_SOLO_WORDS), mashing PRESENT / CORRECT / MISSED / the level / STORE / MASK by key and by
+## of it on a fresh session at x8, then the left ear with Hoot's x8 turn after the step up 5, as
+## the level plans it), mashing PRESENT / CORRECT / MISSED / the level / STORE / MASK by key and by
 ## click (with sloppy scores and double STOREs), then the Day 3 board (the cards flip, the
 ## say-along cut short, the drop, OBJECTION!, the stamp) under random arrows, Enter, 1-3, clicks
 ## and drags. Extra invariants: the dial stays in SpeechRules.MIN_DB..MAX_DB; the speech noise only
@@ -158,7 +158,7 @@ func _run_day3() -> void:
 	var tests: Array = [
 		["right", "right", true, {}],
 		["recheck", "right", false, {"fresh_session": true, "hoot_turn_after": 0}],
-		["left", "left", false, {"hoot_turn_after": LevelMike.LEFT_SOLO_WORDS}],
+		["left", "left", false, {"hoot_turn_after": LevelMike.LEFT_SOLO_WORDS, "hoot_turn_after_up": true}],
 	]
 	var res: Dictionary = {}
 	var recheck: Dictionary = {}

@@ -35,9 +35,10 @@ const ECHO_WORDS := 8
 ## non-organic loss. Mike's simulated tones are steady, so the level derives the retest from the
 ## measured result (the shared tone code is left as it is).
 const RETEST_BETTER_DB := 15
-## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
-## reach Mike's first miss below his SRT (down 10 per hit from PTA + 15), and maybe the step back up.
-const LEFT_SOLO_WORDS := 8
+## The solo (left) ear on a quick visit: the player scores words down to Mike's first miss below
+## his SRT (down 10 per hit from PTA + 15: eight words) and the step back up 5, then Hoot finishes
+## the bracket (plan hoot_turn_after_up). This many words is the cap, for a descent that never misses.
+const LEFT_SOLO_WORDS := 12
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
 const STEP_LABELS: Dictionary = {
@@ -471,8 +472,9 @@ func speech_plan(ear: String) -> Dictionary:
 	if ear == "right":
 		plan["intro"] = "Start at his PTA plus 15: %d dB. He should repeat that easily." % start
 	elif quick_visit():
-		plan["intro"] = "Left ear, yours for %d words! PTA plus 15 is %d dB." % [LEFT_SOLO_WORDS, start]
+		plan["intro"] = "Left ear: yours to the first miss and back up 5! PTA plus 15 is %d dB." % start
 		plan["hoot_turn_after"] = LEFT_SOLO_WORDS
+		plan["hoot_turn_after_up"] = true
 	else:
 		plan["intro"] = "Left ear, your turn! PTA plus 15 is %d dB." % start
 	return plan

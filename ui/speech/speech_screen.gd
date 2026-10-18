@@ -76,6 +76,9 @@ var _clock := 0.0
 ## Words the player presented on this ear (Hoot's turn starts after plan hoot_turn_after of them).
 var _player_words := 0
 var _hoot_after := -1
+## Plan hoot_turn_after_up: Hoot also takes over once the player has scored the word stepped up
+## after a miss (the bracket's first "missed: up 5"); hoot_turn_after stays the cap.
+var _hoot_after_up := false
 var _last_scored: Variant = null
 var _pending: Array = []          ## [kind, data] technique tips held until the answer shows
 var _pending_reactions: Array = []  ## [kind, data] patient reactions held until the answer shows
@@ -220,7 +223,9 @@ func _call_solver(solver: Callable) -> void:
 ## Begin one ear (§9.7). The session is made on the first call and kept between ears.
 ## Plan keys: test ("srt"), tones (§5.1, for the PTA), list, words, exclude, level, transducer,
 ## hoot_turn_after (player words before Hoot finishes at x8 on a quick visit; 0 = Hoot runs the
-## ear; missing = never), intro, hoot_turn_text, show_agreement (default true), done_title,
+## ear; missing = never), hoot_turn_after_up (with hoot_turn_after: Hoot takes over as soon as the
+## player has scored a word stepped up after a miss, the count staying the cap), intro,
+## hoot_turn_text, show_agreement (default true), done_title,
 ## low_start_ok (SpeechSession), fresh_session (this ear on a new session: Hoot's recheck; the
 ## player's session comes back on the next start_test without it).
 func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dictionary = {}) -> void:
@@ -256,6 +261,7 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_coached = coached
 	_show_agreement = bool(_plan.get("show_agreement", true)) and session.test == &"srt"
 	_hoot_after = int(_plan["hoot_turn_after"]) if _plan.has("hoot_turn_after") else -1
+	_hoot_after_up = bool(_plan.get("hoot_turn_after_up", false))
 	_player_words = 0
 	_talking = false
 	_listening = false
@@ -541,9 +547,20 @@ func _score(correct: bool) -> void:
 	if not _auto_running and correct and correct == truth:
 		_maybe_tell(db)
 	_refresh()
-	if not _auto_running and quick_visit and _hoot_after > 0 and _player_words >= _hoot_after and not session.is_done() \
-			and not _hoot_done_ears.has(_ear):
+	if not _auto_running and quick_visit and _hoot_after > 0 and (_player_words >= _hoot_after or (_hoot_after_up and _stepped_up())) \
+			and not session.is_done() and not _hoot_done_ears.has(_ear):
 		_start_hoot_turn()
+
+
+## The last two scored words: a miss, then a word above it (by the player's own scores): the
+## bracket's first "missed: up 5" (plan hoot_turn_after_up).
+func _stepped_up() -> bool:
+	var list := session.trials_for()
+	if list.size() < 2:
+		return false
+	var prev: Dictionary = list[list.size() - 2]
+	var last: Dictionary = list[list.size() - 1]
+	return prev["scored"] is bool and not bool(prev["scored"]) and last["scored"] is bool and int(last["db"]) > int(prev["db"])
 
 
 ## "The tell" (once per visit): a word rightly scored repeated TELL_GAP_DB or more below the ear's
