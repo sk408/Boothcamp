@@ -1,8 +1,9 @@
 extends TestCase
 ## (Speech) The SPEECH screen (CONTRACTS.md §9.7): API and state keys, never the AudiOtron, a full
 ## coached SRT on Mike by keys and by mouse clicks on the anchors, the awaiting_input(&"speech")
-## beat and its solver (and a stale solver), Hoot's x8 turn (time scale restored), the level locked
-## while a word plays, and the swapped key style.
+## beat and its solver (and a stale solver), Hoot's x8 turn (time scale restored), Hoot's recheck on
+## a fresh session, the tell and the coached ear's STORE guard, the feedback after a store (no
+## praise off the bracket), the level locked while a word plays, and the swapped key style.
 
 const SCREEN := "res://ui/speech/speech_screen.tscn"
 const SCRATCH_SAVE := "user://test_speech_screen_save.json"
@@ -431,6 +432,102 @@ func test_hoot_turn_stops_when_the_screen_leaves() -> void:
 	s.free()
 	await wait_frames(30)
 	assert_eq(Engine.time_scale, base)
+
+
+func test_fresh_session_recheck_keeps_the_player_session() -> void:
+	Game.set_setting("quick_visit", true)
+	var s := _screen()
+	s.quick_visit = true
+	var finished: Array = []
+	s.test_finished.connect(func(r: Dictionary) -> void: finished.append(r))
+	s.start_test(_mike(), "right", false, _plan({"hoot_turn_after": 0}))
+	var done: bool = await _wait_until(func() -> bool: return finished.size() == 1, 30.0)
+	assert_true(done, "the first right ear is stored")
+	if not done:
+		return
+	var mine := s.session
+	s.start_test(_mike(), "right", false, _plan({"hoot_turn_after": 0, "fresh_session": true}))
+	assert_ne(s.session, mine, "the recheck gets a fresh session")
+	assert_false(s.session.is_done("right"), "and starts the ear from scratch")
+	done = await _wait_until(func() -> bool: return finished.size() == 2, 30.0)
+	assert_true(done, "Hoot finishes the recheck")
+	if not done:
+		return
+	var re: Dictionary = ((finished[1] as Dictionary)["speech"] as Dictionary)["srt"]
+	assert_true(bool((re.get("right", {}) as Dictionary).get("by_hoot", false)), "the recheck is Hoot's")
+	assert_false(re.has("left"))
+	s.start_test(_mike(), "left", false, _plan({"hoot_turn_after": 0}))
+	assert_eq(s.session, mine, "the next ear goes back to the player's session")
+	assert_true(mine.is_done("right"), "its right SRT untouched")
+	done = await _wait_until(func() -> bool: return finished.size() == 3, 30.0)
+	assert_true(done)
+	if done:
+		var both: Dictionary = ((finished[2] as Dictionary)["speech"] as Dictionary)["srt"]
+		assert_true(both.has("right") and both.has("left"), "both ears in the player's results")
+
+
+func test_tell_points_at_the_meter_and_the_coach_comes_back() -> void:
+	Hoot.reset_visit()   # the tell is once per visit: an earlier test may have used it
+	var s := _screen()
+	s.start_test(_mike(), "right", true, _plan())
+	var coached: bool = await _wait_until(func() -> bool: return String(Hoot.current_tip().get("target", "")).ends_with("_button"), 5.0)
+	assert_true(coached, "the coach's tip is up")
+	s.call("_maybe_tell", 50)   # PTA 72 - 50: not far enough below
+	assert_false(String(Hoot.current_tip().get("text", "")).contains("below"), "no tell above the gap")
+	s.call("_maybe_tell", 35)
+	var tip := Hoot.current_tip()
+	assert_true(String(tip.get("text", "")).contains("below his beeps"), "the tell: " + String(tip.get("text", "")))
+	assert_eq(String(tip.get("target", "")), "agreement_meter", "the hand points at the meter, not at his answer")
+	Hoot.dismiss_current()
+	await wait_frames(2)
+	assert_true(String(Hoot.current_tip().get("target", "")).ends_with("_button"), "the coach's tip comes back")
+	s.call("_maybe_tell", 30)
+	assert_false(String(Hoot.current_tip().get("text", "")).contains("below his beeps"), "once per visit")
+
+
+func test_coached_ear_never_stores_off_the_bracket() -> void:
+	var s := _screen()
+	s.start_test(_mike(), "right", true, _plan())
+	# one textbook word, then STORE twice in a row
+	var words := 0
+	while words < 1:
+		var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
+		assert_true(ok)
+		if not ok:
+			return
+		var act: StringName = s.session.recommended_action()["action"]
+		await tap_action(SpeechScreen.ACTION_INPUTS[act])
+		if act == &"score_correct" or act == &"score_missed":
+			words += 1
+	await _wait_until(_player_turn.bind(s), 10.0)
+	await tap_action(&"store")
+	await wait_frames(2)
+	await tap_action(&"store")
+	await wait_frames(2)
+	assert_false(s.session.is_done("right"), "the coach keeps the right ear by the book")
+	assert_true(bool(s.get_state()["accepting_input"]))
+
+
+func test_feedback_after_a_store() -> void:
+	var good := {"stored_db": 30, "candidate_db": 30, "errors": [], "golf": "par", "strokes": 12, "par": 12, "by_hoot": false}
+	assert_true(SpeechScreen.is_bracketed(good))
+	assert_eq(SpeechScreen.golf_text(good), ["Par!", "12 words, par 12"] as Array[String])
+	assert_eq(SpeechScreen._done_sub(good), "ear done: nice work!")
+	var over := good.duplicate()
+	over["strokes"] = 14
+	assert_eq(SpeechScreen.golf_text(over)[0], "Clean!", "a clean run over par never reads Par!")
+	var early := {"stored_db": 65, "candidate_db": SpeechRules.NO_SRT, "errors": [&"srt_store_no_bracket"], "golf": "par", "strokes": 2, "par": 12, "by_hoot": false}
+	assert_false(SpeechScreen.is_bracketed(early))
+	assert_eq(SpeechScreen.golf_text(early)[0], "Oops!", "no golf praise off the bracket")
+	assert_false(SpeechScreen._done_sub(early).contains("nice work"), "no 'nice work' off the bracket")
+	var off := {"stored_db": 40, "candidate_db": 30, "errors": [], "golf": "par", "strokes": 9, "par": 12}
+	assert_false(SpeechScreen.is_bracketed(off), "stored away from the bracket")
+	assert_true(SpeechScreen._done_sub(off).contains("30"), SpeechScreen._done_sub(off))
+	var keyed := good.duplicate()
+	keyed["bracketed"] = false
+	assert_false(SpeechScreen.is_bracketed(keyed), "the session's own key wins")
+	var hoot := {"stored_db": 30, "candidate_db": 30, "by_hoot": true, "golf": "hoot"}
+	assert_false(SpeechScreen._done_sub(hoot).contains("nice work"))
 
 
 func test_no_hoot_turn_without_quick_visit() -> void:

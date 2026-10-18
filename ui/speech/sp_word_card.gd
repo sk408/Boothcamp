@@ -1,7 +1,7 @@
 class_name SpWordCard
 extends Control
 ## SpWordCard: the clinician's word card (ui/speech only). A ruled index card showing the word the
-## next PRESENT will say (the patient never sees it), split into its two parts ("CUP . CAKE").
+## next PRESENT will say (the patient never sees it), split into its two parts ("RAIN . BOW").
 ## States: &"idle" (NEXT WORD), &"talking" (NOW SAYING, glowing), &"listening" (waiting for his
 ## answer), &"score" (SCORE IT: compare the card with what he said), &"done" (the SRT is stored),
 ## &"empty" (no word list yet). A new word arrives with a quick card flip.
@@ -20,10 +20,15 @@ var state: StringName = &"empty":
 		queue_redraw()
 var number: int = 0
 var words_left: int = 0
-## Shown after the ear is done ("SRT 30 dB").
+## Shown after the ear is done ("SRT 30 dB"), with a small line under it (praise only when the
+## store was bracketed: the screen picks it from the sheet).
 var done_text: String = "":
 	set(v):
 		done_text = v
+		queue_redraw()
+var done_sub: String = "ear done: nice work!":
+	set(v):
+		done_sub = v
 		queue_redraw()
 var _word := ""
 var _parts: Array = []
@@ -104,7 +109,8 @@ func _draw() -> void:
 		AoDraw.text_c(self, c, "no word list yet" if state == &"empty" else "out of words!", 18, Palette.INK_SOFT, AoDraw.FONT_SEMI)
 	elif state == &"done":
 		AoDraw.text_c(self, c + Vector2(0, -8), done_text if done_text != "" else "SRT STORED", 30, Palette.ear_color(ear), AoDraw.FONT_BOLD)
-		AoDraw.text_c(self, c + Vector2(0, 26), "ear done: nice work!", 14, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+		if done_sub != "":
+			AoDraw.text_c(self, c + Vector2(0, 26), done_sub, 14, Palette.INK_SOFT, AoDraw.FONT_SEMI)
 	else:
 		_draw_word(c, r.size.x - 60.0)
 	# status line

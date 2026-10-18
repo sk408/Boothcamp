@@ -6,10 +6,11 @@ extends CanvasLayer
 ## Stage.audiometer and never emits audiometry_started.
 ##
 ## One word: PRESENT says the next word on the clinician's card (TALK lamp, SpeechVoice), then
-## after the patient's pause his answer pops up in the speech bubble ("Cupcake!", "...cake?",
+## after the patient's pause his answer pops up in the speech bubble ("Rainbow!", "...bow?",
 ## "Huh?"). The player scores what he SAID: CORRECT or MISSED. Got it = down 10, missed = up 5;
-## STORE once the SRT ladder shows a bracket. The agreement meter (the "lie detector") then swings
-## to |SRT - PTA| and clunks into place: with Mike it slams into the red.
+## STORE once the SRT ladder shows a bracket (the speech recognition threshold). The agreement
+## meter (the "lie detector") then swings to |SRT - PTA| and clunks into place: with Mike it slams
+## into the red.
 ## Keys and mouse both work everywhere: every control is a clickable AoButton with its key chip.
 
 ## Emitted after the ear-complete fanfare. results: §9.5, merged with the tone results.
@@ -40,8 +41,11 @@ const REPEAT_TIPS: Array[StringName] = [&"srt_wrong_step", &"misscored", &"srt_s
 const TIP_COOLDOWN_S := 20.0
 ## Session observations that would give the answer away before it shows: held until then.
 const HOLD_KINDS: Array[StringName] = [&"half_word", &"cross_heard_speech"]
-## A STORE before the scores bracket an SRT warns first; a second press this soon stores anyway.
+## A STORE before the scores bracket an SRT warns first; a second press this soon stores anyway
+## (never on the coached ear: the coach keeps that one by the book).
 const STORE_CONFIRM_S := 4.0
+## "The tell": Hoot's once-per-visit note when a word is repeated this far (dB) below the ear's PTA.
+const TELL_GAP_DB := 30
 const TEXTBOOK_CALLOUTS: Array[String] = ["Textbook!", "Clean score!", "By the book!", "Sharp ears!", "Clinic-grade!", "Smooth!"]
 ## Golf callout colours (par is sunny yellow, never an ear colour).
 const GOLF_COLORS: Dictionary[StringName, Color] = {
@@ -51,6 +55,10 @@ const GOLF_COLORS: Dictionary[StringName, Color] = {
 const AGREEMENT_COLORS: Dictionary[StringName, Color] = {&"good": Color("#5bc8a3"), &"fair": Color("#ffb627"), &"poor": Color("#ff6f59")}
 
 var session: SpeechSession
+## Plan "fresh_session" (Hoot's recheck) parks the player's session here; it comes back on the
+## next start_test without that key, with its sheets (the grade) untouched.
+var _kept_session: SpeechSession
+var _fresh_active := false
 ## Quick visit (setting, --quick / --full): plan "hoot_turn_after" hands the ear to Hoot.
 var quick_visit := true
 var _plan: Dictionary = {}
@@ -212,21 +220,34 @@ func _call_solver(solver: Callable) -> void:
 ## Begin one ear (§9.7). The session is made on the first call and kept between ears.
 ## Plan keys: test ("srt"), tones (§5.1, for the PTA), list, words, exclude, level, transducer,
 ## hoot_turn_after (player words before Hoot finishes at x8 on a quick visit; 0 = Hoot runs the
-## ear; missing = never), intro, hoot_turn_text, show_agreement (default true), done_title.
+## ear; missing = never), intro, hoot_turn_text, show_agreement (default true), done_title,
+## low_start_ok (SpeechSession), fresh_session (this ear on a new session: Hoot's recheck; the
+## player's session comes back on the next start_test without it).
 func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dictionary = {}) -> void:
 	if patient == null:
 		push_error("SpeechScreen.start_test: no patient")
 		return
 	if _auto_running:
 		_end_hoot_turn()
+	var fresh := bool(plan.get("fresh_session", false))
+	if fresh:
+		if not _fresh_active:
+			_kept_session = session
+			_fresh_active = true
+		session = null
+	elif _fresh_active:
+		session = _kept_session   # null when there was none: a new one below
+		_kept_session = null
+		_fresh_active = false
 	if session == null or session.patient.id != patient.id:
 		session = SpeechSession.new(patient, Game.rng.randi())
 		session.technique.connect(_on_technique)
 		session.combo_changed.connect(_on_combo)
 		session.reaction.connect(_on_reaction)
 		session.stored.connect(_on_stored)
-		_hoot_done_ears.clear()
-		_tip_last.clear()
+		if not fresh:
+			_hoot_done_ears.clear()
+			_tip_last.clear()
 	_voice.stop()
 	_plan = plan.duplicate(true)
 	session.configure(_plan)
@@ -517,13 +538,27 @@ func _score(correct: bool) -> void:
 	Sfx.play(&"ding" if correct else &"click", 1.1 if correct else 0.8, -8.0 if not _auto_running else -16.0)
 	var at := _bubble.badge_global()
 	_fx.burst(at, Palette.MINT if correct else Palette.CORAL, 8 if not _auto_running else 4, 180.0)
-	if not _auto_running and not _coached and correct and correct == truth and not is_nan(session.pta_for(session.ear)) \
-			and float(db) <= session.pta_for(session.ear) - 20.0:
-		Hoot.say_once("speech_tell", _say("{He}'s repeating words %d dB below {his} beeps. Hmm!") % roundi(session.pta_for(session.ear) - db), Hoot.NORMAL, "agreement_meter" if _show_agreement else "speech_ladder")
+	if not _auto_running and correct and correct == truth:
+		_maybe_tell(db)
 	_refresh()
 	if not _auto_running and quick_visit and _hoot_after > 0 and _player_words >= _hoot_after and not session.is_done() \
 			and not _hoot_done_ears.has(_ear):
 		_start_hoot_turn()
+
+
+## "The tell" (once per visit): a word rightly scored repeated TELL_GAP_DB or more below the ear's
+## PTA. Hoot's hand points at the agreement meter (never at the answer being judged); on the
+## coached ear the coach's line comes back after it.
+func _maybe_tell(db: int) -> void:
+	var pta := session.pta_for(session.ear)
+	if is_nan(pta) or float(db) > pta - TELL_GAP_DB:
+		return
+	var msg := _say("{He}'s repeating words %d dB below {his} beeps. Hmm!") % roundi(pta - db)
+	var target := "agreement_meter" if _show_agreement else "speech_ladder"
+	if _coach_active:
+		_interrupt_coach(&"speech_tell", msg, target, false)
+	else:
+		_tip(&"speech_tell", msg, target)
 
 
 func _level(direction: int) -> void:
@@ -567,13 +602,18 @@ func _store() -> void:
 		b.wiggle()
 		Hoot.say("Say a few words first, then store the SRT.", Hoot.NORMAL, "speech_present_button")
 		return
-	if session.candidate() == SpeechRules.NO_SRT and not _auto_running and _clock - _store_warn_t > STORE_CONFIRM_S:
+	# no bracket yet: warn first (a second press soon after stores anyway, except on the coached ear)
+	if session.candidate() == SpeechRules.NO_SRT and not _auto_running and (_coached or _clock - _store_warn_t > STORE_CONFIRM_S):
 		_store_warn_t = _clock
 		_store_warns += 1
 		b.wiggle()
 		Sfx.play(&"error", 1.0, -10.0)
-		Hoot.say(session.tip_text(&"srt_store_no_bracket"), Hoot.HIGH, "speech_ladder")
-		_fx.chip("not bracketed: press again to store anyway", b.get_global_rect().get_center() + Vector2(0, -92), Palette.PAPER, Palette.INK, 15, 2.2)
+		if _coach_active:
+			_interrupt_coach(&"srt_store_no_bracket", session.tip_text(&"srt_store_no_bracket"), "speech_ladder", true)
+		else:
+			Hoot.say(session.tip_text(&"srt_store_no_bracket"), Hoot.HIGH, "speech_ladder")
+		var chip := "not bracketed yet: keep going" if _coached else "not bracketed: press again to store anyway"
+		_fx.chip(chip, b.get_global_rect().get_center() + Vector2(0, -92), Palette.PAPER, Palette.INK, 15, 2.2)
 		_refresh()
 		return
 	_store_warn_t = -100.0
@@ -659,7 +699,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 func _handle_technique(kind: StringName, data: Dictionary) -> void:
 	var auto := bool(data.get("auto", false)) or _auto_running
 	match kind:
-		&"speech_textbook", &"srt_good_start", &"srt_store_ok":
+		&"speech_textbook", &"srt_good_start", &"srt_store_ok", &"srt_low_start":
 			var n := int(data.get("combo", 0))
 			Sfx.play_note(523.25 * pow(2.0, minf(n, 24) / 12.0), -14.0 if not auto else -22.0)
 			if auto:
@@ -675,6 +715,13 @@ func _handle_technique(kind: StringName, data: Dictionary) -> void:
 				_fx.callout(word, c, Palette.MINT, 36, "", randf_range(-6.0, 6.0))
 				_fx.stars(c, 8, Palette.SUNNY)
 				Sfx.play(&"ding", 1.0 + 0.04 * minf(n, 20), -8.0)
+			# a clean move can carry Hoot's praise (srt_low_start: starting low once answers look exaggerated)
+			var praise := String(data.get("message", ""))
+			if praise != "":
+				if _coach_active:
+					_interrupt_coach(kind, praise, _target_for(kind, data), false)
+				else:
+					_tip(kind, praise, _target_for(kind, data))
 		&"srt_stored", &"birdie", &"eagle", &"albatross":
 			pass   # celebrated in _on_stored
 		&"srt_agreement":
@@ -740,7 +787,7 @@ func _target_for(kind: StringName, data: Dictionary) -> String:
 			return "speech_softer_button" if bool(data.get("prev_correct", false)) else "speech_louder_button"
 		&"misscored":
 			return "speech_correct_button" if StringName(String(data.get("said_kind", ""))) == &"correct" else "speech_incorrect_button"
-		&"srt_store_no_bracket", &"srt_store_wrong_level":
+		&"srt_store_no_bracket", &"srt_store_wrong_level", &"srt_low_start":
 			return "speech_ladder"
 		&"speech_marathon":
 			return "speech_store_button"
@@ -782,6 +829,7 @@ func _on_stored(ear: String, test: StringName, sheet: Dictionary) -> void:
 		_meter.lock_in(db, float(sheet.get("pta", NAN)), StringName(String(sheet.get("agreement", ""))))
 	_card.state = &"done"
 	_card.done_text = "SRT %d dB" % db
+	_card.done_sub = _done_sub(sheet)
 	Events.speech_stored.emit(ear, test, sheet)
 	if not by_hoot:
 		_golf_callout(sheet)
@@ -789,6 +837,23 @@ func _on_stored(ear: String, test: StringName, sheet: Dictionary) -> void:
 		_fx.chip("Hoot: SRT %d dB" % db, _ladder.row_global(db) + Vector2(0, -36), Palette.HOOT_FACE, Palette.INK, 16, 1.2)
 	_refresh()
 	_complete_ear()
+
+
+## Was this sheet's stored level the bracketed SRT? The sheet's "bracketed" (SpeechSession), else
+## worked out from candidate_db and stored_db (older sheets).
+static func is_bracketed(sheet: Dictionary) -> bool:
+	var cand := int(sheet.get("candidate_db", SpeechRules.NO_SRT))
+	return bool(sheet.get("bracketed", cand != SpeechRules.NO_SRT and int(sheet.get("stored_db", -999)) == cand))
+
+
+## The word card's line under "SRT 30 dB": praise only for a bracketed store.
+static func _done_sub(sheet: Dictionary) -> String:
+	if bool(sheet.get("by_hoot", false)):
+		return "stored by Hoot, by the book"
+	if not is_bracketed(sheet):
+		var cand := int(sheet.get("candidate_db", SpeechRules.NO_SRT))
+		return "stored before a bracket" if cand == SpeechRules.NO_SRT else "the bracket said %d dB" % cand
+	return "ear done: nice work!" if (sheet.get("errors", []) as Array).is_empty() else "ear done: check Hoot's tips"
 
 
 func _stamp_jolt(serial: int) -> void:
@@ -802,21 +867,29 @@ func _stamp_jolt(serial: int) -> void:
 
 func _golf_callout(sheet: Dictionary) -> void:
 	var golf := StringName(String(sheet.get("golf", "par")))
-	var errs: Array = sheet.get("errors", [])
-	var word := String(golf).replace("_", " ").capitalize() + "!"
-	var sub := "%d words, par %d" % [int(sheet.get("strokes", 0)), int(sheet.get("par", 0))]
-	var col: Color = GOLF_COLORS.get(golf, Palette.PAPER)
-	var big := golf in [&"birdie", &"eagle", &"albatross"]
-	if not errs.is_empty():
-		word = "Oops!"
-		col = Palette.PAPER
-		sub = "check Hoot's tip"
-		big = false
+	var text := golf_text(sheet)
+	var col: Color = GOLF_COLORS.get(golf, Palette.PAPER) if text[0] != "Oops!" else Palette.PAPER
+	var big := golf in [&"birdie", &"eagle", &"albatross"] and text[0] != "Oops!"
 	var at := _ladder.row_global(int(sheet.get("stored_db", 0))) + Vector2(0, -70)
-	_fx.callout(word, at, col, 46 if big else 36, sub, randf_range(-7.0, 3.0), 1.6)
+	_fx.callout(text[0], at, col, 46 if big else 36, text[1], randf_range(-7.0, 3.0), 1.6)
 	if big:
 		_fx.confetti(at, 18)
 		Sfx.play(&"chirp", 1.0, -6.0)
+
+
+## [callout, small line] after the player's store: the golf name over "words, par" for a clean,
+## bracketed SRT ("Clean!" when a clean run over par still counts as par: never "Par!" over
+## "14 words, par 12"); "Oops!" after a slip or an SRT stored off its bracket (no golf praise).
+static func golf_text(sheet: Dictionary) -> Array[String]:
+	var golf := StringName(String(sheet.get("golf", "par")))
+	var strokes := int(sheet.get("strokes", 0))
+	var par := int(sheet.get("par", 0))
+	if not (sheet.get("errors", []) as Array).is_empty() or not is_bracketed(sheet):
+		return ["Oops!", "check Hoot's tip"]
+	var word := String(golf).replace("_", " ").capitalize() + "!"
+	if golf == &"par" and strokes > par:
+		word = "Clean!"
+	return [word, "%d words, par %d" % [strokes, par]]
 
 
 func _on_meter_clunked(agreement: StringName) -> void:
@@ -874,10 +947,13 @@ func _celebrate(serial: int) -> void:
 	if serial != _ear_serial or not is_inside_tree() or session == null:
 		return
 	var st := get_state()
-	Sfx.play(&"fanfare", 1.0, -6.0)
+	var sheet: Dictionary = (session.sheets[session.test] as Dictionary).get(_ear, {})
 	var r := _ladder.get_global_rect()
 	var c := Vector2(r.get_center().x, r.position.y + r.size.y * 0.42)
-	_fx.confetti(c + Vector2(0, -40), 36, 380.0)
+	# no fanfare for an SRT stored off its bracket
+	if bool(sheet.get("by_hoot", false)) or is_bracketed(sheet):
+		Sfx.play(&"fanfare", 1.0, -6.0)
+		_fx.confetti(c + Vector2(0, -40), 36, 380.0)
 	var sub := ""
 	var pta := float(st["pta"])
 	if not is_nan(pta) and StringName(String(st.get("agreement", ""))) != &"":
@@ -1113,7 +1189,7 @@ func _coach_text(a: Dictionary) -> Array:
 				line = "A different word is a miss! Score it MISSED: press %s."
 			return [line % key2, "speech_incorrect_button", "score%d" % n]
 		&"store":
-			return ["Bracketed! %d dB: 2+ right, under half 5 below. Press %s to STORE." % [session.db, _k(&"store")], "speech_store_button", "store%d" % n]
+			return ["Bracketed! %d dB: the softest level with half or more right. Press %s to STORE." % [session.db, _k(&"store")], "speech_store_button", "store%d" % n]
 		&"mask_toggle":
 			return ["This loud, speech can cross over. Press %s: speech noise in the other ear." % _k(&"toggle_mask"), "speech_mask_button", "mask%d" % n]
 	return ["", "", ""]
@@ -1220,7 +1296,8 @@ func _refresh() -> void:
 			var nx := session.next_item()
 			_card.set_word(String(nx.get("text", "")), nx.get("parts", []), trail.size() + 1, int(st["words_left"]))
 			_card.state = &"idle" if not nx.is_empty() else &"empty"
-	_status.set_points(int(st["points"]))
+	# Hoot's recheck (a fresh session) scores nothing: the player's points stay on the display
+	_status.set_points(_kept_session.points if _kept_session != null else int(st["points"]))
 	_refresh_buttons(st)
 	_update_dance(st)
 	_coach_update()
