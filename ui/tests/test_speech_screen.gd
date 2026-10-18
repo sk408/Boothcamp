@@ -520,7 +520,7 @@ func test_low_start_shows_hoot_s_praise() -> void:
 	if not ok:
 		return
 	await tap_action(&"present_tone")
-	var shown: bool = await _wait_until(func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting low"), 10.0)
+	var shown: bool = await _wait_until(func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting below"), 10.0)
 	assert_true(shown, "Hoot's praise: " + String(Hoot.current_tip().get("text", "")))
 	assert_eq(String(Hoot.current_tip().get("target", "")), "speech_ladder")
 	assert_eq(s.session.combo, 1, "a clean check: combo +1")

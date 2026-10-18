@@ -1107,7 +1107,7 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
 | `srt_store_wrong_level` | error | stored a level other than that one (candidate) |
 | `speech_marathon` | error | more than 3x par words in one measurement (once) |
 | `speech_textbook`, `srt_good_start`, `srt_store_ok` | clean | combo +1, points |
-| `srt_low_start` | clean | a first word at least 10 dB below the PTA with plan `low_start_ok`: combo +1, 10 points, Hoot's line in `message` ("Starting low and coming up: smart when answers look exaggerated.") |
+| `srt_low_start` | clean | a first word at least 10 dB below the PTA with plan `low_start_ok`: combo +1, 10 points, Hoot's line in `message` ("Starting below his beeps: smart when answers look exaggerated.") |
 | `birdie` / `eagle` / `albatross` | observation | the SRT hole's golf |
 | `srt_stored`, `srt_agreement` | observation | after a store (agreement, diff, pta); `srt_agreement` carries Hoot's verdict line |
 | `half_word`, `cross_heard_speech`, `speech_mask_needed`, `score_first` | observation | lessons (once each) |

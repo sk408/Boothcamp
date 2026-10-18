@@ -107,7 +107,7 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | SRT start | "Start at his PTA plus 15: 85 dB. He should repeat that easily." |
 | SRT | "SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more." |
 | The dance | "Got it: down 10. Missed: up 5. Another word at the same level is fine too!" (the wrong-step tip: "...Another word here is fine too!") |
-| Low start | "Starting low and coming up: smart when answers look exaggerated." (a first word at least 10 dB below the PTA, once the whisper has been on screen: `low_start_ok`) |
+| Low start | "Starting below his beeps: smart when answers look exaggerated." (a first word at least 10 dB below the PTA, once the whisper has been on screen: `low_start_ok`) |
 | Scoring | "Score what he SAID. Half a word, a different word, or silence: all misses." |
 | SRT rule | "SRT: the softest level with two right and half or more. Check the trail!" |
 | Bracket (coach) | "Bracketed! 30 dB: the softest level with half or more right. Press S to STORE." |
@@ -173,7 +173,10 @@ words or fewer (`story/tests/test_level_mike.gd::test_hoot_lines_fit`).
    estimated SRT, and allows an ascending start when pseudohypacusis (an exaggerated loss) is suspected. The game
    now scores an ascending start (a first word at least 10 dB below the PTA) clean once the whisper is on screen
    (`low_start_ok`); a start above PTA + 25 is
-   still an error (`SRT_START_MAX_DB` waits for your answer).
+   still an error (`SRT_START_MAX_DB` waits for your answer). Hoot's praise for it, "Starting below his beeps:
+   smart when answers look exaggerated.", only says where the first word sits: a first word at 60 (13 below
+   Mike's PTA) that he still repeats steps down, not up, so the line no longer says "coming up". Is starting
+   10+ dB below the PTA the right trigger, or should it be lower (nearer the expected SRT)?
 3. Agreement bands 6 / 12 dB (good / fair / poor) with the 3-frequency PTA (best two when the three spread 20+).
 4. Is the next step right: re-instruct, retest (an ascending retest?), objective tests that don't need his answers
    (the objective cross-checks: acoustic reflexes, OAEs, ABR / ASSR; a Stenger only for a one-sided claim, so not

@@ -34,8 +34,9 @@ const TIPS: Dictionary[StringName, String] = {
 	&"cross_heard_speech": "Loud speech can cross the skull to the other ear. Mask the other ear!",
 	&"speech_mask_needed": "This loud, speech can cross to the other ear. Speech noise on: press M.",
 	&"score_first": "Score that word first: did {he} say the whole word?",
-	# a clean kind: an ascending start once the plan allows it (low_start_ok)
-	&"srt_low_start": "Starting low and coming up: smart when answers look exaggerated.",
+	# a clean kind: a first word below the PTA once the plan allows it (low_start_ok); true whichever
+	# way the next step goes (he may still repeat it, and then the dial goes down, not up)
+	&"srt_low_start": "Starting below {his} beeps: smart when answers look exaggerated.",
 }
 ## misscored, by what the patient actually said.
 const MISSCORED_TIPS: Dictionary[StringName, String] = {

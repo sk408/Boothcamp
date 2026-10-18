@@ -79,8 +79,9 @@ start (from below, coming up) when an exaggerated loss (pseudohypacusis) is susp
 PTA + 15, with PTA + 10..25 accepted, is a shorter teaching default that Steve reviews (CHAPTER3.md §7 Q2;
 `SRT_START_MAX_DB` stays until he answers). The plan key `low_start_ok` turns the ascending start on: Day 3 sets
 it once Hoot's coffee whisper has been on screen (never from the hidden `non_organic` tag), and a first word
-at least 10 dB below the PTA (`SRT_LOW_START_BELOW_PTA_DB`) then scores clean with Hoot's *"Starting low and
-coming up: smart when answers look exaggerated."* The dial's default (the PTA itself) is not an ascending start, so
+at least 10 dB below the PTA (`SRT_LOW_START_BELOW_PTA_DB`) then scores clean with Hoot's *"Starting below his
+beeps: smart when answers look exaggerated."* (true for any such start: Mike may still repeat a first word at 60,
+and then the next step is down, not up). The dial's default (the PTA itself) is not an ascending start, so
 presenting straight away is still an `srt_start` error.
 
 **On the SPEECH screen.** The sheet's `bracketed` key (stored at the bracketed SRT) decides the praise: "ear done:

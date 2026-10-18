@@ -452,7 +452,7 @@ func test_low_start_ok() -> void:
 	ok.present()
 	assert_eq(_kinds(got_ok), [&"srt_low_start"] as Array[StringName])
 	var d: Dictionary = got_ok[0][1]
-	assert_eq(String(d.get("message", "")), "Starting low and coming up: smart when answers look exaggerated.")
+	assert_eq(String(d.get("message", "")), "Starting below his beeps: smart when answers look exaggerated.")
 	assert_eq(ok.combo, 1, "a clean check: combo +1")
 	assert_eq(ok.checks, 1)
 	assert_eq(ok.clean_checks, 1)

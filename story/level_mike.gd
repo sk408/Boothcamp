@@ -466,7 +466,7 @@ func speech_plan(ear: String) -> Dictionary:
 	var plan := {"test": "srt", "tones": tones, "list": LIST_ID, "words": words.duplicate(), "transducer": String(_air_transducer())}
 	if not dropped.is_empty():
 		plan["exclude"] = dropped.duplicate()
-	# once the coffee whisper has been on screen, starting low and coming up is smart, not a slip
+	# once the coffee whisper has been on screen, starting below his beeps is smart, not a slip
 	plan["low_start_ok"] = _whisper_seen
 	var start := SpeechRules.srt_start(ear_pta(ear))
 	if ear == "right":
