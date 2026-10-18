@@ -29,7 +29,7 @@ func after_each() -> void:
 
 
 func test_registry() -> void:
-	assert_eq(Game.chapters().size(), 2)
+	assert_true(Game.chapters().size() >= 2, "Days 1 and 2, plus any later chapters")
 	var d1 := Game.chapter_for_day(1)
 	var d2 := Game.chapter_for_day(2)
 	assert_eq(d1["id"], "gus")

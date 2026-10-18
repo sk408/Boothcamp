@@ -17,6 +17,8 @@ const PHASES: Array[StringName] = [
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
 	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
 	&"chapter_select", &"bc_placement", &"masking", &"referral",
+	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
+	&"tymp", &"decision",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -30,6 +32,16 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_gus.tscn", "requires": ""},
 	{"id": "bonnie", "day": 2, "title": "Day 2: Bonnie Bunsworth", "patient_id": "bonnie", "teaches": "Bone conduction + masking",
 		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
+	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
+	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
+	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",
+		"scene": "res://story/level_case.tscn", "requires": "bonnie", "case": "noise_notch", "face": "Rocco", "tint": Color("#ffd9c7")},
+	{"id": "marina", "day": 7, "title": "Day 7: Captain Marina Gale", "patient_id": "marina", "teaches": "Case file: a spinning room",
+		"scene": "res://story/level_case.tscn", "requires": "rocco", "case": "menieres", "face": "Marina", "tint": Color("#cfe3ff")},
+	{"id": "dash", "day": 8, "title": "Day 8: Dash Delgado", "patient_id": "dash", "teaches": "Case file: one ear, overnight",
+		"scene": "res://story/level_case.tscn", "requires": "marina", "case": "sudden", "face": "Dash", "tint": Color("#ffe0d6")},
+	{"id": "ginger", "day": 9, "title": "Day 9: Ginger Snapp", "patient_id": "ginger", "teaches": "Case file: voices with a bite missing",
+		"scene": "res://story/level_case.tscn", "requires": "dash", "case": "cookie_bite", "face": "Ginger", "tint": Color("#f3e1ff")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to

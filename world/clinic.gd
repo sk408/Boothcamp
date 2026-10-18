@@ -12,6 +12,7 @@ extends Node3D
 ##   doris_enter() (coroutine), doris_react(kind), gus_look(target), set_title_mode(on),
 ##   play_birdsong(), get_head_screen_position(), take_off_glasses() / put_on_glasses(),
 ##   put_on_hearing_aids(), get_muffle().
+## (cases) patient_spec (set before add_child: a case-file patient's whole look, plus extras).
 ## (v3) patient_id (set before add_child: "bonnie" = Day 2), put_on_bone_oscillator(ear),
 ##   put_on_masking_phone(ear), take_off_bone_oscillator(); story extras put_down_basket(),
 ##   give_croissant() (coroutine), walk_out() (coroutine), patient_name().
@@ -24,6 +25,7 @@ const Room := preload("res://world/room.gd")
 const Bean := preload("res://world/characters/bean.gd")
 const Owl := preload("res://world/characters/owl.gd")
 const Ghost := preload("res://world/characters/ghost.gd")
+const CaseExtras := preload("res://world/characters/case_extras.gd")
 const GREY_SHADER := preload("res://world/shaders/grey_world.gdshader")
 
 ## Every reaction kind the patient understands (Events.patient_reaction / play_patient_reaction).
@@ -74,6 +76,9 @@ var _title_idle := 0.0
 ## (v3) Which bean walks in: "" / "gus" = Grandpa Gus, "bonnie" = Bonnie. Set before add_child.
 ## (The patient node keeps the name `gus` so every existing call keeps working.)
 var patient_id := ""
+## (cases) A whole bean spec for a case-file patient (story CaseData.bean_spec), set before add_child.
+## Wins over patient_id's built-in look; its "extras" (hats, props) come from characters/case_extras.gd.
+var patient_spec: Dictionary = {}
 var _bone: Node3D
 var _bone_box: Node3D
 var _bone_rings: Node3D
@@ -106,8 +111,12 @@ func _ready() -> void:
 	_build_environment()
 	refs = Room.build(self, Game.has_upgrade("comfy_chair"))
 	gus = Bean.new()
-	gus.build(Bean.spec_for(patient_id) if patient_id != "" else Bean.GUS)
+	if not patient_spec.is_empty():
+		gus.build(patient_spec)
+	else:
+		gus.build(Bean.spec_for(patient_id) if patient_id != "" else Bean.GUS)
 	add_child(gus)
+	CaseExtras.attach(gus, patient_spec)
 	gus.position = SPOTS[&"door"]
 	doris = Bean.new()
 	doris.build(Bean.DORIS)

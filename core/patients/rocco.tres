@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_case"]
+
+[resource]
+script = ExtResource("1_case")
+id = "rocco"
+display_name = "Rocco Rimshot"
+age = 52
+complaint = "Everybody at the pub mumbles. And my ears ring like a cymbal that never stops."
+thresholds_right = Dictionary[int, int]({
+250: 15,
+500: 15,
+750: 20,
+1000: 25,
+1500: 30,
+2000: 40,
+3000: 55,
+4000: 60,
+6000: 55,
+8000: 40
+})
+thresholds_left = Dictionary[int, int]({
+250: 15,
+500: 20,
+750: 20,
+1000: 25,
+1500: 35,
+2000: 45,
+3000: 60,
+4000: 65,
+6000: 60,
+8000: 45
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.5
+reaction_time_min_s = 0.3
+reaction_time_max_s = 0.7
+psychometric_slope_db = 1.8
+attention = 0.95
+fatigue_per_tone = 0.0008
+min_tone_s = 0.5
+rhythm_sensitivity = 0.8
+tinnitus_hz = 4000
+tags = PackedStringArray("noise", "sensorineural", "bilateral", "case")
+pronoun = "he"
+nickname = "Rocco"

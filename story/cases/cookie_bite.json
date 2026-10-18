@@ -1,0 +1,149 @@
+{
+	"id": "cookie_bite",
+	"patient_id": "ginger",
+	"speaker": "Ginger",
+	"case_title": "GINGER SNAPP'S CASE",
+	"look": {
+		"face": "bonnie", "skin": "#f3c7a3", "skin_shade": "#d9a07c", "nose": "#e9a984",
+		"cardigan": "#9b5de5", "pants": "#5a3d2b", "shirt": "#fff3dc", "accent": "#ff6f59", "shoes": "#7a4b2a",
+		"hair": "#d9622b", "hair_style": "beehive", "mustache": false, "brows": false,
+		"glasses": "round", "glasses_color": "#2d6cdf", "walker": false, "prop": "",
+		"extras": [],
+		"portrait_bg": "#f3e1ff", "name_color": "#7b3fbf"
+	},
+	"intro": [
+		["Ginger", "Hello! Ginger Snapp, Crumb and Co. cookies. I brought samples. The snickerdoodles are still warm!"],
+		{"hoot": "wing_up"},
+		["Hoot", "Day 9, trainee: the Case Files. And... are those cookies? Focus, Hoot. Focus."],
+		{"react": "confused"},
+		["Ginger", "My customers' voices drop out in the middle. Like a cookie with a bite missing!"],
+		["Hoot", "A bite missing from the middle? Interesting choice of words. Let's dig in."]
+	],
+	"always_clues": [
+		{"tag": "middle_drop", "text": "Voices drop out 'in the middle'"}
+	],
+	"history": [
+		{
+			"prompt": "Ask Ginger a question:",
+			"options": [
+				["How long has your hearing been like this?", 2, "Since school! The school hearing tests found it. It hasn't really changed since.", "Found at school; the same ever since", "since_school", "Found years ago and stable since. That's a useful clue!"],
+				["Which cookie is your best seller?", 0, "Ginger snaps, obviously. It's practically the law.", "", ""],
+				["Does anyone in your family have hearing trouble?", 2, "Dad and Grandma! Their hearing tests look just like mine. A family recipe.", "Dad and Grandma have the same pattern", "family", "Same pattern in the family. Hearing patterns can run in families."]
+			]
+		},
+		{
+			"prompt": "Next question:",
+			"options": [
+				["Any ear pain, drainage, dizziness, or sudden change?", 2, "None of those. Same as ever, really. I just need to hear my customers now.", "No pain, drainage, dizziness or sudden change", "no_red_flags"],
+				["Is it both ears?", 1, "Both, about the same. I just smile and nod a lot.", "Both ears, about the same", "both_ears"],
+				["Can I have a snickerdoodle?", 0, "Of course! *crunch* ...Wait, you're the owl's trainee? Take two.", "", ""]
+			]
+		}
+	],
+	"joke_line": "Delicious, but not a clue. Ask about her hearing!",
+	"red_flags": {
+		"tag": "no_red_flags",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or one-sided change.",
+		"answer": "None of those. Same as ever, really. I just need to hear my customers now.",
+		"clue": "No pain, drainage, dizziness or sudden change",
+		"card": "Pain, drainage, dizziness, sudden change: NONE.\nThe same since school.",
+		"card_kind": "clue"
+	},
+	"after_history": [
+		["Hoot", "Both ears, the same for years, no red flags so far. Let's take a look!"]
+	],
+	"otoscopy": {
+		"ear": "right",
+		"caption": "Ginger's RIGHT ear: clear canal, shiny eardrum.",
+		"lines": [
+			["Hoot", "Clear canals, healthy eardrums. Not a single crumb."],
+			["Ginger", "A miracle. I'm usually covered in crumbs."]
+		],
+		"clue": "Canals clear, eardrums normal",
+		"tag": "ear_clear"
+	},
+	"tymp": {
+		"tip": "small",
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.7, "ecv_ml": 1.0},
+		"left": {"type": "A", "peak_daPa": -5, "peak_ml": 0.6, "ecv_ml": 1.0},
+		"clue": "Tymp: type A both ears (middle ears move fine)",
+		"tag": "tymp_a",
+		"after": [
+			["Hoot", "Type A both sides: the middle ears move fine. The trouble is deeper in."]
+		]
+	},
+	"instructions": [
+		["Hoot", "Tell her: press for every beep, even the faint ones."],
+		["Ginger", "Like listening for the shop bell. On it!"]
+	],
+	"audiometry": [
+		{"ear": "right", "test": "ac", "hoot_turn_after": 6, "intro": "Right ear's yours. Watch the middle pitches!"},
+		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed. Same shape?"},
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: is it the inner ear?",
+			"before": [["Hoot", "Now the bone buzzer: middle ear or inner ear?"]]}
+	],
+	"after_audiometry": [
+		["Hoot", "Bone matches air: no gap. The inner ear, and both sides alike."]
+	],
+	"reveal": {
+		"pattern": "cookie",
+		"ear": "both",
+		"title": "COOKIE BITE",
+		"lines": [
+			["Hoot", "Worse in the middle, better at both ends: a cookie bite! It often runs in families."],
+			["Ginger", "My ears are SHAPED like my business. That's branding!"],
+			["Hoot", "Both ears alike, the same since school, and bone matches air."]
+		]
+	},
+	"evidence": {
+		"prompt": "What shape is Ginger's hearing loss?",
+		"options": ["A cookie bite: worst in the middle pitches.", "A ski slope: worst in the high pitches.", "A noise notch at 4k."],
+		"answer": 0,
+		"wrong": ["", "Look at 4k and 8k: they come back up.", "Her dip is wider and lower: 1k to 2k, not 4k."],
+		"right": "A cookie bite! The middle pitches carry lots of speech, so voices drop out."
+	},
+	"findings": [
+		{"tag": "cookie", "text": "Worst in the middle pitches (cookie bite)"},
+		{"tag": "symmetric", "text": "Both ears match"},
+		{"tag": "snhl", "text": "Bone matches air: inner ear"}
+	],
+	"decision": {
+		"prompt": "Make the call for Ginger:",
+		"answer": "fit",
+		"lines": {
+			"fit": "Both ears match, stable for years, no red flags: hearing aids tuned for the middle pitches.",
+			"refer": "No red flags: no pain, dizziness or sudden change, and both ears match. She can be fitted.",
+			"today": "She's had this since school. Nothing sudden, so no emergency."
+		}
+	},
+	"clue_pick": {
+		"prompt": "Present the evidence: why is it safe to fit Ginger today?",
+		"answers": ["no_red_flags", "symmetric", "since_school"],
+		"wrong_line": "True, but it doesn't prove she's safe to fit. Look for the red-flag check!",
+		"right_line": "Exactly! Stable, matching ears, no red flags: fitting is the right call."
+	},
+	"payoff": [
+		["Hoot", "Hearing aids tuned for the middle pitches: right where her bite is."],
+		{"do": "hearing_aids"},
+		{"react": "cheer"},
+		["Ginger", "Oh! I can hear the shop bell AND the customer. Both halves of the cookie!"],
+		["Hoot", "A family pattern is worth a chat with her doctor some day. Not a red flag, though."],
+		["Ginger", "Cookies for everyone! Especially the owl."]
+	],
+	"paper": {
+		"headlines": {
+			"S": "COOKIE BITE CRACKED; OWL AWARDED LIFETIME SUPPLY OF SNICKERDOODLES",
+			"A": "BAKER HEARS WHOLE CUSTOMERS AGAIN; CRUMB AND CO. CELEBRATES",
+			"B": "MIDDLE PITCHES FOUND, GINGER FITTED",
+			"C": "SOME BEEPS CRUMBLED, CONFIRMS OWL",
+			"Do-over": "GINGER BACK TOMORROW WITH MORE SAMPLES"
+		},
+		"subheads": {
+			"S": "A textbook cookie bite and a perfect call. Free snickerdoodles at the booth.",
+			"A": "Stable, matching ears, no red flags: fit and tune for the middle.",
+			"B": "The bite showed up; a few stamps crumbled.",
+			"C": "Look for the dip between 1k and 2k.",
+			"Do-over": "Cookie bites sit in the middle pitches. Ginger brings snacks next time."
+		}
+	}
+}

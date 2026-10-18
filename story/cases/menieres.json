@@ -1,0 +1,156 @@
+{
+	"id": "menieres",
+	"patient_id": "marina",
+	"speaker": "Marina",
+	"case_title": "CAPTAIN MARINA GALE'S CASE",
+	"look": {
+		"face": "doris", "skin": "#c98d64", "skin_shade": "#a86f4b", "nose": "#bd7f58",
+		"cardigan": "#1f3a5f", "pants": "#f2efe6", "shirt": "#ffffff", "accent": "#ffd23f", "shoes": "#2b2b2b",
+		"hair": "#2c1e16", "hair_style": "tufts", "mustache": false, "brows": false,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["captain_cap"],
+		"portrait_bg": "#cfe3ff", "name_color": "#1f4f8f"
+	},
+	"intro": [
+		["Marina", "Ahoy! Captain Marina Gale, the island ferry. Sorry, is the floor moving, or is it me?"],
+		{"hoot": "wing_up"},
+		["Hoot", "Day 7, trainee: the Case Files! A captain who feels seasick on dry land. Curious..."],
+		{"react": "confused"},
+		["Marina", "Twenty-five years at sea, never once seasick. Now my living room spins like a whirlpool!"],
+		["Hoot", "A spinning room is a big clue. Let's hear the whole story."]
+	],
+	"always_clues": [
+		{"tag": "spinning", "text": "Room-spinning attacks"}
+	],
+	"history": [
+		{
+			"prompt": "Ask Marina a question:",
+			"options": [
+				["Which ear is the trouble?", 2, "The left. It feels full, like on a plane, and it roars like the sea in a shell.", "LEFT ear: full feeling, roaring", "left_full", "A full, roaring ear on one side. Into the notebook!"],
+				["Do you get seasick on boats?", 0, "Never! I once ate a fish pie in a force nine gale.", "", ""],
+				["Does your hearing change from day to day?", 2, "Yes! Some days the left is fine. Then a spell comes and it's underwater again.", "Hearing comes and goes", "fluctuating", "Hearing that comes and goes. Remember that one!"]
+			]
+		},
+		{
+			"prompt": "Next question:",
+			"options": [
+				["Tell me about the spinning: how long, how often?", 2, "Hours at a time, a few times a month. Then it passes and I'm steady.", "Spinning spells last hours, a few times a month", "dizzy_attacks"],
+				["Any ear pain or drainage?", 1, "No pain, no drips. Just the fullness and the roar.", "No pain or drainage", "no_pain"],
+				["What's the best sea shanty?", 0, "Anything with a chorus. Ten verses minimum.", "", ""]
+			]
+		}
+	],
+	"joke_line": "Shipshape answer, but not a clue. Ask about her ears!",
+	"red_flags": {
+		"tag": "dizzy_attacks",
+		"ask_line": "Always ask about red flags. Dizziness: how long, how often?",
+		"answer": "Hours at a time, a few times a month. Then it passes and I'm steady.",
+		"clue": "Spinning spells last hours, a few times a month",
+		"card": "Dizziness: YES, spinning spells.\nOne ear only: YES = see a doctor.",
+		"card_kind": "flag"
+	},
+	"after_history": [
+		["Marina", "Oh! I brought my hearing check from the harbour health fair, back in spring."],
+		["Hoot", "Brilliant! Old results are gold. We'll compare them with today's."]
+	],
+	"otoscopy": {
+		"ear": "left",
+		"caption": "Marina's LEFT ear: clear canal, shiny eardrum.",
+		"lines": [
+			["Hoot", "Clear canals, healthy eardrums. No seawater, no barnacles."],
+			["Marina", "Barnacles! You laugh, but I've seen things."]
+		],
+		"clue": "Canals clear, eardrums normal",
+		"tag": "ear_clear"
+	},
+	"tymp": {
+		"tip": "medium",
+		"right": {"type": "A", "peak_daPa": 0, "peak_ml": 0.7, "ecv_ml": 1.2},
+		"left": {"type": "A", "peak_daPa": -15, "peak_ml": 0.6, "ecv_ml": 1.1},
+		"clue": "Tymp: type A both ears (middle ears move fine)",
+		"tag": "tymp_a",
+		"after": [
+			["Hoot", "Type A both sides. Her fullness isn't fluid behind the eardrum. It's deeper."]
+		]
+	},
+	"instructions": [
+		["Hoot", "Tell her: press for every beep, even faint ones. Not for the roar!"],
+		["Marina", "Beeps yes, sea no. Aye aye!"]
+	],
+	"audiometry": [
+		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. I'll zip through the right!"},
+		{"ear": "left", "test": "ac", "hoot_turn_after": 7, "intro": "Left ear's all yours. Keep an eye on the low pitches!"},
+		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
+			"before": [["Hoot", "Now the bone buzzer, on her left. Watch out for the Ghost!"]]}
+	],
+	"after_audiometry": [
+		["Hoot", "Masked bone sits with the air: no gap. It's the inner ear."]
+	],
+	"reveal": {
+		"pattern": "rising",
+		"ear": "left",
+		"title": "LOW PITCHES DOWN",
+		"previous": {
+			"ear": "left",
+			"label": "SPRING",
+			"thresholds": {"250": 25, "500": 25, "750": 20, "1000": 20, "1500": 15, "2000": 15, "3000": 15, "4000": 20, "6000": 25, "8000": 30}
+		},
+		"lines": [
+			["Hoot", "Her left ear is worst in the LOW pitches: a rising pattern. The opposite of Gus!"],
+			["Hoot", "And since spring, those low pitches dropped 25 dB. Hearing that comes and goes."],
+			["Marina", "So my ear has tides?"],
+			["Hoot", "Something like tides, yes. And bone matches air, so it's the inner ear."]
+		]
+	},
+	"evidence": {
+		"prompt": "What does Marina's left ear show?",
+		"options": ["Rising: worst in the LOW pitches.", "A noise notch at 4k.", "A ski slope: worst in the high pitches."],
+		"answer": 0,
+		"wrong": ["", "No dip at 4k: her high pitches are nearly fine.", "Look left on the chart: the low pitches are the worst."],
+		"right": "Rising! A low-pitch loss in one ear that changes between visits."
+	},
+	"findings": [
+		{"tag": "left_only", "text": "Left ear only, worst in the low pitches"},
+		{"tag": "changed", "text": "Low pitches 25 dB worse than in spring"},
+		{"tag": "snhl", "text": "Bone matches air: inner ear"}
+	],
+	"decision": {
+		"prompt": "Make the call for Marina:",
+		"answer": "refer",
+		"lines": {
+			"refer": "Spinning spells, a full roaring ear, hearing that comes and goes: an ear doctor should see her.",
+			"fit": "Dizziness is a red flag. Doctor first; hearing aids may help later, between spells.",
+			"today": "Her spells come and go over months, and she's steady today. Soon, not today."
+		}
+	},
+	"clue_pick": {
+		"prompt": "Present the evidence: what sends Marina to a doctor first?",
+		"answers": ["spinning", "dizzy_attacks", "left_only", "left_full", "changed", "fluctuating"],
+		"wrong_line": "True, but that's not a red flag. What would worry a doctor?",
+		"right_line": "Exactly! Dizziness and a one-sided, changing loss: a doctor looks first."
+	},
+	"payoff": [
+		{"do": "letter"},
+		["Hoot", "I'll send the ear doctor today's results and the spring check, side by side."],
+		["Marina", "A doctor for the spins. Then maybe something for the hearing?"],
+		["Hoot", "Exactly. Hearing aids can help between spells, once the doctor has had a look."],
+		{"react": "cheer"},
+		["Marina", "Aye aye. Full steam ahead... slowly."]
+	],
+	"paper": {
+		"headlines": {
+			"S": "CAPTAIN'S SPINNING SPELLS SPOTTED; OWL SALUTES SHARP TRAINEE",
+			"A": "FERRY CAPTAIN STEERED TO EAR DOCTOR; LOW TIDE IN LEFT EAR",
+			"B": "MARINA REFERRED; TRAINEE FINDS SEA LEGS",
+			"C": "SOME BEEPS LOST AT SEA, CONFIRMS OWL",
+			"Do-over": "MARINA SAILS BACK TOMORROW; BRINGS FISH PIE"
+		},
+		"subheads": {
+			"S": "A rising loss, a spring comparison and a perfect call. The ferry runs on time.",
+			"A": "Dizziness plus a one-sided, changing loss: a doctor looks first.",
+			"B": "The rising pattern showed; a few stamps drifted.",
+			"C": "Watch the low pitches, and compare with old results.",
+			"Do-over": "Spinning plus one ear: always a doctor first."
+		}
+	}
+}
