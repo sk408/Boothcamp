@@ -207,6 +207,27 @@ func test_threshold_needs_two_ascending_hits() -> void:
 	assert_eq(s.ascending_threshold("right", 1000), 25, "two ascending hits at 25")
 
 
+## (polish) Heard twice at -10 dB HL, the bottom of the scale: nothing softer to bracket from, so
+## -10 is the threshold (a store there is by the book, and the coach says store).
+func test_floor_response_counts_as_threshold() -> void:
+	var s := _session()
+	var sim := s.sim as FixedSim
+	for lvl: int in [40, 30, 20, 10, 0, -10]:
+		sim.force = {lvl: true}
+		s.set_level(lvl)
+		_present(s)
+	assert_eq(s.ascending_threshold("right", 1000), null, "one floor hit is not enough")
+	_present(s)
+	assert_eq(s.ascending_threshold("right", 1000), ClinicRules.MIN_DB, "heard twice at the floor")
+	assert_eq(StringName(s.recommended_action()["action"]), &"store")
+	var kinds := _kinds(s)
+	var info := s.store()
+	assert_false(kinds.has(&"store_without_bracket"))
+	assert_eq(int(info["stored_db"]), ClinicRules.MIN_DB)
+	# a consistent patient at the floor: the lucky minimum ends on the second floor hit
+	assert_eq(AudiometrySession.textbook_presentations(40, -10, 1000), 7)
+
+
 func test_threshold_needs_half_of_the_ascending_runs() -> void:
 	var s := _session()
 	var sim := s.sim as FixedSim

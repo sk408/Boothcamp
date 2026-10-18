@@ -651,6 +651,8 @@ func ascending_counts(e: String, f: int) -> Dictionary:
 
 
 ## Lowest level heard on at least 2 ascending runs (and on at least half of them), or null.
+## (polish) The bottom of the scale: heard twice at MIN_DB (-10 dB HL) there is nothing softer to
+## bracket from, so -10 is the answer (a clinic records a response at the audiometer's floor).
 func ascending_threshold(e: String, f: int) -> Variant:
 	var counts := ascending_counts(e, f)
 	var best: Variant = null
@@ -659,6 +661,13 @@ func ascending_threshold(e: String, f: int) -> Variant:
 		if int(c[0]) >= ClinicRules.ASCENDING_HITS_NEEDED and int(c[0]) * 2 >= int(c[1]):
 			if best == null or lvl < int(best):
 				best = lvl
+	if best == null:
+		var floor_hits := 0
+		for rec: Dictionary in measurement(e, f):
+			if bool(rec["responded"]) and int(rec["db"]) <= ClinicRules.MIN_DB:
+				floor_hits += 1
+		if floor_hits >= ClinicRules.ASCENDING_HITS_NEEDED:
+			best = ClinicRules.MIN_DB
 	return best
 
 
@@ -901,6 +910,7 @@ static func textbook_presentations(start_db: int, threshold: int, f: int) -> int
 	var hits: Dictionary = {}
 	var prev_heard := true
 	var any_hit := false
+	var floor_hits := 0
 	var n := 0
 	while n < 80:
 		n += 1
@@ -910,8 +920,10 @@ static func textbook_presentations(start_db: int, threshold: int, f: int) -> int
 				hits[level] = int(hits.get(level, 0)) + 1
 				if int(hits[level]) >= ClinicRules.ASCENDING_HITS_NEEDED:
 					return n
-			if level <= ClinicRules.MIN_DB and any_hit:
-				return n  # heard at the very bottom of the scale: nothing softer to try
+			if level <= ClinicRules.MIN_DB:
+				floor_hits += 1
+				if floor_hits >= ClinicRules.ASCENDING_HITS_NEEDED:
+					return n  # heard twice at the very bottom of the scale: nothing softer to try
 			any_hit = true
 			level = maxi(level - ClinicRules.DOWN_AFTER_HIT_DB, ClinicRules.MIN_DB)
 		else:

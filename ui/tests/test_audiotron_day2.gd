@@ -346,3 +346,27 @@ func test_symbol_layers_and_offsets() -> void:
 	ag.masker_view = {"freq": 1000, "db": 60, "role": &"leak", "hot": true}
 	await wait_frames(2)
 	assert_true(ag._attention_count() >= 1)
+
+
+## (polish) The reveal sorts many marks per ear at one frequency (air, masked air, bone, masked
+## bone): its comparator must be a strict order, or Godot's sort reports "bad comparison function".
+func test_reveal_order_is_strict() -> void:
+	var queue: Array = []
+	for e: String in ["right", "left"]:
+		for test: StringName in [&"ac", &"ac_masked", &"bc", &"bc_masked"]:
+			for f: int in [4000, 250, 1000, 500, 2000]:
+				queue.append([e, f, 10, false, test])
+	Audiogram.sort_reveal(queue)
+	for a: Array in queue:
+		assert_false(Audiogram.reveal_before(a, a), "irreflexive")
+		for b: Array in queue:
+			if a != b:
+				assert_false(Audiogram.reveal_before(a, b) and Audiogram.reveal_before(b, a), "asymmetric")
+	for i in range(1, queue.size()):
+		var p: Array = queue[i - 1]
+		var q: Array = queue[i]
+		assert_true(int(p[1]) <= int(q[1]), "low to high pitch")
+		if int(p[1]) == int(q[1]) and String(p[0]) != String(q[0]):
+			assert_eq(String(p[0]), "right", "right ear first at each pitch")
+	assert_eq(String(queue[0][0]), "right")
+	assert_eq(StringName(queue[0][4]), &"ac", "air stamps before bone at the same pitch")

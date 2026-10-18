@@ -165,6 +165,24 @@ func _ac_db(p_ear: String, f: int) -> float:
 	return float((points[p_ear][f] as Dictionary)["db"])
 
 
+## The reveal's stamp order for queue entries [ear, freq, db, no_response, test]: by frequency,
+## right ear first, then the order they were queued (air, masked air, bone, masked bone). Appends
+## each entry's queue index so the order is strict: Day 2 has several marks per ear at one frequency.
+static func sort_reveal(queue: Array) -> void:
+	for i in queue.size():
+		(queue[i] as Array).append(i)
+	queue.sort_custom(reveal_before)
+
+
+## The strict "stamps first" test behind sort_reveal (entries carry their queue index at [5]).
+static func reveal_before(a: Array, b: Array) -> bool:
+	if int(a[1]) != int(b[1]):
+		return int(a[1]) < int(b[1])
+	if String(a[0]) != String(b[0]):
+		return String(a[0]) == "right"
+	return int(a[5]) < int(b[5])
+
+
 ## Load every stored threshold from a results Dictionary (§5.1). animate = stamp them on one
 ## by one from low to high pitch with the lines drawing in, then emit draw_finished.
 func show_results(results: Dictionary, animate: bool = false) -> void:
@@ -187,7 +205,7 @@ func show_results(results: Dictionary, animate: bool = false) -> void:
 		draw_finished.emit.call_deferred()
 		return
 	_reveal = 1.0
-	queue.sort_custom(func(a: Array, b: Array) -> bool: return a[1] < b[1] if a[1] != b[1] else a[0] == "right")
+	sort_reveal(queue)
 	var t := create_tween()
 	for q: Array in queue:
 		t.tween_callback(func() -> void:
