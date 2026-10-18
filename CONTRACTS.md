@@ -1122,7 +1122,9 @@ Phases: `intro`, `history`, `otoscopy`, `instructions`, `audiometry` {right, ac}
 `familiarize_cards` (info {mouse}), `objection_present` (info {targets, mouse: {drag: [clue, target]}}; solver
 presents the strongest clue), `referral_stamp` (reused). Chapter: `Game.CHAPTERS` id `mike`, day 3, requires `bonnie`
 (the suggested order only: any chapter can be picked). Medals: `history`, `instructions`, `familiarize`, `evidence`,
-`referral`.
+`referral`. Anchors: `word_card_<item id>` (familiarize), `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+`clue_canals` (evidence), `referral_stamp`. Without the SPEECH scene the level lets Hoot say the words (unscored), so
+the visit still ends.
 
 ### §9.9 Autoplay (Speech)
 
@@ -1131,5 +1133,6 @@ presents the strongest clue), `referral_stamp` (reused). Chapter: `Game.CHAPTERS
   `{text: "visible text prefix"}`.
 - Progress also comes from the `speech_*` signals. Sanity (exit 4): every stored SRT within 10 dB of the truth, both
   ears stored on a speech day, and on Day 3 a poor PTA/SRT agreement.
-- Screenshots: `speech_<ear>_srt_first_word`, `speech_<ear>_srt_stored`, `day3_objection`, `day3_stamp`.
+- Screenshots: `speech_<ear>_srt_first_word`, `speech_<ear>_srt_descent`, `speech_<ear>_srt_stored`,
+  `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`, `day3_glazed`.
 

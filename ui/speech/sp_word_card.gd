@@ -6,13 +6,25 @@ extends Control
 ## answer), &"score" (SCORE IT: compare the card with what he said), &"done" (the SRT is stored),
 ## &"empty" (no word list yet). A new word arrives with a quick card flip.
 
-var list_title: String = ""
-var ear: String = "right"
-var state: StringName = &"empty"
+var list_title: String = "":
+	set(v):
+		list_title = v
+		queue_redraw()
+var ear: String = "right":
+	set(v):
+		ear = v
+		queue_redraw()
+var state: StringName = &"empty":
+	set(v):
+		state = v
+		queue_redraw()
 var number: int = 0
 var words_left: int = 0
 ## Shown after the ear is done ("SRT 30 dB").
-var done_text: String = ""
+var done_text: String = "":
+	set(v):
+		done_text = v
+		queue_redraw()
 var _word := ""
 var _parts: Array = []
 var _shown_word := ""

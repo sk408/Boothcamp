@@ -448,7 +448,6 @@ func _on_answer(serial: int) -> void:
 	_listening = false
 	_answer_shown = true
 	_answer_t = _clock
-	print("DBG answer clock=", _clock, " auto=", _auto_running)
 	var cur := session.current
 	var said := String(cur.get("said", ""))
 	var kind := StringName(String(cur.get("kind", "")))
@@ -1132,8 +1131,6 @@ func _say(text: String) -> String:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if _bubble != null and _bubble.state == &"shown" and _card.state != &"score":
-		print("DBG mismatch card=", _card.state, " talking=", _talking, " listening=", _listening, " answer=", _answer_shown, " awaiting=", session.awaiting_score, " auto=", _auto_running, " clock=", _clock)
 	_talk_glow = move_toward(_talk_glow, 1.0 if _talking else 0.0, delta * 8.0)
 	_mic = maxf(0.0, _mic - delta * 0.9)
 	if _lcd != null:
@@ -1254,7 +1251,7 @@ func _refresh_buttons(st: Dictionary) -> void:
 			want = int(st["candidate_db"]) >= 0 and int(st["candidate_db"]) == int(st["db"]) and not awaiting and not busy
 		elif id == "speech_mask_button":
 			want = bool(st["masking_needed"]) and not on and not busy
-		if can_score and (id == "speech_correct_button" or id == "speech_incorrect_button"):
+		if can_score and not _auto_running and (id == "speech_correct_button" or id == "speech_incorrect_button"):
 			want = true   # both pulse until the word is scored
 		b.beckon = want
 	for b: AoButton in _buttons.values():
@@ -1512,7 +1509,7 @@ func _layout() -> void:
 	_dance.position = Vector2(vp.x - m - col_w, mid_y + mid_h - dance_h)
 	_dance.size = Vector2(col_w, dance_h)
 	_ff_banner.size = Vector2(250.0, 44.0)
-	_ff_banner.position = Vector2(_lcd.position.x + (_lcd.size.x - 250.0) * 0.5, y_top + top_h - 22.0)
+	_ff_banner.position = Vector2(_ladder.position.x + (_ladder.size.x - 250.0) * 0.5, y_top + top_h - 22.0)
 	_deck.position = Vector2(m, bottom_y)
 	_deck.size = Vector2(vp.x - m * 2.0, bottom_h)
 	_layout_deck(Rect2(_deck.position, _deck.size))

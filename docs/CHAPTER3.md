@@ -30,7 +30,7 @@ Case history (two rounds of three choices, 2 / 1 / 0 points):
 |---|---|---|---|
 | When did it start, and how? | 2 | Tuesday. The forklift reversed, BEEP BEEP BEEP, then silence. Both ears. | Sudden, both ears, after a reversing beeper (Tuesday) |
 | Any pain, dizziness or ringing? | 2 | No pain, no spinning, no ringing. Just... nothing. Total silence. | No pain, dizziness or tinnitus |
-| What's your favourite forklift? | 0 | The Liftmaster 3000. She's a beauty. Purrs like a kitten. | (joke) |
+| What's your favourite forklift? | 0 | Old Rumbles, bay six. She's a beauty. Purrs like a kitten. | (joke) |
 | Is the test for a work form? | 2 | My cousin Vinnie says you get paid leave for this. I mean: what form? | Wants a form for paid leave from work |
 | How do you manage phone calls? | 1 | Fine, I just put it on speaker... I mean, I DON'T. Can't hear phones. | Nearly said he uses the phone on speaker |
 | Have you tried switching your ears off and on again? | 0 | Is that a thing? Hang on. *wiggles ears* Nope. | (joke) |

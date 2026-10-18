@@ -131,7 +131,7 @@ func _draw() -> void:
 		_dot(Vector2(lx, 22), 7.0, bool(spec[0]), false, 1.0)
 		lx -= 16.0
 	var tally_w := 58.0
-	_plot = Rect2(Vector2(46, 44), Vector2(r.size.x - 46 - tally_w - 14, r.size.y - 44 - 30))
+	_plot = Rect2(Vector2(46, 54), Vector2(r.size.x - 46 - tally_w - 14, r.size.y - 54 - 30))
 	AoDraw.rbox(self, _plot.grow(4.0), Color(Palette.CREAM, 0.9), 10)
 	# rows and dB labels
 	var top_db := int(floor(_hi / ROW_DB)) * ROW_DB
@@ -149,7 +149,7 @@ func _draw() -> void:
 	AoDraw.text_l(self, Vector2(_plot.position.x + 18.0, _plot.position.y + 9.0), "louder", 11, Color(Palette.INK, 0.4), AoDraw.FONT_BOLD)
 	UiDraw.triangle(self, Vector2(_plot.position.x + 10.0, _plot.end.y - 9.0), 9.0, false, Color(Palette.INK, 0.35))
 	AoDraw.text_l(self, Vector2(_plot.position.x + 18.0, _plot.end.y - 9.0), "softer", 11, Color(Palette.INK, 0.4), AoDraw.FONT_BOLD)
-	AoDraw.text_c(self, Vector2(_plot.position.x - 24.0, _plot.position.y - 12.0), "dB HL", 10, Palette.INK_SOFT, AoDraw.FONT_BOLD)
+	AoDraw.text_c(self, Vector2(_plot.position.x - 22.0, _plot.position.y - 13.0), "dB HL", 10, Palette.INK_SOFT, AoDraw.FONT_BOLD)
 	var row_h := absf(_y(0.0) - _y(float(ROW_DB)))
 	# the gap between the beeps and the words (the non-organic tell): a soft coral wash
 	if provisional >= 0 and not is_nan(pta) and pta - float(provisional) > float(SpeechRules.AGREE_FAIR_DB):
