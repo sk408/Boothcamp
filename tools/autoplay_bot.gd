@@ -356,6 +356,7 @@ func _hughson_westlake(_freq: int) -> Dictionary:
 	var trials: Dictionary = {}
 	var prev_heard := true  # the first response is never "ascending"
 	var heard_any := false
+	var floor_hits := 0
 	for n in 30:
 		var heard := await _present()
 		if not prev_heard and heard_any:
@@ -367,7 +368,9 @@ func _hughson_westlake(_freq: int) -> Dictionary:
 					return {"db": level, "no_response": false}
 			heard_any = true
 			if level <= ClinicRules.MIN_DB:
-				return {"db": level, "no_response": false}
+				floor_hits += 1
+				if floor_hits >= ClinicRules.ASCENDING_HITS_NEEDED:
+					return {"db": level, "no_response": false}  # heard twice at the floor
 			level = maxi(level - ClinicRules.DOWN_AFTER_HIT_DB, ClinicRules.MIN_DB)
 		else:
 			if level >= max_db:
