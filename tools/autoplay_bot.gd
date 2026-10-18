@@ -216,11 +216,11 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 func _keys_explainer(solver: Callable, info: Dictionary = {}) -> void:
 	var p := get_tree().get_first_node_in_group("explainer_player")
 	for i in 4:
-		if p == null or not bool(p.call("is_playing")) or int(p.get("scene_index")) >= 1:
+		if _explainer_peeked(p):
 			break
 		await _tap(&"advance_dialogue")
 		await _wait(0.3)
-	await _wait(1.3)
+	await _wait(_explainer_settle(p))
 	await _shot(_explainer_shot(info))
 	await _tap(&"ui_cancel")
 	await _wait(0.6)
@@ -228,6 +228,23 @@ func _keys_explainer(solver: Callable, info: Dictionary = {}) -> void:
 	if p != null and bool(p.call("is_playing")) and solver.is_valid():
 		push_warning("AutoplayBot: Esc did not skip the movie; using the solver")
 		solver.call()
+
+
+## True once the peek has gone far enough: scene 2 of a long movie, the first (only) scene of a
+## one-scene recap (advancing there would end it before its shot), or the movie is gone.
+func _explainer_peeked(p: Node) -> bool:
+	if p == null or not bool(p.call("is_playing")):
+		return true
+	var scenes: Array = (p.get("movie") as Dictionary).get("scenes", [])
+	return int(p.get("scene_index")) >= mini(1, scenes.size() - 1)
+
+
+## How long to let the peeked scene play before its shot: a recap card's four lines are all in by 6.2 s.
+func _explainer_settle(p: Node) -> float:
+	if p == null or not bool(p.call("is_playing")):
+		return 0.3
+	var scenes: Array = (p.get("movie") as Dictionary).get("scenes", [])
+	return 6.6 if scenes.size() <= 1 else 1.3
 
 
 ## The peek's shot name: explainer_scene_2 for the day's movie, explainer_<id> for a recap.
@@ -739,11 +756,11 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 			# (v4) Hoot's movie: "Next" (advances like dialogue) until scene 2 shows, then "Skip movie"
 			var p := get_tree().get_first_node_in_group("explainer_player")
 			for i in 4:
-				if p == null or not bool(p.call("is_playing")) or int(p.get("scene_index")) >= 1:
+				if _explainer_peeked(p):
 					break
 				await _click((p.get("_next_btn") as Control).get_global_rect().get_center())   # a real click on "Next"
 				await _wait(0.3)
-			await _wait(1.3)
+			await _wait(_explainer_settle(p))
 			await _shot(_explainer_shot(info))
 			if p != null and bool(p.call("is_playing")):
 				await _click_text("Skip movie")

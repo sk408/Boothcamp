@@ -1034,7 +1034,8 @@ The bot (`tools/autoplay_bot.gd`) plays the whole level **only through public co
    - **(v4)** The `explainer` beat with keys: **(polish)** `advance_dialogue` (it advances like dialogue) until
      scene 2 shows (at most 4 taps), a shot (`explainer_scene_2`; a recap: `explainer_<id>`), then `ui_cancel`
      (skip); the solver only if the movie still plays. With `--mouse`: real clicks on "Next" the same way, then
-     "Skip movie". The masking recap card is the same beat.
+     "Skip movie". The masking recap card is the same beat: a one-scene movie gets no tap (it would end it), and
+     its shot waits until all four lines are in.
 3. **Ending.** On `Events.level_finished` it records the summary. On `results_continue` it prints
    `AUTOPLAY_RESULT {json}` and emits `Events.quit_requested(code)`.
 
@@ -1073,7 +1074,7 @@ The bot saves:
 - **(v3)** `audiometry_<ear>_<test>_first_store`, `audiometry_<ear>_<test>_hoot_turn`, `audiometry_<ear>_plateau`;
 - **(v3)** the story's own: `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`, `day2_carhart`, `day2_stamp`,
   `day2_croissant`, `day2_goodbye`;
-- **(v4)** `explainer` (phase), `explainer_scene_2` (the bot's peek), `bc_placement_left`, `ghost_demo_right`,
+- **(v4)** `explainer` (phase), `explainer_scene_2` (the bot's peek), `explainer_masking_recap` (the recap card), `bc_placement_left`, `ghost_demo_right`,
   `audiometry_right_ghost_demo` (the demo's first tone), `day2_bone_placement_right` (the quick placement); the dev
   scenes add `explainer_<id>_<NN>_<scene>` (`dev_explainer.tscn`; **(v4, builders)** extra moments of a scene
   `explainer_<id>_<NN>_<scene>_t<seconds>`, `--menu`: `explainer_pause_menu`, `explainer_pause_replay`,

@@ -83,7 +83,8 @@ Screenshots are named `NN_<name>.png`:
 - **(v3)** Day 2 adds `bc_placement`, `masking`, `referral`, `day2_reveal`, `day2_bridge`, `day2_stamp`; audiometry
   shots carry the test when it is not plain air: `audiometry_right_bc`, `audiometry_right_bc_masked_first_store`,
   `audiometry_right_ac_masked_hoot_turn`, and `audiometry_right_plateau` (the first plateau found).
-- **(v4)** Day 2 adds `explainer` and `explainer_scene_2` (Hoot's movie, before the bot skips it), `bc_placement_left`,
+- **(v4)** Day 2 adds `explainer` and `explainer_scene_2` (Hoot's movie, before the bot skips it), `explainer_masking_recap`
+  (the recap card, all four lines in, as the masking phase opens), `bc_placement_left`,
   `audiometry_left_bc`, `ghost_demo_right`, `day2_bone_placement_right`, `audiometry_right_bc` (the demo) and
   `audiometry_right_ghost_demo` (its first tone).
 
