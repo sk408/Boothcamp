@@ -87,7 +87,7 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | 8 | `speech` {left, srt} | Solo: "Left ear, yours for 8 words!" Eight words reach his first miss below the SRT, so the player sees the bracket form; then Hoot takes over (quick visit). Same story: poor agreement. | (speech beats) | 1:00 |
 | 9 | `evidence` | **OBJECTION!** Mike's claim card "I can't hear ANYTHING" and three clues: "SRT 30 vs PTA 72" (or "Hoot's recheck: SRT 30 vs PTA 72"), "answered a whispered coffee offer", "canals clear". The captions stay neutral ("Two sugars, thanks." Hoot whispered it at the desk. / Otoscopy, both ears: clear canals, normal-looking eardrums.); the explanations come in the "why" after a wrong pick. The measurement is always the strongest clue; the whisper never outranks it. Medal `evidence`. | objection_present | 0:45 |
 | 10 | `referral` | "What's next for Mike?" Fit strong hearing aids / **Re-instruct, retest, objective tests, tell his doctor** / Call him a fibber. Then the **RECHECK + OBJECTIVE TESTS + DOCTOR TODAY** stamp. Medal `referral`. | choice, referral_stamp | 0:45 |
-| 11 | `results` | Mike owns up ("Cousin Vinnie said to say I can't hear, for paid leave."). Hoot thanks him, then the main-path lesson: "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse." and "We'll still finish the objective tests and send your results to your doctor." He leaves; Hoot whispers "free donuts in the break room" and Mike yells "GLAZED?!" from the hall. The Daily Decibel, Day 3. | results_continue | 1:00 |
+| 11 | `results` | Mike owns up ("Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine."; the game never says his ears are fine: an SRT of 30 is an upper bound on his hearing, and the objective tests still follow). Hoot thanks him, then the main-path lesson: "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse." and "We'll still finish the objective tests and send your results to your doctor." He leaves; Hoot whispers "free donuts in the break room" and Mike yells "GLAZED?!" from the hall. The Daily Decibel, Day 3. | results_continue | 1:00 |
 
 ## 4. Teaching moments (Hoot, 18 words or fewer)
 
@@ -176,6 +176,7 @@ words or fewer (`story/tests/test_level_mike.gd::test_hoot_lines_fit`).
    still an error (`SRT_START_MAX_DB` waits for your answer).
 3. Agreement bands 6 / 12 dB (good / fair / poor) with the 3-frequency PTA (best two when the three spread 20+).
 4. Is the next step right: re-instruct, retest (an ascending retest?), objective tests that don't need his answers
-   (acoustic reflexes, OAEs, ABR / ASSR; a Stenger only for a one-sided claim), no aids on unreliable results,
+   (the objective cross-checks: acoustic reflexes, OAEs, ABR / ASSR; a Stenger only for a one-sided claim, so not
+   for Mike, who claims both ears), no aids on unreliable results,
    and a medical referral for the reported sudden loss (his doctor hears about it today)?
 5. The tone of the case: kind, never accusing, with a jokey confession. OK for career-fair players?

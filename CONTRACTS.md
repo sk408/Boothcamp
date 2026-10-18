@@ -1139,8 +1139,9 @@ sheet (SRT) = {ear, test: "srt", list_id, stored_db, true_db, error_db, accuracy
 `set_noise(db_em)`, `stop_noise()`, `render(frames)` (pure DSP). Words: a synthesized murmur (one voiced syllable per
 part), or a recording at `res://assets/speech/<list_id>/<item_id>.wav` (WAV only, imported uncompressed), in the test ear
 only, levelled over its speech. The uncompressed import is `project.godot`'s `[importer_defaults]` wav
-`compress/mode` 0: a **project-wide** default, so every WAV in the project imports uncompressed. RMS from
-`AudioSafety.speech_to_rms(hl)` (`SPEECH_OFFSET_DB` -9, RMS ceiling `SPEECH_CEILING_DBFS` -27), every sample through
+`compress/mode` 0: a **global** (project-wide) default, so every WAV anywhere in the project imports uncompressed,
+not only speech recordings (fine today: no other WAVs; a later WAV that should be compressed needs its own import
+setting). RMS from `AudioSafety.speech_to_rms(hl)` (`SPEECH_OFFSET_DB` -9, RMS ceiling `SPEECH_CEILING_DBFS` -27), every sample through
 `clamp_sample()`. Speech noise: speech-shaped noise in the other ear through `masker_to_rms()` and
 `clamp_masker_sample()`. Every word lights the TALK lamp; nothing depends on hearing it.
 

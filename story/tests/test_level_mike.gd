@@ -109,7 +109,7 @@ func test_board_familiarize_drop_slip_then_solver() -> void:
 	assert_eq((info.get("mouse", {}) as Dictionary).get("click", ""), "word_card_windmill", "mouse route: click it")
 	b.call("_try_drop", "rainbow")
 	await wait_frames(2)
-	assert_eq(b.drop_slips, 1, "dropping a word he read fine is a slip")
+	assert_eq(b.drop_slips, 1, "dropping a word he said back fine is a slip")
 	assert_false(done[0], "still waiting for the windmill")
 	assert_true(Hoot.is_showing(), "Hoot nudges kindly")
 	(beat["solver"] as Callable).call()

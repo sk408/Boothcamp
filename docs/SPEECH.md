@@ -101,11 +101,12 @@ The share of half-word misses is `speech.half_words` (0.15 by default; a non-org
 
 **Non-organic loss (Mike).** His voluntary tone thresholds sit around 70 dB, so his PTA is about 70, but he
 repeats spondees at about 30. Hoot's 1 kHz retest also comes back 15 dB better than the first (a retest should
-agree within 5 dB): poor test-retest reliability is another sign. An SRT 13 dB or more better than the PTA is "poor agreement" in the direction of a
-non-organic loss: re-instruct, retest, and refer for objective tests that don't need his answers (acoustic
-reflexes, OAEs, ABR / ASSR). An SRT of 30 is an upper bound on his hearing, not his real hearing. Never accuse:
-most non-organic losses aren't fibs (stress, worry, even a real loss underneath), and the clinic's job is an
-accurate record. A reported sudden loss still goes to a doctor before any hearing aid.
+agree within 5 dB): poor test-retest reliability is another sign. An SRT 13 dB or more better than the PTA is
+"poor agreement" in the direction of a non-organic loss: re-instruct, retest, and refer for objective tests that
+don't need his answers (acoustic reflexes, OAEs, ABR / ASSR; a Stenger only for a one-sided claim, and Mike claims
+both ears). An SRT of 30 is an upper bound on his hearing, not his real hearing. Never accuse: most non-organic
+losses aren't fibs (stress, worry, even a real loss underneath), and the clinic's job is an accurate record. A
+reported sudden loss still goes to a doctor before any hearing aid.
 
 ## 4. WRS: word recognition score (Day 4)
 
@@ -171,7 +172,7 @@ otherwise estimated from the audiogram). Directional microphones (aided, Day 5's
 
 Drop files at `assets/speech/<list_id>/<item_id>.wav` (16-bit PCM, mono, any rate; 8-bit and stereo work too).
 WAV only: the voice decodes it into the test ear's channel, which a streamed `.ogg` could not do, and
-`project.godot` imports WAVs uncompressed (`[importer_defaults]` wav `compress/mode` 0: a project-wide default,
+`project.godot` imports WAVs uncompressed (`[importer_defaults]` wav `compress/mode` 0: a global, project-wide default,
 so it applies to every WAV in the project, not only speech). For sentences, `<item_id>` is the sentence id (e.g. `p1_3`).
 `SpeechVoice` uses a recording when it exists and the synthesized murmur otherwise. A recording is scaled to the
 same safe level as the murmur, measured over its speech (20 ms windows within 35 dB of the loudest), so silence

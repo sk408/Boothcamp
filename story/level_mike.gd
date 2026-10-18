@@ -744,7 +744,8 @@ func _payoff(b: Control) -> void:
 	await _say("Mike", "Objective tests? The kind where I don't have to answer anything?")
 	await _say("Hoot", "Exactly. Tiny sounds, tiny sensors. Your ears do all the talking.")
 	_react(&"wince")
-	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. My ears are fine.")
+	# his own words, no more than the test showed: an SRT of 30 is an upper bound on his hearing, never "fine ears"
+	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine.")
 	clinic.call("hoot_emote", &"nod")
 	await _say("Hoot", "Thank you for telling us, Mike. That took guts.")
 	# the main path must not teach "non-organic = faking"
