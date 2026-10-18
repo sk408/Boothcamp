@@ -92,6 +92,8 @@ Tests: `test_day3_mike_extras` in `world/tests/test_clinic.gd`.
      `world/tests` and `story/tests` removed, so it is not caused by those tests. Run the suite under
      `timeout` and treat "summary printed, then timeout" as an engine exit hang, not a test failure.
   The three rendered full autoplay runs all exited cleanly.
+  **Update (speech thread):** the cause is the engine mixing a freed generator stream; see
+  `core/INTEGRATION_NOTES.md` for the fix and the matching change request for `ToneGenerator`.
 - The otoscope sits in a charging cradle on the desk (`room.gd`).
 - Tests: `world/tests/test_clinic.gd` (API, every reaction, walk/sit/ear projection with right ear on
   the screen's left, muffle amount with no bus-effect changes, story extras, every SHOTS entry).

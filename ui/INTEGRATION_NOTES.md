@@ -97,6 +97,9 @@ All of them are unregistered on exit.
   `size_changed`. It was checked at 1280x720 and at a wider 1728x720.
 - **Audio:** words and the masking noise go only through the screen's own SpeechVoice child. Sfx plays
   only UI blips. The music is ducked while the screen is up. Loudness gags are visual only.
+- **Headless audio hang (fixed in core):** the suite used to hang at quit after the masking test. The cause
+  was the engine mixing a freed generator stream (see `core/INTEGRATION_NOTES.md`); `SpeechVoice` now keeps
+  its stream alive past its last mix, and the test plays the noise for real again.
 
 **Deviations from §9.7 (small):**
 1. **Meter reading while testing.** While testing, the agreement needle reads `max(0, PTA - provisional

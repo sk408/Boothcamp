@@ -464,7 +464,6 @@ func test_level_locked_while_talking() -> void:
 func test_mask_toggle_and_keys_pill() -> void:
 	var s := _screen()
 	s.start_test(_mike(), "right", false, _plan())
-	await wait_frames(2)
 	await tap_action(&"toggle_mask")
 	var st := s.get_state()
 	assert_true(bool(st["mask_on"]))

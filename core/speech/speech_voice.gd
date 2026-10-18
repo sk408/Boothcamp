@@ -44,6 +44,11 @@ var _lp2 := 0.0
 var _n_rng := RandomNumberGenerator.new()
 static var _murmur_cache: Dictionary = {}
 static var _noise_norm := 0.0
+## Generators of freed voices, kept a while longer. The engine's generator playback points at its
+## stream without holding it, and a player freed while playing is mixed once more (its fade-out)
+## after the stream is gone: that read of freed memory once spun the audio thread forever.
+const RETIRED_KEEP := 16
+static var _retired: Array[AudioStream] = []
 
 
 func _ready() -> void:
@@ -59,6 +64,13 @@ func _ready() -> void:
 	_rec_player = AudioStreamPlayer.new()
 	_rec_player.bus = _bus()
 	add_child(_rec_player)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _player != null and _player.stream != null:
+		_retired.append(_player.stream)
+		while _retired.size() > RETIRED_KEEP:
+			_retired.pop_front()
 
 
 static func _bus() -> StringName:
