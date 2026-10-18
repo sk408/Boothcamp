@@ -56,7 +56,8 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
 }
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"]]
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
+	["bc_masked", "L  ]", "left"], ["ac_masked", "L  □", "left"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),
@@ -300,12 +301,13 @@ func _build(s: Dictionary) -> void:
 	_rule(v, 4)
 	var grade := String(s.get("grade", "?"))
 	var cid := String(s.get("chapter_id", "gus"))
-	var heads: Dictionary = CHAPTER_HEADLINES.get(cid, HEADLINES)
+	# (cases) a summary may carry its own "headlines" / "subheads" / "medal_beats" (the case runner's)
+	var heads: Dictionary = s.get("headlines", CHAPTER_HEADLINES.get(cid, HEADLINES))
 	var head := UiKit.label(heads.get(grade, heads.get("B", HEADLINES["B"])), 30, Palette.INK, 700)
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
-	var subs: Dictionary = CHAPTER_SUBHEADS.get(cid, SUBHEADS)
+	var subs: Dictionary = s.get("subheads", CHAPTER_SUBHEADS.get(cid, SUBHEADS))
 	var sub := UiKit.label(subs.get(grade, ""), 18, Palette.INK_SOFT, 500)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
@@ -349,7 +351,7 @@ func _build(s: Dictionary) -> void:
 	medals.add_theme_constant_override("separation", 10)
 	c1.add_child(medals)
 	var md: Dictionary = s.get("medals", {})
-	for pair: Array in CHAPTER_MEDAL_BEATS.get(String(s.get("chapter_id", "")), MEDAL_BEATS):
+	for pair: Array in s.get("medal_beats", CHAPTER_MEDAL_BEATS.get(String(s.get("chapter_id", "")), MEDAL_BEATS)):
 		medals.add_child(_medal(String(pair[1]), String(md.get(pair[0], ""))))
 
 	var vr := ColorRect.new()

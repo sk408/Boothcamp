@@ -759,9 +759,18 @@ func _wheel_into_view(b: Control) -> void:
 func _pick_via_days(info: Dictionary) -> void:
 	var unlocked: Array = info.get("chapters", [])
 	_days_report["unlocked"] = unlocked.duplicate()
+	# --expect-days lists days that must be on the grid, in this order (others may sit between or
+	# after them), so a new chapter doesn't break the check
 	var expect := String(Game.cli_value("expect-days", ""))
-	if expect != "" and ",".join(PackedStringArray(unlocked.map(func(x: Variant) -> String: return String(x)))) != expect:
-		_days_problems.append("days: unlocked %s, expected %s" % [str(unlocked), expect])
+	if expect != "":
+		var at := 0
+		for want: String in expect.split(",", false):
+			while at < unlocked.size() and String(unlocked[at]) != want:
+				at += 1
+			if at >= unlocked.size():
+				_days_problems.append("days: unlocked %s, expected %s among them, in order" % [str(unlocked), expect])
+				break
+			at += 1
 	# (polish) every day is open: the suggested day wears the UP NEXT badge
 	_days_report["suggested"] = String(info.get("suggested", ""))
 	var want_sug := String(Game.cli_value("expect-suggested", ""))

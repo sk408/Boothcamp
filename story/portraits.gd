@@ -1,7 +1,10 @@
 extends RefCounted
 ## Portraits: procedural 2D character portraits for the dialogue box and Hoot's bubble.
 ## Portraits.draw(ci, "Gus", center, radius, talk_open, blink)
-## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "You" (a clipboard), anything else = narrator star.
+## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "You" (a clipboard), any case-file patient (cases:
+## story/case_portraits.gd draws them from their case's "look"), anything else = narrator star.
+
+const CasePortraits := preload("res://story/case_portraits.gd")
 
 const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "Bonnie": Color("#ffe3c2"), "You": Color("#d9e6ff")}
 const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "Bonnie": Color("#c46a1c"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
@@ -12,13 +15,16 @@ const WHITE := Color("#fffdf8")
 
 
 static func name_color(speaker: String) -> Color:
+	if not NAME_COLORS.has(speaker) and CasePortraits.has(speaker):
+		return CasePortraits.name_color(speaker)
 	return NAME_COLORS.get(speaker, NAME_COLORS[""])
 
 
 static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: bool = false, blink: bool = false, frame: bool = true) -> void:
 	if frame:
 		ci.draw_circle(c, r + 5.0, INK)
-		ci.draw_circle(c, r, BG.get(who, Color("#fff3dc")))
+		var bg: Color = BG[who] if BG.has(who) else (CasePortraits.bg(who) if CasePortraits.has(who) else Color("#fff3dc"))
+		ci.draw_circle(c, r, bg)
 	match who:
 		"Gus":
 			_gus(ci, c, r, talk_open, blink)
@@ -31,7 +37,10 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 		"You":
 			_clipboard(ci, c, r)
 		_:
-			UiDraw.star(ci, c, r * 0.6, Palette.SUNNY)
+			if CasePortraits.has(who):
+				CasePortraits.draw(ci, who, c, r, talk_open, blink)
+			else:
+				UiDraw.star(ci, c, r * 0.6, Palette.SUNNY)
 
 
 # ---------------------------------------------------------------- helpers

@@ -4,7 +4,7 @@ extends TestCase
 ## "otosuite" / "affinity" (lowercase, required by the settings contract) are allowed.
 
 const BANNED: PackedStringArray = ["OTOsuite", "Otosuite", "Affinity", "Interacoustics", "Otometrics", "Tahoma"]
-const EXTS: PackedStringArray = [".gd", ".tscn", ".tres", ".cfg"]
+const EXTS: PackedStringArray = [".gd", ".tscn", ".tres", ".cfg", ".json"]
 
 
 func test_no_vendor_names_in_strings() -> void:

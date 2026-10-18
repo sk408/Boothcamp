@@ -17,6 +17,8 @@ const PHASES: Array[StringName] = [
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
 	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
 	&"chapter_select", &"bc_placement", &"masking", &"referral",
+	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
+	&"tymp", &"decision",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -30,6 +32,16 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_gus.tscn", "requires": ""},
 	{"id": "bonnie", "day": 2, "title": "Day 2: Bonnie Bunsworth", "patient_id": "bonnie", "teaches": "Bone conduction + masking",
 		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
+	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
+	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
+	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",
+		"scene": "res://story/level_case.tscn", "requires": "bonnie", "case": "noise_notch", "face": "Rocco", "tint": Color("#ffd9c7")},
+	{"id": "marina", "day": 7, "title": "Day 7: Captain Marina Gale", "patient_id": "marina", "teaches": "Case file: the ferry captain",
+		"scene": "res://story/level_case.tscn", "requires": "rocco", "case": "menieres", "face": "Marina", "tint": Color("#cfe3ff")},
+	{"id": "dash", "day": 8, "title": "Day 8: Dash Delgado", "patient_id": "dash", "teaches": "Case file: the pizza rush",
+		"scene": "res://story/level_case.tscn", "requires": "marina", "case": "sudden", "face": "Dash", "tint": Color("#ffe0d6")},
+	{"id": "ginger", "day": 9, "title": "Day 9: Ginger Snapp", "patient_id": "ginger", "teaches": "Case file: the ventriloquist",
+		"scene": "res://story/level_case.tscn", "requires": "dash", "case": "cookie_bite", "face": "Ginger", "tint": Color("#f3e1ff")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
@@ -546,14 +558,24 @@ func _patient_short(id: String) -> String:
 	return String(p.call("short_name")) if p != null and p.has_method("short_name") else id.capitalize()
 
 
-## (polish) The day the paper's Next button offers: the day after this one in order, or after the
-## last day the suggested day (Day 2 played first: Day 1 next), or "" when every day is done.
+## (polish) The day the paper's Next button offers: the suggested day when it comes earlier in order
+## than this one (a later day played first: Day 2 or Day 6 first goes back to Day 1), else the day
+## after this one in order, after the last day the suggested day, or "" when every day is done.
 func _paper_next(id: String) -> String:
+	var sug := suggested_chapter_id()
+	if sug != "" and sug != id and _chapter_index(sug) < _chapter_index(id):
+		return sug    # a later day played first: Next goes back to the day the title suggests
 	var nxt := _next_after(id)
 	if nxt != "":
 		return nxt
-	var sug := suggested_chapter_id()
 	return sug if sug != id else ""
+
+
+func _chapter_index(id: String) -> int:
+	for i in CHAPTERS.size():
+		if String(CHAPTERS[i]["id"]) == id:
+			return i
+	return CHAPTERS.size()
 
 
 func _next_after(id: String) -> String:

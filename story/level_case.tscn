@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://story/level_case.gd" id="1"]
+
+[node name="LevelCase" type="Node"]
+script = ExtResource("1")
