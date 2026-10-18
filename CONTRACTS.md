@@ -1208,7 +1208,8 @@ or an unbracketed store; "Clean!" for a clean run over par, never "Par!").
 ### §9.8 Story and flow (Day 3, `story/level_mike.gd`)
 
 Phases: `intro`, `history`, `otoscopy`, `instructions`, `audiometry` {right, ac} / {left, ac} (Hoot runs the tones:
-`hoot_turn_after` 0), `familiarize` (go through the words; a word Mike doesn't know is dropped), `speech` {ear, test:
+`hoot_turn_after` 0), `familiarize` (Hoot says each word and Mike says it back by ear, the cards facing Hoot; a
+word Mike doesn't know is dropped; then his SRT instructions: the test words come from this list), `speech` {ear, test:
 "srt"} for right (coached) and left, `evidence` (OBJECTION!), `referral`, `results`. New blocking beats:
 `familiarize_cards` (info {mouse}), `objection_present` (info {targets, mouse: {drag: [clue, target]}}; solver
 presents the strongest clue), `referral_stamp` (reused). Every SRT plan sets `low_start_ok` once Hoot's coffee
@@ -1217,7 +1218,7 @@ better than the PTA, or not stored at its bracket), Hoot reruns that ear by the 
 (`fresh_session`, `hoot_turn_after` 0); the board (`board_sheet()`) uses his recheck, the results keep the player's
 sheet for the grade. The SRT-vs-PTA measurement is always the strongest clue. Chapter: `Game.CHAPTERS` id `mike`, day 3, requires `bonnie`
 (the suggested order only: any chapter can be picked). Medals: `history`, `instructions`, `familiarize`, `evidence`,
-`referral`. Anchors: `word_card_<item id>` (familiarize), `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+`referral`. Anchors: `word_card_<item id>`, `familiarize_cue` (familiarize), `objection_claim`, `clue_srt_pta`, `clue_coffee`,
 `clue_canals` (evidence), `referral_stamp`. Without the SPEECH scene the level lets Hoot say the words (unscored), so
 the visit still ends.
 

@@ -1,7 +1,9 @@
 extends Control
 ## Day 3 board (Speech): three moments on one cream board.
-##  1. Familiarise: twelve spondee word cards flip over, a highlight sweeps along as Mike reads
-##     them, the one he has never heard of wobbles with a "?", and the player drops it (crossed out).
+##  1. Familiarise: twelve spondee word cards flip over on the CLINICIAN'S side (a "Mike can't see
+##     this" cue: he repeats by ear, never reads). A highlight sweeps along as Hoot says each word and
+##     Mike says it back (both on the "now saying" line, a tick on each card); the one he has never
+##     heard of wobbles with a "?", and the player drops it (crossed out).
 ##  2. OBJECTION!: Mike's claim card ("I can't hear ANYTHING") and three clue cards. Drag the
 ##     strongest clue onto the claim (or click it, then the claim; or 1-3 + Enter). The right one
 ##     slams a big OBJECTION! across the claim with a screen shake; the others get a kind Hoot tip.
@@ -10,17 +12,21 @@ extends Control
 ## Story-internal:
 ##   var b := MikeBoard.new(); hud.add_game(b)
 ##   await b.run_cards(items)            # SpeechMaterial items; the cards flip in (no input)
-##   await b.read_along(0, 5, 2.4)       # the highlight sweeps cards 0..5 while Mike reads them
+##   await b.say_along(0, 5, 2.4)        # Hoot says cards 0..5, Mike says each back (a tick each)
+##   b.finish_say_along()                # the sweep's end at once (the player clicked on)
+##   b.say_word("windmill", "Wind... mill?")   # Hoot says one more; Mike's echo, no tick
 ##   b.stumble("windmill")               # wobble + "?"
 ##   await b.run_drop("windmill")        # beat familiarize_cards (solver drops it); b.drop_slips
 ##   b.show_objection(claim, clues)      # claim {quote, who, verdict}; clues [{id, title, sub, best, why}]
 ##   await b.run_objection()             # beat objection_present (solver presents the best clue); b.picks
 ##   b.set_referral_mode(true)           # the clue column steps aside, the claim card shrinks left
 ##   await b.run_stamp()                 # beat referral_stamp (solver stamps)
-## Anchors: word_card_<id> (every card), objection_claim, clue_<id> (every clue), referral_stamp.
+## Anchors: word_card_<id> (every card), familiarize_cue, objection_claim, clue_<id> (every clue),
+## referral_stamp.
 ## Every motion respects Game.settings.reduced_motion (Juice does; the slam and rays check it).
 
 signal _dropped
+signal _said
 signal _presented
 signal _stamped
 
@@ -33,6 +39,11 @@ const CARD_BACK := Color("#bfe6ff")
 ## Every clue looks the same until hovered or picked (colour must not give the answer away).
 const CLUE_NEUTRAL := Color("#fffaf0")
 const CLUE_PICK := Color("#ffe9a8")
+## The familiarisation cue beside the cards: they face the clinician, never Mike.
+const CUE_HEAD := "CLINICIAN'S SIDE"
+const CUE_TEXT := "Mike can't\nsee this"
+const CUE_POS := Vector2(12, 166)
+const CUE_W := 152.0
 const CLAIM_POS := Vector2(56, 132)
 const CLAIM_W := 520.0
 const CLUE_X := 640.0
@@ -51,7 +62,11 @@ var _cards: Dictionary = {}          # item id -> Control
 var _order: Array[String] = []
 var _flip: Dictionary = {}           # item id -> 0..1 (0 = back, 1 = front)
 var _wobble: Dictionary = {}         # item id -> 1..0
-var _reading := -1.0
+var _echoed: Dictionary = {}         # item id -> true once Mike said it back
+var _echo_text: Dictionary = {}      # item id -> what Mike said back (when not just the word)
+var _saying := -1.0                  # card index + 0..1 (Hoot says it, then Mike says it back)
+var _say_tween: Tween
+var _say_range := Vector2i(-1, -1)
 var _stumbled := ""
 var _drop_target := ""
 var _drop_accepting := false
@@ -60,6 +75,8 @@ var _hover := ""
 
 var _head: Label
 var _hints: HBoxContainer
+var _echo_line: Label
+var _cue: PanelContainer
 var _grid: GridContainer
 var _fx: Control
 var _t := 0.0
@@ -116,6 +133,16 @@ func _ready() -> void:
 	_grid.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_grid)
+	# the "now saying" line (Hoot's word, then Mike's echo) sits where the key hints go later
+	_echo_line = UiKit.label("", 22, Palette.INK, 700)
+	_echo_line.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_echo_line.offset_top = 124
+	_echo_line.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_echo_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_echo_line)
+	_cue = _make_cue()
+	_cue.visible = false
+	add_child(_cue)
 	_objection = UiKit.full_rect()
 	_objection.name = "Objection"
 	_objection.visible = false
@@ -140,7 +167,7 @@ func _exit_tree() -> void:
 		Hoot.unregister_anchor("word_card_" + id)
 	for c: Dictionary in _clues:
 		Hoot.unregister_anchor("clue_" + String(c.get("id", "")))
-	for a: String in ["objection_claim", "referral_stamp"]:
+	for a: String in ["objection_claim", "referral_stamp", "familiarize_cue"]:
 		Hoot.unregister_anchor(a)
 	Hoot.clear_bubble_hint()
 
@@ -165,8 +192,10 @@ func _set_hints(parts: Array) -> void:
 ## (coroutine) Lay out one card per item (face down) and flip them over one by one.
 func run_cards(items: Array[Dictionary], title: String = "SPONDEE LIST A") -> void:
 	_items = items
-	_head.text = "%s: GO THROUGH THE WORDS" % title.to_upper()
+	_head.text = "%s: HOOT SAYS, MIKE REPEATS" % title.to_upper()
 	Juice.pop(_head, 1.15, 0.3)
+	_cue.visible = true
+	Hoot.register_anchor("familiarize_cue", _cue)
 	for it: Dictionary in items:
 		var id := String(it.get("id", ""))
 		var card := Control.new()
@@ -208,23 +237,143 @@ func _set_flip(v: float, id: String) -> void:
 		card.queue_redraw()
 
 
-## (coroutine) A reading highlight sweeps from card `from` to card `to` over `seconds`.
-func read_along(from: int, to: int, seconds: float) -> void:
-	var t := create_tween()
-	t.tween_method(_set_reading, float(from), float(to) + 0.99, maxf(0.05, seconds))
-	await t.finished
-	_set_reading(-1.0)
+## (coroutine) Hoot says cards `from`..`to` one by one and Mike says each back, by ear: the
+## highlight sits on the card Hoot is saying, the "now saying" line shows his word and then Mike's
+## echo, and a tick lands on the card. `seconds` for the whole sweep.
+func say_along(from: int, to: int, seconds: float) -> void:
+	finish_say_along()
+	_say_range = Vector2i(from, to)
+	_say_tween = create_tween()
+	_say_tween.tween_method(_set_saying, float(from), float(to) + 0.99, maxf(0.05, seconds))
+	_say_tween.tween_callback(func() -> void:
+		_say_tween = null
+		finish_say_along())
+	if _say_range.x >= 0:
+		await _said
 
 
-func _set_reading(v: float) -> void:
-	var before := int(_reading)
-	_reading = v
-	if int(v) != before and v >= 0.0 and int(v) < _order.size():
-		var card: Control = _cards[_order[int(v)]]
-		Juice.pop(card, 1.06, 0.18)
-		Sfx.play(&"pop", 1.3, -16.0)
+## The sweep's end at once (the player clicked on before it finished): every card it covers is
+## ticked and say_along() returns. Does nothing when no sweep is running.
+func finish_say_along() -> void:
+	if _say_range.x < 0:
+		return
+	if _say_tween != null and _say_tween.is_valid():
+		_say_tween.kill()
+	_say_tween = null
+	for i in range(_say_range.x, mini(_say_range.y, _order.size() - 1) + 1):
+		_echoed[_order[i]] = true
+	_say_range = Vector2i(-1, -1)
+	_saying = -1.0
+	_update_echo_line()
 	for c: Control in _cards.values():
 		c.queue_redraw()
+	_said.emit()
+
+
+## Hoot says one more card and Mike's echo is `echo` (no tick: he doesn't know the word). The
+## highlight and the "now saying" line stay on it until the drop.
+func say_word(id: String, echo: String) -> void:
+	var i := _order.find(id)
+	if i < 0:
+		return
+	_echo_text[id] = echo
+	_saying = float(i) + 0.75
+	Juice.pop(_cards[id] as Control, 1.06, 0.18)
+	Sfx.play(&"pop", 1.3, -16.0)
+	_update_echo_line()
+	for c: Control in _cards.values():
+		c.queue_redraw()
+
+
+## Did Mike say this card back (its tick)?
+func is_echoed(id: String) -> bool:
+	return _echoed.has(id)
+
+
+## Mike's echo of a card: what say_word() gave, else the word itself ("Rainbow!").
+func echo_of(id: String) -> String:
+	if _echo_text.has(id):
+		return String(_echo_text[id])
+	var w := _word(id)
+	return w.left(1).to_upper() + w.substr(1) + "!"
+
+
+## What the "now saying" line shows: Hoot's word, then (once he has said it back) Mike's echo.
+func echo_line() -> String:
+	return _echo_line.text
+
+
+func _word(id: String) -> String:
+	var i := _order.find(id)
+	return String((_items[i] as Dictionary).get("text", id)) if i >= 0 and i < _items.size() else id
+
+
+func _set_saying(v: float) -> void:
+	var before := _saying
+	_saying = v
+	var i := int(v)
+	if i < 0 or i >= _order.size():
+		return
+	if int(before) != i or before < 0.0:
+		Juice.pop(_cards[_order[i]] as Control, 1.06, 0.18)
+		Sfx.play(&"pop", 1.3, -16.0)
+	# Hoot says it in the first half of the card's slot, Mike says it back in the second
+	for j in range(maxi(0, _say_range.x), i):
+		_echoed[_order[j]] = true
+	if v - float(i) >= 0.5:
+		_echoed[_order[i]] = true
+	_update_echo_line()
+	for c: Control in _cards.values():
+		c.queue_redraw()
+
+
+func _update_echo_line() -> void:
+	var i := int(_saying)
+	if _saying < 0.0 or i >= _order.size():
+		_echo_line.text = ""
+		return
+	var id := _order[i]
+	var line := "Hoot: \"%s\"" % _word(id)
+	if _saying - float(i) >= 0.5:
+		line += "      Mike: \"%s\"" % echo_of(id)
+	_echo_line.text = line
+
+
+## The cue beside the cards (a small sign in the left margin, clear of the hints, Hoot's bubble and
+## the dialogue portrait): an eye with a slash, "CLINICIAN'S SIDE", "Mike can't see this".
+func _make_cue() -> PanelContainer:
+	var p := UiKit.panel(Color("#fff4f2"), Palette.INK, 12)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.position = CUE_POS
+	p.custom_minimum_size = Vector2(CUE_W, 0)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(v)
+	var eye := Control.new()
+	eye.custom_minimum_size = Vector2(0, 30)
+	eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	eye.draw.connect(func() -> void:
+		var c := Vector2(eye.size.x * 0.5, 15)
+		var pts := PackedVector2Array()
+		for k in 17:
+			var a := PI * k / 16.0
+			pts.append(c + Vector2(cos(a) * 18.0, -sin(a) * 11.0))
+		for k in range(1, 16):
+			var a := PI * k / 16.0
+			pts.append(c + Vector2(-cos(a) * 18.0, sin(a) * 11.0))
+		pts.append(pts[0])
+		eye.draw_polyline(pts, Palette.INK, 2.5, true)
+		eye.draw_circle(c, 5.0, Palette.INK)
+		eye.draw_line(c + Vector2(-17, 12), c + Vector2(17, -12), Palette.RIGHT_RED, 3.5, true))
+	v.add_child(eye)
+	var head := UiKit.label(CUE_HEAD, 12, Palette.RIGHT_RED, 700)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	var l := UiKit.label(CUE_TEXT, 16, Palette.INK, 700)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(l)
+	return p
 
 
 ## The card Mike stumbles on: a wobble and a "?".
@@ -244,6 +393,9 @@ func run_drop(target: String) -> void:
 	_drop_target = target
 	_drop_accepting = true
 	_kb = -1
+	# the key hints take the "now saying" row; the "?" badge marks the word he didn't know
+	_saying = -1.0
+	_echo_line.text = ""
 	if UiKit.show_key_hints():
 		_set_hints(["Click the word he doesn't know   or", ["Left", "Right", "Up", "Down"], "+", ["Enter"]])
 	else:
@@ -272,7 +424,7 @@ func _try_drop(id: String) -> void:
 		drop_slips += 1
 		Juice.shake(card, 6.0, 0.25)
 		Sfx.play(&"boing", 1.3, -8.0)
-		Hoot.say("He read that one fine! Drop the word he didn't know.", Hoot.HIGH, "word_card_" + _drop_target)
+		Hoot.say("He said that one back fine! Drop the word he didn't know.", Hoot.HIGH, "word_card_" + _drop_target)
 		_dropped.emit()
 		return
 	dropped.append(id)
@@ -298,10 +450,10 @@ func _draw_card(card: Control, id: String) -> void:
 	var front := float(_flip.get(id, 0.0)) >= 0.5
 	var i := _order.find(id)
 	var is_drop := dropped.has(id)
-	var reading := _reading >= 0.0 and int(_reading) == i
-	var hl := (_drop_accepting and (_hover == id or _kb == i)) or reading
+	var saying := _saying >= 0.0 and int(_saying) == i
+	var hl := (_drop_accepting and (_hover == id or _kb == i)) or saying
 	if hl:
-		UiDraw.rounded_rect(card, r.grow(5.0), Palette.SUNNY if reading else Palette.SKY.darkened(0.15), 18)
+		UiDraw.rounded_rect(card, r.grow(5.0), Palette.SUNNY if saying else Palette.SKY.darkened(0.15), 18)
 	UiDraw.rounded_rect(card, Rect2(r.position + Vector2(0, 5), r.size), Color(Palette.INK, 0.16), 16)
 	if not front:
 		UiDraw.rounded_rect(card, r, CARD_BACK, 16, 3, Palette.INK)
@@ -321,6 +473,12 @@ func _draw_card(card: Control, id: String) -> void:
 	if parts.size() == 2:
 		card.draw_string(UiKit.font(600), Vector2(0, 74), "%s  -  %s" % [parts[0], parts[1]], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 16, Palette.INK_SOFT)
 	card.draw_string(UiKit.font(700), Vector2(12, 22), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(Palette.INK, 0.4))
+	if _echoed.has(id) and not is_drop:
+		# Mike said it back: a small tick in the corner
+		var at := Vector2(r.size.x - 20, 20)
+		card.draw_circle(at, 13.0, Palette.INK)
+		card.draw_circle(at, 11.0, Palette.MINT)
+		UiDraw.check(card, at, 12.0, Palette.INK, 3.0)
 	if is_drop:
 		UiDraw.cross(card, r.get_center(), 44.0, Color(Palette.RIGHT_RED, 0.85), 6.0)
 		card.draw_set_transform(r.get_center() + Vector2(50, -24), -0.2, Vector2.ONE)
@@ -343,6 +501,8 @@ func show_objection(claim: Dictionary, clues: Array[Dictionary]) -> void:
 	_claim_data = claim
 	_clues = clues
 	_grid.visible = false
+	_cue.visible = false
+	_echo_line.text = ""
 	_set_hints([])
 	_head.text = "WHICH CLUE CHECKS THE CLAIM?"
 	Juice.pop(_head, 1.15, 0.3)

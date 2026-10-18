@@ -48,7 +48,7 @@ tone audiogram.
 
 | Rule | Value | Constant / function |
 |---|---|---|
-| Familiarise first | read the word list with the patient at a comfortable level; drop any word they don't know | story beat |
+| Familiarise first | at a comfortable level, say each word for the patient to repeat (the list out of their sight: they learn the words by ear, not by reading); drop any word they don't know; then tell them every test word comes from this list | story beat |
 | Better ear first | the ear with the lower PTA | `better_ear` |
 | Start level | the PTA rounded to the nearest 5 dB, plus 15 | `SRT_START_ABOVE_PTA_DB` 15, `srt_start` |
 | Acceptable first word | PTA + 10 to PTA + 25. A first word at least 10 dB below the PTA is an ascending start: clean (`srt_low_start`) when the plan sets `low_start_ok`. Anything else outside the window (including the dial's default at the PTA) is an `srt_start` error | `SRT_START_MIN_DB` 10, `SRT_START_MAX_DB` 25, `SRT_LOW_START_BELOW_PTA_DB` 10, `srt_start_ok`, `srt_start_low` |

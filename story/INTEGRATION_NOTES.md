@@ -72,8 +72,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `hoot_turn_after` 0, the screen's `quick_visit` on for it and restored after; without a screen a new
   `SpeechSession` + `hoot_runs_ear`). His sheet goes in `LevelMike.recheck`; `board_sheet()` returns it for
   the board and Hoot's verdict, while the results keep the player's sheet for the grade.
-- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)`,
-  `read_along(from, to, s)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
+- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)` (the cards face the
+  clinician: a "CLINICIAN'S SIDE: Mike can't see this" sign, anchor `familiarize_cue`), `say_along(from, to, s)`
+  (Hoot says each card, Mike says it back by ear: the "now saying" line and a tick per card),
+  `finish_say_along()`, `say_word(id, echo)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
   `{targets: ["word_card_windmill"], mouse: {click: "word_card_windmill"}}`, solver drops it; other cards
   are slips with a kind tip), `show_objection(claim, clues)`, `run_objection()` (beat `objection_present`,
   info `{targets: ["objection_claim"], mouse: {drag: ["clue_srt_pta", "objection_claim"]}}`, solver
@@ -83,7 +85,7 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   ("Hoot's recheck: SRT %d vs PTA %d" after a recheck) is always the best one, the coffee and canals
   captions stay neutral, and the verdict and `claim_note()` follow the direction.
   OBJECTION! slams in with `Events.screen_shake` and settles into a corner sticker; reduced motion
-  keeps it still. Anchors: `word_card_<id>`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+  keeps it still. Anchors: `word_card_<id>`, `familiarize_cue`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
   `clue_canals`, `referral_stamp`.
 - **Daily Decibel:** headlines, subheads and the medal row (Chat, Explain, Words, Case, Next) for
   `mike`; with `audiometry.speech.srt` present, column 2 is the word golf card (per ear stored SRT,

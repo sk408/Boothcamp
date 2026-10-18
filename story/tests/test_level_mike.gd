@@ -135,6 +135,60 @@ func test_board_familiarize_keyboard() -> void:
 	assert_eq(b.drop_slips, 0)
 
 
+## Familiarisation by ear: the cards face the clinician (the sign), Hoot says each word and Mike
+## says it back (the "now saying" line, a tick per card); the windmill gets his echo but no tick.
+func test_board_familiarize_by_ear() -> void:
+	var b := MikeBoard.new()
+	add_node(b)
+	await wait_frames(2)
+	Engine.time_scale = 6.0
+	await b.run_cards(_twelve())
+	var sign := _find_label(b, MikeBoard.CUE_TEXT)
+	assert_true(sign != null and sign.is_visible_in_tree(), "the 'Mike can't see this' sign is up")
+	assert_true(_find_label(b, MikeBoard.CUE_HEAD) != null, "the clinician's side")
+	assert_true(Hoot.has_anchor("familiarize_cue"))
+	assert_true(_find_label(b, "SPONDEE LIST A: HOOT SAYS, MIKE REPEATS") != null, "the header says who says what")
+	var done := [false]
+	var sweep := func() -> void:
+		await b.say_along(0, 10, 3.0)
+		done[0] = true
+	sweep.call()
+	var seen_hoot := false
+	var seen_mike := false
+	var t0 := Time.get_ticks_msec()
+	while not done[0] and Time.get_ticks_msec() - t0 < 5000:
+		var line := b.echo_line()
+		seen_hoot = seen_hoot or line.begins_with("Hoot: \"")
+		seen_mike = seen_mike or line.contains("Mike: \"")
+		await wait_frames(1)
+	assert_true(done[0], "the sweep ends by itself")
+	assert_true(seen_hoot and seen_mike, "the line shows Hoot's word, then Mike's echo")
+	for it: Dictionary in _twelve().slice(0, 11):
+		assert_true(b.is_echoed(String(it["id"])), "Mike said %s back" % it["id"])
+	assert_false(b.is_echoed("windmill"), "the windmill isn't said yet")
+	assert_eq(b.echo_line(), "", "the line clears after the sweep")
+	b.say_word("windmill", "Wind... mill?")
+	assert_eq(b.echo_line(), "Hoot: \"windmill\"      Mike: \"Wind... mill?\"", "every word on screen, his echo too")
+	assert_false(b.is_echoed("windmill"), "no tick: he doesn't know it")
+	assert_eq(b.echo_of("rainbow"), "Rainbow!")
+	# a sweep cut short (the player clicked on) still ticks its cards and returns
+	var b2 := MikeBoard.new()
+	add_node(b2)
+	await wait_frames(2)
+	await b2.run_cards(_twelve())
+	var done2 := [false]
+	var sweep2 := func() -> void:
+		await b2.say_along(0, 10, 60.0)
+		done2[0] = true
+	sweep2.call()
+	await wait_frames(3)
+	b2.finish_say_along()
+	await wait_frames(1)
+	assert_true(done2[0], "finish_say_along ends the sweep")
+	assert_true(b2.is_echoed("raincoat"), "every card it covered is ticked")
+	b2.finish_say_along()   # a second call is harmless
+
+
 func test_board_objection_wrong_pick_then_solver_then_stamp() -> void:
 	var lv: Node = LevelMike.new()
 	lv.set("results", _merged())
@@ -379,6 +433,58 @@ func test_recheck_on_the_speech_screen() -> void:
 	assert_eq(s.session, player_session, "the left ear goes back to the player's session")
 	assert_true(player_session.is_done("right"), "with the first right SRT still stored")
 	Game.settings["quick_visit"] = quick
+	lv.free()
+
+
+## The familiarisation step on the level (board, dialogue and HUD, no clinic): Hoot says the words,
+## Mike says them back and the player drops the windmill; then Mike's SRT instructions.
+func test_familiarize_flow() -> void:
+	Engine.time_scale = 6.0
+	var lv: Node = LevelMike.new()
+	var hud: CanvasLayer = (load("res://story/hud.gd") as GDScript).new()
+	add_node(hud)
+	var dlg := DialogueBox.new()
+	add_node(dlg)
+	lv.set("hud", hud)
+	lv.set("dialogue", dlg)
+	var out: Array = [null]
+	var run := func() -> void:
+		out[0] = await lv.call("_familiarize")
+	run.call()
+	var lines: Array[String] = []
+	var handled := 0
+	var t0 := Time.get_ticks_msec()
+	while out[0] == null and Time.get_ticks_msec() - t0 < 40000:
+		await wait_frames(2)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		var info: Dictionary = b["info"]
+		if b["beat"] == &"dialogue":
+			lines.append("%s: %s" % [info.get("speaker", ""), info.get("text", "")])
+		elif b["beat"] == &"familiarize_cards":
+			lines.append("(drop)")
+		await wait_seconds(0.1)
+		(b["solver"] as Callable).call()
+	assert_true(out[0] != null, "the step finished")
+	var by_ear := lines.find("Hoot: I'll say each word, nice and loud. You say it back. No peeking: the cards face me!")
+	var echo := -1
+	for i in lines.size():
+		if lines[i].begins_with("Mike: Lighthouse! Rainbow!"):
+			echo = i
+	var windmill := lines.find("Mike: Wind... mill? Never seen one. Is it a fan for a field?")
+	var drop := lines.find("(drop)")
+	var told := lines.find("Hoot: Every test word comes from this list, Mike. Say back what you hear, and guess if unsure.")
+	assert_true(by_ear >= 0 and echo > by_ear, "Hoot says the words, Mike says them back: %s" % str(lines))
+	assert_true(windmill > echo and drop > windmill, "the windmill gag, then the player's drop")
+	assert_true(told > drop, "his SRT instructions: the words come from this list")
+	assert_eq(lv.get("dropped"), ["windmill"] as Array[String])
+	assert_eq(String((Game.visit.get("medals", {}) as Dictionary).get("familiarize", "")), "gold", "yes + a clean drop")
+	var board: Control = out[0]
+	for it: Dictionary in _twelve().slice(0, 11):
+		assert_true(bool(board.call("is_echoed", String(it["id"]))), "said back: " + String(it["id"]))
+	assert_true(LevelMike.echo_line(_twelve()).begins_with("Lighthouse! Rainbow! Sunbeam! Bookshelf! Easy! Moonlight!"))
 	lv.free()
 
 

@@ -22,10 +22,14 @@ const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_mike.tscn"
 const PATIENT_ID := "mike"
 
-## The spondee list, how many cards Mike reads, and the one he has never heard of.
+## The spondee list, how many cards Hoot says for Mike to repeat, and the one he has never heard of.
 const LIST_ID := "spondee_a"
 const FAMILIAR_WORDS := 12
 const UNKNOWN_WORD := "windmill"
+## Seconds for Hoot and Mike to go through the known cards (a short step: the player may click on).
+const SAY_ALONG_S := 4.4
+## Mike says back this many of them in his dialogue line (the rest are on the cards).
+const ECHO_WORDS := 8
 ## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
 ## reach Mike's first miss below his SRT (down 10 per hit from PTA + 15), and maybe the step back up.
 const LEFT_SOLO_WORDS := 8
@@ -342,6 +346,17 @@ func ear_pta(ear: String) -> float:
 
 # ---------------------------------------------------------------- 6. familiarise the word list
 
+## Mike's line while he says the cards back after Hoot (the first ECHO_WORDS; all of them are on
+## the cards): "Lighthouse! Rainbow! Sunbeam! Bookshelf! Easy! Moonlight! ...".
+static func echo_line(items: Array) -> String:
+	var said: Array[String] = []
+	for it: Variant in items.slice(0, ECHO_WORDS):
+		said.append(_cap(String((it as Dictionary).get("text", ""))))
+	var first := "! ".join(PackedStringArray(said.slice(0, 4)))
+	var rest := "! ".join(PackedStringArray(said.slice(4)))
+	return "%s! Easy! %s..." % [first, rest] if rest != "" else "%s! Easy!" % first
+
+
 ## Returns the board: the objection and the referral happen on it later.
 func _familiarize() -> Control:
 	_phase(&"familiarize")
@@ -364,16 +379,17 @@ func _familiarize() -> Control:
 	var b := MikeBoard.new()
 	hud.call("add_game", b)
 	await b.run_cards(items, SpeechMaterial.title(LIST_ID))
+	# by ear, not by eye: Hoot says each word, Mike says it back, and the cards face Hoot (the
+	# board's "Mike can't see this" sign); every word is on the cards and the "now saying" line
+	await _say("Hoot", "I'll say each word, nice and loud. You say it back. No peeking: the cards face me!")
 	var unknown := words.find(UNKNOWN_WORD)
 	var last_known := (unknown - 1) if unknown > 0 else words.size() - 1
-	b.read_along(0, last_known, 2.6)
-	var texts: Array[String] = []
-	for it: Dictionary in items.slice(0, mini(8, last_known + 1)):
-		texts.append(String(it.get("text", "")))
-	var first := ", ".join(PackedStringArray(texts.slice(0, 4)))
-	var rest := ", ".join(PackedStringArray(texts.slice(4)))
-	await _say("Mike", "%s... easy! %s..." % [_cap(first), _cap(rest)])
+	b.say_along(0, last_known, SAY_ALONG_S)
+	_react(&"nod")
+	await _say("Mike", echo_line(items.slice(0, last_known + 1)))
+	b.finish_say_along()   # the player may click on before the sweep ends
 	if unknown >= 0:
+		b.say_word(UNKNOWN_WORD, "Wind... mill?")
 		b.stumble(UNKNOWN_WORD)
 		_react(&"confused")
 		await _say("Mike", "Wind... mill? Never seen one. Is it a fan for a field?")
@@ -383,6 +399,8 @@ func _familiarize() -> Control:
 		dropped = b.dropped.duplicate()
 		_react(&"nod")
 		await _say("Mike", "The rest? Know 'em all. Not that I'll HEAR any of 'em.")
+	# his instructions for the SRT: the answers come from this list
+	await _say("Hoot", "Every test word comes from this list, Mike. Say back what you hear, and guess if unsure.")
 	var problems := (0 if said_yes else 1) + b.drop_slips
 	Game.record_medal("familiarize", "gold" if problems == 0 else ("silver" if problems == 1 else "bronze"))
 	Game.set_visit_flag("familiarized_first", said_yes)
