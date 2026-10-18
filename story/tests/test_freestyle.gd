@@ -180,15 +180,16 @@ func test_tray_rows_fit_the_screen() -> void:
 	var rows: Array = [LevelFreestyle.MASK_OPTIONS, LevelFreestyle.TYMP_LABELS.values(), FsRules.DECISION_STAMPS.values(),
 		FsRules.TYPE_LABELS.values()]
 	for k in rows.size() + 1:
-		var got := [-1]
+		var got := [false]
 		var run := func() -> void:
 			if k == 0:
-				got[0] = await tray.pick(tools, {}, &"chat", "What next for Penny?")
+				await tray.pick(tools, {}, &"chat", "What next for Penny?")
 			else:
 				var labels: Array[String] = []
 				for l: Variant in rows[k - 1]:
 					labels.append(String(l))
-				got[0] = await tray.choose("Which one?", labels, 0)
+				await tray.choose("Which one?", labels, 0)
+			got[0] = true
 		run.call()
 		await wait_seconds(0.2)
 		var vw := tray.get_viewport_rect().size.x
@@ -199,4 +200,4 @@ func test_tray_rows_fit_the_screen() -> void:
 					"row %d: '%s' sits on screen (%d to %d of %d)" % [k, b.text, int(b.position.x), int(b.position.x + b.size.x), int(vw)])
 		(tray as Object).call("_choose", 0)
 		await wait_seconds(0.2)
-		assert_ne(got[0], -1, "row %d answered" % k)
+		assert_true(got[0], "row %d answered" % k)

@@ -27,7 +27,7 @@
 		"red_flags": {"say": [
 			"No pain, no gunk, never dizzy. Not even after the slam.",
 			"It bled the day I fell, though. Loads. Nothing since."
-		], "note": "Ear bled at the fall; no pain, gunk or dizzy now"},
+		], "note": "Bled at the fall; no pain, gunk or dizziness now"},
 		"noise": {"say": "Skate park wheels on concrete. Punk shows, but I wear earplugs. My mum's a nurse.", "note": "Punk shows, with earplugs"},
 		"ear_history": {"say": [
 			"Never had an ear infection. Then the handrail.",
@@ -71,8 +71,8 @@
 	},
 	"debrief": [
 		["Hoot", "Healed eardrum, floppy peak, big gap after a knock: that points to the hearing chain behind it."],
-		["Hoot", "Masked bone stayed normal: the inner ear's fine. Gaps like this are often fixable. The doctor decides."],
-		["Hoot", "Count the red flags: blood from that ear, a sudden change, one ear worse, and that gap."]
+		["Hoot", "The hearing chain: three tiny bones behind the eardrum. Masked bone was normal, so the inner ear's fine."],
+		["Hoot", "Often fixable, but the doctor decides. Red flags: blood, sudden change, one ear worse, that gap."]
 	],
 	"goodbye": [
 		{"do": "letter"},

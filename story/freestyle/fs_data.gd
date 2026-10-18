@@ -20,7 +20,7 @@ const CASES_DIR := "res://story/freestyle/cases/"
 ## Every walk-in, in waiting-room order (a test checks that every case file is listed here; a list,
 ## not a folder scan, so exported builds find them all).
 const CASE_IDS: PackedStringArray = [
-	"fs_penny", "fs_mabel", "fs_sid", "fs_viola", "fs_buck",
+	"fs_penny", "fs_mabel", "fs_sid", "fs_viola", "fs_buck", "fs_melody", "fs_skyler",
 ]
 const REQUIRED_KEYS: PackedStringArray = [
 	"id", "patient_id", "speaker", "stars", "teaser", "look", "voice", "hello", "answers", "key_questions",
