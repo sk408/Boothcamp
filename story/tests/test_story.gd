@@ -331,7 +331,7 @@ func test_title_screen_beats() -> void:
 
 func test_voice_bank_is_quiet() -> void:
 	var ceiling := pow(10.0, (Voice.VOICE_PEAK_DBFS + 0.5) / 20.0)
-	for who: String in ["Gus", "Hoot", "Doris", "Gus|muffled", "Doris|muffled"]:
+	for who: String in ["Gus", "Hoot", "Doris", "Mike", "Gus|muffled", "Doris|muffled"]:
 		var parts := who.split("|")
 		var bank: Array = Voice.bank_for(parts[0], parts.size() > 1)
 		assert_true(bank.size() > 0)
@@ -438,7 +438,9 @@ func test_title_day_cards_keyboard() -> void:
 	assert_true(bool((cards[1] as Button).get_meta("hl", false)))
 	assert_eq((cards[1] as Button).text, "", "cards keep their own labels")
 	await tap_action(&"ui_down")
-	assert_eq(int(title.get("_hl")), 2, "Down from the only row: Back")
+	var cols := int(title.get("_days_cols"))
+	var below := 1 + cols if 1 + cols < cards.size() else (cards.size() - 1 if cards.size() > cols else cards.size())
+	assert_eq(int(title.get("_hl")), below, "Down: the card below Day 2, or Back from the last row")
 	await tap_action(&"ui_up")
 	await tap_action(&"ui_cancel")
 	assert_eq(title.get("_state"), &"menu", "Esc goes back")
@@ -451,3 +453,11 @@ func test_title_day_cards_keyboard() -> void:
 	await tap_action(&"ui_accept")
 	Events.goto_scene.disconnect(gcb)
 	assert_eq(went, ["res://story/level_bonnie.tscn"], "Enter on Day 2 starts it")
+
+
+## (Speech) Mike's Day 3 card has his face and his tint from his chapter entry.
+func test_title_day3_card_face() -> void:
+	var ts: Script = load("res://story/title_screen.gd")
+	var mike := Game.chapter("mike")
+	assert_eq(ts.call("card_face", mike), "Mike")
+	assert_eq(ts.call("card_tint", mike), Color("#fff0a6"))

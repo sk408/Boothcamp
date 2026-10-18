@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_case"]
+
+[resource]
+script = ExtResource("1_case")
+id = "ginger"
+display_name = "Ginger Snapp"
+age = 41
+complaint = "Voices keep dropping out. I just smile, nod and let Chip do the talking."
+thresholds_right = Dictionary[int, int]({
+250: 15,
+500: 20,
+750: 30,
+1000: 45,
+1500: 50,
+2000: 50,
+3000: 40,
+4000: 25,
+6000: 20,
+8000: 15
+})
+thresholds_left = Dictionary[int, int]({
+250: 15,
+500: 25,
+750: 35,
+1000: 45,
+1500: 50,
+2000: 55,
+3000: 45,
+4000: 30,
+6000: 25,
+8000: 20
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.3
+reaction_time_min_s = 0.4
+reaction_time_max_s = 0.9
+psychometric_slope_db = 1.7
+attention = 0.97
+fatigue_per_tone = 0.0006
+min_tone_s = 0.5
+rhythm_sensitivity = 0.5
+tinnitus_hz = 0
+tags = PackedStringArray("cookie_bite", "hereditary", "sensorineural", "bilateral", "case")
+pronoun = "she"
+nickname = "Ginger"

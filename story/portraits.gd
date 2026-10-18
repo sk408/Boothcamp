@@ -1,10 +1,13 @@
 extends RefCounted
 ## Portraits: procedural 2D character portraits for the dialogue box and Hoot's bubble.
 ## Portraits.draw(ci, "Gus", center, radius, talk_open, blink)
-## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "You" (a clipboard), anything else = narrator star.
+## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "Mike" (Speech), "You" (a clipboard), any case-file patient
+## (cases: story/case_portraits.gd draws them from their case's "look"), anything else = narrator star.
 
-const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "Bonnie": Color("#ffe3c2"), "You": Color("#d9e6ff")}
-const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "Bonnie": Color("#c46a1c"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
+const CasePortraits := preload("res://story/case_portraits.gd")
+
+const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "Bonnie": Color("#ffe3c2"), "Mike": Color("#fff0a6"), "You": Color("#d9e6ff")}
+const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "Bonnie": Color("#c46a1c"), "Mike": Color("#a3333d"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
 
 const INK := Color("#2e2442")
 const SKIN := Color("#ffcf9e")
@@ -12,13 +15,16 @@ const WHITE := Color("#fffdf8")
 
 
 static func name_color(speaker: String) -> Color:
+	if not NAME_COLORS.has(speaker) and CasePortraits.has(speaker):
+		return CasePortraits.name_color(speaker)
 	return NAME_COLORS.get(speaker, NAME_COLORS[""])
 
 
 static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: bool = false, blink: bool = false, frame: bool = true) -> void:
 	if frame:
 		ci.draw_circle(c, r + 5.0, INK)
-		ci.draw_circle(c, r, BG.get(who, Color("#fff3dc")))
+		var bg: Color = BG[who] if BG.has(who) else (CasePortraits.bg(who) if CasePortraits.has(who) else Color("#fff3dc"))
+		ci.draw_circle(c, r, bg)
 	match who:
 		"Gus":
 			_gus(ci, c, r, talk_open, blink)
@@ -28,10 +34,15 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 			_doris(ci, c, r, talk_open, blink)
 		"Bonnie":
 			_bonnie(ci, c, r, talk_open, blink)
+		"Mike":
+			_mike(ci, c, r, talk_open, blink)
 		"You":
 			_clipboard(ci, c, r)
 		_:
-			UiDraw.star(ci, c, r * 0.6, Palette.SUNNY)
+			if CasePortraits.has(who):
+				CasePortraits.draw(ci, who, c, r, talk_open, blink)
+			else:
+				UiDraw.star(ci, c, r * 0.6, Palette.SUNNY)
 
 
 # ---------------------------------------------------------------- helpers
@@ -223,6 +234,73 @@ static func _bonnie(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink
 		ci.draw_arc(h + Vector2(0, hr * 0.52), hr * 0.17, 0, TAU, 16, Color("#d9465f"), 3.0, true)
 	else:
 		ci.draw_arc(h + Vector2(0, hr * 0.32), hr * 0.25, 0.5, PI - 0.5, 12, Color("#d9465f"), 4.0, true)
+
+
+## (Speech) Mike Lenders: hi-vis vest over a cherry bowling shirt, a foam neck brace, a slick quiff
+## with sunglasses pushed up on it, stubble and a big show-off grin.
+static func _mike(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: bool) -> void:
+	var lime := Color("#d6ef3a")
+	var hair := Color("#3a2a22")
+	var skin := Color("#d9a07a")
+	_shoulders(ci, c, r, Color("#a3333d"), r * 0.42)
+	# the vest panels with their silver band, the shirt's cream camp collar between them
+	for s: float in [-1.0, 1.0]:
+		var panel := PackedVector2Array([c + Vector2(r * 0.2 * s, r * 0.5), c + Vector2(r * 0.72 * s, r * 0.62), c + Vector2(r * 0.86 * s, r), c + Vector2(r * 0.16 * s, r)])
+		var clipped := PackedVector2Array()
+		for p: Vector2 in panel:
+			var d := p - c
+			clipped.append(c + d.normalized() * minf(d.length(), r - 1.0))
+		ci.draw_colored_polygon(clipped, lime)
+		ci.draw_line(c + Vector2(r * 0.18 * s, r * 0.78), c + Vector2(r * 0.6 * s, r * 0.78), Color("#eef2f7"), r * 0.09, true)
+		ci.draw_colored_polygon(PackedVector2Array([c + Vector2(r * 0.04 * s, r * 0.44), c + Vector2(r * 0.34 * s, r * 0.47), c + Vector2(r * 0.18 * s, r * 0.62)]), Color("#fff3dc"))
+	var h := c + Vector2(0, -r * 0.06)
+	var hr := r * 0.44
+	# the foam neck brace under the chin
+	UiDraw.rounded_rect(ci, Rect2(c + Vector2(-hr * 0.78, hr * 0.62), Vector2(hr * 1.56, hr * 0.5)), INK, int(hr * 0.22))
+	UiDraw.rounded_rect(ci, Rect2(c + Vector2(-hr * 0.72, hr * 0.66), Vector2(hr * 1.44, hr * 0.42)), Color("#f4ecdc"), int(hr * 0.2))
+	ci.draw_line(c + Vector2(-hr * 0.12, hr * 0.87), c + Vector2(hr * 0.12, hr * 0.87), Color("#b9c0cc"), 3.0, true)
+	# ears, head, sideburns
+	for s: float in [-1.0, 1.0]:
+		_outlined_ellipse(ci, h + Vector2(hr * 0.98 * s, hr * 0.08), Vector2(hr * 0.15, hr * 0.22), skin, 2.5)
+	ci.draw_circle(h, hr + 3.0, INK)
+	ci.draw_circle(h, hr, skin)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_rect(Rect2(h + Vector2(hr * 0.82 * s - hr * 0.09, -hr * 0.45), Vector2(hr * 0.18, hr * 0.45)), hair)
+	# stubble along the jaw
+	for i in 15:
+		var a := lerpf(0.35, PI - 0.35, i / 14.0)
+		for k in 2:
+			var p := h + Vector2(cos(a), sin(a)) * hr * (0.78 - 0.13 * k) + Vector2(0, hr * 0.08)
+			ci.draw_circle(p, maxf(1.0, hr * 0.035), Color("#5a3d2b", 0.45))
+	# the quiff
+	_ellipse(ci, h + Vector2(0, -hr * 0.72), Vector2(hr * 1.0, hr * 0.42), hair)
+	_outlined_ellipse(ci, h + Vector2(hr * 0.12, -hr * 1.08), Vector2(hr * 0.78, hr * 0.36), hair, 3.0, -0.12)
+	ci.draw_arc(h + Vector2(hr * 0.1, -hr * 1.1), hr * 0.45, -2.7, -1.2, 10, hair.lightened(0.3), 3.0, true)
+	# the sunglasses, pushed up on the hairline
+	for s: float in [-1.0, 1.0]:
+		var lc := h + Vector2(hr * 0.3 * s, -hr * 0.66)
+		_outlined_ellipse(ci, lc, Vector2(hr * 0.26, hr * 0.15), Color("#26394a"), 3.5)
+		ci.draw_line(lc + Vector2(-hr * 0.12, -hr * 0.04), lc + Vector2(-hr * 0.02, -hr * 0.09), Color(1, 1, 1, 0.85), 2.0, true)
+	ci.draw_line(h + Vector2(-hr * 0.06, -hr * 0.7), h + Vector2(hr * 0.06, -hr * 0.7), INK, 3.5, true)
+	# eyes and bushy brows (one cocked: a showman)
+	for s: float in [-1.0, 1.0]:
+		var e := h + Vector2(hr * 0.37 * s, -hr * 0.08)
+		_eye(ci, e, hr * 0.19, blink)
+		var lift := hr * (0.1 if s > 0.0 else 0.0)
+		ci.draw_line(e + Vector2(-hr * 0.2, -hr * 0.3 - lift), e + Vector2(hr * 0.2, -hr * 0.34 - lift * 0.5 - hr * 0.04 * s), hair, hr * 0.12, true)
+	_ellipse(ci, h + Vector2(0, hr * 0.14), Vector2(hr * 0.13, hr * 0.11), Color("#cf8f69"))
+	if talk_open:
+		_ellipse(ci, h + Vector2(0, hr * 0.5), Vector2(hr * 0.22, hr * 0.17), Color("#7a2a3a"))
+		_ellipse(ci, h + Vector2(0, hr * 0.42), Vector2(hr * 0.18, hr * 0.05), WHITE)
+	else:
+		# a big toothy show-off grin
+		var pts := PackedVector2Array()
+		for i in 13:
+			var a := lerpf(0.15, PI - 0.15, i / 12.0)
+			pts.append(h + Vector2(hr * 0.02, hr * 0.34) + Vector2(cos(a) * hr * 0.32, sin(a) * hr * 0.2))
+		ci.draw_colored_polygon(pts, WHITE)
+		pts.append(pts[0])
+		ci.draw_polyline(pts, INK, 3.0, true)
 
 
 static func _clipboard(ci: CanvasItem, c: Vector2, r: float) -> void:

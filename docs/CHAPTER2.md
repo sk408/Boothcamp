@@ -320,8 +320,9 @@ visual gags only. Every masker lights the NOISE box on the LCD and the squiggles
   for the screen; arrows + Enter, Esc = Back, mouse click and wheel.
 - Finishing a day adds it to `progress.chapters_done` and emits `Events.chapter_completed`. The first clear
   of Day 1 stamps "UP NEXT! Day 2: Bonnie" on the paper and makes "Next: Day 2 [Space]" the big button; a replay
-  still offers "Next: Day 2 [N]". After the last day in order, Next goes to the suggested day instead (Day 2
-  played first: "UP NEXT! Day 1: Gus"). Old saves where Gus was played count as Day 1 done. Progress is saved in
+  still offers "Next: Day 2 [N]". When a later day is played while an earlier suggested day is still to do,
+  or after the last day in order, Next goes to the suggested day instead (Day 2 played first: "UP NEXT! Day 1:
+  Gus"). Old saves where Gus was played count as Day 1 done. Progress is saved in
   `user://save.json`.
 
 ## 12. Controls (keys and mouse)

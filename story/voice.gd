@@ -22,6 +22,8 @@ const SPEAKERS: Dictionary = {
 	"Gus": {"f0": 128.0, "wobble": 0.06, "roll": 0.72, "vowels": ["a", "o", "u", "e", "a", "o"]},
 	"Hoot": {"f0": 410.0, "wobble": 0.10, "roll": 0.55, "vowels": ["u", "o", "u", "o", "i", "u"]},
 	"Doris": {"f0": 235.0, "wobble": 0.08, "roll": 0.68, "vowels": ["e", "i", "a", "e", "o", "i"]},
+	# (Speech) Day 3: Mike, gruff and booming (a showman)
+	"Mike": {"f0": 105.0, "wobble": 0.05, "roll": 0.78, "vowels": ["a", "o", "a", "u", "e", "o"]},
 }
 ## Rough vowel formants (F1, F2) in Hz.
 const FORMANTS: Dictionary = {
@@ -29,6 +31,8 @@ const FORMANTS: Dictionary = {
 }
 
 static var _banks: Dictionary = {}
+## (cases) Extra speakers a level registers at run time (the case files' "voice"), same keys as SPEAKERS.
+static var _extra: Dictionary = {}
 
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
@@ -48,12 +52,28 @@ func _ready() -> void:
 
 
 static func has_voice(speaker: String) -> bool:
-	return SPEAKERS.has(speaker)
+	return SPEAKERS.has(speaker) or _extra.has(speaker)
+
+
+## (cases) Give a speaker a voice: {"f0", "wobble", "roll", "vowels"} (missing keys use Gus's).
+## The built-in speakers keep theirs.
+static func register(speaker: String, spec: Dictionary) -> void:
+	if speaker == "" or SPEAKERS.has(speaker):
+		return
+	var full: Dictionary = (SPEAKERS["Gus"] as Dictionary).duplicate(true)
+	for k: String in ["f0", "wobble", "roll"]:
+		if spec.has(k):
+			full[k] = float(spec[k])
+	if spec.get("vowels", []) is Array and not (spec.get("vowels", []) as Array).is_empty():
+		full["vowels"] = (spec["vowels"] as Array).duplicate()
+	_extra[speaker] = full
+	_banks.erase(speaker)
+	_banks.erase(speaker + "|muffled")
 
 
 ## Play syllable number i (any int) for the speaker. Quiet, short, safe to call every few letters.
 func syllable(speaker: String, i: int, volume_db: float = 0.0) -> void:
-	if not SPEAKERS.has(speaker):
+	if not has_voice(speaker):
 		return
 	var m := world_muffle()
 	var bank := bank_for(speaker, m > 0.4)
@@ -81,7 +101,7 @@ static func bank_for(speaker: String, muffled: bool = false) -> Array:
 	var key := speaker + ("|muffled" if muffled else "")
 	if _banks.has(key):
 		return _banks[key]
-	var spec: Dictionary = SPEAKERS[speaker]
+	var spec: Dictionary = SPEAKERS[speaker] if SPEAKERS.has(speaker) else _extra[speaker]
 	var bank: Array = []
 	var vowels: Array = spec["vowels"]
 	for i in vowels.size():
