@@ -527,6 +527,43 @@ func test_low_start_shows_hoot_s_praise() -> void:
 	assert_true(s.session.errors.is_empty(), "not an srt_start error")
 
 
+## A clean store on a combo step draws a combo callout ("Clean score!"), except when the ear's
+## sheet carries earlier slips: then the store's "Oops!" stands alone.
+func test_no_combo_callout_over_an_oops_store() -> void:
+	var calls_of := func(scr: SpeechScreen) -> Array[String]:
+		var out: Array[String] = []
+		for c: Dictionary in (scr.get("_fx") as AoFx).get("_calls"):
+			out.append(String(c["text"]))
+		return out
+	var clean := _screen()
+	clean.start_test(_mike(), "left", false, _plan())
+	await wait_frames(2)
+	clean.call("_handle_technique", &"srt_store_ok", {"combo": 3, "multiplier": 1, "points": 50})
+	var words: Array[String] = calls_of.call(clean)
+	var combo_word := false
+	for w: String in words:
+		combo_word = combo_word or SpeechScreen.TEXTBOOK_CALLOUTS.has(w)
+	assert_true(combo_word, "a clean ear: the combo callout at the store: %s" % str(words))
+	clean.queue_free()
+	await wait_frames(2)
+	var s := _screen()
+	s.start_test(_mike(), "left", false, _plan())
+	# one word scored the wrong way: a misscore on this ear
+	var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(ok)
+	await tap_action(&"present_tone")
+	ok = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(ok)
+	var truth := bool(s.session.current.get("correct", false))
+	await tap_action(&"speech_incorrect" if truth else &"speech_correct")
+	assert_true(s.session.slips().has(&"misscored"), "the slip is on this ear's sheet: %s" % str(s.session.slips()))
+	(s.get("_fx") as AoFx).set("_calls", [] as Array[Dictionary])
+	s.call("_handle_technique", &"srt_store_ok", {"combo": 3, "multiplier": 1, "points": 50})
+	for w: String in calls_of.call(s):
+		assert_false(SpeechScreen.TEXTBOOK_CALLOUTS.has(w), "no combo callout under the Oops!: " + w)
+	assert_eq(SpeechScreen.golf_text({"errors": [&"misscored"], "candidate_db": 30, "stored_db": 30})[0], "Oops!")
+
+
 func test_coached_ear_never_stores_off_the_bracket() -> void:
 	var s := _screen()
 	s.start_test(_mike(), "right", true, _plan())

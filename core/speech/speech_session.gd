@@ -567,6 +567,11 @@ func _mkey() -> String:
 	return "%s:%s" % [test, ear]
 
 
+## The slips (error kinds) on this ear's measurement so far: what its sheet's "errors" will hold.
+func slips() -> Array:
+	return (_meas_errors.get(_mkey(), []) as Array).duplicate()
+
+
 func _check_start() -> void:
 	var p := pta_for(ear)
 	if SpeechRules.srt_start_ok(db, p):

@@ -727,7 +727,9 @@ func _handle_technique(kind: StringName, data: Dictionary) -> void:
 			var at := _ladder.last_dot_global() + Vector2(34, -30)
 			if int(data.get("points", 0)) > 0:
 				_fx.callout("+%d" % int(data["points"]), at, Palette.MINT, 22, "", 0.0, 0.7)
-			if n >= 3 and (n == 3 or n == 6 or n == 10 or n % 5 == 0):
+			# no combo callout on a clean store whose sheet still ends in "Oops!" (earlier slips on this ear)
+			var store_oops := kind == &"srt_store_ok" and not session.slips().is_empty()
+			if n >= 3 and (n == 3 or n == 6 or n == 10 or n % 5 == 0) and not store_oops:
 				var word := TEXTBOOK_CALLOUTS[(n / 3) % TEXTBOOK_CALLOUTS.size()]
 				var c := _ladder.get_global_rect().get_center() + Vector2(0, -60)
 				_fx.callout(word, c, Palette.MINT, 36, "", randf_range(-6.0, 6.0))
