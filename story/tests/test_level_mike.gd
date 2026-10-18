@@ -439,6 +439,115 @@ func test_recheck_on_the_speech_screen() -> void:
 	lv.free()
 
 
+## A stand-in clinic for the speech step: the calls _speech() makes, and a camera to switch off.
+class StubClinic extends Node3D:
+	var cam := Camera3D.new()
+	var calls: Array[String] = []
+
+	func _init() -> void:
+		add_child(cam)
+
+	func focus_camera(_shot: StringName, _seconds: float = 0.0) -> void:
+		calls.append("focus_camera")
+
+	func hold_response_button(_on: bool) -> void:
+		calls.append("hold_response_button")
+
+	func get_main_camera() -> Camera3D:
+		return cam
+
+	func take_off_earphones() -> void:
+		calls.append("take_off_earphones")
+
+
+## The level without its _ready (no clinic scene, no _run): the test hands _speech() what it needs.
+class QuietLevel extends "res://story/level_mike.gd":
+	func _ready() -> void:
+		pass
+
+
+## The speech step itself (level_mike._speech()) through the recheck gate: the player's right SRT is
+## stored 5 dB off its bracket, so it can't show the mismatch; Hoot reruns the ear on the SPEECH
+## screen, the board uses his sheet, the results keep the player's for the grade, and the left
+## ear goes on (Hoot finishing it after the step up).
+func test_speech_step_through_the_recheck_gate() -> void:
+	Engine.time_scale = 8.0
+	var quick: Variant = Game.settings.get("quick_visit", true)
+	Game.settings["quick_visit"] = true
+	var lv: Node = QuietLevel.new()
+	lv.set("patient", _mike())
+	lv.set("tones", SpeechSession.tone_results_from(_mike()))
+	var ws: Array[String] = []
+	for it: Dictionary in _twelve():
+		ws.append(String(it["id"]))
+	lv.set("words", ws)
+	lv.set("dropped", ["windmill"] as Array[String])
+	var hud: CanvasLayer = (load("res://story/hud.gd") as GDScript).new()
+	add_node(hud)
+	var dlg := DialogueBox.new()
+	add_node(dlg)
+	var clinic := StubClinic.new()
+	add_node(clinic)
+	lv.set("hud", hud)
+	lv.set("dialogue", dlg)
+	lv.set("clinic", clinic)
+	add_node(lv)
+	var done := [false]
+	var run := func() -> void:
+		await lv.call("_speech")
+		done[0] = true
+	run.call()
+	var lines: Array[String] = []
+	var spoiled := [SpeechRules.NO_SRT]   # the bracketed SRT the player's right store stepped off
+	var handled := 0
+	var t0 := Time.get_ticks_msec()
+	while not done[0] and Time.get_ticks_msec() - t0 < 90000:
+		await wait_frames(1)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		var info: Dictionary = b["info"]
+		if b["beat"] == &"dialogue":
+			lines.append("%s: %s" % [info.get("speaker", ""), info.get("text", "")])
+		elif b["beat"] == &"speech" and String(info.get("ear", "")) == "right" and String(info.get("action", "")) == "store" \
+				and spoiled[0] == SpeechRules.NO_SRT:
+			# the player steps off the bracket, then stores: an SRT that can't carry the board
+			spoiled[0] = int(info["target_db"])
+			await tap_action(&"louder")
+			await tap_action(&"store")
+			continue
+		await wait_seconds(0.05)
+		(b["solver"] as Callable).call()
+	assert_true(done[0], "the speech step finished")
+	assert_ne(spoiled[0], SpeechRules.NO_SRT, "the right ear reached its store")
+	var mine: Dictionary = lv.call("srt_sheet", "right")
+	assert_eq(int(mine.get("stored_db", -1)), spoiled[0] + 5, "the player's right SRT, 5 dB off its bracket")
+	assert_false(LevelMike._srt_shows_mismatch(mine), "it can't carry the board")
+	var re: Dictionary = lv.get("recheck")
+	assert_false(re.is_empty(), "Hoot's recheck ran")
+	assert_true(bool(re.get("by_hoot", false)), "his run is not scored")
+	assert_true(LevelMike._srt_shows_mismatch(re), "by the book, Mike's SRT shows the mismatch")
+	assert_eq(lv.call("board_sheet"), re, "the board uses the recheck")
+	var cards: Array = lv.call("objection_cards")
+	assert_true(String((cards[1] as Array)[1]["title"]).begins_with("Hoot's recheck: SRT "), "the clue names his recheck")
+	var on_record: Dictionary = ((((lv.get("results") as Dictionary).get("speech", {}) as Dictionary).get("recheck", {}) as Dictionary) \
+		.get("srt", {}) as Dictionary).get("right", {})
+	assert_eq(int(on_record.get("stored_db", -1)), int(re.get("stored_db", -2)), "his recheck is on the visit's record (the paper's note)")
+	assert_eq(Game.visit.get("audiometry", {}), lv.get("results"), "and in the visit's results")
+	assert_has(lines, "Hoot: The bracket said %d dB, not that one. I'll recheck the right ear by the book." % spoiled[0])
+	var left: Dictionary = lv.call("srt_sheet", "left")
+	assert_false(left.is_empty(), "the left ear went on after the recheck")
+	assert_true(bool(left.get("by_hoot", false)), "Hoot finished the left bracket after the step up")
+	var verdict := false
+	for l: String in lines:
+		verdict = verdict or (l.begins_with("Hoot: SRT should sit within") and l.ends_with("better. Poor agreement!"))
+	assert_true(verdict, "the agreement verdict from the recheck: %s" % str(lines))
+	assert_has(clinic.calls, "take_off_earphones")
+	assert_eq(lv.get("screen"), null, "the SPEECH screen is gone")
+	Game.settings["quick_visit"] = quick
+
+
 ## The familiarisation step on the level (board, dialogue and HUD, no clinic): Hoot says the words,
 ## Mike says them back and the player drops the windmill; then Mike's SRT instructions.
 func test_familiarize_flow() -> void:
