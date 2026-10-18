@@ -2,11 +2,12 @@ extends Control
 ## TitleScreen: the safety notice, then the title menu over a live 3D clinic backdrop.
 ## Phases: &"disclaimer" (beat disclaimer_ok) then &"title" (beat title_start).
 ## Play -> the next chapter (v3: Game.start_chapter(Game.next_chapter_id()): Day 1 on a fresh
-## save, then the first open day not yet done). Days -> the day picker (phase / beat
-## &"chapter_select"): one card per chapter, locked days say how to open them, and the career-fair
-## toggle "Unlock all days (demo)". Options opens the pause menu. Quit quits.
-## Keyboard: Up/Down + Enter/Space. Mouse: click. The notice shows once per session; the
-## footer "This is a game, not a hearing test." is always on screen.
+## save, then the suggested day). Days -> the day picker (phase / beat &"chapter_select"): a
+## scrolling grid with one card per chapter, any number of them. Every day is open (polish: no
+## locks, any order); the suggested day wears an "UP NEXT" badge. Options opens the pause menu.
+## Quit quits. Keyboard: Up/Down + Enter/Space (Days: arrows move in the grid, Esc = Back).
+## Mouse: click, wheel scrolls the grid. The notice shows once per session; the footer
+## "This is a game, not a hearing test." is always on screen.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
@@ -30,21 +31,35 @@ var _font: Font
 var _starting := false
 var _idle := 0.0
 var _reset_armed := false
-# v3: the day picker
+# v3: the day picker (polish: a scrolling grid for any number of days)
 var _days_card: PanelContainer
 var _menu_buttons: Array[Button] = []
+## The Days card's buttons in keyboard order: every day card (day order), then Back.
 var _day_buttons: Array[Button] = []
+var _day_cards: Array[Button] = []
 var _days_note: Label
-const CARD_SIZE := Vector2(340, 318)
-## (Speech) The row of day cards must fit the 1280 px view with any number of days: cards narrow
-## from CARD_SIZE down to this, and their text shrinks to fit.
-const DAYS_ROW_MAX_W := 1180.0
-const CARD_MIN_W := 180.0
-## Who is on each day's card (a Portraits speaker) and the card's tint. (Unknown speakers draw the
-## narrator star, so a day can be listed before its portrait exists.)
-const DAY_FACES: Dictionary = {"gus": "Gus", "bonnie": "Bonnie", "mike": "Mike", "nora": "Nora", "marco": "Marco"}
-const DAY_TINTS: Dictionary = {"gus": Color("#bfeee6"), "bonnie": Color("#ffe3c2"), "mike": Color("#fff0a6"),
-	"nora": Color("#e3dcff"), "marco": Color("#ffd9cc")}
+var _days_hint_plain: Control
+var _days_hint_scroll: Control
+var _days_scroll: ScrollContainer
+var _days_grid: GridContainer
+var _days_cols := 1
+var _scroll_tween: Tween
+## Dev scenes and tests only: a chapter list to show instead of Game.chapters() (set it before
+## the title enters the tree). Never set in the game.
+var chapters_override: Array = []
+## Card size in the grid (the cards scale up when there are only a few days).
+const CARD_SIZE := Vector2(256, 206)
+const CARD_GAP := 18.0
+const GRID_MARGIN := 12.0
+const MAX_COLUMNS := 6
+## The always-visible safety footer band at the bottom, and the Days card's chrome around the grid
+## (panel margins, the header row, the footer row, separations).
+const FOOTER_H := 46.0
+const DAYS_CHROME_H := 24.0 + 40.0 + 48.0 + 2.0 * 10.0
+## Who is on each day's card (a Portraits speaker) and the card's tint. A chapter without an entry
+## here uses its own "face" / "tint" keys (Game.CHAPTERS), else a cream card with a star.
+const DAY_FACES: Dictionary = {"gus": "Gus", "bonnie": "Bonnie"}
+const DAY_TINTS: Dictionary = {"gus": Color("#bfeee6"), "bonnie": Color("#ffe3c2")}
 
 
 func _ready() -> void:
@@ -77,9 +92,8 @@ func _process(delta: float) -> void:
 	_logo.queue_redraw()
 	queue_redraw()
 	if _state == &"days":
-		for b: Button in _day_buttons:
-			if b.has_meta("chapter"):
-				b.queue_redraw()
+		for b: Button in _day_cards:
+			b.queue_redraw()
 
 
 func _draw() -> void:
@@ -129,7 +143,7 @@ func _on_start() -> void:
 	_start_chapter(Game.next_chapter_id(), &"title_start")
 
 
-## (v3) Start a chapter (falls back to Day 1's scene if it is locked or missing).
+## (v3) Start a chapter (falls back to Day 1's scene if it is unknown or missing).
 func _start_chapter(id: String, beat: StringName) -> void:
 	if _starting:
 		return
@@ -150,16 +164,25 @@ func _on_days() -> void:
 		return
 	_state = &"days"
 	Events.input_resolved.emit(&"title_start")
-	Events.phase_changed.emit(&"chapter_select", {"unlocked": Game.unlocked_chapter_ids()})
+	Events.phase_changed.emit(&"chapter_select", {"unlocked": _list_ids(), "suggested": _suggested_id()})
 	_menu_card.visible = false
 	_refresh_days()
+	_layout_days()
 	_days_card.visible = true
 	Juice.bounce_in(_days_card, 0.4)
 	_logo.create_tween().tween_property(_logo, "modulate:a", 0.0, 0.2)
 	_buttons = _day_buttons
-	_set_hl(0, false)
+	# start on the suggested day (Day 1 on a fresh save)
+	var start := 0
+	var sug := _suggested_id()
+	for i in _day_cards.size():
+		if String(_day_cards[i].get_meta("chapter", "")) == sug:
+			start = i
+	_days_scroll.scroll_vertical = 0
+	_set_hl(start, false)
+	_settle_scroll(start)
 	Sfx.play(&"whoosh", 1.2, -8.0)
-	Events.awaiting_input.emit(&"chapter_select", {"chapters": Game.unlocked_chapter_ids(), "next": Game.next_chapter_id()},
+	Events.awaiting_input.emit(&"chapter_select", {"chapters": _list_ids(), "next": Game.next_chapter_id(), "suggested": sug},
 		func() -> void: _start_chapter(Game.next_chapter_id(), &"chapter_select"))
 
 
@@ -173,65 +196,195 @@ func _days_back() -> void:
 	_show_title()
 
 
-func _pick_day(id: String, b: Button) -> void:
+## Every day is open (polish): a card always starts its chapter.
+func _pick_day(id: String, _b: Button = null) -> void:
 	if _state != &"days":
-		return
-	if not Game.is_chapter_unlocked(id):
-		Juice.shake(b, 6.0, 0.25)
-		Sfx.play(&"error", 1.0, -8.0)
-		var req := Game.chapter(String(Game.chapter(id).get("requires", "")))
-		_days_note.text = "%s opens when you finish Day %d. Or switch on \"Unlock all days\"." % [
-			String(Game.chapter(id).get("title", "This day")).get_slice(":", 0), int(req.get("day", 1))]
-		_days_note.add_theme_color_override("font_color", Palette.CORAL.darkened(0.25))
-		Juice.pop(_days_note, 1.1, 0.25)
 		return
 	_start_chapter(id, &"chapter_select")
 
 
-func _toggle_unlock_all() -> void:
-	Game.set_setting("unlock_all_days", not bool(Game.settings.get("unlock_all_days", false)))
-	Sfx.play(&"click", 1.1, -4.0)
-	_refresh_days()
-	_set_hl(_hl, false)
+## The chapters the picker shows: Game.chapters(), or the dev / test override.
+func _chapter_list() -> Array:
+	return chapters_override if not chapters_override.is_empty() else Game.chapters()
+
+
+func _list_ids() -> Array[String]:
+	var out: Array[String] = []
+	for ch: Dictionary in _chapter_list():
+		out.append(String(ch.get("id", "")))
+	return out
+
+
+## The day with the "UP NEXT" badge (Game.suggested_chapter_id() over the shown list).
+func _suggested_id() -> String:
+	return Game.suggested_from(_chapter_list(), Game.progress.get("chapters_done", []) as Array)
+
+
+## A card's portrait speaker: DAY_FACES, else the chapter's own "face" key, else "".
+static func card_face(ch: Dictionary) -> String:
+	var id := String(ch.get("id", ""))
+	if DAY_FACES.has(id):
+		return String(DAY_FACES[id])
+	return String(ch.get("face", ""))
+
+
+## A card's tint: DAY_TINTS, else the chapter's "tint" (a Color or a "#rrggbb" string), else cream.
+static func card_tint(ch: Dictionary) -> Color:
+	var id := String(ch.get("id", ""))
+	if DAY_TINTS.has(id):
+		return DAY_TINTS[id]
+	var t: Variant = ch.get("tint", null)
+	if t is Color:
+		return t
+	if t is String and Color.html_is_valid(String(t)):
+		return Color.html(String(t))
+	return Palette.CREAM
 
 
 func _refresh_days() -> void:
 	var pats: Dictionary = Game.progress.get("patients", {})
-	for b: Button in _day_buttons:
-		var id := String(b.get_meta("chapter", ""))
-		if id == "":
-			continue
-		var ch := Game.chapter(id)
-		var label := String(ch["title"])
-		var rec: Dictionary = pats.get(String(ch["patient_id"]), {})
+	var sug := _suggested_id()
+	for b: Button in _day_cards:
+		var ch: Dictionary = b.get_meta("ch", {})
+		var id := String(ch.get("id", ""))
+		var label := String(ch.get("title", id))
+		var rec: Dictionary = pats.get(String(ch.get("patient_id", id)), {})
 		var best := String(rec.get("best_grade", ""))
-		var open := Game.is_chapter_unlocked(id)
-		if not open:
-			label += "  (locked)"
-		elif Game.is_chapter_done(id) and best != "":
+		var done := Game.is_chapter_done(id)
+		if done and best != "":
 			label += "  [%s]" % best
 		b.set_meta("label", label)
-		b.set_meta("locked", not open)
-		b.set_meta("best", best if open else "")
-		b.tooltip_text = String(ch.get("teaches", ""))
+		b.set_meta("best", best if done else "")
+		b.set_meta("suggested", id == sug)
+		b.tooltip_text = "%s: %s" % [String(ch.get("title", "")), String(ch.get("teaches", ""))]
 		var status := b.get_node_or_null("Status") as Label
 		if status != null:
-			var req := Game.chapter(String(ch.get("requires", "")))
-			if not open:
-				status.text = "Finish Day %d to open" % int(req.get("day", 1))
-			elif int(rec.get("plays", 0)) > 0:
-				status.text = "Played %d time%s" % [int(rec["plays"]), "" if int(rec["plays"]) == 1 else "s"]
+			var plays := int(rec.get("plays", 0))
+			if plays > 0:
+				status.text = "Played %d time%s" % [plays, "" if plays == 1 else "s"]
 			else:
 				status.text = "New!"
-			status.add_theme_color_override("font_color", Palette.CORAL.darkened(0.2) if not open else Palette.INK_SOFT)
-		b.modulate = Color(1, 1, 1, 0.92) if not open else Color.WHITE
 		b.queue_redraw()
-	for b: Button in _day_buttons:
-		if String(b.get_meta("toggle", "")) == "unlock":
-			b.set_meta("label", "Unlock all days (demo): %s" % ("ON" if bool(Game.settings.get("unlock_all_days", false)) else "OFF"))
 	if _days_note != null:
-		_days_note.text = "New days open when you finish the one before."
-		_days_note.add_theme_color_override("font_color", Palette.INK_SOFT)
+		_days_note.text = "Every day is open: play them in any order."
+
+
+## Size the grid for the screen: as many columns as fit (at most MAX_COLUMNS), as many rows as fit
+## above the safety footer; more days than that scroll. Called on open and on every resize.
+func _layout_days() -> void:
+	if _days_card == null:
+		return
+	var vp := get_viewport_rect().size
+	var k := _card_scale()
+	var cs := CARD_SIZE * k
+	for b: Button in _day_cards:
+		b.custom_minimum_size = cs
+		_layout_card(b)
+	var g := grid_geometry(vp, _day_cards.size(), k)
+	_days_cols = int(g["cols"])
+	_days_grid.columns = _days_cols
+	var scrolls := bool(g["scrolls"])
+	_days_scroll.custom_minimum_size = g["scroll_size"]
+	_days_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if scrolls else ScrollContainer.SCROLL_MODE_DISABLED
+	if _days_hint_scroll != null and _days_hint_plain != null:
+		_days_hint_scroll.visible = scrolls
+		_days_hint_plain.visible = not scrolls
+	# centred above the footer band
+	var sz := _days_card.get_combined_minimum_size()
+	_days_card.size = sz
+	_days_card.position = Vector2(floor((vp.x - sz.x) * 0.5), floor(maxf(10.0, (vp.y - FOOTER_H - sz.y) * 0.5)))
+
+
+## The grid's shape for n days on a screen of logical size vp (k = card scale): {cols, rows,
+## vis_rows, scrolls, scroll_size}. Pure, so tests can check any screen without resizing one.
+static func grid_geometry(vp: Vector2, n: int, k: float = 1.0) -> Dictionary:
+	var cs := CARD_SIZE * k
+	n = maxi(1, n)
+	var avail_w := vp.x - 2.0 * 40.0 - 32.0 - 16.0 - 2.0 * GRID_MARGIN
+	var avail_h := vp.y - FOOTER_H - 2.0 * 12.0 - DAYS_CHROME_H - 2.0 * GRID_MARGIN
+	var cols := clampi(int(floor((avail_w + CARD_GAP) / (cs.x + CARD_GAP))), 1, mini(n, MAX_COLUMNS))
+	var rows := int(ceil(float(n) / cols))
+	var vis_rows := clampi(int(floor((avail_h + CARD_GAP) / (cs.y + CARD_GAP))), 1, rows)
+	var scrolls := rows > vis_rows
+	var grid_w := cols * cs.x + (cols - 1) * CARD_GAP + 2.0 * GRID_MARGIN
+	var grid_h := vis_rows * cs.y + (vis_rows - 1) * CARD_GAP + 2.0 * GRID_MARGIN
+	return {"cols": cols, "rows": rows, "vis_rows": vis_rows, "scrolls": scrolls,
+		"scroll_size": Vector2(grid_w + (16.0 if scrolls else 0.0), grid_h)}
+
+
+## The grid sorts its cards a frame after it opens: then bring the highlighted card into view.
+func _settle_scroll(i: int) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _state == &"days" and i < _day_cards.size() and _hl == i:
+		_scroll_to_card(_day_cards[i], false)
+
+
+## Few days get big cards; many get the compact grid.
+func _card_scale() -> float:
+	return 1.25 if _day_cards.size() <= 3 else 1.0
+
+
+func _on_viewport_resized() -> void:
+	if _state == &"days":
+		_layout_days()
+		if _hl >= 0 and _hl < _day_cards.size():
+			_scroll_to_card.call_deferred(_day_cards[_hl], false)
+
+
+## Keep a highlighted card (and its glow ring) inside the scroll window.
+func _scroll_to_card(b: Button, smooth: bool = true) -> void:
+	if _days_scroll == null or not _days_scroll.is_visible_in_tree() or not _day_cards.has(b):
+		return
+	var top := b.position.y           # the grid sits GRID_MARGIN inside the scrolled content
+	var bot := b.position.y + b.size.y + 2.0 * GRID_MARGIN
+	var cur := float(_days_scroll.scroll_vertical)
+	var h := _days_scroll.size.y
+	var target := cur
+	if top < cur:
+		target = top
+	elif bot > cur + h:
+		target = bot - h
+	if is_equal_approx(target, cur):
+		return
+	if _scroll_tween != null and _scroll_tween.is_valid():
+		_scroll_tween.kill()
+	if not smooth or bool(Game.settings.get("reduced_motion", false)):
+		_days_scroll.scroll_vertical = int(target)
+		return
+	_scroll_tween = create_tween()
+	_scroll_tween.tween_property(_days_scroll, "scroll_vertical", int(target), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+## Arrow keys on the Days card: Left / Right step through every button (cards, then Back, wrapping);
+## Up / Down move a row in the grid, past the last row to Back, from Back to the last card.
+func _days_nav(dx: int, dy: int) -> void:
+	var n := _day_cards.size()
+	var total := _buttons.size()
+	if total == 0:
+		return
+	if dx != 0:
+		_set_hl((_hl + dx + total) % total)
+		return
+	var back := n  # Back comes right after the cards
+	var row := int(_hl / _days_cols)
+	var last_row := int((n - 1) / _days_cols)
+	if dy > 0:
+		if _hl >= n:
+			_set_hl(0)
+		elif _hl + _days_cols < n:
+			_set_hl(_hl + _days_cols)
+		elif row < last_row:
+			_set_hl(n - 1)    # a short last row: its last card
+		else:
+			_set_hl(back)
+	elif dy < 0:
+		if _hl >= n:
+			_set_hl(n - 1)
+		elif _hl - _days_cols >= 0:
+			_set_hl(_hl - _days_cols)
+		else:
+			_set_hl(back)
 
 
 func _on_options() -> void:
@@ -247,6 +400,12 @@ func _on_quit() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event.is_pressed():
 		_idle = 0.0
+	# (polish) Esc on the Days card means Back (before the pause menu turns it into Options)
+	if _state == &"days" and event.is_action_pressed(&"ui_cancel") and not event.is_echo():
+		var pm := get_tree().get_first_node_in_group("pause_menu")
+		if pm == null or not bool(pm.call("is_open")):
+			_days_back()
+			get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -263,9 +422,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _state != &"menu" and _state != &"days":
 		return
-	if event.is_action_pressed(&"ui_down") or (_state == &"days" and event.is_action_pressed(&"ui_right")):
+	if _state == &"days" and (event.is_action_pressed(&"ui_right") or event.is_action_pressed(&"ui_left")):
+		_days_nav(1 if event.is_action_pressed(&"ui_right") else -1, 0)
+	elif _state == &"days" and (event.is_action_pressed(&"ui_down") or event.is_action_pressed(&"ui_up")):
+		_days_nav(0, 1 if event.is_action_pressed(&"ui_down") else -1)
+	elif event.is_action_pressed(&"ui_down"):
 		_set_hl((_hl + 1) % _buttons.size())
-	elif event.is_action_pressed(&"ui_up") or (_state == &"days" and event.is_action_pressed(&"ui_left")):
+	elif event.is_action_pressed(&"ui_up"):
 		_set_hl((_hl - 1 + _buttons.size()) % _buttons.size())
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
 		_buttons[_hl].pressed.emit()
@@ -286,6 +449,7 @@ func _set_hl(i: int, sound: bool = true) -> void:
 			if on and not was:
 				b.pivot_offset = b.size * 0.5
 				Juice.pop(b, 1.04, 0.2)
+				_scroll_to_card(b)
 			b.queue_redraw()
 			continue
 		b.theme_type_variation = &"AccentButton" if on else &""
@@ -305,20 +469,24 @@ func _build() -> void:
 	root.add_child(_logo)
 
 	_menu_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
-	_menu_card.position = Vector2(92, 326)
+	_menu_card.position = Vector2(92, 284)  # (polish) five buttons + stats fit above the footer
 	_menu_card.custom_minimum_size = Vector2(380, 0)
 	root.add_child(_menu_card)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
+	v.add_theme_constant_override("separation", 6)
 	_menu_card.add_child(v)
-	var specs: Array = [["Play", _on_start], ["Days", _on_days], ["Options", _on_options]]
+	# (polish) once you have played, Play says which day it starts
+	var play_txt := "Play"
+	if _has_progress():
+		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Options", _on_options]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
 	specs.append(["Quit", _on_quit])
 	for spec: Array in specs:
-		var b := UiKit.button(spec[0], &"", Vector2(340, 58))
+		var b := UiKit.button(spec[0], &"", Vector2(340, 48))
 		b.set_meta("label", spec[0])
-		b.add_theme_font_size_override("font_size", 26)
+		b.add_theme_font_size_override("font_size", 24)
 		b.pressed.connect(spec[1])
 		var idx := _buttons.size()
 		b.mouse_entered.connect(func() -> void:
@@ -333,7 +501,7 @@ func _build() -> void:
 		v.add_child(hr)
 	var stats := _stats_text()
 	if stats != "":
-		var sl := UiKit.label(stats, 16, Palette.INK_SOFT, 500)
+		var sl := UiKit.label(stats, 15, Palette.INK_SOFT, 500)
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		sl.custom_minimum_size = Vector2(340, 0)
@@ -400,171 +568,187 @@ func _build() -> void:
 	row.add_child(ok)
 
 
-## (v3) The day picker: one big card per day (portrait, title, what it teaches, best grade, lock),
-## then the demo unlock toggle and Back. Keyboard: Up/Down (or Left/Right) + Enter, Esc = Back.
+## (v3) The day picker. (Polish) A scrolling grid with one card per chapter, any number of them:
+## the columns and visible rows follow the screen (_layout_days), the rest scrolls (mouse wheel,
+## the scroll bar, or the arrow keys, which keep the highlighted card in view). Then Back.
 func _build_days(root: Control) -> void:
 	_days_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
-	_days_card.set_anchors_preset(Control.PRESET_CENTER)
-	_days_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_days_card.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_days_card.offset_top = -40   # sizes to its content, centred a little above the middle
-	_days_card.offset_bottom = -40
+	_days_card.name = "DaysCard"
 	_days_card.visible = false
 	root.add_child(_days_card)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
+	v.add_theme_constant_override("separation", 10)
 	_days_card.add_child(v)
-	var head := UiKit.label("Pick a day", 32, Palette.INK, 700)
-	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 16)
 	v.add_child(head)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", _days_row_sep())
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(row)
-	for ch: Dictionary in Game.chapters():
-		var id := String(ch["id"])
+	var title := UiKit.label("Pick a day", 32, Palette.INK, 700)
+	head.add_child(title)
+	_days_note = UiKit.label("Every day is open: play them in any order.", 16, Palette.INK_SOFT, 600)
+	_days_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_days_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_days_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	head.add_child(_days_note)
+	_days_scroll = ScrollContainer.new()
+	_days_scroll.name = "DaysScroll"
+	_days_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_days_scroll.follow_focus = false
+	v.add_child(_days_scroll)
+	var margin := MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
+	for side: String in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, int(GRID_MARGIN))
+	_days_scroll.add_child(margin)
+	_days_grid = GridContainer.new()
+	_days_grid.name = "DaysGrid"
+	_days_grid.add_theme_constant_override("h_separation", int(CARD_GAP))
+	_days_grid.add_theme_constant_override("v_separation", int(CARD_GAP))
+	_days_grid.mouse_filter = Control.MOUSE_FILTER_PASS
+	margin.add_child(_days_grid)
+	for ch: Dictionary in _chapter_list():
+		var id := String(ch.get("id", ""))
 		var b := _day_card(ch)
 		b.pressed.connect(func() -> void: _pick_day(id, b))
-		_add_day_button(row, b)
+		_add_day_button(_days_grid, b)
+		_day_cards.append(b)
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 14)
-	foot.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(foot)
-	var t := UiKit.button("Unlock all days (demo): OFF", &"", Vector2(400, 50))
-	t.set_meta("label", "Unlock all days (demo): OFF")
-	t.set_meta("toggle", "unlock")
-	t.add_theme_font_size_override("font_size", 18)
-	t.pressed.connect(_toggle_unlock_all)
-	_add_day_button(foot, t)
-	var back := UiKit.button("Back", &"", Vector2(200, 50))
+	if UiKit.show_key_hints():
+		# two versions of the hint: "wheel scrolls" only when there are more days than fit (_layout_days)
+		for scroll_hint: bool in [false, true]:
+			var hr := UiKit.hint_row([["Arrows"], "+", ["Enter"], "   ", ["Esc"],
+				"back    wheel scrolls    or click" if scroll_hint else "back    or click"], 15)
+			hr.name = "HintScroll" if scroll_hint else "HintPlain"
+			hr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			hr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			hr.visible = not scroll_hint
+			foot.add_child(hr)
+			if scroll_hint:
+				_days_hint_scroll = hr
+			else:
+				_days_hint_plain = hr
+	else:
+		var spacer := Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		foot.add_child(spacer)
+	var back := UiKit.button("Back", &"", Vector2(180, 48))
 	back.set_meta("label", "Back")
 	back.add_theme_font_size_override("font_size", 20)
 	back.pressed.connect(_days_back)
 	_add_day_button(foot, back)
-	_days_note = UiKit.label("New days open when you finish the one before.", 16, Palette.INK_SOFT, 600)
-	_days_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_days_note.custom_minimum_size = Vector2(620, 0)
-	_days_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_days_note)
-	if UiKit.show_key_hints():
-		var hr := UiKit.hint_row([["Left", "Right"], "+", ["Enter"], "   ", ["Esc"], "back   or click"], 15)
-		hr.alignment = BoxContainer.ALIGNMENT_CENTER
-		v.add_child(hr)
-
-
-## (Speech) Gap between day cards: roomy for a few days, tighter for many.
-## n = the number of days (0 = Game.chapters()).
-static func _days_row_sep(n: int = 0) -> int:
-	return 22 if (n if n > 0 else Game.chapters().size()) <= 3 else 14
-
-
-## (Speech) One card's size for n days (0 = Game.chapters()): CARD_SIZE while they fit in one
-## row, narrower (never below CARD_MIN_W) when there are more.
-static func _card_size(n: int = 0) -> Vector2:
-	var count := maxi(1, n if n > 0 else Game.chapters().size())
-	var w := floorf((DAYS_ROW_MAX_W - (count - 1) * _days_row_sep(count)) / count)
-	return Vector2(clampf(w, CARD_MIN_W, CARD_SIZE.x), CARD_SIZE.y)
-
-
-## (Speech) The largest font size (from `size` down to `min_size`) at which text fits in width px.
-static func _fit_font(text: String, weight: int, size: int, min_size: int, width: float) -> int:
-	var f := UiKit.font(weight)
-	var fs := size
-	while fs > min_size and f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
-		fs -= 1
-	return fs
+	get_viewport().size_changed.connect(_on_viewport_resized)
 
 
 ## One day's card: a flat button that draws itself (_draw_day_card); its labels are children, so
-## the title text ("Day 2: Bonnie Bunsworth") is what a click or a screen reader finds.
+## the title text ("Day 2: Bonnie Bunsworth") is what a click or a screen reader finds. The label
+## meta is the full title; the card shows the DAY chip and the name.
 func _day_card(ch: Dictionary) -> Button:
-	var id := String(ch["id"])
-	var cs := _card_size()
+	var id := String(ch.get("id", ""))
 	var b := Button.new()
 	b.flat = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = cs
+	b.mouse_filter = Control.MOUSE_FILTER_PASS   # clicks stop here; the wheel reaches the scroll
+	b.custom_minimum_size = CARD_SIZE
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	b.set_meta("label", String(ch["title"]))
+	b.set_meta("label", String(ch.get("title", id)))
 	b.set_meta("chapter", id)
+	b.set_meta("ch", ch)
 	b.draw.connect(_draw_day_card.bind(b))
-	var title_text := String(ch["title"])
-	var title := UiKit.label(title_text, _fit_font(title_text, 700, 23, 15, cs.x - 24), Palette.INK, 700)
+	var full := String(ch.get("title", id))
+	var name_part := full.get_slice(":", 1).strip_edges() if full.contains(":") else full
+	var title := UiKit.label(name_part, 21, Palette.INK, 700)
 	title.name = "Title"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title.clip_text = true
-	title.position = Vector2(10, 182)
-	title.size = Vector2(cs.x - 20, 32)
 	b.add_child(title)
-	var teach_text := String(ch.get("teaches", ""))
-	var teach := UiKit.label(teach_text, _fit_font(teach_text, 600, 18, 13, cs.x - 24), Palette.INK_SOFT, 600)
+	var teach := UiKit.label(String(ch.get("teaches", "")), 15, Palette.INK_SOFT, 600)
 	teach.name = "Teaches"
 	teach.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	teach.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	teach.clip_text = true
-	teach.position = Vector2(10, 218)
-	teach.size = Vector2(cs.x - 20, 26)
 	b.add_child(teach)
-	var status := UiKit.label("", 17 if cs.x >= 280.0 else 15, Palette.INK_SOFT, 700)
+	var status := UiKit.label("", 15, Palette.INK_SOFT, 700)
 	status.name = "Status"
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status.clip_text = true
-	status.position = Vector2(10, 266)
-	status.size = Vector2(cs.x - 20, 26)
 	b.add_child(status)
+	_layout_card(b)
 	return b
 
 
+## Place a card's labels for its size (compact or big).
+func _layout_card(b: Button) -> void:
+	var sz := b.custom_minimum_size
+	var k := sz.y / CARD_SIZE.y
+	var w := sz.x - 20.0
+	var t := b.get_node("Title") as Label
+	t.position = Vector2(10, 108.0 * k)
+	t.size = Vector2(w, 30.0 * k)
+	t.add_theme_font_size_override("font_size", int(21.0 * k))
+	var te := b.get_node("Teaches") as Label
+	te.position = Vector2(10, 137.0 * k)
+	te.size = Vector2(w, 24.0 * k)
+	te.add_theme_font_size_override("font_size", int(15.0 * k))
+	var st := b.get_node("Status") as Label
+	st.position = Vector2(10, 173.0 * k)
+	st.size = Vector2(w, 24.0 * k)
+	st.add_theme_font_size_override("font_size", int(15.0 * k))
+
+
 func _draw_day_card(b: Button) -> void:
-	var id := String(b.get_meta("chapter", ""))
-	var ch := Game.chapter(id)
+	var ch: Dictionary = b.get_meta("ch", {})
 	var hl := bool(b.get_meta("hl", false))
-	var locked := bool(b.get_meta("locked", false))
+	var k := b.size.y / CARD_SIZE.y
+	var day := int(ch.get("day", 0))
 	var r := Rect2(Vector2.ZERO, b.size)
-	var tint: Color = DAY_TINTS.get(id, Palette.CREAM)
+	var tint := card_tint(ch)
 	if hl:
-		UiDraw.rounded_rect(b, r.grow(7.0), Palette.SUNNY, 30)
-	UiDraw.rounded_rect(b, Rect2(r.position + Vector2(0, 6), r.size), Color(Palette.INK, 0.18), 24)
-	UiDraw.rounded_rect(b, r, Palette.PAPER, 24, 4, Palette.INK)
+		UiDraw.rounded_rect(b, r.grow(6.0), Palette.SUNNY, 26)
+	UiDraw.rounded_rect(b, Rect2(r.position + Vector2(0, 5), r.size), Color(Palette.INK, 0.18), 22)
+	UiDraw.rounded_rect(b, r, Palette.PAPER, 22, 4, Palette.INK)
 	# the tinted top with the patient's portrait
-	var top := Rect2(Vector2(4, 4), Vector2(b.size.x - 8, 150))
-	UiDraw.rounded_rect(b, top, tint.lerp(Palette.PAPER, 0.35) if not locked else Color("#e6e0d6"), 20)
-	for i in maxi(2, int((b.size.x - 30.0) / 58.0) + 1):
-		var x := 26.0 + i * 58.0
-		b.draw_circle(Vector2(x, 34.0 + 18.0 * float(i % 2)), 5.0, Color(Color.WHITE, 0.45))
-	var pc := Vector2(b.size.x * 0.5, 100)
-	# the portrait shrinks a little on narrow cards; the bob is out of phase from card to card
-	var pr := clampf(b.size.x / CARD_SIZE.x, 0.78, 1.0) * 66.0
-	var phase := float(maxi(0, Game.chapters().find(ch))) * 1.7
-	var bob := sin(_t * 2.4 + phase) * (3.0 if hl and not locked else 0.0)
-	Portraits.draw(b, String(DAY_FACES.get(id, "")), pc + Vector2(0, bob), pr, false, fmod(_t + pc.x, 4.2) < 0.12)
+	var top := Rect2(Vector2(4, 4), Vector2(b.size.x - 8, 96.0 * k))
+	UiDraw.rounded_rect(b, top, tint.lerp(Palette.PAPER, 0.3), 18)
+	for i in 5:
+		var x := 22.0 * k + i * (b.size.x - 44.0 * k) / 4.0
+		b.draw_circle(Vector2(x, 24.0 * k + 14.0 * k * float(i % 2)), 4.0 * k, Color(Color.WHITE, 0.45))
+	var pc := Vector2(b.size.x * 0.5, 56.0 * k)
+	var bob := sin(_t * 2.4 + day * 1.7) * (3.0 if hl else 0.0)
+	Portraits.draw(b, card_face(ch), pc + Vector2(0, bob), 38.0 * k, false, fmod(_t + day * 0.9, 4.2) < 0.12)
 	# the DAY chip
 	var f := UiKit.font(700)
-	var chip := "DAY %d" % int(ch.get("day", 1))
-	var cw := f.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-	UiDraw.rounded_rect(b, Rect2(Vector2(16, 14), Vector2(cw + 24, 32)), Palette.INK if not locked else Palette.INK_SOFT, 14)
-	b.draw_string(f, Vector2(28, 37), chip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.PAPER)
-	# best grade badge
+	var fs := int(16.0 * k)
+	var chip := "DAY %d" % day
+	var cw := f.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	UiDraw.rounded_rect(b, Rect2(Vector2(12, 12) * k, Vector2(cw + 20.0 * k, 28.0 * k)), Palette.INK, 12)
+	b.draw_string(f, Vector2(22.0 * k, 32.0 * k), chip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.PAPER)
+	# best grade badge (a finished day)
 	var best := String(b.get_meta("best", ""))
 	if best != "":
-		var bc := Vector2(b.size.x - 44, 44)
-		b.draw_circle(bc + Vector2(0, 3), 27.0, Color(Palette.INK, 0.25))
-		b.draw_circle(bc, 27.0, Palette.grade_color(best))
-		b.draw_arc(bc, 27.0, 0, TAU, 32, Palette.INK, 4.0, true)
-		var gw := f.get_string_size(best, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
-		b.draw_string(f, bc + Vector2(-gw * 0.5, 11), best, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.INK)
-		b.draw_string(f, bc + Vector2(-16, 44), "BEST", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Palette.INK_SOFT)
-	# a divider under the title
-	b.draw_line(Vector2(60, 256), Vector2(b.size.x - 60, 256), Color(Palette.INK, 0.12), 2.0)
-	if locked:
-		# frosted portrait and a big padlock
-		b.draw_circle(pc, pr + 6.0, Color(Palette.PAPER, 0.62))
-		var lk := pc + Vector2(0, 10)
-		b.draw_arc(lk + Vector2(0, -22), 20.0, PI, TAU, 16, Palette.INK, 13.0, true)
-		b.draw_arc(lk + Vector2(0, -22), 20.0, PI, TAU, 16, Color("#b9c0cc"), 6.0, true)
-		UiDraw.rounded_rect(b, Rect2(lk + Vector2(-32, -24), Vector2(64, 52)), Palette.SUNNY, 12, 4, Palette.INK)
-		b.draw_circle(lk + Vector2(0, -2), 7.0, Palette.INK)
-		b.draw_line(lk + Vector2(0, -2), lk + Vector2(0, 14), Palette.INK, 5.0)
+		var bc := Vector2(b.size.x - 34.0 * k, 34.0 * k)
+		var br := 21.0 * k
+		b.draw_circle(bc + Vector2(0, 3), br, Color(Palette.INK, 0.25))
+		b.draw_circle(bc, br, Palette.grade_color(best))
+		b.draw_arc(bc, br, 0, TAU, 32, Palette.INK, 3.5, true)
+		var gs := int(24.0 * k)
+		var gw := f.get_string_size(best, HORIZONTAL_ALIGNMENT_LEFT, -1, gs).x
+		b.draw_string(f, bc + Vector2(-gw * 0.5, 9.0 * k), best, HORIZONTAL_ALIGNMENT_LEFT, -1, gs, Palette.INK)
+		var bs := int(11.0 * k)
+		var bw := f.get_string_size("BEST", HORIZONTAL_ALIGNMENT_LEFT, -1, bs).x
+		b.draw_string(f, bc + Vector2(-bw * 0.5, br + 13.0 * k), "BEST", HORIZONTAL_ALIGNMENT_LEFT, -1, bs, Palette.INK_SOFT)
+	# the suggested day: a little UP NEXT ribbon (a hint, never a lock)
+	if bool(b.get_meta("suggested", false)):
+		var us := int(13.0 * k)
+		var txt := "UP NEXT"
+		var uw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, us).x + 18.0 * k
+		var wob := sin(_t * 3.0) * 1.5 if hl else 0.0
+		var ur := Rect2(Vector2(b.size.x - uw - 10.0 * k, 12.0 * k + wob), Vector2(uw, 24.0 * k))
+		UiDraw.rounded_rect(b, Rect2(ur.position + Vector2(0, 3), ur.size), Color(Palette.INK, 0.25), 10)
+		UiDraw.rounded_rect(b, ur, Palette.SUNNY, 10, 3, Palette.INK)
+		b.draw_string(f, ur.position + Vector2(9.0 * k, 17.0 * k), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, us, Palette.INK)
+	# a divider above the status line
+	b.draw_line(Vector2(50, 168.0 * k), Vector2(b.size.x - 50, 168.0 * k), Color(Palette.INK, 0.12), 2.0)
 
 
 func _add_day_button(v: Container, b: Button) -> void:
@@ -606,21 +790,18 @@ func _on_new_player() -> void:
 func _stats_text() -> String:
 	var parts: PackedStringArray = []
 	var any := false
-	var bests: Array[Array] = []
+	var bests: PackedStringArray = []
 	for ch: Dictionary in Game.chapters():
 		var rec: Dictionary = (Game.progress.get("patients", {}) as Dictionary).get(String(ch["patient_id"]), {})
 		if not rec.is_empty():
 			any = true
 		if not rec.is_empty() and String(rec.get("best_grade", "")) != "":
-			bests.append([int(ch["day"]), String(rec["best_grade"])])
-	# (Speech) one compact entry, so many days don't wrap the menu card off the screen
-	if bests.size() == 1:
-		parts.append("Day %d best: %s" % [int(bests[0][0]), String(bests[0][1])])
-	elif not bests.is_empty():
-		var each: PackedStringArray = []
-		for d: Array in bests:
-			each.append("Day %d %s" % [int(d[0]), String(d[1])])
-		parts.append("Best: " + ", ".join(each))
+			bests.append("Day %d best: %s" % [int(ch["day"]), String(rec["best_grade"])])
+	# (polish) many days: one short line instead of a best grade per day (the Days card shows them)
+	if bests.size() <= 2:
+		parts.append_array(bests)
+	else:
+		parts.append("%d of %d days done" % [(Game.progress.get("chapters_done", []) as Array).size(), Game.chapters().size()])
 	var coins := int(Game.progress.get("coins", 0))
 	if coins > 0 or any:
 		parts.append("%d Decibucks" % coins)
@@ -681,13 +862,18 @@ func _draw_logo() -> void:
 		_letter(ch, Vector2(x2, y2 + bob), 92, Palette.CORAL)
 		x2 += _font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, 92).x - 2.0
 	_logo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var tag := "Beep. Bracket. Be a hearing hero."
+	# (polish) the tagline sits beside CAMP: the taller menu card (five buttons) covers the space below
+	var tag := "Beep. Bracket.\nBe a hearing hero."
 	var tf := UiKit.font(600)
-	var tp := Vector2(64.0, y2 + 40.0)
-	var ts := tf.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 24)
-	var asc := tf.get_ascent(24)
-	UiDraw.rounded_rect(_logo, Rect2(tp + Vector2(-14.0, -asc - 5.0), Vector2(ts.x + 28.0, ts.y + 10.0)), Color(Palette.PAPER, 0.94), 20, 3, Color(Palette.INK, 0.85))
-	_logo.draw_string(tf, tp, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Palette.INK_SOFT)
+	var tfs := 22
+	var tp := Vector2(x2 + 34.0, y2 - 52.0)
+	var ts := tf.get_multiline_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs)
+	var asc := tf.get_ascent(tfs)
+	var tilt := -0.05 + sin(_t * 1.6) * 0.01
+	_logo.draw_set_transform(tp, tilt, Vector2.ONE)
+	UiDraw.rounded_rect(_logo, Rect2(Vector2(-16.0, -asc - 8.0), Vector2(ts.x + 32.0, ts.y + 14.0)), Color(Palette.PAPER, 0.94), 20, 3, Color(Palette.INK, 0.85))
+	_logo.draw_multiline_string(tf, Vector2.ZERO, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, -1, Palette.INK_SOFT)
+	_logo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _letter(ch: String, at: Vector2, px: int, fill: Color) -> void:

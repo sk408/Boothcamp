@@ -17,14 +17,18 @@ signal test_finished(results: Dictionary)
 
 const ANCHORS: Array[String] = ["tone_button", "louder_button", "softer_button", "freq_up_button", "freq_down_button", "store_button", "no_response_button", "ear_right_button", "ear_left_button", "audiogram_right", "audiogram_left"]
 ## (v3) Buttons (and Hoot anchors) that only show on Day 2 plans (hidden on Day 1).
-## Anchor ids: mask_softer_button, mask_toggle_button, mask_louder_button, transducer_button.
-const MASK_BUTTONS: Array[String] = ["mask_softer_button", "mask_toggle_button", "mask_louder_button", "transducer_button"]
+## Anchor ids: mask_softer_button, mask_toggle_button, mask_louder_button, and the ROUTE pill's two
+## segments transducer_air_button (AIR, A) and transducer_bone_button (BONE, B) (polish: one
+## segment per route, so a button never shows one state over the key for the other).
+const MASK_BUTTONS: Array[String] = ["mask_softer_button", "mask_toggle_button", "mask_louder_button", "transducer_air_button", "transducer_bone_button"]
 ## (v3) Test-plan panel titles per goal test.
 const QUEST_TITLES: Dictionary[StringName, String] = {&"ac": "TEST PLAN", &"bc": "BONE PLAN", &"bc_masked": "MASKED BONE", &"ac_masked": "MASKED AIR"}
 ## Runtime action for the key-hint toggle (H). Added here if project.godot lacks it.
 const TOGGLE_HINTS_ACTION := &"toggle_key_hints"
 const HINT_FEATHERS := 3
 const TEXTBOOK_CALLOUTS: Array[String] = ["Textbook!", "By the book!", "Hughson would be proud!", "Westlake-tastic!", "Smooth!", "Clinic-grade!"]
+## (Polish) Masked sheets: the plateau is Hood's method, not Hughson-Westlake's.
+const MASKED_CALLOUTS: Array[String] = ["Textbook!", "Ghostbuster!", "Hood would be proud!", "Plateau pro!", "Smooth!", "Clinic-grade!"]
 ## Golf callout colours. Par is a neutral sunny yellow, never an ear colour (red = right, blue = left).
 const GOLF_COLORS: Dictionary[StringName, Color] = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#ff9f1c"), &"birdie": Color("#5bc8a3"), &"par": Color("#ffd23f"),
@@ -95,7 +99,8 @@ const BONNIE_QUIPS: Array[String] = [
 	"My left ear is doing all the work today.",
 	"Whisper-quiet. Like flour settling.",
 	"Was that one for me, or for the owl?",
-	"My mom's ears went like this too, you know.",
+	"My mum's ears went like this too, you know.",
+	"Funny: I hear customers BETTER when the mixer's running!",
 ]
 const PATIENT_QUIPS: Dictionary[String, Array] = {"gus": GUS_QUIPS, "bonnie": BONNIE_QUIPS}
 const HOOT_GOLF_QUIPS: Dictionary[StringName, Array] = {
@@ -150,6 +155,17 @@ var _masking_ui := false
 var _solo_limit := QUICK_SOLO_HOLES
 var _masker_key: Array = []
 var _ghost_t := -100.0
+## (Polish) Hoot's montage is filling the ear (instant_measure): the session's per-tone signals are muted.
+var _montage_busy := false
+## (Polish) After the coached masked stamp, the next frequency gets a light coach: the button to
+## press beckons and the dance card pulses, no words.
+var _light_coach := false
+## (Polish) Tips held back while the coach talks (shown after the coached stamp): [kind, text, target].
+var _deferred_tips: Array = []
+## (Polish) The player saw a masked answer "run from the noise" (the shadow chase) this visit.
+var _chase_seen := false
+## (Polish) The player has moved the noise dial at least once (the occlusion line explains first).
+var _mask_tapped := false
 
 var _root: Control
 var _bg: Control
@@ -244,6 +260,13 @@ func demo_start() -> void:
 ##   "intro": String           Hoot's opening line (instead of the default)
 ##   "hoot_turn_text": String  Hoot's line when he takes over
 ##   "done_title": String      the big callout when the test is complete
+##   (polish) "intro_full": String  the opening line when quick visit is OFF (Hoot takes no turn)
+##   (polish) "montage": bool       quick visit + hoot_turn_after 0: Hoot fills the ear in a few
+##                                  seconds (instant_measure, stamps fly in) instead of an x8 turn
+##   (polish) "skip_hoot_retest": bool  Hoot's turn / montage skips the 1 kHz retest (Day 2)
+##   (polish) "nothing_title": String   the callout when the goal sheet needs nothing (e.g. no masking)
+##   (polish) "start_db": int           the first level of a non-air plan (default: the textbook start)
+## A goal sheet that is already complete (nothing to mask) finishes at once with that callout.
 func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dictionary = {}) -> void:
 	if session == null or session.patient.id != patient.id:
 		session = AudiometrySession.new(patient, Game.rng.randi())
@@ -274,6 +297,8 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_solo_stamps = 0
 	_dance_key = ""
 	_dance.clear()
+	_light_coach = false
+	_deferred_tips.clear()
 	_plan = plan.duplicate(true)
 	session.configure(_plan)
 	_masking_ui = bool(_plan.get("masking_controls", session.goal_test != &"ac"))
@@ -290,7 +315,8 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	else:
 		var rem := session.required_remaining(ear)
 		session.set_freq(rem[0] if not rem.is_empty() else ClinicRules.START_FREQ)
-		session.set_level(session.recommended_start(ear, session.freq))
+		# (polish) "start_db": the plan's own first level (Day 2's 250 Hz bonus hole starts at 40)
+		session.set_level(int(_plan["start_db"]) if _plan.has("start_db") else session.recommended_start(ear, session.freq))
 		if coached and _masking_ui and session.goal_test == &"bc" and session.stored_thresholds(ear, &"bc").is_empty():
 			# the route lesson: the first coached bone test starts on air, so the player presses B
 			session.set_transducer(session.air_transducer)
@@ -309,14 +335,25 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_coach_tip = -1
 	_coach_active = coached
 	var intro := String(_plan.get("intro", ""))
+	if not quick_visit and _plan.has("intro_full"):
+		intro = String(_plan["intro_full"])   # (polish) no Hoot turn without quick visit: no "I'll run it"
+	if session.goal_test != &"ac" and session.is_ear_complete(ear):
+		# (polish) nothing to measure on this sheet (inserts: no cross-over, no masked air): done
+		_coach_active = false
+		_refresh()
+		_complete_ear.call_deferred(ear)
+		return
 	if coached:
 		if intro != "":
 			Hoot.say(intro, Hoot.NORMAL, "", "", 3.0)
 		_coach_update()
 	elif quick_visit and _solo_limit <= 0:
 		if intro != "":
-			Hoot.say(intro, Hoot.NORMAL, "", "", 2.0)
-		_start_hoot_turn.call_deferred()
+			Hoot.say(intro, Hoot.NORMAL, "", "", 2.0 if not bool(_plan.get("montage", false)) else 3.5)
+		if bool(_plan.get("montage", false)):
+			_run_montage.call_deferred()
+		else:
+			_start_hoot_turn.call_deferred()
 	elif intro != "":
 		Hoot.say(intro, Hoot.NORMAL)
 	elif quick_visit and _solo_limit < 20:
@@ -418,10 +455,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_buttons["mask_toggle_button"].flash_press()
 		_toggle_mask()
 	elif _masking_ui and event.is_action_pressed(&"transducer_bone"):
-		_buttons["transducer_button"].flash_press()
+		_buttons["transducer_bone_button"].flash_press()
 		_set_transducer(&"bone")
 	elif _masking_ui and event.is_action_pressed(&"transducer_air"):
-		_buttons["transducer_button"].flash_press()
+		_buttons["transducer_air_button"].flash_press()
 		_set_transducer(session.air_transducer)
 	elif event.is_action_pressed(&"louder", true):
 		_buttons["louder_button"].flash_press()
@@ -527,6 +564,8 @@ func _mask_level(direction: int) -> void:
 		return
 	if session.step_mask(direction):
 		Sfx.play(&"click", 0.8 + direction * 0.08, -6.0)
+		if not _auto_running:
+			_mask_tapped = true
 	else:
 		_lcd.deny()
 		Sfx.play(&"error", 1.2, -12.0)
@@ -620,6 +659,23 @@ func _store(no_response: bool) -> void:
 		return
 	if session.time - _last_store_t < STORE_DEBOUNCE_S:
 		return  # a double tap of S / Enter right after a stamp
+	if _masking_ui and session.test != session.goal_test and not _auto_running:
+		# (polish) a stamp on the wrong sheet (air while the lesson is bone, or the noise off on a
+		# masked test) would only confuse the chart: say what to switch first
+		_lcd.deny()
+		Sfx.play(&"error", 1.2, -12.0)
+		var a := session.recommended_action()
+		var why := "Switch the route first!"
+		var tgt := "store_button"
+		if a["action"] == &"transducer":
+			var to_bone := StringName(a.get("target", &"bone")) == &"bone"
+			why = ("Switch to BONE first: press %s." % _k(&"transducer_bone")) if to_bone else ("Switch to AIR first: press %s." % _k(&"transducer_air"))
+			tgt = "transducer_bone_button" if to_bone else "transducer_air_button"
+		elif a["action"] == &"mask_toggle":
+			why = ("Noise first: press %s, then find the plateau." if not session.mask_on else "Noise off first: press %s.") % _k(&"toggle_mask")
+			tgt = "mask_toggle_button"
+		_tip(&"store_wrong_sheet", why, tgt)
+		return
 	if session.measurement(session.ear, session.freq).is_empty():
 		# nothing to stamp yet at this pitch (an accidental second S would stamp the next one)
 		_lcd.deny()
@@ -681,6 +737,8 @@ func _ensure_hint_action() -> void:
 # ---------------------------------------------------------------- session callbacks
 
 func _on_responded(ear: String, freq: int, db: int, related: bool) -> void:
+	if _montage_busy:
+		return  # Hoot's montage: no presses on screen (no tone was played either)
 	_booth.flash_press(ear)
 	_fx.burst(_booth.lamp_global_position(), Palette.ear_color(ear), 10, 230.0)
 	_fx.burst(_booth.lamp_global_position(), Palette.PRESS_LIME, 6, 160.0)
@@ -694,6 +752,10 @@ func _on_responded(ear: String, freq: int, db: int, related: bool) -> void:
 
 
 func _on_presentation_closed(_e: String, _f: int, rec: Dictionary) -> void:
+	if _montage_busy:
+		return
+	if not bool(rec.get("responded", false)) and not _auto_running and not _coach_active and int(rec.get("mask_db", -1)) >= 0:
+		_check_chase(_e, _f)
 	if not bool(rec.get("responded", false)):
 		# a miss: a grey puff where the "HEARD!" would have been
 		_fx.chip("...", _buttons["tone_button"].get_global_rect().get_center() + Vector2(0, -66), Color("#d9d3e3"), Palette.INK_SOFT, 20, 0.8)
@@ -703,6 +765,8 @@ func _on_presentation_closed(_e: String, _f: int, rec: Dictionary) -> void:
 
 
 func _on_reaction(kind: StringName, data: Dictionary) -> void:
+	if _montage_busy:
+		return
 	Events.patient_reaction.emit(kind, data)
 	if EMOTES.has(kind):
 		_booth.emote(EMOTES[kind])
@@ -715,8 +779,12 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 			if session != null and session.time - _ghost_t > 1.2:
 				_ghost_t = session.time
 				var via := String(data.get("via", "left"))
-				if _auto_running:
-					_fx.chip("boo!", bc + Vector2(0, -40), Color("#efeaf7"), Palette.PLUM, 16, 0.7)
+				var e_now := String(data.get("ear", _ear))
+				# (polish) before the first bone stamp there is nothing to compare yet: a small "boo?" only;
+				# the big Ghost flies once a bone mark sits next to the air mark (or under masking)
+				var early := not bool(data.get("masked", false)) and session.stored_thresholds(e_now, &"bc").is_empty()
+				if _auto_running or early:
+					_fx.chip("boo?" if early and not _auto_running else "boo!", bc + Vector2(0, -40), Color("#efeaf7"), Palette.PLUM, 16, 0.7)
 				else:
 					# the Cross-Hearing Ghost flies from the test ear's chart to the ear that really heard it
 					var from := _chart_point(String(data.get("ear", _ear)), session.freq, int(data.get("db", session.db)))
@@ -724,7 +792,15 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 					# the shout goes where the chart is empty: under a ghost in the upper half, else above it
 					var card_r := (_cards[via] as AoEarCard).get_global_rect() if _cards.has(via) else Rect2(to - Vector2(200, 200), Vector2(400, 400))
 					var shout := to + Vector2(0, 84) if to.y + 130.0 < card_r.end.y else to + Vector2(0, -96)
-					_fx.ghost(from, to, "BOO!", "the %s cochlea heard it" % via.to_upper(), shout)
+					var title := "BOO!"
+					var air := session.stored_thresholds(e_now, &"ac")
+					var bone := session.stored_thresholds(e_now, &"bc")
+					var b_order: Array = ((session.sheet(&"bc")["order"] as Dictionary)[e_now] as Array) if session.sheet(&"bc").has("order") else []
+					if not bool(data.get("masked", false)) and not b_order.is_empty():
+						var lf := int(b_order[-1])   # the last bone mark and the air mark at the same pitch
+						if air.has(lf) and bone.has(lf):
+							title = "Bone %d, air %d? BOO!" % [int(bone[lf]), int(air[lf])]
+					_fx.ghost(from, to, title, "the %s cochlea may have heard it" % via.to_upper(), shout)
 					Sfx.play(&"whoosh", 1.3, -10.0)
 		&"tickle":
 			if not _auto_running:
@@ -732,7 +808,23 @@ func _on_reaction(kind: StringName, data: Dictionary) -> void:
 		&"overmasked":
 			if not _auto_running:
 				Events.screen_shake.emit(0.3, 0.25)
-				_fx.callout("TOO MUCH NOISE!", bc + Vector2(80, 60), Palette.CORAL, 34, "it leaks back into the test ear", -5.0, 1.5)
+				_fx.callout("TOO MUCH NOISE!", bc + Vector2(80, 60), Palette.CORAL, 34, "it could leak into the test ear", -5.0, 1.5)
+
+
+## (Polish) The shadow chase, seen the way a clinician sees it (no peeking): a tone heard at one noise
+## level is missed at the same level after one noise raise, so the answer "ran from the noise":
+## it was the other cochlea. Once per visit, a tip that names it; the plateau tip later says why.
+func _check_chase(e: String, f: int) -> void:
+	if _chase_seen or session == null:
+		return
+	var recs := session.measurement(e, f)
+	if recs.size() < 2:
+		return
+	var last: Dictionary = recs[-1]
+	var prev: Dictionary = recs[-2]
+	if bool(prev["responded"]) and int(prev["db"]) == int(last["db"]) and int(last.get("mask_db", -1)) == int(prev.get("mask_db", -1)) + ClinicRules.MASK_STEP_DB:
+		_chase_seen = true
+		Hoot.say("The answer ran from the noise: that was the Ghost! Tone up 5, keep chasing.", Hoot.HIGH, "louder_button", "tip_shadow_chase", 6.0)
 
 
 ## Canvas position of (freq, db) on an ear card's audiogram.
@@ -769,6 +861,8 @@ func _punch_in(kind: StringName) -> void:
 
 
 func _on_technique(kind: StringName, data: Dictionary) -> void:
+	if _montage_busy:
+		return
 	Events.technique_event.emit(kind, data)
 	var auto := bool(data.get("auto", false)) or _auto_running
 	match kind:
@@ -782,7 +876,8 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			if int(data.get("points", 0)) > 0:
 				_fx.callout("+%d" % int(data["points"]), _buttons["tone_button"].get_global_rect().get_center() + Vector2(90, -64), Palette.MINT, 22, "", 0.0, 0.7)
 			if n >= 3 and (n == 3 or n == 6 or n == 10 or n % 5 == 0):
-				var word := TEXTBOOK_CALLOUTS[(n / 3) % TEXTBOOK_CALLOUTS.size()]
+				var words := MASKED_CALLOUTS if session != null and ClinicRules.test_is_masked(session.test) else TEXTBOOK_CALLOUTS
+				var word: String = words[(n / 3) % words.size()]
 				var at := _buttons["tone_button"].get_global_rect().get_center() + Vector2(0, -118)
 				_fx.callout(word, at, Palette.MINT, 38, "", randf_range(-6.0, 6.0))
 				_fx.stars(at, 8, Palette.SUNNY)
@@ -837,7 +932,14 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			# just under the plateau graph, so the flat line itself stays in view
 			_fx.callout("FLAT LINE!", Vector2(lc.end.x - 150.0, lc.end.y + 6.0), Palette.MINT, 36, "more noise, same answer", -4.0, 1.6)
 			Sfx.play(&"sparkle", 1.1, -6.0)
-			_tip(kind, String(data.get("message", "")), "store_button")
+			if _coach_active:
+				pass  # the coach already says "Flat line! ... STORE" (no second, stale "Store it!" after the stamp)
+			elif _chase_seen:
+				# after the shadow chase: why the plateau is the method at all (once; then the usual tip)
+				if not Hoot.say_once("tip_plateau_xray", "Flat line! Real audiometers can't see the Ghost: that's why pros trust the plateau. Store it!", Hoot.HIGH, "store_button"):
+					_tip(kind, String(data.get("message", "")), "store_button")
+			else:
+				_tip(kind, String(data.get("message", "")), "store_button")
 		_:
 			if auto:
 				return
@@ -845,13 +947,16 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var error := kind in ERROR_KINDS
 			if error and not _coach_active:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
-			if msg != "" and not (_coach_active and error):
+			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap"]:
+				# (polish) a lesson during the coached steps waits for the coached stamp
+				_deferred_tips.append([kind, msg, _target_for(kind, data)])
+			elif msg != "" and not (_coach_active and error):
 				_tip(kind, msg, _target_for(kind, data))
 
 
 ## Show a technique tip. Everyday slips repeat (with a cooldown); the rest fire once per visit.
 func _tip(kind: StringName, msg: String, target: String) -> void:
-	if kind in REPEAT_TIPS or kind == &"store_empty":
+	if kind in REPEAT_TIPS or kind == &"store_empty" or kind == &"store_wrong_sheet":
 		var cd := TIP_COOLDOWN_S if _clean_steps < TIP_QUIET_AFTER_STEPS else TIP_COOLDOWN_LATE_S
 		var now := session.time if session != null else 0.0
 		if now - float(_tip_last.get(kind, -1000.0)) < cd:
@@ -922,11 +1027,16 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 		_fx.chip("NR" if no_resp else "%d dB" % db, at + Vector2(0, -30), Palette.HOOT_FACE, Palette.INK, 14, 0.9)
 	else:
 		_celebrate_stamp(ear, freq, at, info)
+	if not by_hoot:
+		Hoot.dismiss_target("store_button")   # (polish) no "Store it!" left over after the stamp
+		if _light_coach and not _coach_active:
+			_light_coach = false   # the light coach covers one frequency only
 	if _coach_active:
 		_coach_active = false
 		if _coach_tip >= 0:
 			Hoot.dismiss(_coach_tip)
 		_coach_tip = -1
+		_light_coach = ClinicRules.test_is_masked(test) and not by_hoot
 		var nxt: Array[int] = session.required_remaining(ear)
 		var where := ("%d Hz" % nxt[0]) if not nxt.is_empty() else "the next pitch"
 		# (integrator) a Day 2 plan whose turn starts right after this stamp: Hoot announces
@@ -935,6 +1045,9 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 			and not _auto_done_ears.has(_ear) and _solo_stamps + 1 >= _solo_limit and not session.is_ear_complete(_ear)
 		if not hoot_next:
 			Hoot.say("Stamped! On to %s. Same dance, now you lead!" % where, Hoot.HIGH, "", "", 5.0)
+		for d: Array in _deferred_tips:
+			_tip(StringName(d[0]), String(d[1]), String(d[2]))
+		_deferred_tips.clear()
 	elif not by_hoot and freq == 4000 and not _told_3k6k and test == &"ac":
 		_told_3k6k = true
 		Hoot.say("Many clinics also test 3000 and 6000 Hz: fitting formulas use them.", Hoot.LOW, "", "tip_3k6k", 5.0)
@@ -997,7 +1110,9 @@ func _celebrate_stamp(_ear_s: String, _freq: int, at: Vector2, info: Dictionary)
 			_par_count += 1
 			say = _par_count % 3 == 0
 		if say and not Hoot.is_showing():
-			var lines: Array = HOOT_GOLF_QUIPS[golf]
+			var lines: Array = (HOOT_GOLF_QUIPS[golf] as Array).duplicate()
+			if session != null and session.patient.id != "gus":
+				lines = lines.filter(func(l: String) -> bool: return not l.contains("can't hear"))   # a Gus joke
 			Hoot.say(_say(String(lines[randi() % lines.size()])), Hoot.LOW, "", "", 3.5)
 
 
@@ -1039,6 +1154,7 @@ func _complete_ear(ear: String) -> void:
 	var results := session.build_results()
 	var ear_res: Dictionary = results["ears"][ear]
 	Events.ear_completed.emit(ear, ear_res)
+	_light_coach = false
 	var card: AoEarCard = _cards[ear]
 	card.flash()
 	_refresh()
@@ -1046,17 +1162,42 @@ func _complete_ear(ear: String) -> void:
 	Sfx.play(&"fanfare", 1.0, -6.0)
 	var center := card.get_global_rect().get_center()
 	_fx.confetti(center + Vector2(0, -60), 40, 420.0)
-	var golf := int(ear_res.get("golf", 0))
-	var golf_txt := "even par" if golf == 0 else ("%d under par" % -golf if golf < 0 else "%d over par" % golf)
-	var pr := session.ear_progress(ear)
-	var parts: Array[String] = ["%d stamps" % pr[0], golf_txt]
-	var birdies := int(ear_res.get("birdies", 0))
-	if birdies > 0:
-		parts.append("%d birdie%s!" % [birdies, "" if birdies == 1 else "s"])
-	var hoot_n := int(ear_res.get("hoot_holes", 0))
+	# (polish) the sub-line counts THIS test's sheet only; golf over the player's own stamps
+	var sheet_st: Dictionary = (session.sheet(session.goal_test)["stored"] as Dictionary)[ear]
+	if session.goal_test == &"bc" and _plan.has("bc_freqs"):
+		# a bone test over part of the sheet (the 250 Hz bonus hole): count only its own stamps
+		var own := {}
+		for f: Variant in _plan["bc_freqs"]:
+			if sheet_st.has(int(f)):
+				own[int(f)] = sheet_st[int(f)]
+		sheet_st = own
+	var mine := 0
+	var hoot_n := 0
+	var fair := 0
+	var birdies := 0
+	for f: int in sheet_st:
+		var inf: Dictionary = sheet_st[f]
+		if bool(inf.get("by_hoot", false)):
+			hoot_n += 1
+			continue
+		mine += 1
+		var d := int(inf.get("strokes", 0)) - int(inf.get("par", 0))
+		fair += mini(d, 0) if bool(inf.get("clean", true)) else maxi(d, 0)
+		if StringName(String(inf.get("golf", ""))) in [&"birdie", &"eagle", &"albatross"]:
+			birdies += 1
+	var n := sheet_st.size() + (1 if session.goal_test == &"ac" and not (session.retest[ear] as Dictionary).is_empty() else 0)
+	var parts: Array[String] = ["%d stamp%s" % [n, "" if n == 1 else "s"]]
+	if mine > 0:
+		parts.append("even par" if fair == 0 else ("%d under par" % -fair if fair < 0 else "%d over par" % fair))
+		if birdies > 0:
+			parts.append("%d birdie%s" % [birdies, "" if birdies == 1 else "s"])
 	if hoot_n > 0:
-		parts.append("Hoot did %d" % hoot_n)
-	_fx.callout(String(_plan.get("done_title", "%s EAR DONE!" % ear.to_upper())), center + Vector2(0, -20), Palette.SUNNY, 52, ", ".join(parts), -3.0, 2.6)
+		parts.append("Hoot did %d" % hoot_n if mine > 0 else "all by Hoot")
+	var title := String(_plan.get("done_title", "%s EAR DONE!" % ear.to_upper()))
+	if sheet_st.is_empty():
+		title = String(_plan.get("nothing_title", "NOTHING TO MASK!"))
+		parts = ["no cross-over: nothing to stamp"]
+	_fx.callout(title, center + Vector2(0, -20), Palette.SUNNY, 52, ", ".join(parts), -3.0, 2.6)
 	var melody := card.audiogram.play_melody(ear, 0.2)
 	await get_tree().create_timer(melody + 1.4, false).timeout
 	results = session.build_results()
@@ -1078,6 +1219,9 @@ func _start_hoot_turn() -> void:
 	_ff_on = false
 	session.scoring = false
 	_coach_active = false
+	_light_coach = false
+	if bool(_plan.get("skip_hoot_retest", false)):
+		session.retest_waived[_ear] = true   # (polish, Day 2) the 1 kHz retest was taught on Day 1
 	_fx.clear_speech()
 	for id: String in ["tone_button", "softer_button", "louder_button", "store_button"] + MASK_BUTTONS:
 		(_buttons[id] as AoButton).beckon = false
@@ -1096,6 +1240,46 @@ func _start_hoot_turn() -> void:
 	if not get_tree().paused:
 		Engine.time_scale = _ff_scale()
 	_auto.run(self, session, _ear)
+
+
+## (Polish) Hoot's montage: the ear in a few seconds. Each remaining measurement is a whole textbook
+## search done at once by the session (instant_measure: the patient simulator answers, no tones
+## are played), then its stamp flies onto the chart. Hoot's holes (scoring off), input locked.
+func _run_montage() -> void:
+	if _auto_running or _finishing or session == null or session.is_ear_complete(_ear):
+		return
+	for src: String in _hold.keys():
+		_hold_remove(src)
+	_buttons["tone_button"].cancel_hold()
+	_auto_running = true
+	_ff_on = false
+	_base_time_scale = Engine.time_scale
+	session.scoring = false
+	_coach_active = false
+	if bool(_plan.get("skip_hoot_retest", false)):
+		session.retest_waived[_ear] = true
+	_ff_banner.visible = true
+	_hoot_spot.queue_redraw()
+	_refresh()
+	await get_tree().create_timer(0.8, false).timeout
+	var guard := 0
+	while _auto_running and is_inside_tree() and not _finishing and not session.is_ear_complete(_ear) and guard < 30:
+		guard += 1
+		var rem := session.required_remaining(_ear)
+		if rem.is_empty():
+			break
+		_montage_busy = true
+		var info := session.instant_measure(_ear, rem[0])
+		_montage_busy = false
+		if info.is_empty():
+			break
+		if _finishing or not is_inside_tree():
+			return
+		await get_tree().create_timer(0.38, false).timeout
+	if _auto_running and not _finishing and is_inside_tree() and not session.is_ear_complete(_ear):
+		# should never happen: hand the rest to the normal x8 turn
+		_auto_running = false
+		_start_hoot_turn()
 
 
 func _end_hoot_turn() -> void:
@@ -1177,7 +1361,7 @@ func _auto_mask_level(d: int) -> void:
 func _auto_transducer(tr: StringName) -> void:
 	if not _auto_running:
 		return
-	(_buttons["transducer_button"] as AoButton).flash_press()
+	(_buttons["transducer_bone_button" if tr == &"bone" else "transducer_air_button"] as AoButton).flash_press()
 	_set_transducer(tr)
 
 
@@ -1189,7 +1373,7 @@ func _draw_ff_banner() -> void:
 	for i in 3:
 		var a := 0.35 + 0.65 * maxf(0.0, sin(t * 7.0 - i * 0.9))
 		UiDraw.arrow(_ff_banner, Vector2(r.end.x - 70.0 + i * 16.0, r.get_center().y), 12.0, Vector2.RIGHT, Color(Palette.INK, a))
-	AoDraw.text_l(_ff_banner, Vector2(18.0, r.get_center().y), "HOOT'S TURN  x8", 20, Palette.INK, AoDraw.FONT_BOLD)
+	AoDraw.text_l(_ff_banner, Vector2(18.0, r.get_center().y), "HOOT'S MONTAGE" if bool(_plan.get("montage", false)) else "HOOT'S TURN  x8", 20, Palette.INK, AoDraw.FONT_BOLD)
 
 
 ## Light the dance-card chip that matches the textbook's next move.
@@ -1310,8 +1494,8 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 	match act:
 		&"transducer":
 			if StringName(a.get("target", &"bone")) == &"bone":
-				return ["Bone time! Switch the AudiOtron to BONE: press %s." % _k(&"transducer_bone"), "transducer_button", "to_bone"]
-			return ["Back to the earphones: press %s for AIR." % _k(&"transducer_air"), "transducer_button", "to_air"]
+				return ["Bone time! Switch the AudiOtron to BONE: press %s." % _k(&"transducer_bone"), "transducer_bone_button", "to_bone"]
+			return ["Back to the earphones: press %s for AIR." % _k(&"transducer_air"), "transducer_air_button", "to_air"]
 		&"mask_toggle":
 			return ["Turn the masking noise ON with %s. It hisses in the OTHER ear." % _k(&"toggle_mask"), "mask_toggle_button", "mask_on"]
 		&"mask_louder", &"mask_softer":
@@ -1321,6 +1505,11 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 			var key := _k(&"mask_louder" if act == &"mask_louder" else &"mask_softer")
 			var btn := "mask_louder_button" if act == &"mask_louder" else "mask_softer_button"
 			if recs.is_empty():
+				var occl := _occlusion_part(tm)
+				if occl > 0 and not _mask_tapped:
+					# explained once, in plain words; the next line (after a tap) has the numbers
+					var other := AudiometrySession.other_ear(session.ear)
+					return ["Noise %d = %s air %d + 10, +%d: a covered ear hears bone louder. Tap %s." % [tm, other, tm - occl - ClinicRules.MASK_SAFETY_DB, occl, key], btn, "mask_occl%d" % session.mask_db]
 				return ["Noise to %d (%s). Tap %s %s." % [tm, _initial_why(tm), key, ntimes], btn, "mask_set%d" % session.mask_db]
 			if last_heard:
 				var steps := int(session.plateau_info()["steps"])
@@ -1350,7 +1539,18 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 	return []
 
 
-## Where the starting noise comes from, in numbers: "left air 5 + 10 + 10 occlusion".
+## The occlusion part of a starting noise level tm (0 when there is none): tm - non-test air - 10.
+func _occlusion_part(tm: int) -> int:
+	if session == null or session.transducer != &"bone":
+		return 0
+	var n_ac := ClinicRules.best_thresholds(session.results_view(), AudiometrySession.other_ear(session.ear), false)
+	if not n_ac.has(session.freq):
+		return 0
+	var o := tm - int(n_ac[session.freq]) - ClinicRules.MASK_SAFETY_DB
+	return o if o > 0 and o <= 20 else 0
+
+
+## Where the starting noise comes from, in numbers: "left air 5 + 10 + 10 covered ear".
 func _initial_why(tm: int) -> String:
 	var other := AudiometrySession.other_ear(session.ear)
 	var n_ac := ClinicRules.best_thresholds(session.results_view(), other, false)
@@ -1360,9 +1560,9 @@ func _initial_why(tm: int) -> String:
 		if occl == 0:
 			return "%s air %d + 10" % [other, ac]
 		if occl > 0 and occl <= 20:
-			return "%s air %d + 10 + %d occlusion" % [other, ac, occl]
+			return "%s air %d + 10 + %d covered ear" % [other, ac, occl]
 	var o := ClinicRules.occlusion_effect(session.freq, session.air_transducer) if session.transducer == &"bone" else 0
-	return "other ear's air + 10" + (" + %d occlusion" % o if o > 0 else "")
+	return "other ear's air + 10" + (" + %d covered ear" % o if o > 0 else "")
 
 
 func _k(action: StringName) -> String:
@@ -1448,12 +1648,38 @@ func _refresh() -> void:
 	_refresh_mask_buttons(st)
 	_sync_masker()
 	if not _coach_active:
+		var light := _light_target(st) if _light_coach else ""
 		for id: String in ["tone_button", "softer_button", "louder_button"] + MASK_BUTTONS:
-			(_buttons[id] as AoButton).beckon = false
+			(_buttons[id] as AoButton).beckon = id == light
 		var cand := int(st["candidate_db"])
-		(_buttons["store_button"] as AoButton).beckon = cand >= 0 and cand == int(st["db"]) and not bool(st["tone_on"]) and bool(st["accepting_input"])
+		(_buttons["store_button"] as AoButton).beckon = light == "store_button" or (cand >= 0 and cand == int(st["db"]) and not bool(st["tone_on"]) and bool(st["accepting_input"]))
 	_update_dance()
 	Events.audiometer_state_changed.emit(st)
+
+
+## (Polish) The light coach: the button the textbook presses next (no words), "" for none.
+func _light_target(st: Dictionary) -> String:
+	if session == null or bool(st["tone_on"]) or not bool(st["accepting_input"]):
+		return ""
+	var a := session.recommended_action()
+	match a["action"]:
+		&"present":
+			return "tone_button"
+		&"softer":
+			return "softer_button"
+		&"louder":
+			return "louder_button"
+		&"store":
+			return "store_button"
+		&"mask_louder":
+			return "mask_louder_button"
+		&"mask_softer":
+			return "mask_softer_button"
+		&"mask_toggle":
+			return "mask_toggle_button"
+		&"transducer":
+			return "transducer_bone_button" if StringName(a.get("target", &"bone")) == &"bone" else "transducer_air_button"
+	return ""
 
 
 ## (v3) The Day 2 teaching overlays on the ear cards: the masking assistant (blinking symbols
@@ -1504,14 +1730,19 @@ func _refresh_mask_buttons(st: Dictionary) -> void:
 		return
 	var tb: AoButton = _buttons["mask_toggle_button"]
 	var on := bool(st["mask_on"])
-	tb.text = "MASK ON" if on else "MASK OFF"
-	tb.face_color = Palette.PLUM.lightened(0.35) if on else Palette.CREAM
-	var rb: AoButton = _buttons["transducer_button"]
+	tb.text = "NOISE"
+	tb.sub_text = "ON" if on else "OFF"
+	tb.lamp = 1 if on else 0
+	tb.face_color = Palette.PLUM.lightened(0.45) if on else Palette.CREAM
 	var bone := StringName(st["transducer"]) == &"bone"
-	rb.text = "BONE" if bone else "AIR"
+	var ra: AoButton = _buttons["transducer_air_button"]
+	var rb: AoButton = _buttons["transducer_bone_button"]
+	ra.text = "INSERT" if StringName(st["air_transducer"]) == &"inserts" else "AIR"
+	ra.face_color = Palette.PAPER if bone else Palette.SKY
 	rb.face_color = Palette.SKY if bone else Palette.PAPER
-	rb.action = &"transducer_air" if bone else &"transducer_bone"
-	for b: AoButton in [tb, rb]:
+	ra.text_color = Palette.INK if not bone else Color(Palette.INK, 0.6)
+	rb.text_color = Palette.INK if bone else Color(Palette.INK, 0.6)
+	for b: AoButton in [tb, ra, rb]:
 		b.queue_redraw()
 
 
@@ -1660,14 +1891,20 @@ func _build_ui() -> void:
 	nr.font_size = 17
 	# v3: masking and route (hidden on Day 1)
 	var ms := _make_button("mask_softer_button", "NOISE", AoButton.Icon.TRI_DOWN, Palette.PLUM.lightened(0.55), &"mask_softer", func() -> void: _mask_level(-1))
-	var mt := _make_button("mask_toggle_button", "MASK OFF", AoButton.Icon.NONE, Palette.CREAM, &"toggle_mask", _toggle_mask)
+	var mt := _make_button("mask_toggle_button", "NOISE", AoButton.Icon.NONE, Palette.CREAM, &"toggle_mask", _toggle_mask)
+	mt.sub_text = "OFF"
+	mt.lamp = 0
 	var ml := _make_button("mask_louder_button", "NOISE", AoButton.Icon.TRI_UP, Palette.PLUM.lightened(0.55), &"mask_louder", func() -> void: _mask_level(1))
-	var route := _make_button("transducer_button", "AIR", AoButton.Icon.NONE, Palette.PAPER, &"transducer_bone", func() -> void:
+	# the ROUTE pill: one segment per route, the active one lit; a click selects that segment
+	var r_air := _make_button("transducer_air_button", "AIR", AoButton.Icon.NONE, Palette.SKY, &"transducer_air", func() -> void:
 		if session != null:
-			_set_transducer(session.air_transducer if session.transducer == &"bone" else &"bone"))
-	for b: AoButton in [ms, mt, ml, route]:
+			_set_transducer(session.air_transducer))
+	var r_bone := _make_button("transducer_bone_button", "BONE", AoButton.Icon.NONE, Palette.PAPER, &"transducer_bone", func() -> void: _set_transducer(&"bone"))
+	for b: AoButton in [ms, mt, ml, r_air, r_bone]:
 		b.font_size = 15
 		b.visible = false
+	for b: AoButton in [r_air, r_bone]:
+		b.radius = 14
 	var er := _make_button("ear_right_button", "R", AoButton.Icon.EAR_RIGHT, Palette.RIGHT_TINT, &"ear_right", func() -> void: _set_ear("right"))
 	var el := _make_button("ear_left_button", "L", AoButton.Icon.EAR_LEFT, Palette.LEFT_TINT, &"ear_left", func() -> void: _set_ear("left"))
 	for b: AoButton in [er, el]:
@@ -1786,12 +2023,12 @@ func _layout_deck(deck: Rect2) -> void:
 		# v3: room for MASKING and ROUTE, everything a little narrower (scales up on wide screens)
 		var k := clampf((deck.size.x - 1256.0) / 600.0, 0.0, 1.0)
 		groups = [
-			["LEVEL + TONE", [["softer_button", lerpf(76.0, 96.0, k)], ["tone_button", lerpf(132.0, 196.0, k)], ["louder_button", lerpf(76.0, 96.0, k)]]],
-			["FREQUENCY", [["freq_down_button", lerpf(58.0, 84.0, k)], ["freq_up_button", lerpf(58.0, 84.0, k)]]],
-			["THRESHOLD", [["store_button", lerpf(96.0, 136.0, k)], ["no_response_button", lerpf(80.0, 108.0, k)]]],
-			["MASKING", [["mask_softer_button", lerpf(54.0, 76.0, k)], ["mask_toggle_button", lerpf(96.0, 110.0, k)], ["mask_louder_button", lerpf(54.0, 76.0, k)]]],
-			["ROUTE", [["transducer_button", lerpf(70.0, 90.0, k)]]],
-			["EAR", [["ear_right_button", lerpf(46.0, 62.0, k)], ["ear_left_button", lerpf(46.0, 62.0, k)]]],
+			["LEVEL + TONE", [["softer_button", lerpf(74.0, 96.0, k)], ["tone_button", lerpf(124.0, 196.0, k)], ["louder_button", lerpf(74.0, 96.0, k)]]],
+			["FREQUENCY", [["freq_down_button", lerpf(54.0, 84.0, k)], ["freq_up_button", lerpf(54.0, 84.0, k)]]],
+			["THRESHOLD", [["store_button", lerpf(90.0, 136.0, k)], ["no_response_button", lerpf(76.0, 108.0, k)]]],
+			["MASKING  %s = on/off" % _k(&"toggle_mask"), [["mask_softer_button", lerpf(54.0, 76.0, k)], ["mask_toggle_button", lerpf(92.0, 110.0, k)], ["mask_louder_button", lerpf(54.0, 76.0, k)]]],
+			["ROUTE", [["transducer_air_button", lerpf(56.0, 76.0, k)], ["transducer_bone_button", lerpf(56.0, 76.0, k)]], 3.0],
+			["EAR", [["ear_right_button", lerpf(44.0, 62.0, k)], ["ear_left_button", lerpf(44.0, 62.0, k)]]],
 		]
 	# narrower buttons, smaller labels (Day 1 keeps its sizes)
 	var fonts := {"softer_button": [19, 15], "louder_button": [19, 15], "tone_button": [26, 22], "store_button": [22, 17], "no_response_button": [17, 13],
@@ -1800,14 +2037,14 @@ func _layout_deck(deck: Rect2) -> void:
 		(_buttons[id] as AoButton).font_size = int(fonts[id][1 if _masking_ui else 0])
 	(_buttons["tone_button"] as AoButton).icon_size = 30.0 if _masking_ui else 38.0
 	var gap := 9.0
-	var util_w := 132.0
+	var util_w := 132.0 if not _masking_ui else 122.0
 	var widths: Array[float] = []
 	var total := 0.0
 	for g: Array in groups:
 		var w := 0.0
 		for b: Array in g[1]:
 			w += float(b[1])
-		w += gap * ((g[1] as Array).size() - 1)
+		w += (float(g[2]) if g.size() > 2 else gap) * ((g[1] as Array).size() - 1)
 		widths.append(w)
 		total += w
 	var inner := deck.size.x - 40.0 - util_w
@@ -1819,12 +2056,13 @@ func _layout_deck(deck: Rect2) -> void:
 	for gi in groups.size():
 		var g: Array = groups[gi]
 		_group_labels.append([g[0], Rect2(Vector2(x, deck.position.y + 6.0), Vector2(widths[gi], 16.0))])
+		var g_gap := float(g[2]) if g.size() > 2 else gap
 		for b: Array in g[1]:
 			var btn: AoButton = _buttons[b[0]]
 			btn.position = Vector2(x, y)
 			btn.size = Vector2(float(b[1]), h)
-			x += float(b[1]) + gap
-		x += spacing - gap
+			x += float(b[1]) + g_gap
+		x += spacing - g_gap
 	var ux := deck.end.x - 16.0 - util_w
 	var uy := deck.position.y + 14.0
 	var uh := (deck.size.y - 28.0 - 2.0 * 8.0) / 3.0

@@ -50,7 +50,8 @@ signal comfort_changed(hearts: int, reason: String)
 ## Game emits when the coin total changes.
 signal coins_changed(total: int, delta: int)
 ## (v3) Game emits from finish_visit() when a chapter (day) is completed for the first time or again.
-## newly_unlocked: chapter ids that this completion unlocked (Array of String, often empty).
+## newly_unlocked: always [] since the polish pass (every day is open from the start); kept
+## so listeners need not change. The summary's first_clear / suggested_next say what is new.
 signal chapter_completed(chapter_id: String, newly_unlocked: Array)
 
 # ---------------------------------------------------------------- dialogue (story)

@@ -28,7 +28,7 @@ const ZONES: Array = [
 	["nose", Vector2(-166, 8), 24.0, "Boop! A nose is cartilage, not bone. Find the bony bump behind her ear.", "BOOP!"],
 	["forehead", Vector2(-112, -62), 30.0, "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her right ear.", "UNICORN!"],
 	["jaw", Vector2(-62, 112), 28.0, "She'd hear her teeth chatter! Higher and further back: the mastoid.", "Chatter chatter!"],
-	["top", Vector2(-14, -146), 32.0, "Her lost glasses! Mystery solved. The buzzer needs skin over bone, behind the ear.", "My glasses!"],
+	["top", Vector2(-14, -146), 32.0, "Her lost glasses! Mystery solved. Glasses off before the headband; the buzzer goes behind the ear.", "My glasses!"],
 	["pinna", Vector2(36, 6), 30.0, "Off the ear flap! Touching the pinna leaks buzz into the canal. Behind it, on bone.", "SQUEEEE!"],
 	["mastoid", Vector2(96, 54), 28.0, "Perfect: on the mastoid bone, behind the ear, not touching it.", "Bone on bone!"],
 	["bun", Vector2(74, -180), 40.0, "That's a bun, not a bone! Lovely bun though. Try behind her ear.", "Fresh bun!"],
@@ -116,10 +116,15 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	Hoot.unregister_anchor("oscillator")
 	Hoot.unregister_anchor("mastoid_target_right")
+	Hoot.clear_bubble_hint()
 
 
 func _layout() -> void:
 	_card.position = (size - CARD) * 0.5 + Vector2(0, 46)
+	# (polish) Hoot's tips sit right of the card, not over its "BONNIE'S RIGHT SIDE" header
+	var right := _card.position.x + CARD.x + 12.0
+	if size.x - right >= 260.0:
+		Hoot.set_bubble_hint(Rect2(Vector2(right, _card.position.y), Vector2(size.x - right - 12.0, 200.0)))
 	_osc_home = Vector2(CARD.x - 92.0, CARD.y - 96.0)
 	if not placed and not _dragging and _gag == "":
 		_osc.position = _osc_home - _osc.size * 0.5

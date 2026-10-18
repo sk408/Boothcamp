@@ -93,6 +93,8 @@ var _accepting := false
 var _done := false
 var _next := "title"
 var _idle := 0.0
+## (polish) the "UP NEXT!" rubber stamp on the masthead (null unless this visit was a first clear)
+var _unlock_stamp: Control
 
 
 func _ready() -> void:
@@ -127,6 +129,8 @@ func show_summary(summary: Dictionary) -> String:
 	await t.finished
 	Sfx.play(&"stamp")
 	Events.screen_shake.emit(0.2, 0.15)
+	if _unlock_stamp != null:
+		_slam_unlock_stamp()
 	_count_coins(int(summary.get("coins_earned", 0)), int(summary.get("coins_total", Game.progress.get("coins", 0))))
 	_accepting = true
 	Events.awaiting_input.emit(&"results_continue", {"summary": summary}, _continue)
@@ -161,11 +165,44 @@ func _next_day() -> void:
 
 func _has_next_day() -> bool:
 	var nid := String(_summary.get("next_chapter_id", ""))
-	return nid != "" and Game.is_chapter_unlocked(nid)
+	return nid != "" and not Game.chapter(nid).is_empty()   # every day is open (polish)
 
 
+## (polish) What the paper calls the patient: the profile's short name ("Gus", not "Grandpa").
 func _first_name() -> String:
+	var short := String(_summary.get("patient_short", ""))
+	if short != "":
+		return short
 	return String(_summary.get("patient_name", "Gus")).split(" ")[0]
+
+
+## (polish) This visit finished the day for the first time and the next day is still new: an
+## "UP NEXT!" stamp, and Next is the big button ([Space]).
+func _next_is_primary() -> bool:
+	if not _has_next_day():
+		return false
+	var nid := String(_summary.get("next_chapter_id", ""))
+	var first := bool(_summary.get("first_clear", (_summary.get("newly_unlocked", []) as Array).has(nid)))
+	return first and not Game.is_chapter_done(nid)
+
+
+## "Day 2" from "Day 2: Bonnie Bunsworth".
+func _next_short_title() -> String:
+	var nch := Game.chapter(String(_summary.get("next_chapter_id", "")))
+	return String(nch.get("title", "Next day")).get_slice(":", 0).strip_edges()
+
+
+func _slam_unlock_stamp() -> void:
+	_unlock_stamp.visible = true
+	_unlock_stamp.pivot_offset = _unlock_stamp.size * 0.5
+	_unlock_stamp.scale = Vector2(2.4, 2.4)
+	_unlock_stamp.modulate.a = 0.0
+	var t := create_tween().set_parallel(true)
+	t.tween_property(_unlock_stamp, "scale", Vector2.ONE, 0.22).set_delay(0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_property(_unlock_stamp, "modulate:a", 1.0, 0.12).set_delay(0.35)
+	t.chain().tween_callback(func() -> void:
+		Sfx.play(&"stamp", 1.15)
+		Events.screen_shake.emit(0.15, 0.12))
 
 
 ## (v3) The classified ad's item: the one offered on this day (Game.SHOP_ITEMS).
@@ -209,8 +246,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and (event as InputEventKey).keycode == KEY_N and _has_next_day():
 		_next_day()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed(&"advance_dialogue") or event.is_action_pressed(&"ui_accept"):
+	elif event is InputEventKey and (event as InputEventKey).keycode == KEY_T and _next_is_primary():
 		_continue()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"advance_dialogue") or event.is_action_pressed(&"ui_accept"):
+		if _next_is_primary():
+			_next_day()
+		else:
+			_continue()
 		get_viewport().set_input_as_handled()
 
 
@@ -273,6 +316,8 @@ func _build(s: Dictionary) -> void:
 	var mast := UiKit.label("THE DAILY DECIBEL", 58, Palette.INK, 700)
 	mast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(mast)
+	if _next_is_primary():
+		_unlock_stamp = _make_unlock_stamp(mast)
 	_rule(v, 4)
 	var grade := String(s.get("grade", "?"))
 	var cid := String(s.get("chapter_id", "gus"))
@@ -420,19 +465,61 @@ func _build(s: Dictionary) -> void:
 	btns.add_theme_constant_override("separation", 6)
 	btns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(btns)
-	var cont := UiKit.button("Back to the title  [%s]" % Game.key_label(&"advance_dialogue") if UiKit.show_key_hints() else "Back to the title", &"AccentButton", Vector2(250, 50))
+	var hints := UiKit.show_key_hints()
+	var primary_next := _next_is_primary()
+	if primary_next:
+		# (polish) the visit just opened the next day: that is the big button, on [Space]
+		var ntxt := "Next: %s" % _next_short_title()
+		var nb := UiKit.button(ntxt + ("  [%s]" % Game.key_label(&"advance_dialogue")) if hints else ntxt, &"AccentButton", Vector2(250, 50))
+		nb.tooltip_text = String(Game.chapter(String(s.get("next_chapter_id", ""))).get("title", ""))
+		nb.pressed.connect(_next_day)
+		btns.add_child(nb)
+	var ctxt := "Back to the title"
+	var cont := UiKit.button(ctxt + ("  [T]" if primary_next else "  [%s]" % Game.key_label(&"advance_dialogue")) if hints else ctxt, &"" if primary_next else &"AccentButton", Vector2(250, 40 if primary_next else 50))
 	cont.pressed.connect(_continue)
 	btns.add_child(cont)
 	var again_txt := "Play %s again" % _first_name()
-	var again := UiKit.button(again_txt + "  [A]" if UiKit.show_key_hints() else again_txt, &"", Vector2(250, 40))
+	var again := UiKit.button(again_txt + "  [A]" if hints else again_txt, &"", Vector2(250, 40))
 	again.pressed.connect(_again)
 	btns.add_child(again)
-	if _has_next_day():
-		var nch := Game.chapter(String(s.get("next_chapter_id", "")))
-		var ntxt := "Next: %s" % String(nch.get("title", "next day"))
-		var nb := UiKit.button(ntxt + "  [N]" if UiKit.show_key_hints() else ntxt, &"", Vector2(250, 40))
+	if _has_next_day() and not primary_next:
+		var ntxt := "Next: %s" % _next_short_title()
+		var nb := UiKit.button(ntxt + "  [N]" if hints else ntxt, &"", Vector2(250, 40))
+		nb.tooltip_text = String(Game.chapter(String(s.get("next_chapter_id", ""))).get("title", ""))
 		nb.pressed.connect(_next_day)
 		btns.add_child(nb)
+
+
+## (polish) A tilted rubber stamp on the masthead's right: UP NEXT! / Day 2: Bonnie.
+## A child of the label (not a container), so it rides along with the paper's tilt.
+func _make_unlock_stamp(mast: Label) -> Control:
+	var st := Control.new()
+	st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	st.size = Vector2(230, 70)
+	st.rotation = -0.1
+	st.visible = false
+	# "Day 2: Bonnie": the day and the next patient's short name
+	var nch := Game.chapter(String(_summary.get("next_chapter_id", "")))
+	var sub := String(nch.get("title", "")).get_slice(":", 0).strip_edges()
+	var pid := String(nch.get("patient_id", ""))
+	var np: Resource = Game.load_patient(pid) if ResourceLoader.exists(Game.PATIENT_DIR + pid + ".tres") else null
+	if np != null and np.has_method("short_name"):
+		sub += ": " + String(np.call("short_name"))
+	var ink := Palette.CORAL.darkened(0.15)
+	st.draw.connect(func() -> void:
+		var r := Rect2(Vector2(3, 3), st.size - Vector2(6, 6))
+		st.draw_rect(r, Color(NEWSPRINT, 0.9))
+		UiDraw.rounded_rect(st, r, Color(0, 0, 0, 0), 8, 4, ink)
+		UiDraw.rounded_rect(st, r.grow(-6), Color(0, 0, 0, 0), 5, 2, Color(ink, 0.6))
+		var f := UiKit.font(700)
+		var t1 := "UP NEXT!"
+		var w1 := f.get_string_size(t1, HORIZONTAL_ALIGNMENT_LEFT, -1, 21).x
+		st.draw_string(f, Vector2((st.size.x - w1) * 0.5, 33), t1, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, ink)
+		var w2 := f.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		st.draw_string(f, Vector2((st.size.x - w2) * 0.5, 55), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, ink))
+	mast.add_child(st)
+	mast.resized.connect(func() -> void: st.position = Vector2(mast.size.x - st.size.x + 6, (mast.size.y - st.size.y) * 0.5 + 2))
+	return st
 
 
 func _bar(name: String, value: float, col: Color) -> Control:

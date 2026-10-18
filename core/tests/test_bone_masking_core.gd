@@ -219,9 +219,10 @@ func test_plateau_dance_step_by_step() -> void:
 	assert_eq(s.stored_thresholds("right", &"bc_masked"), {1000: 10})
 
 
-## A by-the-book plateau with a real (wobbly) patient lands above the cochlea (5, after a wobble
-## 10 dB): masked stamps get MASKED_GRACE_DB more room on the high side; below the truth, none.
-func test_masked_accuracy_grace() -> void:
+## (Polish) Masked stamps are scored like unmasked ones (MASKED_GRACE_DB 0): the simulator's
+## masked calibration (PatientSim.MASKED_BIAS_DB) puts a by-the-book plateau on the truth instead.
+func test_masked_accuracy_no_grace() -> void:
+	assert_eq(AudiometrySession.MASKED_GRACE_DB, 0)
 	var s := _bonnie()
 	s.configure({"test": &"bc_masked"})
 	s.set_freq(1000)
@@ -229,14 +230,13 @@ func test_masked_accuracy_grace() -> void:
 		s.toggle_mask()
 	assert_eq(s.test, &"bc_masked", "noise on: the masked sheet")
 	var none: Array[StringName] = []
-	# effective error after the grace: +10 counts as +5 (still exact), +15 as +10; below: no grace
-	var cases := {10: 0.0, 20: 5.0, 25: 10.0, 0: -10.0}
+	var cases := {10: 0.0, 15: 5.0, 20: 10.0, 5: -5.0}
 	for lvl: int in cases:
 		s.set_level(lvl)
 		var info: Dictionary = s._make_info([], none, false, &"first", null)
 		assert_eq(int(info["true_db"]), 10, "true_db is the right cochlea, unchanged")
 		assert_near(float(info["accuracy"]), ClinicRules.accuracy_for_error(float(cases[lvl])), 1e-6, "masked stamp at %d" % lvl)
-	# unmasked bone gets no grace: its truth is whoever answers (the left cochlea, 0)
+	# unmasked bone: its truth is whoever answers (the left cochlea, 0)
 	s.configure({"test": &"bc"})
 	if s.mask_on:
 		s.toggle_mask()
@@ -247,6 +247,75 @@ func test_masked_accuracy_grace() -> void:
 	assert_eq(int(un["true_db"]), 0)
 	assert_near(float(un["accuracy"]), ClinicRules.accuracy_for_error(10.0), 1e-6)
 	assert_true(float(un["accuracy"]) < 1.0)
+
+
+## (Polish) Calibration: Hoot's by-the-book plateau (instant_measure, the real wobbly simulator)
+## lands on Bonnie's profile value at least 65 % of the time for masked bone AND masked air, with
+## a small mean error, so masked air confirms unmasked air (docs/CHAPTER2.md section 2).
+func test_by_the_book_plateau_lands_on_truth() -> void:
+	var p := Game.load_patient("bonnie") as PatientProfile
+	var hits := {&"bc_masked": 0, &"ac_masked": 0}
+	var n := {&"bc_masked": 0, &"ac_masked": 0}
+	var err_sum := {&"bc_masked": 0.0, &"ac_masked": 0.0}
+	var same_as_unmasked := 0
+	for seed_i in 60:
+		var s := AudiometrySession.new(p, 1000 + seed_i)
+		s.scoring = false
+		for plan: Array in [[&"ac", "right"], [&"ac", "left"], [&"bc", "right"], [&"bc_masked", "right"], [&"ac_masked", "right"]]:
+			s.configure({"test": plan[0]})
+			if plan[0] == &"ac":
+				s.retest_waived[plan[1]] = true
+			var e: String = plan[1]
+			var guard := 0
+			while not s.is_ear_complete(e) and guard < 30:
+				guard += 1
+				var rem := s.required_remaining(e)
+				if rem.is_empty():
+					break
+				var info := s.instant_measure(e, rem[0])
+				if info.is_empty():
+					break
+			assert_true(s.is_ear_complete(e), "seed %d: %s %s complete" % [seed_i, plan[0], e])
+			if ClinicRules.test_is_masked(plan[0]):
+				var st: Dictionary = (s.sheet(plan[0])["stored"] as Dictionary)[e]
+				var un: Dictionary = (s.sheet(ClinicRules.unmasked_test(plan[0]))["stored"] as Dictionary)[e]
+				for f: int in st:
+					var d := int(st[f]["stored_db"]) - int(st[f]["true_db"])
+					if plan[0] == &"ac_masked" and un.has(f) and int(un[f]["stored_db"]) == int(st[f]["stored_db"]):
+						same_as_unmasked += 1
+					n[plan[0]] = int(n[plan[0]]) + 1
+					err_sum[plan[0]] = float(err_sum[plan[0]]) + d
+					if d == 0:
+						hits[plan[0]] = int(hits[plan[0]]) + 1
+	for t: StringName in hits:
+		assert_true(int(n[t]) > 100, "%s measured often enough" % t)
+		var rate := float(hits[t]) / float(n[t])
+		var mean := float(err_sum[t]) / float(n[t])
+		assert_true(rate >= 0.65, "%s: a by-the-book plateau lands on the truth %.0f %% of the time" % [t, rate * 100.0])
+		assert_between(mean, -2.5, 2.5, "%s mean error %.1f dB" % [t, mean])
+	var agree := float(same_as_unmasked) / float(n[&"ac_masked"])
+	assert_true(agree >= 0.75, "masked air confirms unmasked air %.0f %% of the time" % (agree * 100.0))
+
+
+## (Polish) instant_measure is Hoot's only: it does nothing while scoring is on, and the 1 kHz retest
+## can be waived for an ear (Day 2: Hoot skips it).
+func test_instant_measure_and_retest_waiver() -> void:
+	var p := Game.load_patient("bonnie") as PatientProfile
+	var s := AudiometrySession.new(p, 77)
+	assert_eq(s.instant_measure("left", 1000), {}, "scoring on: the player's holes are never instant")
+	s.scoring = false
+	var info := s.instant_measure("left", 1000)
+	assert_false(info.is_empty())
+	assert_true(bool(info["by_hoot"]))
+	assert_between(int(info["stored_db"]), 0, 15)
+	s.instant_measure("left", 2000)
+	s.instant_measure("left", 4000)
+	s.instant_measure("left", 8000)
+	assert_eq(s.required_remaining("left")[0], 1000, "the retest is next")
+	s.retest_waived["left"] = true
+	assert_false(s.required_remaining("left").has(1000), "waived")
+	assert_eq(s.measurement_kind("left", 1000), &"redo")
+	assert_eq(s.ear_progress("left")[1], 6, "1k 2k 4k 8k 500 250, no retest")
 
 
 ## The bone oscillator's outputs are lower than the earphones'; a miss at the bone maximum may be
@@ -367,6 +436,7 @@ static func _power_at(buf: PackedVector2Array, f: float, from: int) -> float:
 ## centred on the test frequency, louder as the dial goes up.
 func test_masker_noise_is_safe_and_narrow() -> void:
 	var g := ToneGenerator.new()
+	(g.get("_m_rng") as RandomNumberGenerator).seed = 2024   # the noise is random: keep the test steady
 	var cap := AudioSafety.masker_ceiling()
 	g.start_masker("left", 1000.0, 110.0)
 	var buf := g.render(ToneGenerator.MIX_RATE / 2)
@@ -376,7 +446,13 @@ func test_masker_noise_is_safe_and_narrow() -> void:
 	assert_eq(pk.y, 0.0, "nothing in the right ear")
 	assert_true(absf(buf[0].x) < cap * 0.05, "ramped in, no click")
 	# narrow band: far more energy at 1 kHz than three octaves away
-	assert_true(_power_at(buf, 1000.0, 4000) > 20.0 * _power_at(buf, 8000.0, 4000), "centred on 1 kHz")
+	# (polish) averaged over a few bins: one Goertzel bin of noise scatters a lot
+	var p_in := 0.0
+	var p_out := 0.0
+	for d: float in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+		p_in += _power_at(buf, 1000.0 + d, 4000)
+		p_out += _power_at(buf, 8000.0 + d, 4000)
+	assert_true(p_in > 20.0 * p_out, "centred on 1 kHz (%f vs %f)" % [p_in, p_out])
 	# louder dial, more noise (well under the cap)
 	var lo := ToneGenerator.new()
 	lo.start_masker("left", 1000.0, 20.0)
@@ -401,6 +477,48 @@ func test_masker_noise_is_safe_and_narrow() -> void:
 	assert_true(pb.y > pb.x, "the tone is louder than the hiss")
 	for n: Node in [g, lo, hi, both]:
 		n.free()
+
+
+## (Polish) The masker never drops out when a beep ends mid-buffer: the noise channel keeps
+## playing across a stop_tone() boundary (it used to be zeroed for the rest of the buffer).
+func test_masker_survives_tone_stop() -> void:
+	var g := ToneGenerator.new()
+	g.start_masker("left", 1000.0, 50.0)
+	g.render(ToneGenerator.MIX_RATE / 10)   # masker fully ramped in
+	g.start_tone("right", 1000.0, 40.0)
+	g.render(ToneGenerator.MIX_RATE / 10)
+	g.stop_tone()
+	var buf := g.render(ToneGenerator.MIX_RATE / 10)   # the tone ramps out early in this buffer
+	var zeros := 0
+	for i in buf.size():
+		if buf[i].x == 0.0:
+			zeros += 1
+	assert_true(zeros < 5, "masker channel silent in %d of %d samples after stop_tone()" % [zeros, buf.size()])
+	assert_eq(buf[buf.size() - 1].y, 0.0, "the tone itself has ramped out")
+	g.free()
+
+
+## (Polish) Unmasked air truth follows the cross-hearing model: for a dead right ear the accurate
+## unmasked stamp is the shadow curve (the left cochlea + IA), not the ear's own threshold.
+func test_unmasked_air_truth_is_the_shadow_curve() -> void:
+	var p := _head("dead_right", 0, 0)
+	for f: int in ClinicRules.AC_FREQS:
+		p.thresholds_right[f] = 110
+	for f: int in ClinicRules.BC_FREQS:
+		p.bc_right[f] = 110
+	p.ia_phones_db = 60
+	var s := AudiometrySession.new(p, 3)
+	assert_eq(s.test, &"ac")
+	assert_eq(s.response_truth("right", 1000), 60, "shadow: left cochlea 0 + 60 dB IA")
+	assert_eq(s.response_truth("left", 1000), 0)
+	# Bonnie's and Gus's air truths are their own thresholds (no crossing at their levels)
+	var b := AudiometrySession.new(Game.load_patient("bonnie") as PatientProfile, 3)
+	var g := AudiometrySession.new(Game.load_patient("gus") as PatientProfile, 3)
+	for f: int in ClinicRules.AC_FREQS:
+		assert_eq(b.response_truth("right", f), b.patient.get_threshold("right", f), "Bonnie right %d" % f)
+		assert_eq(g.response_truth("left", f), g.patient.get_threshold("left", f), "Gus left %d" % f)
+	g.sim.swapped = true
+	assert_eq(g.response_truth("right", 4000), 55, "swapped phones still score the requested ear")
 
 
 ## Bone channel: the tone plays in the test ear and, 10 dB softer, in the other ear (bone has no

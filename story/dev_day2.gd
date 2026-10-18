@@ -170,14 +170,14 @@ func _board() -> void:
 	await _shot("dev_day2_stamped")
 
 
-## The title's day picker: locked, then unlocked with a best grade on Day 1.
+## The title's day picker: every day open; a fresh save suggests Day 1, then Day 2 is UP NEXT
+## with a best grade on Day 1.
 func _title() -> void:
 	clinic.queue_free()
 	hud.queue_free()
 	var keep_settings: Dictionary = Game.settings.duplicate(true)
 	var keep_progress: Dictionary = Game.progress.duplicate(true)
-	Game.settings["unlock_all_days"] = false
-	Game.progress["patients"] = {"gus": {"best_score": 91.0, "best_grade": "A", "last_grade": "A", "plays": 2}}
+	Game.progress["patients"] = {}
 	Game.progress["chapters_done"] = []
 	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
 	add_child(title)
@@ -186,22 +186,48 @@ func _title() -> void:
 	await _wait(0.8)
 	title.call("_on_days")
 	await _wait(0.8)
-	await _shot("dev_day2_title_days_locked")
-	var day2: Button = null
-	for b: Button in title.get("_day_buttons"):
-		if String(b.get_meta("chapter", "")) == "bonnie":
-			day2 = b
-	title.call("_pick_day", "bonnie", day2)
-	await _wait(0.5)
-	await _shot("dev_day2_title_days_refused")
+	await _shot("dev_day2_title_days_fresh")
+	Game.progress["patients"] = {"gus": {"best_score": 91.0, "best_grade": "A", "last_grade": "A", "plays": 2}}
 	Game.progress["chapters_done"] = ["gus"]
 	title.call("_refresh_days")
 	title.call("_set_hl", 1, false)
 	await _wait(0.6)
 	await _shot("dev_day2_title_days_open")
-	title.call("_set_hl", 2, false)
-	await _wait(0.3)
-	await _shot("dev_day2_title_days_toggle")
+	# the title menu with progress (Play names the suggested day; the stats line fits above the footer)
+	title.queue_free()
+	await _wait(0.2)
+	title = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await _wait(0.6)
+	title.call("_on_notice_ok")
+	await _wait(1.0)
+	await _shot("dev_day2_title_menu_after_day1")
+	title.queue_free()
+	await _wait(0.2)
+	Game.progress["patients"]["bonnie"] = {"best_score": 96.0, "best_grade": "S", "last_grade": "S", "plays": 1}
+	Game.progress["chapters_done"] = ["gus", "bonnie"]
+	title = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await _wait(0.6)
+	title.call("_on_notice_ok")
+	await _wait(1.0)
+	await _shot("dev_day2_title_menu_veteran")
+	title.call("_on_days")
+	await _wait(0.8)
+	await _shot("dev_day2_title_days_veteran")
+	# the paper after Day 2 played first (fresh save): Next is Day 1, with the UP NEXT! stamp
+	title.queue_free()
+	Game.progress["patients"] = {}
+	Game.progress["chapters_done"] = []
+	Game.begin_visit("bonnie")
+	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
+	var summary := Game.finish_visit()
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_child(paper)
+	paper.call("show_summary", summary)
+	await _wait(2.5)
+	await _shot("dev_day2_paper_day2_first")
+	paper.queue_free()
 	Game.settings = keep_settings
 	Game.progress = keep_progress
 

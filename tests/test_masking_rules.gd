@@ -44,6 +44,11 @@ func test_carhart_notch() -> void:
 	assert_true(ClinicRules.has_carhart_notch({1000: 10, 2000: 25, 4000: 10}))
 	assert_false(ClinicRules.has_carhart_notch({1000: 10, 2000: 15, 4000: 10}), "a 5 dB wobble is not a notch")
 	assert_false(ClinicRules.has_carhart_notch({1000: 10, 2000: 25}), "needs 4 kHz too")
+	# (polish) a classic Carhart pattern dips at 1 kHz as well: still a notch against 500 / 4k
+	assert_true(ClinicRules.has_carhart_notch({500: 5, 1000: 15, 2000: 20, 4000: 5}), "1k dips a little too")
+	assert_true(ClinicRules.has_carhart_notch({500: 10, 1000: 10, 2000: 25, 4000: 10}), "Bonnie")
+	assert_false(ClinicRules.has_carhart_notch({500: 5, 1000: 10, 2000: 25, 4000: 40}), "a sloping loss is not a notch")
+	assert_false(ClinicRules.has_carhart_notch({500: 10, 1000: 30, 2000: 25, 4000: 10}), "the bottom is at 1k, not 2k")
 
 
 func test_when_to_mask() -> void:

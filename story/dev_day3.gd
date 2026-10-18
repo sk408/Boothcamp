@@ -139,13 +139,12 @@ func _paper() -> void:
 	paper.queue_free()
 
 
-## The title's Days row with every day open.
+## The title's Days grid (every day is open).
 func _title() -> void:
 	clinic.queue_free()
 	hud.queue_free()
 	var keep_settings: Dictionary = Game.settings.duplicate(true)
 	var keep_progress: Dictionary = Game.progress.duplicate(true)
-	Game.settings["unlock_all_days"] = true
 	Game.progress["patients"] = {"gus": {"best_score": 91.0, "best_grade": "A", "last_grade": "A", "plays": 2},
 		"bonnie": {"best_score": 84.0, "best_grade": "B", "last_grade": "B", "plays": 1}}
 	Game.progress["chapters_done"] = ["gus", "bonnie"]

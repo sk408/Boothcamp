@@ -26,7 +26,7 @@ The foundation stubs in `core/`, `ui/`, `world/` and `story/` have been replaced
 Contract changes from that integration are marked **(v2)**.
 
 **(v3) Chapter 2** (Day 2, Bonnie Bunsworth: bone conduction + masking; design in `docs/CHAPTER2.md`) adds
-chapters and unlocks, bone and masked tests, the masker, and the Day 2 level. Every v3 change is marked
+chapters (every day open, polish), bone and masked tests, the masker, and the Day 2 level. Every v3 change is marked
 **(v3)**. Day 1 behaves exactly as before: every v3 parameter has a default that reproduces v2.
 Additions from the Chapter 2 builders, merged at integration, are marked **(v3, builders)**.
 
@@ -109,7 +109,7 @@ The global signal bus. Each signal's emitter and payload is documented in the fi
 | Hoot | `hoot_say(text, priority, ghost_hand_target)`, `hoot_tip_shown(tip)`, `hoot_tip_dismissed(tip_id)`, `hoot_mastered(skill)` |
 | audiometry | `audiometry_started(patient_id, ear, coached)`, `tone_started(ear, freq, db)`, `tone_stopped(ear, freq, db, duration_s)`, `patient_responded(ear, freq, db, tone_related)`, `audiometer_state_changed(state §4.3)`, `threshold_stored(ear, freq, db, info §4.4)`, `technique_event(kind §4.5, data)`, `combo_changed(n, multiplier)`, `ear_completed(ear, ear_results §5.1)`, `audiometry_finished(results §5.1)` |
 | world | `patient_reaction(kind §6.2, data)`, `screen_shake(strength, duration_s)` |
-| **(v3)** chapters | `chapter_completed(chapter_id, newly_unlocked: Array)` (Game, from `finish_visit`) |
+| **(v3)** chapters | `chapter_completed(chapter_id, newly_unlocked: Array)` (Game, from `finish_visit`; **(polish)** `newly_unlocked` is always `[]`: every day is open) |
 | **(v3)** masking | `masker_changed(ear, freq, db, on)` (ear = the MASKED ear), `transducer_changed(transducer, ear)` (AudiOtron) |
 
 Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
@@ -119,7 +119,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 
 | Member | Meaning |
 |---|---|
-| `settings: Dictionary` | `DEFAULT_SETTINGS`: `key_style` ("otosuite" / "affinity"), `master_volume`, `tone_volume`, `sfx_volume`, `music_volume` (0..1), `show_key_hints`, `reduced_motion`, `no_startle`, `fullscreen`, `text_speed`, `quick_visit`, **(v3)** `unlock_all_days` (career-fair demo: every day open) |
+| `settings: Dictionary` | `DEFAULT_SETTINGS`: `key_style` ("otosuite" / "affinity"), `master_volume`, `tone_volume`, `sfx_volume`, `music_volume` (0..1), `show_key_hints`, `reduced_motion`, `no_startle`, `fullscreen`, `text_speed`, `quick_visit`. **(polish)** `unlock_all_days` is gone (every day is open); an old save that still has it loads fine, the key is ignored |
 | `set_setting(key, value)` | apply, save, emit `settings_changed` (and `key_style_changed`) |
 | `set_key_style(style)`, `get_key_style()` | Swaps the events of `louder` and `softer` (§4.7) |
 | `key_label(action) -> String`, `key_labels(action)` | Current key names for on-screen hints. Always use these; never hard-code "Up". |
@@ -138,11 +138,12 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `rng: RandomNumberGenerator` | Seeded (`--seed`, default 1234 in autoplay). Use it for anything that should replay the same way. |
 | `clock: float` | Game seconds. Pauses with the tree and follows `Engine.time_scale`. |
 | `PHASES` | Phase ids (§3.1) |
-| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`) |
+| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
 | **(v3)** `chapters()`, `chapter(id)`, `chapter_for_patient(id)`, `chapter_for_day(day)`, `chapter_scene(id)` | Registry lookups (`{}` / `""` when unknown) |
-| **(v3)** `is_chapter_done(id)`, `is_chapter_unlocked(id)`, `unlocked_chapter_ids()` | Unlocked = no `requires`, or `requires` done, or `unlock_all_days`, or `--unlock-all`, or the `--day` / `--chapter` chapter |
-| **(v3)** `next_chapter_id()`, `cli_chapter_id()` | What the title's Play starts: the CLI chapter, else the first unlocked chapter not done, else `last_chapter`, else Day 1 |
-| **(v3)** `start_chapter(id) -> bool` | Remembers `last_chapter`, saves, emits `goto_scene(scene)`. False if locked or missing |
+| **(v3)** `is_chapter_done(id)`, `is_chapter_unlocked(id)`, `unlocked_chapter_ids()` | **(polish)** Every chapter is open from the start, in any order (Steve's rule): `is_chapter_unlocked()` is always true and `unlocked_chapter_ids()` lists every chapter. Kept so callers need not change |
+| **(polish)** `suggested_chapter_id()`, `static suggested_from(list, done)` | The suggested day (the title's "UP NEXT" badge): the first chapter in day order not done whose `requires` is done, empty or unknown; else the first not done; `""` when every day is done |
+| **(v3)** `next_chapter_id()`, `cli_chapter_id()` | What the title's Play starts: the CLI chapter, else the suggested day, else `last_chapter`, else Day 1 |
+| **(v3)** `start_chapter(id) -> bool` | Remembers `last_chapter`, saves, emits `goto_scene(scene)`. False only if the chapter is unknown or its scene is missing |
 | **(v3)** `current_chapter_id` | Set by `begin_visit` from the patient |
 | **(v3)** `SHOP_ITEMS` | `{id: {cost, day, title, blurb}}`: `comfy_chair` (40, day 1), `insert_earphones` (60, day 2). Never needed to play |
 
@@ -231,7 +232,7 @@ Story emits `Events.phase_changed(phase, info)` at each beat, in this order. Ids
 |---|---|---|
 | `disclaimer` | title screen: "This is a game, not a hearing test." | {} |
 | `title` | title menu (Play / Days / Options / Quit) | {} |
-| `chapter_select` **(v3)** | the title's day picker ("Days") | {unlocked: [chapter ids]} |
+| `chapter_select` **(v3)** | the title's day picker ("Days") | {unlocked: [every chapter id], suggested: chapter id} |
 | `intro` | Gus bursts in | {} |
 | `history` | case-history choices | {} |
 | `otoscopy` | I-spy in the ear canal | {} |
@@ -282,7 +283,7 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `evidence_present` | level | {target: "evidence_target"} |
 | `fitting_switch_on` | level | {} |
 | `results_continue` | results paper | {summary} |
-| `chapter_select` **(v3)** | title screen (Days card) | {chapters: unlocked ids, next: chapter id}; solver starts `next` |
+| `chapter_select` **(v3)** | title screen (Days card) | {chapters: every chapter id, next: chapter id, suggested: chapter id}; solver starts `next` |
 | `bc_placement` **(v3)** | level_bonnie (oscillator game) | {targets: ["mastoid_target_right"], mistakes}; solver places it on the mastoid |
 | `referral_stamp` **(v3)** | level_bonnie (Day 2 board) | {targets: ["referral_stamp"]}; solver stamps |
 
@@ -300,8 +301,12 @@ New beats are fine if they follow the same rule. Add them to this table through 
 - **(v3)** Earphones game: `setup(clinic, pronoun := "his")`.
 - **(v3, builders)** Day 2 board (`story/games/day2_board.gd`): `run_reveal(results)`, `show_gap()` (the toll
   bridge), `set_compact(on)`, `show_type(text)`, `show_carhart()`, `run_stamp()`. `Otoscopy.show_clear(ear, caption)`
-  is an input-free look at a healthy ear. The title's Days card keeps `_day_buttons` (metas `label`, `chapter`,
-  `toggle`, `locked`, `hl`), `_pick_day`, `_toggle_unlock_all` and `_days_back` for the tests and the bot.
+  is an input-free look at a healthy ear. The title's Days card keeps `_day_buttons` (every day card, then
+  Back; metas `label`, `chapter`, `ch`, `suggested`, `best`, `hl`), `_day_cards`, `_pick_day`, `_days_back`, `_days_scroll`
+  and `_days_cols` for the tests and the bot. **(polish)** It is a scrolling grid for any number of days: columns and
+  visible rows follow the screen (`grid_geometry(vp, n, k)`), the rest scrolls (wheel, scroll bar, or the arrow keys,
+  which keep the highlighted card in view: Left / Right step through every button, Up / Down move a row, past the
+  last row to Back). Esc = Back. `chapters_override` (dev scenes and tests only) shows another chapter list.
 - Pause menu: group `pause_menu`, with `open()` / `close()` / `is_open()` and the key-style toggle. The `pause` action toggles it.
 
 ---------------------------------------------------------------------------------------------
@@ -409,9 +414,14 @@ How the screen behaves:
 | `bc_freqs` | required unmasked bone frequencies (default `ClinicRules.BC_REQUIRED`) |
 | `air_transducer` | `"phones"` (default) or `"inserts"` |
 | `mask_on`, `mask_db` | start with the masker on / at this level (default off: the player presses M) |
-| `masking_controls` | show the MASKING (noise down, MASK, noise up) and ROUTE (AIR / BONE) buttons; default true for any test but `ac` |
+| `masking_controls` | show the MASKING (noise down, NOISE on/off, noise up) and ROUTE (AIR \| BONE) buttons; default true for any test but `ac` |
 | `hoot_turn_after` | stamps before Hoot takes over at x8 (default 3); 0 = Hoot runs the whole test (quick visit) |
 | `intro`, `hoot_turn_text`, `done_title` | Hoot's opening tip, his take-over line, the quest panel's done title |
+| `intro_full` **(polish)** | the opening tip used instead of `intro` when quick visit is off (no "I'll run the rest") |
+| `montage` **(polish)** | with quick visit and `hoot_turn_after` 0: Hoot fills the ear as a stamp montage (`AudiometrySession.instant_measure`, no tones played, input locked, scoring off) instead of the x8 turn |
+| `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it |
+| `nothing_title` **(polish)** | the done title when the goal sheet needs nothing (default "NOTHING TO MASK!") |
+| `start_db` **(polish)** | the first level of a non-air plan instead of the textbook start (Day 2's optional 250 Hz bone "bonus hole" starts at 40, so the vibrotactile tickle lands) |
 
 The required measurements are those of the goal sheet: `ac` as below; `bc` = `bc_freqs`; masked sheets =
 `ClinicRules.masked_freqs_needed()` from what is stored so far (bone: gap > 10; air: AC - 40 >= the other
@@ -419,6 +429,12 @@ ear's bone estimate). The player can switch sheets with the controls (transducer
 sheet: `test_for(transducer, mask_on)`), but the test finishes when the goal sheet is complete. Masked
 measurements start at the unmasked stamp; after a masked store the noise dial moves to the next frequency's
 initial level. The masker plays in the non-test ear whenever masking is on (§1.3).
+**(polish)** If the goal sheet is not `ac` and is already complete when `start_test` runs (insert earphones: no
+masked air is needed), the test finishes at once with `nothing_title`; nothing waits for input. While the masking
+deck shows, STORE on the wrong sheet (an unmasked stamp during a masked test) is refused with a tip naming the key
+to press. Unmasked bone heard by the other cochlea flies the Ghost only once a bone mark sits next to the air mark
+("Bone 10, air 50? BOO!"); before that a small "boo?" chip. Hoot's coach explains the covered-ear (occlusion) bonus
+once, and a one-time tip names a "shadow chase" (heard, then missed at the same tone after one noise raise).
 **(v3, builders)** The route lesson: a COACHED `bc` plan with the masking deck starts on AIR while the ear has no
 bone stamps yet, so the player presses B (uncoached bone plans start on bone). With `hoot_turn_after` 0 Hoot runs
 the whole test ("My turn!"); when his turn starts right after the coached stamp, the coach's "now you lead" line
@@ -499,11 +515,12 @@ Before the first `start_test`, `accepting_input` is false and `stored` is empty.
 }
 ```
 **(v3)** `true_db` is the response threshold for that sheet: unmasked bone = whichever cochlea answers first
-(the better one), masked bone = the bone threshold, air (masked or not) = the air threshold. A masked
+(the better one), masked bone = the bone threshold, masked air = the air threshold. A masked
 store is the plateau level when a plateau was found, else the ascending threshold.
-**(v3, builders)** Masked accuracy grace: a masked stamp ABOVE the truth is scored as if it were
-`AudiometrySession.MASKED_GRACE_DB` (5) dB closer (5 above = exact, 10 above = 0.8), because the plateau's
-single presentations at a ~75 % threshold drift upwards. `true_db` and `error_db` are unchanged.
+**(v3, builders; polish)** `AudiometrySession.MASKED_GRACE_DB` is now 0: masked stamps are scored like any other.
+The plateau's upward drift is removed at the source instead (the simulator's masked calibration, §4.8).
+**(polish)** Unmasked air `true_db` is the shadow curve too: the better of the test ear and the other cochlea
+through the air IA (unchanged for Gus and Bonnie, whose real IA keeps the shadow out of reach).
 **(v2)** `par` is dynamic: the median presentations of a textbook search from the level this measurement
 started at (typically 7-13), not the constant 7.
 
@@ -600,6 +617,7 @@ var max_output_transducer: StringName = &"phones"   # &"bone" shades the bone ma
 var attention: Dictionary                     # test -> ear -> freq -> true: the masking assistant's blinking symbols
 var show_gap: bool                            # the air-bone gap bridge (dashed "45?" posts on unmasked bone, solid on masked)
 var masker_view: Dictionary                   # the masker on this chart: {freq, db, ...} draws the noise curtain
+var dim: Dictionary                           # (polish) ear -> alpha (1 = normal): fades one ear's symbols, lines and layers
 ```
 
 What it draws:
@@ -648,6 +666,8 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   - controls: `set_ear`, `step_freq`, `set_freq`, `step_level`, `tone_down`, `tone_up`;
   - storing: `store`, `store_no_response`;
   - queries: `ascending_threshold`, `required_remaining`, `is_ear_complete`, `stored_thresholds`, `build_results`.
+  - **(polish)** `ascending_threshold` also answers `MIN_DB` (-10) when the open measurement was heard twice at -10 dB HL:
+    nothing softer to bracket from, so a store there is by the book (`textbook_presentations` and the bot agree).
 - `PatientSim`: logistic psychometric model with attention, fatigue, false alarms, reaction time and groove.
   - `THRESHOLD_BIAS_DB` 2: the curve's 50 % point sits 2 dB below the profile threshold, so a by-the-book 2-of-3
     ascending search writes down the profile value about 80 % of the time (and 5 dB either side otherwise).
@@ -657,6 +677,16 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   `initial_mask_db`, `overmask_limit_db` (bone: tone + IA; air: the test ear's best bone, or the nearest measured
   bone frequency's, + IA), `masking_needed_here`, `mask_status`, `plateau_info`, `store_candidate` (the plateau
   level, or the held level once `window_full(e, f)`), `window_full`, `results_view`; per-test sheets; `MASK_PAR_SLACK` 2 (masked par = textbook dance + 2).
+- **(polish)** `AudiometrySession`: `MASKED_GRACE_DB` 0 (a masked stamp is scored like any other: the simulator is
+  calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); `instant_measure(ear, freq)
+  -> Dictionary` runs one whole textbook measurement at once through the public controls with simulated time (Hoot's
+  montage; returns {} while a tone is on or while scoring is on). The unmasked air truth (`response_truth(&"ac")`) is
+  the shadow curve: the better of the test ear and the other cochlea through the air IA, so an unmasked stamp that
+  the other ear heard is scored as correct for an unmasked sheet.
+- **(polish)** `PatientSim`: `MASKED_BIAS_DB` 4, `MASKED_SLOPE_SCALE` 0.7, `MASKED_LAPSE_SCALE` 0 under masking (the
+  noise makes answers steadier, not looser), so a by-the-book plateau search lands on the profile value about 70-80 %
+  of the time and masked air agrees with unmasked air. This is a gameplay calibration, not a model of central masking.
+- **(polish)** `ToneGenerator.render()`: the masker keeps playing when a tone ramps out (it never drops with the tone).
 - **(v3)** `PatientSim`: `transducer`, `masker_db`, `masker_transducer`, `condition()`, `condition_for(ear, freq, tr,
   mask, mask_tr)` (via `ClinicRules.response_threshold`), `last_heard_by` (&"test" / &"cross", reactions only).
 - `ToneGenerator` (Node): `AudioStreamGenerator` at 44.1 kHz on the Tones bus.
@@ -740,8 +770,12 @@ but must not rename or remove these.
   "duration_s": 402.0, "audiometry": {...§5.1...},
   # v3
   "patient_name": "Grandpa Gus", "chapter_id": "gus", "day": 1,
-  "newly_unlocked": ["bonnie"],        # chapters this visit opened (empty on a replay)
-  "next_chapter_id": "bonnie"          # "" after the last chapter
+  "newly_unlocked": [],                # (polish) always empty: every day is open
+  "next_chapter_id": "bonnie",         # the day after this one in order; after the last chapter the suggested day (polish), "" when all are done
+  # polish
+  "patient_short": "Gus",              # PatientProfile.short_name()
+  "first_clear": true,                 # this visit finished the chapter for the first time
+  "suggested_next": "bonnie"           # Game.suggested_chapter_id() after this visit ("" = every day done)
 }
 ```
 
@@ -832,10 +866,11 @@ New kinds go through `world/INTEGRATION_NOTES.md`.
 | `--fresh` | reset the save |
 | `--save=user://x.json` | use another save file |
 | `--mouse` **(v2)** | with `--autoplay`: the bot plays the whole level with real mouse events only (exit 6 if a target is missing) |
-| `--day=N` / `--chapter=id` **(v3)** | Play (and the bot) starts that chapter; it counts as unlocked |
-| `--unlock-all` **(v3)** | every chapter unlocked for this run |
+| `--day=N` / `--chapter=id` **(v3)** | Play (and the bot) starts that chapter |
+| `--unlock-all` **(v3)** | **(polish)** accepted and ignored: every chapter is always open |
 | `--keep-save` **(v3, integrator)** | with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 with the same `--save=`) |
-| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`), `--try-locked=<id>` (press that card first and expect a refusal), `--toggle-unlock` (press "Unlock all days (demo)" first), `--expect-days=gus,bonnie` (the unlocked list). The result gets a `days` report; a failed expectation is a problem (exit 4) |
+| `--upgrades=a,b` **(polish)** | own these shop items for this run (e.g. `insert_earphones`), after the save reset |
+| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
 
 ### §7.2 What the bot relies on (must keep working)
 
@@ -890,7 +925,7 @@ The bot saves:
 - one shot per phase, named like `05_audiometry_right.png` (**v3**: `_<test>` is appended for non-`ac` tests, e.g. `audiometry_right_bc_masked`);
 - **(v3)** `audiometry_<ear>_<test>_first_store`, `audiometry_<ear>_<test>_hoot_turn`, `audiometry_<ear>_plateau`;
 - **(v3)** the story's own: `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`, `day2_carhart`, `day2_stamp`,
-  `day2_croissant`, `day2_goodbye`; with `--via-days`: `days_locked_refused`, `days_toggled`;
+  `day2_croissant`, `day2_goodbye`;
 - `audiometry_<ear>_first_tone`, `audiometry_<ear>_first_store`, `audiometry_<ear>_complete`;
 - `results_final`.
 
@@ -931,6 +966,8 @@ The bot saves:
 Related calls:
 - `Hoot.say_once(key, text, priority, target)`: once per visit.
 - `dismiss(id)`, `dismiss_current()`, `clear_queue()`, `clear()`.
+- **(polish)** `dismiss_target(target)`: drops every queued tip pointing at that anchor, and the current one (the
+  AudiOtron calls it with `store_button` once the player stamps, so "Store it!" never outlives the stamp).
 - `current_tip()`, `is_showing()`, `queued_count()`.
 - `note_clean_use(skill)` and `is_mastered(skill)`. Mastery comes after 3 clean uses and is saved in `progress.hoot_mastery`. It emits `hoot_mastered`.
 
@@ -951,7 +988,7 @@ camera). Related calls: `unregister_anchor`, `has_anchor`, `anchor_screen_rect(i
 |---|---|
 | AudiOtron | `tone_button`, `louder_button`, `softer_button`, `freq_up_button`, `freq_down_button`, `store_button`, `no_response_button`, `ear_right_button`, `ear_left_button`, `audiogram_right`, `audiogram_left` |
 | story | `otoscope_seed`, `ear_target_right`, `ear_target_left`, `earphone_red`, `earphone_blue`, `reveal_audiogram`, `evidence_target`, `evidence_slope` |
-| AudiOtron **(v3)** | `mask_softer_button`, `mask_toggle_button`, `mask_louder_button`, `transducer_button` (hidden unless the plan shows the masking deck) |
+| AudiOtron **(v3)** | `mask_softer_button`, `mask_toggle_button`, `mask_louder_button`, `transducer_air_button`, `transducer_bone_button` **(polish: the old single `transducer_button` became the two-segment AIR \| BONE switch)** (hidden unless the plan shows the masking deck) |
 | story **(v3)** | `oscillator`, `mastoid_target_right`, `abg_bridge`, `referral_stamp` |
 
 **Bubble placement.**

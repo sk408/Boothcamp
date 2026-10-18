@@ -43,6 +43,9 @@ var beckon: bool = false
 var hold_ring: bool = false
 ## Seconds the tone has been held (-1 = not playing). Set by the screen every frame.
 var hold_s: float = -1.0
+## (Polish) A state lamp on the left of the face: -1 none, 0 off (dark), 1 on (lamp_color, glowing).
+var lamp: int = -1
+var lamp_color: Color = Palette.PLUM
 
 var _hover := false
 var _held := false
@@ -145,7 +148,7 @@ func _gui_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	_wiggle = maxf(0.0, _wiggle - delta * 3.0)
-	if glow > 0.0 or flame_px > 0.0 or beckon or _wiggle > 0.0 or hold_s >= 0.0:
+	if glow > 0.0 or flame_px > 0.0 or beckon or _wiggle > 0.0 or hold_s >= 0.0 or lamp > 0:
 		queue_redraw()
 
 
@@ -194,6 +197,16 @@ func _draw() -> void:
 	var inline_key := pill and show_keycap and action != &""
 	if inline_key:
 		c.x -= 13.0
+	if lamp >= 0:
+		var lc := Vector2(f.position.x + 15.0, f.get_center().y)
+		if lamp > 0 and not locked:
+			var pulse := 0.5 + 0.5 * sin(_t * 6.0)
+			draw_circle(lc, 11.0 + 2.0 * pulse, Color(lamp_color.lightened(0.3), 0.35))
+		draw_circle(lc, 8.0, Palette.INK)
+		draw_circle(lc, 6.0, lamp_color.lightened(0.15) if lamp > 0 else Color("#6b6478"))
+		if lamp > 0:
+			draw_circle(lc + Vector2(-2, -2), 2.0, Color(1, 1, 1, 0.7))
+		c.x += 9.0
 	if has_text:
 		var fs := font_size if has_icon else font_size + 2
 		AoDraw.text_c(self, Vector2(c.x, text_y if has_icon else c.y - (6.0 if sub_text != "" else 0.0)), text, fs, col, AoDraw.FONT_BOLD)

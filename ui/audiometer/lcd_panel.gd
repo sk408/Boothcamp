@@ -306,7 +306,7 @@ func _draw_trail(a: Rect2) -> void:
 	var strokes := int(view["strokes"])
 	var golf := "STROKES %d" % strokes + ("   PAR %d" % par if par > 0 else "")
 	if a.size.x < 280.0:
-		golf = "%d beeps" % strokes + (" / par %d" % par if par > 0 else "")
+		golf = ("%d beep" if strokes == 1 else "%d beeps") % strokes + (" / par %d" % par if par > 0 else "")
 	var gcol := Palette.LCD_TEXT if par <= 0 or strokes <= par else Palette.CORAL
 	AoDraw.text_r(self, Vector2(a.end.x - 4, head_y), golf, 14, gcol, AoDraw.FONT_BOLD)
 	var plot := Rect2(a.position + Vector2(30, 38), Vector2(a.size.x - 40, a.size.y - 50))

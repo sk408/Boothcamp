@@ -181,7 +181,7 @@ func test_coached_bone_route_lesson() -> void:
 	assert_eq(screen.session.recommended_action()["action"], &"transducer")
 	var line: Array = screen._coach_text(screen.session.recommended_action())
 	assert_true(String(line[0]).begins_with("Bone time!"), String(line[0]))
-	assert_eq(String(line[1]), "transducer_button")
+	assert_eq(String(line[1]), "transducer_bone_button")
 	screen.session.set_transducer(&"bone")
 	assert_eq(screen.get_state()["test"], &"bc")
 	# once bone stamps exist, a coached bone plan does not repeat the lesson
@@ -261,8 +261,9 @@ func test_noise_curtain_leak_and_lcd() -> void:
 	assert_eq(left_card.audiogram.masker_view, {})
 
 
-## An unmasked bone beep heard by the LEFT cochlea flies the Cross-Hearing Ghost (the player's
-## turn); the plateau's end pops FLAT LINE!.
+## An unmasked bone beep heard by the LEFT cochlea: before any bone mark only a "boo?" chip; once
+## a bone mark sits next to the air mark the Cross-Hearing Ghost flies (the player's turn); the
+## plateau's end pops FLAT LINE!.
 func test_ghost_and_flat_line() -> void:
 	var screen := _screen()
 	await wait_frames(2)
@@ -278,8 +279,15 @@ func test_ghost_and_flat_line() -> void:
 	_tick(s, 2.0)
 	assert_true(screen._fx._ghost.is_empty())
 	_present(screen)
+	assert_true(screen._fx._ghost.is_empty(), "no bone mark yet: only a small boo? chip")
+	# one bone stamp, then the same beep again: now the Ghost flies with bone vs air
+	_play(screen, "right", 1)
+	s.set_freq(1000)
+	s.set_level(30)
+	_tick(s, 2.0)
+	_present(screen)
 	assert_false(screen._fx._ghost.is_empty(), "the Ghost flies")
-	assert_eq(String(screen._fx._ghost["text"]), "BOO!")
+	assert_true(String(screen._fx._ghost["text"]).ends_with("BOO!"), String(screen._fx._ghost.get("text", "")))
 	assert_true(String(screen._fx._ghost["sub"]).contains("LEFT"))
 	assert_true(screen._fx.busy())
 	await wait_seconds(2.3)
@@ -338,3 +346,27 @@ func test_symbol_layers_and_offsets() -> void:
 	ag.masker_view = {"freq": 1000, "db": 60, "role": &"leak", "hot": true}
 	await wait_frames(2)
 	assert_true(ag._attention_count() >= 1)
+
+
+## (polish) The reveal sorts many marks per ear at one frequency (air, masked air, bone, masked
+## bone): its comparator must be a strict order, or Godot's sort reports "bad comparison function".
+func test_reveal_order_is_strict() -> void:
+	var queue: Array = []
+	for e: String in ["right", "left"]:
+		for test: StringName in [&"ac", &"ac_masked", &"bc", &"bc_masked"]:
+			for f: int in [4000, 250, 1000, 500, 2000]:
+				queue.append([e, f, 10, false, test])
+	Audiogram.sort_reveal(queue)
+	for a: Array in queue:
+		assert_false(Audiogram.reveal_before(a, a), "irreflexive")
+		for b: Array in queue:
+			if a != b:
+				assert_false(Audiogram.reveal_before(a, b) and Audiogram.reveal_before(b, a), "asymmetric")
+	for i in range(1, queue.size()):
+		var p: Array = queue[i - 1]
+		var q: Array = queue[i]
+		assert_true(int(p[1]) <= int(q[1]), "low to high pitch")
+		if int(p[1]) == int(q[1]) and String(p[0]) != String(q[0]):
+			assert_eq(String(p[0]), "right", "right ear first at each pitch")
+	assert_eq(String(queue[0][0]), "right")
+	assert_eq(StringName(queue[0][4]), &"ac", "air stamps before bone at the same pitch")

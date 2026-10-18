@@ -272,7 +272,7 @@ const ABG_CONDUCTIVE_DB := 10
 ## Referral red flag: a gap of at least this at EACH of these frequencies.
 const ABG_RED_FLAG_DB := 15
 const ABG_RED_FLAG_FREQS: Array[int] = [500, 1000, 2000]
-## Carhart notch: bone at 2 kHz at least this much poorer than both 1 kHz and 4 kHz.
+## Carhart notch: masked bone at 2 kHz at least this much poorer than the better of 500 and 4 kHz.
 const CARHART_FREQ := 2000
 const CARHART_MIN_DIP_DB := 10
 ## Hearing types from air vs bone (classify with hearing_type()).
@@ -392,12 +392,25 @@ static func hearing_type(ac: Dictionary, bc: Dictionary) -> StringName:
 	return &"sensorineural"
 
 
-## Carhart notch: bone at 2 kHz at least CARHART_MIN_DIP_DB poorer than both 1 kHz and 4 kHz.
+## Carhart notch (masked bone): 2 kHz at least CARHART_MIN_DIP_DB poorer than the better of 500 and
+## 4000 Hz, poorer than 4 kHz (a notch, not a slope) and the bottom of the dip. A mechanical effect
+## of the stiff stapes (the cochlea is fine); it often recovers after surgery.
 static func has_carhart_notch(bc: Dictionary) -> bool:
-	if not (bc.has(1000) and bc.has(CARHART_FREQ) and bc.has(4000)):
+	if not (bc.has(CARHART_FREQ) and bc.has(4000)):
 		return false
 	var dip := int(bc[CARHART_FREQ])
-	return dip - int(bc[1000]) >= CARHART_MIN_DIP_DB and dip - int(bc[4000]) >= CARHART_MIN_DIP_DB
+	# the reference is the better of 500 and 4000 Hz: 1 kHz often dips a little too in a Carhart
+	# pattern, so it only stands in when 500 was not measured
+	var ref := int(bc[4000])
+	if bc.has(500):
+		ref = mini(ref, int(bc[500]))
+	elif bc.has(1000):
+		ref = mini(ref, int(bc[1000]))
+	if dip - ref < CARHART_MIN_DIP_DB:
+		return false
+	if dip - int(bc[4000]) < 5:
+		return false  # 2 kHz no poorer than 4 kHz: a sloping loss, not a notch
+	return not bc.has(1000) or dip >= int(bc[1000])  # 2 kHz is the bottom of the dip
 
 
 ## AC masking rule: test-ear AC level - IA >= the non-test ear's (best) BC.

@@ -22,8 +22,11 @@ const PHASES: Array[StringName] = [
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
-## requires: the chapter id that must be completed first ("" = always open).
-## Story reads this for the title's day picker; Game uses it for unlocks (CONTRACTS.md §2.2 v3).
+## Every chapter is open from the start and can be played in any order (Steve's rule, polish).
+## requires: the chapter that is best played first; it only picks the "UP NEXT" (suggested) day,
+## it never locks anything ("" = a fine first day). Optional keys for the title's day picker:
+## "face" (a Portraits speaker id) and "tint" (Color or "#rrggbb"), used when the title's own
+## DAY_FACES / DAY_TINTS tables have no entry (CONTRACTS.md §2.2).
 const CHAPTERS: Array[Dictionary] = [
 	{"id": "gus", "day": 1, "title": "Day 1: Grandpa Gus", "patient_id": "gus", "teaches": "Air conduction",
 		"scene": "res://story/level_gus.tscn", "requires": ""},
@@ -31,7 +34,7 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_bonnie.tscn", "requires": "gus"},
 	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
 	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech reception (SRT)",
-		"scene": "res://story/level_mike.tscn", "requires": "bonnie"},
+		"scene": "res://story/level_mike.tscn", "requires": "bonnie", "face": "Mike", "tint": "#fff0a6"},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
@@ -55,7 +58,8 @@ const DEFAULT_SETTINGS: Dictionary = {
 	"fullscreen": false,
 	"text_speed": 1.0,           ## dialogue typewriter speed multiplier
 	"quick_visit": true,         ## Hoot finishes the second ear at x8 after a few stamps (~10 min level)
-	"unlock_all_days": false,    ## (v3) career-fair demo: every day is playable from the title
+	# (polish) "unlock_all_days" is gone: every day is always open. Old saves that still carry it
+	# load fine (load_game() only copies known keys).
 }
 
 const DEFAULT_PROGRESS: Dictionary = {
@@ -107,6 +111,11 @@ func _ready() -> void:
 		reset_save()
 	else:
 		load_game()
+	# --upgrades=insert_earphones (polish, dev/test runs): own these shop items for this run
+	if cli.has("upgrades"):
+		for id: String in String(cli["upgrades"]).split(",", false):
+			if SHOP_ITEMS.has(id) and not has_upgrade(id):
+				(progress["upgrades"] as Array).append(id)
 	if cli_flag("affinity"):
 		_cli_style_keep = String(settings.get("key_style", "otosuite"))
 		settings["key_style"] = "affinity"
@@ -385,13 +394,10 @@ func finish_visit() -> Dictionary:
 	progress["plays"] = int(progress.get("plays", 0)) + 1
 	var ch := chapter_for_patient(id)
 	var chapter_id := String(ch.get("id", ""))
-	var unlocked_before := unlocked_chapter_ids()
-	if chapter_id != "" and not is_chapter_done(chapter_id):
+	var first_clear := chapter_id != "" and not is_chapter_done(chapter_id)
+	if first_clear:
 		(progress["chapters_done"] as Array).append(chapter_id)
-	var newly: Array = []
-	for cid: String in unlocked_chapter_ids():
-		if not unlocked_before.has(cid):
-			newly.append(cid)
+	var newly: Array = []   # (polish) nothing is ever locked, so nothing is newly unlocked
 	save_game()
 	var summary := {
 		"patient_id": id,
@@ -409,10 +415,13 @@ func finish_visit() -> Dictionary:
 		"audiometry": res,
 		# v3
 		"patient_name": _patient_name(id),
+		"patient_short": _patient_short(id),  # (polish) "Gus", "Bonnie": PatientProfile.short_name()
 		"chapter_id": chapter_id,
 		"day": int(ch.get("day", 0)),
 		"newly_unlocked": newly,
-		"next_chapter_id": _next_after(chapter_id),
+		"next_chapter_id": _paper_next(chapter_id),
+		"first_clear": first_clear,               # (polish) this visit finished the chapter for the first time
+		"suggested_next": suggested_chapter_id(),  # (polish) the day the title now suggests ("" = all done)
 	}
 	visit["summary"] = summary
 	if chapter_id != "":
@@ -471,24 +480,41 @@ func is_chapter_done(id: String) -> bool:
 	return (progress.get("chapters_done", []) as Array).has(id)
 
 
-## Open to play: its requirement is done, or the "unlock_all_days" demo setting is on, or the
-## command line asks for it (--day=N / --chapter=id / --unlock-all, dev and autoplay runs).
-func is_chapter_unlocked(id: String) -> bool:
-	var c := chapter(id)
-	if c.is_empty():
-		return false
-	if bool(settings.get("unlock_all_days", false)) or cli_flag("unlock-all") or cli_chapter_id() == id:
-		return true
-	var req := String(c.get("requires", ""))
-	return req == "" or is_chapter_done(req)
+## (polish) Every chapter is open from the start, in any order: always true. Kept so callers
+## (and the other chapter branches) need not change. "requires" only picks the suggested day.
+func is_chapter_unlocked(_id: String) -> bool:
+	return true
 
 
+## Every chapter id, in day order (all of them are open).
 func unlocked_chapter_ids() -> Array[String]:
 	var out: Array[String] = []
 	for c: Dictionary in CHAPTERS:
-		if is_chapter_unlocked(String(c["id"])):
-			out.append(String(c["id"]))
+		out.append(String(c["id"]))
 	return out
+
+
+## (polish) The day the title suggests next (its card wears the "UP NEXT" badge): the first
+## chapter in day order not done yet whose "requires" is done (or empty, or unknown); else the
+## first chapter not done; "" when every day is done.
+func suggested_chapter_id() -> String:
+	return suggested_from(CHAPTERS, progress.get("chapters_done", []) as Array)
+
+
+## suggested_chapter_id() over any chapter list (the title's day picker and its tests use it).
+static func suggested_from(list: Array, done: Array) -> String:
+	var first_open := ""
+	var ids: Array = list.map(func(c: Dictionary) -> String: return String(c.get("id", "")))
+	for c: Dictionary in list:
+		var id := String(c.get("id", ""))
+		if done.has(id):
+			continue
+		var req := String(c.get("requires", ""))
+		if req == "" or done.has(req) or not ids.has(req):
+			return id
+		if first_open == "":
+			first_open = id
+	return first_open
 
 
 ## The chapter the command line asks for (--chapter=id or --day=N), "" if none.
@@ -500,18 +526,17 @@ func cli_chapter_id() -> String:
 	return ""
 
 
-## What the title's "Play" starts: the command-line chapter; else the first unlocked chapter not
-## yet done; else the last one played; else Day 1.
+## What the title's "Play" starts: the command-line chapter; else the suggested day
+## (suggested_chapter_id()); else the last one played; else Day 1.
 func next_chapter_id() -> String:
 	var forced := cli_chapter_id()
 	if forced != "":
 		return forced
-	for c: Dictionary in CHAPTERS:
-		var id := String(c["id"])
-		if is_chapter_unlocked(id) and not is_chapter_done(id):
-			return id
+	var sug := suggested_chapter_id()
+	if sug != "":
+		return sug
 	var last := String(progress.get("last_chapter", ""))
-	if last != "" and is_chapter_unlocked(last):
+	if last != "" and not chapter(last).is_empty():
 		return last
 	return String(CHAPTERS[0]["id"])
 
@@ -519,6 +544,21 @@ func next_chapter_id() -> String:
 func _patient_name(id: String) -> String:
 	var p := load_patient(id)
 	return String(p.get("display_name")) if p != null else id
+
+
+func _patient_short(id: String) -> String:
+	var p := load_patient(id)
+	return String(p.call("short_name")) if p != null and p.has_method("short_name") else id.capitalize()
+
+
+## (polish) The day the paper's Next button offers: the day after this one in order, or after the
+## last day the suggested day (Day 2 played first: Day 1 next), or "" when every day is done.
+func _paper_next(id: String) -> String:
+	var nxt := _next_after(id)
+	if nxt != "":
+		return nxt
+	var sug := suggested_chapter_id()
+	return sug if sug != id else ""
 
 
 func _next_after(id: String) -> String:
@@ -533,10 +573,10 @@ func chapter_scene(id: String) -> String:
 
 
 ## Start a chapter: remembers it and asks main to switch to its level scene. Returns false if the
-## chapter is unknown or locked.
+## chapter is unknown or its scene is missing (every chapter is open: nothing is ever refused).
 func start_chapter(id: String) -> bool:
-	if not is_chapter_unlocked(id) or not ResourceLoader.exists(chapter_scene(id)):
-		push_warning("Game.start_chapter: %s is locked or missing" % id)
+	if chapter(id).is_empty() or not ResourceLoader.exists(chapter_scene(id)):
+		push_warning("Game.start_chapter: %s is unknown or missing" % id)
 		return false
 	current_chapter_id = id
 	progress["last_chapter"] = id
@@ -620,7 +660,7 @@ static func _merge_typed(into: Dictionary, from: Variant) -> void:
 
 
 ## (v3) Saves from before chapters existed: a patient with a finished visit counts as that
-## chapter done (a Day 1 veteran finds Day 2 open).
+## chapter done (a Day 1 veteran sees Day 2 as UP NEXT).
 func _migrate_chapters() -> void:
 	var done: Array = progress.get("chapters_done", [])
 	var pats: Dictionary = progress.get("patients", {})

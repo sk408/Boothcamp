@@ -167,8 +167,7 @@ func render(frames: int) -> PackedVector2Array:
 	for i in frames:
 		_ramp = move_toward(_ramp, _target, ramp_step)
 		if _ramp <= 0.0 and _target <= 0.0:
-			out[i] = Vector2.ZERO
-			continue
+			continue  # the tone has ramped out: out[i] already holds the masker (or silence)
 		_amp += (target_amp - _amp) * glide
 		var env := 0.5 - 0.5 * cos(PI * _ramp)  # raised cosine
 		if stimulus == Stimulus.PULSED:

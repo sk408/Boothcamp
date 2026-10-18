@@ -40,6 +40,28 @@ so branches don't collide.
 - Conductive cases (wax, fluid, otosclerosis-like) use the v3 bone-conduction fields from chapter 2.
 - Clinical wording for every case is reviewed by Steve before release.
 
+## Registering the chapter: one `Game.CHAPTERS` entry
+
+```gdscript
+{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco",
+	"teaches": "Case file: ringing ears", "scene": "res://story/level_case.tscn",
+	"requires": "bonnie", "face": "Rocco", "tint": Color("#ffd9c7")},
+```
+
+- **Every chapter is open from the start and can be played in any order** (Steve's rule). There are no locks:
+  `Game.is_chapter_unlocked()` is always true, and there is no "unlock all days" setting any more.
+- `requires` is only a hint: the chapter best played first. It picks the **suggested** day
+  (`Game.suggested_chapter_id()`: the first day not done whose `requires` is done), which wears a small
+  "UP NEXT" badge on the title's day picker and is what Play starts. The Daily Decibel stamps "UP NEXT!" and makes
+  "Next: Day N" the big button after a chapter's first clear.
+- The title's Days card is a scrolling grid that lays out any number of chapters (columns and visible rows follow
+  the screen; it fits 1280x720 and 1920x1080), with keyboard (arrows, Enter, Esc) and mouse (click, wheel) control.
+  Each card shows the DAY chip, the part of `title` after the colon, `teaches`, a best grade and a portrait.
+- `face` (a `Portraits` speaker id) and `tint` (a `Color` or a `"#rrggbb"` string) are optional. The title's own
+  `DAY_FACES` / `DAY_TINTS` tables win when they have the id; otherwise the card uses these keys, else a cream card
+  with a star. So a chapter branch never needs to edit `story/title_screen.gd`.
+- Keep `title` as `"Day N: Name"` and `day` unique. The bot finds a card by its title (`--via-days --pick=<id>`).
+
 ## Shared files: additive changes only
 
 `autoload/events.gd`, `autoload/game.gd`, `autoload/clinic_rules.gd`, `core/patient_profile.gd`, `core/patient_sim.gd`,
@@ -59,7 +81,8 @@ makes the change on `main`.
 ## Before opening a PR
 
 1. `godot --headless --path . --import`, then `tools/run_tests.sh` (all green, incl. `test_vendor_free`).
-2. `tools/autoplay_check.sh` for **every** day (`--day=N`), keyboard and `--mouse`.
+2. `tools/autoplay_check.sh` for **every** day (`--day=N`), keyboard and `--mouse`, and once from the day picker
+   (`--via-days --pick=<id>`, add `--mouse` to scroll and click the card like a player).
 3. A few rendered screenshots of the new chapter (`tools/shots.sh`) attached to the PR.
 4. The PR description lists every shared-file addition.
 

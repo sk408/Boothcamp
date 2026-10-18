@@ -6,11 +6,14 @@ You take his history, look in his ears, explain the test, put the earphones on, 
 pure-tone air-conduction test on both ears with the AudiOtron 3000, read the audiogram, crack the
 case, and get a sneak peek of his first hearing aids. One visit takes about 10 to 15 minutes.
 
-**Day 2** brings Bonnie Bunsworth, a baker whose right ear has gone "all underwater". Hoot runs
-her air test, then you put the bone oscillator on her mastoid, find out why unmasked bone lies
-(the Cross-Hearing Ghost), mask the other ear with the plateau dance, and stamp the referral to
-the ear doctor (a conductive loss with normal bone). Day 2 opens when Day 1 is done, or straight
-away with **Unlock all days (demo)** on the title's **Days** card. Progress is saved.
+**Day 2** brings Bonnie Bunsworth, a baker whose right ear has gone "all underwater". You test
+her right ear by air (Hoot coaches the first beep and runs the rest), watch Hoot's montage of her
+normal left ear, put the bone oscillator on her mastoid, find out why unmasked bone lies (the
+Cross-Hearing Ghost), mask the other ear with the plateau dance for bone and then for air, and
+stamp the referral to the ear doctor (a conductive loss with normal bone). About 15 minutes.
+Every day is open from the start: pick one on the title's **Days** card, in any order. The
+suggested day wears an **UP NEXT** ribbon, and after Day 1 The Daily Decibel stamps UP NEXT! and
+**Next: Day 2** goes straight on. Progress is saved.
 
 **Day 3** brings Mike "Totally Deaf" Lenders, a forklift driver who says he can't hear a thing
 since a forklift beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his
@@ -49,8 +52,8 @@ options). Closing the window saves and quits.
 | **N** | No response (only after a miss at the loudest level) |
 | **R** / **L** | Right / left ear |
 | **H** | Show or hide the key hints next to every control |
-| **B** / **A** (Day 2) | Bone oscillator / air (earphones) |
-| **M** (Day 2) | Masking noise on / off (it plays in the other ear) |
+| **B** / **A** (Day 2) | Route the tone to the BONE oscillator / back to AIR (earphones) |
+| **M** (Day 2) | Masking NOISE on / off (it plays in the other ear; its lamp glows while on) |
 | **PgUp** / **PgDn**, or **Shift+Up** / **Shift+Down** (Day 2) | Noise louder / softer, 5 dB per tap |
 | **Esc** or **P** | Pause and options |
 
@@ -74,8 +77,10 @@ Everything works with the mouse. Hold the big **TONE** pad to beep, right-click 
 response, click **SOFTER**, **LOUDER**, the **Hz** arrows and **STORE**, or scroll over the dB
 readout. Click the audiogram or a test-plan token to jump to that frequency. The **II** button
 pauses. In the story, click to continue, click an answer, drag the earphone cups onto Gus's ears
-and drag the evidence onto the case file. On Day 2, click **AIR** / **BONE** and **MASK**, the
-noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp.
+and drag the evidence onto the case file. On Day 2, click the **AIR | BONE** switch and **NOISE**, the
+noise arrows, drag the bone oscillator onto Bonnie's mastoid, and click the referral stamp. On
+the title's **Days** card, click a day; the mouse wheel scrolls the grid when there are more days
+than fit.
 On Day 3, click a word card to drop it, click **PRESENT**, **CORRECT**, **MISSED**, **LOUDER**,
 **SOFTER**, **STORE** and **MASK** on the SPEECH screen, and drag a clue onto Mike's claim.
 
@@ -88,8 +93,20 @@ search usually needs, combos build while every step is by the book, and the scor
 when Gus wobbles it never costs you a bogey, and a slip never earns a birdie.
 
 On the second ear you test a few frequencies on your own, then Hoot takes a turn and finishes
-the ear at 8x speed so you can watch the whole routine (turn this off with **Quick visit** in the
-pause menu to test every frequency yourself; Hoot's stamps never count for or against you).
+the ear at 8x speed so you can watch the whole routine (turn this off with **Quick visit (Hoot
+runs the repeats)** in the pause menu to test every frequency yourself; Hoot's stamps never count
+for or against you). On Day 2 the air test is a repeat of Day 1, so Hoot coaches one beep and
+runs the rest, and her left ear plays as a quick stamp montage; the bone and masking sheets are
+yours. With Quick visit off you test everything.
+
+On Day 2 the AudiOtron grows a **MASKING** deck. The **AIR | BONE** switch shows where the tone
+goes (AIR reads INSERT with the insert earphones from the shop). **NOISE** turns the masker on in
+the other ear, with a lamp and a NOISE box that light whenever it plays. Hoot walks you through
+the first masked bone threshold one press at a time: the starting noise (the other ear's air
++ 10, plus a few dB for a covered ear at low pitches), then "heard = noise up 5, missed = tone up
+5" until the answer survives three noise raises in a row: the plateau, drawn as a flat line on
+the chart. If one more noise step makes her answer vanish, the tone was crossing to the other
+ear: that was the Ghost.
 
 ## What the level teaches
 
@@ -114,24 +131,36 @@ pause menu to test every frequency yourself; Hoot's stamps never count for or ag
   fine-tuning and a few weeks of getting used to.
 
 At the end, The Daily Decibel scores accuracy, technique, efficiency and care, shows your golf
-card and the 1 kHz retest, and pays Decibucks you can spend on a comfier booth chair.
+card and the 1 kHz retest, and pays Decibucks you can spend on a comfier booth chair (Day 2's
+paper sells insert earphones).
 
 ### Day 2: what it teaches
 
 - **Bone conduction:** the oscillator goes on the mastoid bone behind the ear, never touching the
   ear itself. Bone skips the ear canal and middle ear, so it measures the cochlea directly (tested
-  at 500 to 4000 Hz; the bone oscillator tops out lower than earphones).
+  at 500 to 4000 Hz; the bone oscillator tops out lower than earphones). An optional **bonus
+  hole** tests bone at 250 Hz too: a loud low buzz there can be felt rather than heard, which is
+  why many clinics skip it.
 - **The air-bone gap:** air poorer than bone by more than 10 dB means a conductive loss. A gap of
   15 dB or more at 500, 1000 and 2000 Hz is a red flag for a referral.
 - **Cross-hearing:** bone crosses the skull with about 0 dB of loss, so unmasked bone is heard by
   the better cochlea. Air crosses too once the tone is 40 dB above the other ear's bone.
 - **Masking (simplified):** start the noise at the other ear's air threshold + 10, plus the
-  occlusion effect for bone at low pitches; heard = noise up 5, missed = tone up 5; three noise
-  raises with the tone still heard is the plateau. Too much noise crosses back (overmasking).
-  The masking dilemma is only mentioned.
+  occlusion effect for bone at low pitches (a covered ear hears bone louder); heard = noise up 5,
+  missed = tone up 5; the tone heard at the same level through three noise raises is the
+  plateau. Too much noise crosses back (overmasking). Then masked air: her right air minus about
+  40 dB (supra-aural phones) could still reach her left cochlea, so air gets masked too. With the
+  insert earphones (about 55 dB lost crossing the head) it often cannot, and no masked air is
+  needed. The masking dilemma is only mentioned.
 - **The takeaway:** a conductive loss with normal bone means an ENT referral. Bonnie's pattern
-  (with a little dip in bone at 2 kHz) is the classic picture of otosclerosis, which the doctor
-  confirms; the game never diagnoses.
+  is the classic picture of otosclerosis: extra bone grows around the stapes (the stirrup bone),
+  so it cannot vibrate freely. Her bone line has a small dip at 2 kHz, the **Carhart notch**: a
+  stiff middle ear fakes a small bone loss there, and her cochlea is fine. The ENT confirms it;
+  then surgery to free the stapes, or hearing aids, both of which can work well. The game never
+  diagnoses.
+- **The Day 2 board:** the air-bone gap drawn as a river, with the bone line as the bridge over
+  it and a toll booth: the "toll" is the dB the middle ear charges before sound reaches the
+  cochlea.
 
 Symbols follow the usual audiogram conventions: O / X for air, < / > for unmasked bone,
 [ / ] for masked bone, triangle / square for masked air; bone symbols are never joined by lines.
@@ -165,6 +194,8 @@ godot --headless --path . --import                  # first time, or after addin
 tools/run_tests.sh                                  # unit tests (exit 0 = green)
 tools/autoplay_check.sh                             # a bot plays the whole level headless
 tools/autoplay_check.sh --day=2                     # ...Day 2 (bone and masking)
+tools/autoplay_check.sh --day=2 --upgrades=insert_earphones   # ...Day 2 with inserts
+tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Days card
 tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it

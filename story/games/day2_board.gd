@@ -1,9 +1,11 @@
 extends Control
 ## Day 2 board (v3): Bonnie's audiogram with air AND bone. The chart stamps in, then the
-## air-bone gap lights up as a toll bridge: a plank road runs along the bone marks (bone drives
-## straight past, a little bone car proves it), stone pillars drop to the air marks with the toll
-## in dB on each one, and a toll booth with a bobbing barrier sits at the air end (air pays at the
-## middle ear). Later: the Carhart notch callout, the type-of-loss badge, and the big
+## air-bone gap lights up as a toll bridge: the gap between bone (top) and air (bottom) is a river,
+## each gap frequency gets a plank hung just under its bone mark and a stone pillar down to the air
+## mark with the toll in dB (bone drives straight past: a little bone car hops plank to plank; the
+## planks are separate, because bone marks are never joined), and a toll booth with a bobbing
+## barrier sits at the air end (air pays at the middle ear). The left ear fades while the bridge
+## is up, so the eye compares right air with right bone. Later: the Carhart notch callout, the type-of-loss badge, and the big
 ## "REFERRED TO ENT" stamp when the player presses it.
 ## Story-internal:
 ##   var b := Day2Board.new(); hud.add_game(b); await b.run_reveal(results)
@@ -116,12 +118,12 @@ func _exit_tree() -> void:
 func run_reveal(p_results: Dictionary) -> void:
 	results = p_results
 	Juice.bounce_in(_card, 0.45)
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.5, false).timeout
 	if ag == null:
 		return
 	ag.show_results(results, true)
 	await ag.draw_finished
-	await get_tree().create_timer(0.3).timeout
+	await get_tree().create_timer(0.3, false).timeout
 
 
 ## (coroutine) The toll bridge: the band between bone (top) and air (bottom) on the right ear.
@@ -130,8 +132,9 @@ func show_gap() -> void:
 		return
 	_place_bridge_anchor()
 	Sfx.play(&"whoosh", 0.8, -6.0)
-	var t := create_tween()
+	var t := create_tween().set_parallel(true)
 	t.tween_property(self, "_gap", 1.0, 1.2).from(0.0).set_trans(Tween.TRANS_SINE)
+	t.tween_method(func(a: float) -> void: ag.dim = {"left": a}, 1.0, 0.25, 0.5)
 	await t.finished
 	var avg := _avg_gap()
 	_title.text = "AIR-BONE GAP: ~%d dB" % avg
@@ -144,7 +147,7 @@ func show_gap() -> void:
 	Juice.pop(_title, 1.7, 0.45)
 	Sfx.play(&"fanfare")
 	Events.screen_shake.emit(0.2, 0.15)
-	await get_tree().create_timer(0.6).timeout
+	await get_tree().create_timer(0.6, false).timeout
 
 
 ## Shrink the board to the top of the screen (dialogue choices go below it), or restore it.
@@ -191,7 +194,7 @@ func run_stamp() -> void:
 	Events.awaiting_input.emit(&"referral_stamp", {"targets": ["referral_stamp"]}, _stamp)
 	while not stamped:
 		await _stamped
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(1.0, false).timeout
 
 
 func _stamp() -> void:
@@ -338,76 +341,81 @@ func _draw_bridge() -> void:
 	var n := pts.size()
 	var k := clampf(_gap, 0.0, 1.0)
 	var upto := k * (n - 1) if n > 1 else 1.0
-	var top := PackedVector2Array()
-	var bot := PackedVector2Array()
-	for i in n:
-		if float(i) > upto + 0.001 and n > 1:
-			var u := upto - floorf(upto)
-			var j := int(floorf(upto))
-			top.append(_to_fx((pts[j][2] as Vector2).lerp(pts[j + 1][2], u)))
-			bot.append(_to_fx((pts[j][1] as Vector2).lerp(pts[j + 1][1], u)))
+	# the river (the gap itself): one quad per segment, only where both ends have a gap; the air
+	# point never above the bone point, so a sloppy chart can't fold the polygon
+	for i in n - 1:
+		if float(i) >= upto:
 			break
-		top.append(_to_fx(pts[i][2]))
-		bot.append(_to_fx(pts[i][1]))
-	var lift := 17.0 * s     # the deck rides just above the bone marks, so the [ stay readable
-	var deck := PackedVector2Array()
-	for p in top:
-		deck.append(p - Vector2(0, lift))
-	if top.size() >= 2:
-		# the gap itself, the "river" the bridge spans
-		var poly := top.duplicate()
-		for i in range(bot.size() - 1, -1, -1):
-			poly.append(bot[i])
-		_fx.draw_colored_polygon(poly, Color(BRIDGE, 0.2))
+		if int(pts[i][3]) <= 0 or int(pts[i + 1][3]) <= 0:
+			continue
+		var u := clampf(upto - i, 0.0, 1.0)
+		var t0 := _to_fx(pts[i][2])
+		var b0 := _to_fx(pts[i][1])
+		var t1 := _to_fx((pts[i][2] as Vector2).lerp(pts[i + 1][2], u))
+		var b1 := _to_fx((pts[i][1] as Vector2).lerp(pts[i + 1][1], u))
+		b0.y = maxf(b0.y, t0.y + 1.0)
+		b1.y = maxf(b1.y, t1.y + 1.0)
+		var quad := PackedVector2Array([t0, t1, b1, b0])
+		if Geometry2D.triangulate_polygon(quad).is_empty():
+			continue
+		_fx.draw_colored_polygon(quad, Color(BRIDGE, 0.2))
 	var f := UiKit.font(700)
-	# stone pillars from the deck down to the air marks, the toll in dB hanging on each
-	for i in mini(n, top.size()):
-		var a := deck[i]
-		var b := bot[i] - Vector2(0, 14.0 * s)
+	var planks: Array[Vector2] = []
+	for i in n:
+		if n > 1 and float(i) > upto + 0.001:
+			break
+		var gap := int(pts[i][3])
+		if not ClinicRules.is_conductive_gap(gap):
+			continue   # 10 dB or less is no real gap: no toll
+		var bone_p := _to_fx(pts[i][2])
+		var air_p := _to_fx(pts[i][1])
+		var a := bone_p + Vector2(0, 14.0 * s)      # the plank hangs just under the bone mark
+		var b := air_p - Vector2(0, 14.0 * s)       # the pillar stops above the air mark
 		if b.y - a.y < 8.0:
 			continue
 		var w := 9.0 * s
 		var pr := Rect2(Vector2(a.x - w * 0.5, a.y), Vector2(w, b.y - a.y))
 		_fx.draw_rect(pr, STONE)
 		_fx.draw_rect(pr, Color(Palette.INK, 0.75), false, 2.0)
-		var gap := int(pts[i][3])
-		var txt := "%d dB" % gap
-		var fs := int(16.0 * s + 0.5)
+		# the plank: a short deck for this frequency only, with two railing posts
+		var pw := 44.0 * s
+		var plank := Rect2(Vector2(a.x - pw * 0.5, a.y - 4.0 * s), Vector2(pw, 8.0 * s))
+		UiDraw.rounded_rect(_fx, plank, PLANK, 3, 2, Palette.INK)
+		for side: float in [-1.0, 1.0]:
+			var post := Vector2(a.x + side * (pw * 0.5 - 4.0 * s), a.y - 4.0 * s)
+			_fx.draw_line(post, post - Vector2(0, 8.0 * s), Color(Palette.INK, 0.7), 2.5, true)
+		planks.append(a)
+		# the toll in dB, hanging on the pillar (the vertical gap IS the toll)
+		var txt := "toll %d dB" % gap
+		var fs := int(15.0 * s + 0.5)
 		var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var mid := (a + b) * 0.5 + Vector2(10.0 * s, 6.0 * s)
 		var sway := 2.0 * sin(_t * 2.0 + i)
 		_fx.draw_line(Vector2(a.x, mid.y - 18.0 * s), mid + Vector2(4.0 * s, -18.0 * s + sway), Color(Palette.INK, 0.6), 2.0, true)
 		UiDraw.rounded_rect(_fx, Rect2(mid + Vector2(-6.0 * s, -18.0 * s + sway), Vector2(tw + 12.0 * s, 24.0 * s)), Palette.PAPER, 8, 2, BRIDGE.darkened(0.3))
 		_fx.draw_string(f, mid + Vector2(0, sway), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.INK)
-	if deck.size() >= 2:
-		# the plank road and its railing
-		_fx.draw_polyline(deck, Palette.INK, 11.0 * s, true)
-		_fx.draw_polyline(deck, PLANK, 7.0 * s, true)
-		for i in deck.size() - 1:
-			var p0 := deck[i]
-			var p1 := deck[i + 1]
-			var steps := maxi(2, int(p0.distance_to(p1) / (14.0 * s)))
-			for j in steps:
-				var p := p0.lerp(p1, float(j) / steps)
-				_fx.draw_line(p + Vector2(0, -3.0 * s), p + Vector2(0, 3.0 * s), PLANK.darkened(0.35), 2.0, true)
-		var rail := PackedVector2Array()
-		for p in deck:
-			rail.append(p - Vector2(0, 11.0 * s))
-		_fx.draw_polyline(rail, Color(Palette.INK, 0.7), 2.5, true)
-		for p in deck:
-			_fx.draw_line(p, p - Vector2(0, 11.0 * s), Color(Palette.INK, 0.7), 2.5, true)
-	if k < 0.99 or n == 0:
+	if k < 0.99 or planks.is_empty():
 		return
 	# the toll booth at the air end of the first pillar: air pays here
-	var base := _to_fx(pts[0][1]) + Vector2(-58.0 * s, -6.0 * s)
-	_draw_toll_booth(base, s)
-	# a little bone car drives straight across the deck, no toll
-	if deck.size() >= 2:
+	var first := -1
+	for i in n:
+		if ClinicRules.is_conductive_gap(int(pts[i][3])):
+			first = i
+			break
+	if first >= 0:
+		_draw_toll_booth(_to_fx(pts[first][1]) + Vector2(-58.0 * s, -6.0 * s), s)
+	# a little bone car hops plank to plank, no toll
+	if planks.size() >= 2:
 		var lap := fmod(_t * 0.22, 1.0)
-		var seg := lap * (deck.size() - 1)
-		var j := mini(int(seg), deck.size() - 2)
-		var cp := deck[j].lerp(deck[j + 1], seg - j)
-		_draw_bone_car(cp - Vector2(0, 6.0 * s), s, (deck[j + 1] - deck[j]).angle())
+		var seg := lap * (planks.size() - 1)
+		var j := mini(int(seg), planks.size() - 2)
+		var u2 := seg - j
+		var cp := planks[j].lerp(planks[j + 1], u2) - Vector2(0, sin(u2 * PI) * 34.0 * s)
+		var dir := planks[j + 1] - planks[j]
+		var tilt := dir.angle() + (u2 - 0.5) * -0.6
+		_draw_bone_car(cp - Vector2(0, 10.0 * s), s, tilt)
+	else:
+		_draw_bone_car(planks[0] - Vector2(0, 10.0 * s), s, 0.0)
 
 
 func _draw_toll_booth(base: Vector2, s: float) -> void:
@@ -470,8 +478,13 @@ func _draw_carhart() -> void:
 	var below := float(air.get(2000, float(bone[2000]) + 30.0)) + 12.0
 	var lp := _to_fx(xf * Vector2(ag.freq_to_x(2000), ag.db_to_y(below))) + Vector2(18.0, 30.0) * s
 	_fx.draw_line(p + Vector2(4.0, r), lp + Vector2(4.0 * s, -20.0 * s), Palette.PLUM, 3.0, true)
-	UiDraw.rounded_rect(_fx, Rect2(lp + Vector2(-8.0 * s, -20.0 * s), Vector2(tw + 16.0 * s, 28.0 * s)), Palette.PLUM, 10, 2, Palette.INK)
+	var sub := "mechanical, not inner ear"
+	var fs2 := int(13.0 * s + 0.5)
+	var tw2 := UiKit.font(600).get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x
+	var bw := maxf(tw, tw2) + 16.0 * s
+	UiDraw.rounded_rect(_fx, Rect2(lp + Vector2(-8.0 * s, -20.0 * s), Vector2(bw, 46.0 * s)), Palette.PLUM, 10, 2, Palette.INK)
 	_fx.draw_string(f, lp, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.PAPER)
+	_fx.draw_string(UiKit.font(600), lp + Vector2(0, 17.0 * s), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color(Palette.PAPER, 0.85))
 
 
 func _draw_type() -> void:
@@ -494,9 +507,10 @@ func _draw_type() -> void:
 
 func _draw_stamp() -> void:
 	var cr := _card.get_global_rect()
-	var c := _to_fx(cr.get_center() + Vector2(120, 40) * _sc())
+	# the empty lower right of the chart (90-110 dB, 2-8 kHz): the bridge and the notch stay readable
+	var c := _to_fx(cr.get_center() + Vector2(190, 160) * _sc())
 	var land := clampf(_stamp_t / 0.18, 0.0, 1.0)
-	var sc := lerpf(2.6, 1.0, land * land) * _sc()
+	var sc := lerpf(2.6, 0.8, land * land) * _sc()
 	var alpha := clampf(_stamp_t / 0.12, 0.0, 1.0)
 	_fx.draw_set_transform(c, -0.18, Vector2.ONE * sc)
 	var col := Color(Palette.RIGHT_RED, 0.9 * alpha)
