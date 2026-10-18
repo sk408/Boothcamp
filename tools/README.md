@@ -20,6 +20,9 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | Headless mouse-only playthrough (real clicks and drags only, ends back on the title) | `tools/mouse_check.sh` | ~10 s |
 | **(v3)** Day 2 (Bonnie: bone, masking, referral), keys or mouse only | `tools/autoplay_check.sh --day=2` / `tools/autoplay_check.sh --day=2 --mouse` | ~25 s |
 | **(Speech)** Day 3 (Mike: SRT on the SPEECH screen, the OBJECTION! board, the recheck stamp), keys or mouse only | `tools/autoplay_check.sh --day=3` / `tools/autoplay_check.sh --day=3 --mouse` | ~15 s |
+| **(cases)** Days 6 to 9, the case files (history, otoscopy, tymp, audiometry, the call), keys or mouse only | `tools/autoplay_check.sh --day=6` (or 7, 8, 9) / add `--mouse`; Quick visit off: add `--full` | ~30 s each |
+| **(cases)** A case picked from the Days grid by mouse | `tools/autoplay_check.sh --save=/abs/s.json --via-days --mouse --pick=marina` (or rocco, dash, ginger) | ~30 s |
+| **(cases)** `docs/CASE_SCRIPTS.md` matches the case JSON (regenerate it: drop `--check`) | `python3 tools/case_scripts.py --check` | ~1 s |
 | Rendered autoplay with screenshots at every phase | `tools/shots.sh /abs/out/dir` (Day 2: add `--day=2`) | ~5 min (Day 2 ~13 min) |
 | Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` (Day 2's five tests and the masking keys: add `--day=2`) | ~10 s (Day 2 ~20 s) |
 | **(v3)** Day 2 set pieces without playing (bone placement with a wrong spot, the oscillator on Bonnie, the board's reveal, bridge and stamp on made-up results) | `tools/scene_shot.sh res://story/dev_day2.tscn /abs/out/dir "60" 30` (the scene takes its own shots) | ~2 min |
@@ -33,7 +36,7 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | **(Speech)** The SPEECH screen alone: a coached right-ear SRT of Mike | `tools/scene_shot.sh res://ui/speech/speech_screen.tscn /abs/out/dir "2,6,12,20" 24` (extras after a `--`, e.g. `... 24 -- --demo-play --demo-ear=left`; also `--demo-uncoached`, `--demo-hoot=N`) | ~1 min |
 | **(v3)** Day 2 audio-safety movie: Bonnie's air, bone, masked bone and masked air with UI sounds muted; `tools/analyze_movie_bc.py` checks tone channel and level, the bone cross-feed (-10 dB) and the masker (other ear only, level, -24 dBFS cap); prints `AUDIO_CHECK PASS` | `tools/movie_check.sh /abs/out/dir --day=2` | ~20 min |
 | **(v3)** AudiOtron Day 2 teaching states (bone route, Ghost, masking deck, plateau, overmasking, finished audiogram) | `timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://ui/dev/dev_audiotron_day2.tscn --shots=/abs/dir --fresh` (add `--resolution 1920x1080` before `--` and a 1920x1080 xvfb screen for full HD) | ~3 min |
-| **(v3)** Chapter select by real input (polish: every day open, any order): Day 2 straight from a fresh save, then Day 1 by mouse on the same save (Day 1 still UP NEXT) | `tools/autoplay_check.sh --save=/abs/s.json --via-days --expect-days=gus,bonnie --expect-suggested=gus --pick=bonnie` then `tools/autoplay_check.sh --save=/abs/s.json --keep-save --via-days --mouse --expect-suggested=gus --pick=gus` | ~30 s |
+| **(v3)** Chapter select by real input (polish: every day open, any order): Day 2 straight from a fresh save, then Day 1 by mouse on the same save (Day 1 still UP NEXT). `--expect-days` days must be on the grid in that order; other days may sit between or after them | `tools/autoplay_check.sh --save=/abs/s.json --via-days --expect-days=gus,bonnie --expect-suggested=gus --pick=bonnie` then `tools/autoplay_check.sh --save=/abs/s.json --keep-save --via-days --mouse --expect-suggested=gus --pick=gus` | ~30 s |
 | **(polish)** The Days grid with 11 made-up days (never shipped): 1280x720 and 1920x1080 shots, keyboard scrolling to the last card | `tools/scene_shot.sh res://story/dev_days.tscn /abs/out/dir "30" 30` (add a 1920x1080 run: see the scene's header) | ~30 s |
 
 The scripts expand to the commands below, if you need to tweak them:
@@ -73,7 +76,7 @@ Exit codes:
 | 0 | ok |
 | 2 | stalled: no progress for 120 game seconds; a `stuck_<phase>.png` shot is taken |
 | 3 | overall timeout |
-| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k and masked air present. **(Speech)** Every stored speech sheet within 10 dB of the truth; on Day 3 both SRTs stored and a poor PTA/SRT agreement |
+| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k, and masked air at every frequency the rules ask for with this air transducer (none with inserts; a masked air stamp where none was needed is a problem too). **(Speech)** Every stored speech sheet within 10 dB of the truth; on Day 3 both SRTs stored and a poor PTA/SRT agreement |
 | 5 | script errors (or, since the polish pass, engine errors and `push_error()`) were logged during the run |
 | 6 | `--mouse` only: a mouse target was not found on screen |
 

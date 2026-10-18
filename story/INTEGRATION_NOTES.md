@@ -41,8 +41,7 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `abg_bridge`, `referral_stamp`.
 - **Otoscopy:** `Otoscopy.show_clear(ear, caption)` is an input-free look at a healthy ear (Day 2).
 - **Title:** Days shows one illustrated card per day (portrait, title, what it teaches, best grade
-  badge, plays, padlock + "Finish Day 1 to open" when locked), the "Unlock all days (demo)" toggle
-  and Back. Up/Down or Left/Right + Enter, Esc = Back, or click. The card's title is a child Label, so
+  badge, plays, UP NEXT on the suggested day) in a scrolling grid, and Back. Up/Down or Left/Right + Enter, Esc = Back, or click. The card's title is a child Label, so
   the mouse bot's `_click_text("Day 1: Grand")` still lands on the card. Day 1's flow is unchanged.
 - **Screenshots (Day 2):** `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`,
   `day2_carhart`, `day2_stamp`, `day2_croissant`, `day2_goodbye`.
@@ -78,9 +77,9 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   PTA, agreement chip with the gap, words vs par, golf) with half-words and Hoot's words in the facts
   line. Tone-only results keep the beep golf card.
 - **Shared story bits:** Mike's portrait (`portraits.gd`), display name "Mike \"Totally Deaf\"
-  Lenders", a gruff voice (f0 105 Hz), Days cards that shrink to fit up to six days in one row
-  (`_card_size(n)`), faces and tints for `mike`, `nora`, `marco`. The HUD tracker, the Hoot notes
-  and the pause corner hide in the `speech` phase like in `audiometry`.
+  Lenders", a gruff voice (f0 105 Hz). Mike's day card uses his chapter entry's own `"face": "Mike"`
+  and `"tint"` keys (no `title_screen.gd` change). The HUD tracker, the Hoot notes and the pause
+  corner hide in the `speech` phase like in `audiometry`.
 - **Note:** CHAPTER3.md names Mike's favourite forklift with what reads like a real product name;
   the level uses "Old Rumbles, bay six" instead (originality rule).
 - **Screenshots (Day 3):** `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`,
@@ -106,3 +105,30 @@ It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (
 `story/tests/test_story.gd` covers dialogue keys and solvers, the mini-game solvers and keyboard paths,
 the Hoot bubble, the pause menu and its key-style label, the results continue beat, the title beats, and
 the voice ceiling.
+
+## Cases (Days 6 to 9, cases branch; CONTRACTS.md §11, docs/CASES.md)
+
+The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
+Requests for the integrator and the title owner:
+
+- **Day picker.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and
+  `tint` (the card colour), which the Days grid uses. `Portraits` draws every case speaker (it falls back to
+  `CasePortraits`).
+- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 9) both append to `Game.CHAPTERS`
+  and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`). Keep both blocks, speech first.
+- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` now has left-ear masked rows too (Marina's masked tests are on her
+  LEFT ear): `["bc_masked", "L  ]", "left"]` and `["ac_masked", "L  □", "left"]` (the ASHA square). Additive,
+  added in the cases PR at the integrator's request.
+- **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
+  covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
+- **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
+  `"Do-over"`) and `medal_beats`; when present they win over the per-chapter tables. Already wired, listed
+  here so it isn't undone at merge.
+- **Voice.** `Voice.register(speaker, spec)` adds a babble voice for a case speaker (built-in speakers can't
+  be overwritten). Case speakers with no registered voice are silent; missing keys in a case's voice spec take Gus's values.
+- **Portraits.** Unknown speakers fall back to `story/case_portraits.gd`. Chip (Ginger's puppet) has a cookie
+  portrait.
+- **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
+  `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
+- **Tests:** `story/tests/test_cases.gd` (14 tests). `python3 tools/case_scripts.py --check` fails if
+  `docs/CASE_SCRIPTS.md` is out of date with the case JSON.

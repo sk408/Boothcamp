@@ -771,7 +771,7 @@ but must not rename or remove these.
   # v3
   "patient_name": "Grandpa Gus", "chapter_id": "gus", "day": 1,
   "newly_unlocked": [],                # (polish) always empty: every day is open
-  "next_chapter_id": "bonnie",         # the day after this one in order; after the last chapter the suggested day (polish), "" when all are done
+  "next_chapter_id": "bonnie",         # the suggested day when it comes earlier in order than this one (a later day played first); else the day after this one in order; after the last chapter the suggested day (polish), "" when all are done
   # polish
   "patient_short": "Gus",              # PatientProfile.short_name()
   "first_clear": true,                 # this visit finished the chapter for the first time
@@ -870,7 +870,7 @@ New kinds go through `world/INTEGRATION_NOTES.md`.
 | `--unlock-all` **(v3)** | **(polish)** accepted and ignored: every chapter is always open |
 | `--keep-save` **(v3, integrator)** | with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 with the same `--save=`) |
 | `--upgrades=a,b` **(polish)** | own these shop items for this run (e.g. `insert_earphones`), after the save reset |
-| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
+| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days must be on the grid, in that order; other days may sit between or after them), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
 
 ### §7.2 What the bot relies on (must keep working)
 
@@ -1174,3 +1174,59 @@ the visit still ends.
 - Screenshots: `speech_<ear>_srt_first_word`, `speech_<ear>_srt_descent`, `speech_<ear>_srt_stored`,
   `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`, `day3_glazed`.
 
+---------------------------------------------------------------------------------------------
+
+## §11 Cases (patient case files, Days 6 onward)
+
+Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from the JSON by `tools/case_scripts.py`).
+(§9 is speech, Days 3-5; §10 is left free for a chapter in flight, so section numbers don't collide when branches merge.)
+
+**Files.**
+
+| What | Where | Owner |
+|---|---|---|
+| Case data, one per case | `story/cases/<case_id>.json` (the source of truth for every line) | cases |
+| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural: no bone data, bone = air) | cases |
+| Runner (one for every case) | `story/level_case.gd` + `.tscn` | cases |
+| Loader and checks | `story/case_data.gd` (`CaseData`, preload by path) | cases |
+| Rules | `core/cases/case_rules.gd` (`class_name CaseRules`): decisions, red flags (2022 labeling), asymmetry, the sudden-loss definition, tympanogram types and curve | cases |
+| Case board, tymp gadget, hours clock, payoff props | `story/games/case_board.gd`, `case_tymp.gd`, `case_clock.gd`, `case_props.gd` | cases |
+| Portraits from a case's look | `story/case_portraits.gd` | cases |
+| 3D costume bits | `world/characters/case_extras.gd` (`CaseExtras.attach(bean, spec)`) | cases |
+
+**Registering a case.** One `Game.CHAPTERS` entry per case, scene `res://story/level_case.tscn`, with the extra keys
+`case` (the JSON id), `face` (the portrait speaker for the day picker) and `tint` (the card colour). `requires` only picks
+the suggested ("UP NEXT") day; every day is open. `LevelCase.pick_case_id()`: the chapter's `case`, else `--case=<id>`,
+else the first registered case.
+
+**Phases** (`Events.phase_changed`): `intro`, `history`, `otoscopy`, `tymp`, `instructions`, `audiometry` (one per
+test, info `{ear, test}`), `reveal`, `evidence`, `decision`, `results`. `Game.PHASES` gained `tymp` and `decision`.
+
+**Beats.** No new beat kinds. Everything is `dialogue`, `choice` (history, tip, tymp question, shape, earplugs,
+the stamp tray, the clue cards), the AudiOtron's own beats, and `results_continue`. The stamp tray
+(FIT / REFER / DOCTOR TODAY) and the tip sizes (Small / Medium / Large) keep a fixed order; every other choice is
+shuffled with `Game.rng` and `info.best` follows the shuffle. Stamp and card buttons are flat Buttons whose Label children start with
+the option text, so the mouse bot clicks them by their first 18 characters (tests keep those prefixes unique).
+
+**Hooks in other modules (all additive).**
+- `world/clinic.gd`: `var patient_spec: Dictionary` (a full bean spec from `CaseData.bean_spec`); when set, the
+  patient is built from it and `CaseExtras.attach(patient, patient_spec)` adds the costume bits.
+- `story/portraits.gd`: unknown speakers fall back to `CasePortraits` (name colour, frame background, drawing),
+  so a new case needs no portrait code. A case's extra speakers (`voices`, e.g. Chip) can use `"portrait": "cookie"`.
+- `story/voice.gd`: `Voice.register(speaker, {f0, wobble, roll, vowels})` gives case speakers a babble voice.
+- `story/daily_decibel.gd`: the summary may carry `headlines`, `subheads` and `medal_beats`; they win over the
+  per-chapter tables.
+
+**Visit and medals.** Medals `history` (Chat), `tymp` (Tymp), `evidence` (Pattern), `decision` (Call). Visit flags:
+`case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`. The
+summary gains `case_id`, `headlines`, `subheads`, `medal_beats`.
+
+**Anchors.** `reveal_audiogram` (the board's chart), `case_stamps`, `case_clues`.
+
+**Screenshots** (with `--shots`): `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`,
+`_pattern`, `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
+
+**Tests.** `story/tests/test_cases.gd`: every registered case validates (`CaseData.validate`), Hoot lines are 18 words
+or fewer, choice prefixes are unique, each truth table shows its shape even with any single 5 dB wobble, asymmetry
+and the call match, Dash meets the sudden definition, the charts on file, tymp curve widths, the red-flag list,
+picker teasers give nothing away.
