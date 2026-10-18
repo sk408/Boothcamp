@@ -68,17 +68,37 @@ def main():
             f, d, fr = on.pop(p[1])
             tones.append((p[1], f, d, fr, int(p[4])))
 
+    # (v3) Tone onsets: the side signal is cut into non-zero runs (gaps under 3 ms merged) and each
+    # logged tone takes the run that starts nearest its ON frame plus the generator's output lag
+    # (measured on tones with a quiet gap before them). Searching forward from the ON frame instead
+    # picks up the tail of the previous tone during Hoot's x8 turn, where tones are ~6 frames apart.
+    nzs = np.nonzero(S)[0]
+    runs = []
+    if nzs.size:
+        br = np.nonzero(np.diff(nzs) > int(0.003 * sr))[0]
+        runs = [[int(a0), int(a1) + 1, False] for a0, a1 in zip(np.concatenate(([nzs[0]], nzs[br + 1])), np.concatenate((nzs[br], [nzs[-1]])))]
+    lags, last_off = [], -10 ** 9
+    for ear, f, d, f_on, f_off in tones:
+        if f_on - last_off > 20:
+            r = next((r for r in runs if r[0] >= f_on * spf), None)
+            if r is not None and r[0] - f_on * spf < 15 * spf:
+                lags.append(r[0] - f_on * spf)
+        last_off = f_off
+    lag = float(np.median(lags)) if lags else 0.0
+    print(f"generator lag: median {lag / spf:.1f} frames ({lag / sr * 1000:.0f} ms) from {len(lags)} isolated tones; side-signal runs {len(runs)}")
+
     tone_mask = np.zeros(len(S), bool)
     blk = int(0.002 * sr)        # 2 ms blocks for the silence test
     rows = []
     for ear, f, d, f_on, f_off in tones:
-        lo, hi = f_on * spf, min(len(S), (f_on + 15) * spf)
-        nz = np.nonzero(np.abs(S[lo:hi]) > 0)[0]
-        if nz.size == 0:
+        want = f_on * spf + lag
+        best = min((r for r in runs if not r[2]), key=lambda r: abs(r[0] - want), default=None)
+        if best is None or abs(best[0] - want) > 3 * spf:
             rows.append((ear, f, d, None))
             continue
-        s0 = lo + nz[0]                                   # audio onset (generator buffer lag)
-        s1 = min(len(S), s0 + (f_off - f_on) * spf + int(0.08 * sr))   # + release ramp tail
+        best[2] = True
+        s0 = best[0]                                      # audio onset (generator buffer lag)
+        s1 = min(len(S), max(best[1], s0 + (f_off - f_on) * spf) + int(0.08 * sr))   # + release ramp tail
         tone_mask[s0:s1] = True
         ramp = int(0.035 * sr)
         st0, st1 = s0 + ramp, s0 + (f_off - f_on) * spf - int(0.005 * sr)

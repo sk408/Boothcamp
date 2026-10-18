@@ -80,6 +80,9 @@ var rng := RandomNumberGenerator.new()
 var clock: float = 0.0
 
 var _default_events: Dictionary = {}
+## --affinity is "for this run": the style the save had, written back by save_game() (integrator, v3).
+## Cleared when the player picks a style in the game.
+var _cli_style_keep := ""
 
 
 func _ready() -> void:
@@ -94,11 +97,13 @@ func _ready() -> void:
 		save_path = "user://save_scene.json"  # dev scene runs (monkey, shots) never touch the player's save
 	if cli.has("save"):
 		save_path = String(cli["save"])
-	if cli_flag("autoplay") or cli_flag("fresh"):
+	# --keep-save (integrator): an autoplay run that continues an earlier run's save (Day 1 then Day 2)
+	if cli_flag("fresh") or (cli_flag("autoplay") and not cli_flag("keep-save")):
 		reset_save()
 	else:
 		load_game()
 	if cli_flag("affinity"):
+		_cli_style_keep = String(settings.get("key_style", "otosuite"))
 		settings["key_style"] = "affinity"
 	rng.seed = int(cli.get("seed", 1234 if cli_flag("autoplay") else Time.get_ticks_usec()))
 	var speed := float(cli.get("speed", 1.0))
@@ -181,6 +186,8 @@ func is_autoplay() -> bool:
 # ---------------------------------------------------------------- settings
 
 func set_setting(key: String, value: Variant) -> void:
+	if key == "key_style":
+		_cli_style_keep = ""
 	settings[key] = value
 	apply_settings()
 	save_game()
@@ -541,7 +548,11 @@ func _ensure_visit() -> void:
 # ---------------------------------------------------------------- save / load
 
 func save_game() -> bool:
-	var data := {"version": SAVE_VERSION, "settings": settings, "progress": progress}
+	var to_save := settings
+	if _cli_style_keep != "":
+		to_save = settings.duplicate(true)
+		to_save["key_style"] = _cli_style_keep
+	var data := {"version": SAVE_VERSION, "settings": to_save, "progress": progress}
 	# write a temp file, then rename over the save: a crash mid-write never corrupts it
 	var tmp := save_path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)

@@ -493,6 +493,22 @@ func _par_caption(res: Dictionary) -> String:
 	return "Beeps per threshold vs par (%s per hole). Fewer = better; brown = Hoot's." % par_txt
 
 
+## A golf row's tag: the ear letter and the row's real audiogram symbol (O X, [ masked bone,
+## triangle masked air), drawn, so it matches the chart.
+func _row_tag(ear: String, sheet: StringName) -> Control:
+	var test: StringName = &"ac" if sheet == &"freqs" else sheet
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(40, 40)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.tooltip_text = {&"ac": "air", &"bc_masked": "masked bone", &"ac_masked": "masked air"}.get(test, "")
+	c.draw.connect(func() -> void:
+		var col := Palette.ear_color(ear)
+		var f := UiKit.font(700)
+		c.draw_string(f, Vector2(0, 26), "R" if ear == "right" else "L", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, col)
+		UiDraw.audiogram_symbol(c, Vector2(26, 20), ear, test, 13.0, 2.5))
+	return c
+
+
 func _golf_card(res: Dictionary) -> Control:
 	var grid := GridContainer.new()
 	var freqs: Array[int] = []
@@ -517,7 +533,7 @@ func _golf_card(res: Dictionary) -> Control:
 	for row: Array in rows:
 		var e := String(row[2])
 		var fl: Dictionary = (ears.get(e, {}) as Dictionary).get(String(row[0]), {})
-		grid.add_child(UiKit.label(String(row[1]), 15, Palette.ear_color(e), 700))
+		grid.add_child(_row_tag(e, StringName(String(row[0]))))
 		for f in freqs:
 			var cell := PanelContainer.new()
 			cell.custom_minimum_size = Vector2(44, 40)

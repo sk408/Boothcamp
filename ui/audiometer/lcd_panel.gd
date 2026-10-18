@@ -5,10 +5,13 @@ extends Control
 ## current frequency (filled dot = heard, hollow = missed), strokes vs par, and a badge that
 ## lights up when a level has been heard twice on the way up ("STORE!").
 ## Mouse: the < > chevrons step the frequency, the up/down chevrons the level, the stimulus chip cycles.
-## (v3) Mode chips follow the transducer (PHONE / INSERT / BONE) and the test (AC / BC); with the
-## masking controls live a NOISE box shows the masker ear and level with the masking-help light,
-## and on a masked test the trail becomes the PLATEAU graph (tone level against noise level:
-## a flat line of heard dots = the plateau).
+## (v3) Mode chips follow the transducer (PHONE / INSERT / BONE) and the test (AC / BC). With the
+## masking controls live the display becomes two channels, like a clinical audiometer: the tone
+## (test ear) on the left, the masker on the right, its level in [brackets] with "NBN" and the
+## masked ear, plus the masking-help TRAFFIC LIGHT (top amber = too much, middle green = good,
+## bottom amber = too little / masking needed; all purple = masking dilemma). On a masked test the
+## trail becomes the PLATEAU graph: tone level against noise level, the safe masking window shaded
+## between the starting level and overmasking, and a flat line of heard dots = the plateau.
 const MASK_COLORS: Dictionary[StringName, Color] = {
 	&"off": Color("#5d5672"), &"needed": Color("#ff9f1c"), &"under": Color("#ff9f1c"),
 	&"ok": Color("#9ee34b"), &"over": Color("#ff6f59"), &"impossible": Color("#8e5cc4"),
@@ -16,12 +19,16 @@ const MASK_COLORS: Dictionary[StringName, Color] = {
 const MASK_WORDS: Dictionary[StringName, String] = {
 	&"off": "off", &"needed": "MASK!", &"under": "too little", &"ok": "good", &"over": "too much", &"impossible": "dilemma",
 }
+## Traffic-light lamp per status: 0 = top (too much), 1 = middle (good), 2 = bottom (too little).
+const MASK_LAMP: Dictionary[StringName, int] = {&"needed": 2, &"under": 2, &"ok": 1, &"over": 0}
 
 signal freq_step(direction: int)
 signal level_step(direction: int)
 signal stimulus_cycle
 
 const TRAIL_MAX := 13
+## Room between trail dots (px): a narrow trail panel shows fewer of the latest beeps.
+const TRAIL_DOT_PX := 21.0
 
 var view: Dictionary = {
 	"ear": "right", "freq": 1000, "db": 40, "tone_on": false, "stim": "TONE", "trail": [],
@@ -129,7 +136,8 @@ func _draw() -> void:
 	AoDraw.rbox(self, plate, Palette.CORAL, 13, 3, Palette.INK)
 	var lw := AoDraw.text_l(self, Vector2(plate.position.x + 14, plate.get_center().y), "AudiOtron", 17, Palette.PAPER, AoDraw.FONT_BOLD)
 	AoDraw.text_l(self, Vector2(plate.position.x + 18 + lw, plate.get_center().y), "3000", 17, Palette.SUNNY, AoDraw.FONT_BOLD)
-	var split := screen.position.x + minf(330.0, screen.size.x * 0.5)
+	var masking := bool((view.get("mask", {}) as Dictionary).get("enabled", false))
+	var split := screen.position.x + (minf(366.0, screen.size.x * 0.58) if masking else minf(330.0, screen.size.x * 0.5))
 	_draw_readout(Rect2(screen.position, Vector2(split - screen.position.x, screen.size.y)))
 	draw_line(Vector2(split, screen.position.y + 12), Vector2(split, screen.end.y - 12), Color(Palette.LCD_DIM, 0.6), 2.0)
 	_draw_trail(Rect2(Vector2(split + 10, screen.position.y), Vector2(screen.end.x - split - 14, screen.size.y)))
@@ -161,6 +169,8 @@ func _draw_readout(a: Rect2) -> void:
 	AoDraw.text_c(self, sr.get_center() + Vector2(-5, 0), stim, 12, Palette.LCD_BG, AoDraw.FONT_BOLD)
 	UiDraw.triangle(self, sr.get_center() + Vector2(sw * 0.5 - 10, 1), 7.0, false, Palette.LCD_BG)
 	_hot["stim"] = sr
+	var mask: Dictionary = view.get("mask", {})
+	var masking := bool(mask.get("enabled", false))
 	# frequency row
 	var fy := a.position.y + 70.0
 	var ftxt := "%d" % int(view["freq"])
@@ -175,57 +185,97 @@ func _draw_readout(a: Rect2) -> void:
 	# level row
 	var ly := a.position.y + a.size.y - 40.0
 	var ltxt := "%d" % int(view["db"])
-	var ls := 60
+	var ls := 54 if masking else 60
 	var lb := float(_bump["db"])
 	var shake := sin(_t * 70.0) * 7.0 * _deny
 	var lx := a.position.x + 44.0 + shake
 	var lcol := Palette.LCD_TEXT if not bool(view["tone_on"]) else Palette.TONE_CYAN.lerp(Palette.LCD_TEXT, 0.3)
 	var lwid := AoDraw.text_size(ltxt, ls, AoDraw.FONT_BOLD).x
 	AoDraw.text_l(self, Vector2(lx, ly - lb * 5.0), ltxt, ls, lcol, AoDraw.FONT_BOLD)
-	AoDraw.text_l(self, Vector2(lx + lwid + 8.0, ly + 10.0), "dB HL", 19, Color(Palette.LCD_TEXT, 0.7), AoDraw.FONT_SEMI)
+	AoDraw.text_l(self, Vector2(lx + lwid + 8.0, ly + 10.0), "dB HL", 17 if masking else 19, Color(Palette.LCD_TEXT, 0.7), AoDraw.FONT_SEMI)
 	_chevron(Rect2(Vector2(a.position.x + 10, ly - 30), Vector2(28, 26)), Vector2.UP, "db_up")
 	_chevron(Rect2(Vector2(a.position.x + 10, ly + 4), Vector2(28, 26)), Vector2.DOWN, "db_down")
 	_hot["db"] = Rect2(Vector2(lx, ly - 30), Vector2(lwid + 70.0, 60))
-	# TONE lamp
-	var lc := Vector2(a.end.x - 40.0, ly - 2.0)
+	# TONE lamp (smaller and tucked left of the masker channel when masking is live)
+	var box_w := 124.0
+	var lc := Vector2(a.end.x - 40.0, ly - 2.0) if not masking else Vector2(a.end.x - box_w - 30.0, ly + 6.0)
+	var lr := 22.0 if not masking else 16.0
 	var g := tone_glow
 	if g > 0.0:
 		for i in 3:
-			var rr := 26.0 + 9.0 * i + 6.0 * fmod(_t * 2.5 + i * 0.33, 1.0)
+			var rr := lr + 4.0 + 9.0 * i + 6.0 * fmod(_t * 2.5 + i * 0.33, 1.0)
 			draw_arc(lc, rr, -0.9, 0.9, 18, Color(Palette.TONE_CYAN, 0.5 * g * (1.0 - i * 0.28)), 3.0, true)
 			draw_arc(lc, rr, PI - 0.9, PI + 0.9, 18, Color(Palette.TONE_CYAN, 0.5 * g * (1.0 - i * 0.28)), 3.0, true)
-		draw_circle(lc, 30.0, Color(Palette.TONE_CYAN, 0.18 * g))
-	draw_circle(lc, 22.0, Palette.INK)
-	draw_circle(lc, 18.0, Palette.LCD_DIM.lerp(Palette.TONE_CYAN, g))
-	draw_circle(lc + Vector2(-6, -6), 5.0, Color(1, 1, 1, 0.25 + 0.4 * g))
-	AoDraw.text_c(self, lc + Vector2(0, -34), "TONE", 12, Palette.LCD_TEXT.lerp(Palette.TONE_CYAN, g), AoDraw.FONT_BOLD)
-	var mask: Dictionary = view.get("mask", {})
-	if bool(mask.get("enabled", false)):
-		_draw_masker(Rect2(Vector2(a.end.x - 122.0, fy - 22.0), Vector2(114.0, 46.0)), mask)
+		draw_circle(lc, lr + 8.0, Color(Palette.TONE_CYAN, 0.18 * g))
+	draw_circle(lc, lr, Palette.INK)
+	draw_circle(lc, lr - 4.0, Palette.LCD_DIM.lerp(Palette.TONE_CYAN, g))
+	draw_circle(lc + Vector2(-6, -6) * lr / 22.0, 5.0 * lr / 22.0, Color(1, 1, 1, 0.25 + 0.4 * g))
+	AoDraw.text_c(self, lc + Vector2(0, -lr - 12.0), "TONE", 12 if not masking else 11, Palette.LCD_TEXT.lerp(Palette.TONE_CYAN, g), AoDraw.FONT_BOLD)
+	if masking:
+		_draw_masker(Rect2(Vector2(a.end.x - box_w - 2.0, a.position.y + 46.0), Vector2(box_w, a.size.y - 50.0)), mask)
 
 
-## (v3) The NOISE box: masker ear, level (dB EM) and the masking-help light. Lit while on.
+## (v3) The masker channel (the NOISE box): the masked ear, "NBN", the level in [brackets] (dB EM)
+## and the masking-help traffic light. Lit purple while the noise plays.
 func _draw_masker(r: Rect2, m: Dictionary) -> void:
 	var on := bool(m.get("on", false))
 	var status := StringName(String(m.get("status", "off")))
 	var light: Color = MASK_COLORS.get(status, Palette.LCD_DIM)
 	var me := String(m.get("ear", "left"))
-	AoDraw.rbox(self, r, Color(Palette.PLUM, 0.28 if on else 0.08), 10, 2, Palette.PLUM if on else Palette.LCD_DIM)
-	var head := "NOISE %s" % ("L" if me == "left" else "R")
-	AoDraw.text_l(self, r.position + Vector2(8, 11), head, 11, Palette.LCD_TEXT if on else Color(Palette.LCD_TEXT, 0.5), AoDraw.FONT_BOLD)
-	var lv := "%d" % int(m.get("db", 0))
-	var lw := AoDraw.text_l(self, r.position + Vector2(8, 31), lv, 22, Palette.LCD_TEXT if on else Color(Palette.LCD_TEXT, 0.45), AoDraw.FONT_BOLD)
-	AoDraw.text_l(self, r.position + Vector2(12 + lw, 34), "dB EM", 10, Color(Palette.LCD_TEXT, 0.6), AoDraw.FONT_SEMI)
-	var lc := Vector2(r.end.x - 14.0, r.position.y + 12.0)
-	var pulse := 0.5 + 0.5 * sin(_t * 6.0) if status in [&"needed", &"under", &"over"] else 1.0
-	draw_circle(lc, 7.0, Palette.INK)
-	draw_circle(lc, 5.5, light.lerp(Palette.LCD_BG, 0.0 if pulse > 0.5 else 0.4))
-	AoDraw.text_r(self, Vector2(r.end.x - 6.0, r.end.y - 9.0), String(MASK_WORDS.get(status, "")), 10, light, AoDraw.FONT_BOLD)
+	var blink := 0.5 + 0.5 * sin(_t * 7.0)
+	AoDraw.rbox(self, r, Color(Palette.PLUM, 0.3 if on else 0.08), 12, 2, Palette.PLUM.lightened(0.25) if on else Palette.LCD_DIM)
+	var txt_col := Palette.LCD_TEXT if on else Color(Palette.LCD_TEXT, 0.5)
+	# header: NOISE > L  [NBN]
+	var hx := r.position.x + 8.0
+	var hy := r.position.y + 12.0
+	var hw := AoDraw.text_l(self, Vector2(hx, hy), "NOISE", 11, txt_col, AoDraw.FONT_BOLD)
+	var ec := Palette.ear_color(me)
+	var chip := Rect2(Vector2(hx + hw + 4.0, hy - 8.0), Vector2(18.0, 16.0))
+	AoDraw.rbox(self, chip, ec if on else Color(ec, 0.4), 8)
+	AoDraw.text_c(self, chip.get_center(), "L" if me == "left" else "R", 11, Palette.PAPER, AoDraw.FONT_BOLD)
+	var nb := Rect2(Vector2(chip.end.x + 4.0, hy - 8.0), Vector2(30.0, 16.0))
+	AoDraw.ring(self, nb, Palette.PLUM.lightened(0.45) if on else Palette.LCD_DIM, 8, 2)
+	AoDraw.text_c(self, nb.get_center(), "NBN", 9, Palette.PLUM.lightened(0.55) if on else Palette.LCD_DIM, AoDraw.FONT_BOLD)
+	# the level in brackets, the way audiometers show the masking channel
+	var lv := "[%d]" % int(m.get("db", 0))
+	var lcol := Palette.PLUM.lightened(0.6) if on else Color(Palette.LCD_TEXT, 0.4)
+	var lw := AoDraw.text_l(self, Vector2(hx - 2.0, r.position.y + 44.0), lv, 30, lcol, AoDraw.FONT_BOLD)
+	AoDraw.text_l(self, Vector2(hx + 1.0, r.position.y + 68.0), "dB EM", 11, Color(Palette.LCD_TEXT, 0.6), AoDraw.FONT_SEMI)
 	if on:
 		for i in 4:
-			var xx := r.position.x + 64.0 + i * 5.0
+			var xx := hx + 48.0 + i * 5.0
 			var hh := 4.0 + 5.0 * absf(sin(_t * 17.0 + i * 1.3))
-			draw_line(Vector2(xx, r.position.y + 11.0 - hh * 0.5), Vector2(xx, r.position.y + 11.0 + hh * 0.5), Color(Palette.PLUM.lightened(0.4), 0.9), 2.0)
+			draw_line(Vector2(xx, r.position.y + 68.0 - hh * 0.5), Vector2(xx, r.position.y + 68.0 + hh * 0.5), Color(Palette.PLUM.lightened(0.4), 0.9), 2.0)
+	# status word
+	var word := String(MASK_WORDS.get(status, ""))
+	if word != "":
+		var flash := status in [&"needed", &"under", &"over"]
+		AoDraw.text_l(self, Vector2(hx, r.end.y - 11.0), word, 12, Color(light, 1.0 if not flash else 0.55 + 0.45 * blink), AoDraw.FONT_BOLD)
+	_hot["masker"] = r
+	# the traffic light housing: too much (top) / good (middle) / too little (bottom)
+	var tl := Rect2(Vector2(r.end.x - 26.0, r.position.y + 6.0), Vector2(20.0, r.size.y - 12.0))
+	AoDraw.rbox(self, tl, Palette.INK, 10)
+	var lamp_on: int = MASK_LAMP.get(status, -1)
+	for i in 3:
+		var c := Vector2(tl.get_center().x, tl.position.y + tl.size.y * (0.18 + 0.32 * i))
+		var col := Color(Palette.LCD_DIM, 0.55)
+		var lit := 0.0
+		if status == &"impossible":
+			col = MASK_COLORS[&"impossible"]
+			lit = 0.6 + 0.4 * blink
+		elif i == lamp_on:
+			col = MASK_COLORS[&"ok"] if i == 1 else MASK_COLORS[&"needed"]
+			lit = 1.0 if status == &"ok" else 0.45 + 0.55 * blink
+		if lit > 0.0:
+			draw_circle(c, 9.0, Color(col, 0.3 * lit))
+			draw_circle(c, 6.5, col.lerp(Palette.LCD_BG, 1.0 - lit))
+		else:
+			draw_circle(c, 6.5, col)
+		draw_circle(c + Vector2(-2, -2), 1.8, Color(1, 1, 1, 0.25 + 0.3 * lit))
+
+
+static func _hz_short(f: int) -> String:
+	return "%d Hz" % f if f < 1000 else ("%dk" % (f / 1000) if f % 1000 == 0 else "%.1fk" % (f / 1000.0))
 
 
 func _chevron(rect: Rect2, dir: Vector2, id: String) -> void:
@@ -255,13 +305,16 @@ func _draw_trail(a: Rect2) -> void:
 	var par := int(view["par"])
 	var strokes := int(view["strokes"])
 	var golf := "STROKES %d" % strokes + ("   PAR %d" % par if par > 0 else "")
+	if a.size.x < 280.0:
+		golf = "%d beeps" % strokes + (" / par %d" % par if par > 0 else "")
 	var gcol := Palette.LCD_TEXT if par <= 0 or strokes <= par else Palette.CORAL
 	AoDraw.text_r(self, Vector2(a.end.x - 4, head_y), golf, 14, gcol, AoDraw.FONT_BOLD)
 	var plot := Rect2(a.position + Vector2(30, 38), Vector2(a.size.x - 40, a.size.y - 50))
+	var shown := clampi(int(plot.size.x / TRAIL_DOT_PX), 5, TRAIL_MAX)
 	# level range
 	var lo := cur_db
 	var hi := cur_db
-	var start := maxi(0, trail.size() - TRAIL_MAX + 1)
+	var start := maxi(0, trail.size() - shown + 1)
 	for i in range(start, trail.size()):
 		lo = mini(lo, int(trail[i]["db"]))
 		hi = maxi(hi, int(trail[i]["db"]))
@@ -303,7 +356,7 @@ func _draw_trail(a: Rect2) -> void:
 		AoDraw.rbox(self, br, Palette.PRESS_LIME if is_cand else Palette.SELECT_ORANGE, 9)
 		AoDraw.text_c(self, br.get_center(), txt, 11, Palette.LCD_BG, AoDraw.FONT_BOLD)
 	# dots
-	var step_x := plot.size.x / float(TRAIL_MAX + 0.5)
+	var step_x := plot.size.x / float(shown + 0.5)
 	var pts := PackedVector2Array()
 	for i in range(start, trail.size()):
 		pts.append(Vector2(plot.position.x + step_x * (i - start + 0.6), to_y.call(float(trail[i]["db"]))))
@@ -342,25 +395,30 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 	var trail: Array = view["trail"]
 	var head_y := a.position.y + 20.0
 	AoDraw.text_l(self, Vector2(a.position.x + 4, head_y), "PLATEAU", 14, Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
-	AoDraw.text_l(self, Vector2(a.position.x + 78, head_y), "%d Hz" % int(view["freq"]), 14, Color(Palette.LCD_TEXT, 0.7), AoDraw.FONT_SEMI)
+	var narrow := a.size.x < 280.0
+	var hz := "%d Hz" % int(view["freq"]) if not narrow else _hz_short(int(view["freq"]))
+	AoDraw.text_l(self, Vector2(a.position.x + 78, head_y), hz, 14, Color(Palette.LCD_TEXT, 0.7), AoDraw.FONT_SEMI)
 	var steps := int(pl.get("steps", 0))
 	var needed := int(pl.get("needed", 3))
 	var found := bool(pl.get("found", false))
-	var badge := "STORE!" if found else "%d/%d noise ups" % [mini(steps, needed), needed]
+	var badge := "STORE!" if found else ("%d/%d noise ups" % [mini(steps, needed), needed] if not narrow else "%d/%d ups" % [mini(steps, needed), needed])
 	var bw := AoDraw.text_size(badge, 12, AoDraw.FONT_BOLD).x + 14.0
 	var br := Rect2(Vector2(a.end.x - 4 - bw, head_y - 10), Vector2(bw, 20))
 	AoDraw.rbox(self, br, Palette.PRESS_LIME if found else Palette.SELECT_ORANGE, 10)
 	AoDraw.text_c(self, br.get_center(), badge, 12, Palette.LCD_BG, AoDraw.FONT_BOLD)
 	var plot := Rect2(a.position + Vector2(30, 40), Vector2(a.size.x - 40, a.size.y - 62))
-	var m_lo := int(pl.get("initial", 0)) - 10
-	var m_hi := m_lo + 40
+	var m_lo := int(pl.get("initial", 0)) - 5
+	var m_hi := m_lo + 30
+	var lim0 := int((view.get("mask", {}) as Dictionary).get("limit", 0))
+	if lim0 > m_lo and lim0 <= m_lo + 40:
+		m_hi = maxi(m_hi, lim0 + 5)  # show where "too much" begins when it is near
 	var t_lo := int(view["db"])
 	var t_hi := t_lo
 	for rec: Dictionary in trail:
 		var m := int(rec.get("mask_db", -1))
 		if m >= 0:
 			m_lo = mini(m_lo, m - 5)
-			m_hi = maxi(m_hi, m + 5)
+			m_hi = maxi(m_hi, m + 10)
 		t_lo = mini(t_lo, int(rec["db"]))
 		t_hi = maxi(t_hi, int(rec["db"]))
 	var mid := (t_lo + t_hi) / 2.0
@@ -374,9 +432,21 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 		AoDraw.text_r(self, Vector2(plot.position.x - 6, y), str(lvl), 11, Color(Palette.LCD_TEXT, 0.55), AoDraw.FONT_MED)
 	var init := int(pl.get("initial", 0))
 	var ix: float = to_x.call(float(init))
+	# the safe masking window: from the starting level up to overmasking (mint), beyond it (coral)
+	var limit := int((view.get("mask", {}) as Dictionary).get("limit", 0))
+	var band_y := plot.end.y + 1.0
+	if limit > init:
+		var lx: float = clampf(to_x.call(float(limit)), plot.position.x, plot.end.x)
+		var sx: float = clampf(ix, plot.position.x, plot.end.x)
+		draw_rect(Rect2(Vector2(sx, plot.position.y), Vector2(maxf(0.0, lx - sx), plot.size.y)), Color(Palette.MINT, 0.07))
+		draw_rect(Rect2(Vector2(sx, band_y), Vector2(maxf(0.0, lx - sx), 4.0)), Color(Palette.MINT, 0.8))
+		if lx < plot.end.x:
+			draw_rect(Rect2(Vector2(lx, plot.position.y), Vector2(plot.end.x - lx, plot.size.y)), Color(Palette.CORAL, 0.1))
+			draw_rect(Rect2(Vector2(lx, band_y), Vector2(plot.end.x - lx, 4.0)), Color(Palette.CORAL, 0.85))
+			AoDraw.text_c(self, Vector2(minf(lx + 22.0, plot.end.x - 18.0), plot.position.y + 8.0), "too much", 9, Palette.CORAL, AoDraw.FONT_BOLD)
 	AoDraw.dashed(self, Vector2(ix, plot.position.y), Vector2(ix, plot.end.y), Color(Palette.PLUM.lightened(0.3), 0.8), 1.5, 4.0, 4.0)
-	AoDraw.text_c(self, Vector2(ix, plot.end.y + 10.0), "start %d" % init, 10, Palette.PLUM.lightened(0.4), AoDraw.FONT_BOLD)
-	AoDraw.text_r(self, Vector2(plot.end.x, plot.end.y + 10.0), "noise dB EM >", 10, Color(Palette.LCD_TEXT, 0.5), AoDraw.FONT_SEMI)
+	AoDraw.text_c(self, Vector2(ix, plot.end.y + 12.0), "start %d" % init, 10, Palette.PLUM.lightened(0.4), AoDraw.FONT_BOLD)
+	AoDraw.text_r(self, Vector2(plot.end.x, plot.end.y + 12.0), "noise >", 10, Color(Palette.LCD_TEXT, 0.5), AoDraw.FONT_SEMI)
 	# the plateau run: same tone level, rising noise
 	var run_db := int(pl.get("db", -1))
 	if run_db >= 0 and steps > 0:
@@ -389,7 +459,7 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 		var col := Palette.PRESS_LIME if found else Palette.SUNNY
 		draw_line(Vector2(to_x.call(float(start_m)), y0), Vector2(to_x.call(float(end_m)), y0), Color(col, 0.55), 9.0, true)
 		if found:
-			AoDraw.text_c(self, Vector2((to_x.call(float(start_m)) + to_x.call(float(end_m))) * 0.5, y0 - 16.0), "FLAT LINE!", 12, Palette.PRESS_LIME, AoDraw.FONT_BOLD)
+			AoDraw.text_c(self, Vector2((to_x.call(float(start_m)) + to_x.call(float(end_m))) * 0.5, y0 + 15.0), "plateau", 11, Palette.PRESS_LIME, AoDraw.FONT_BOLD)
 	_last_dot = Vector2.INF
 	for rec: Dictionary in trail:
 		var m2 := int(rec.get("mask_db", -1))
@@ -398,13 +468,13 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 		var c := Vector2(to_x.call(float(m2)), to_y.call(float(rec["db"])))
 		_last_dot = c
 		if bool(rec["responded"]):
-			draw_circle(c, 7.0, Palette.PRESS_LIME)
-			draw_arc(c, 7.0, 0.0, TAU, 20, Palette.LCD_BG, 2.0, true)
+			draw_circle(c, 6.5, Palette.PRESS_LIME)
+			draw_arc(c, 6.5, 0.0, TAU, 20, Palette.LCD_BG, 2.0, true)
 		elif not bool(rec["closed"]):
-			draw_arc(c, 7.0 + 2.0 * (0.5 + 0.5 * sin(_t * 10.0)), 0.0, TAU, 20, Palette.TONE_CYAN, 3.0, true)
+			draw_arc(c, 6.5 + 2.0 * (0.5 + 0.5 * sin(_t * 10.0)), 0.0, TAU, 20, Palette.TONE_CYAN, 3.0, true)
 		else:
-			draw_circle(c, 6.0, Palette.LCD_BG)
-			draw_arc(c, 6.0, 0.0, TAU, 20, Palette.LCD_TEXT, 2.5, true)
+			draw_circle(c, 5.5, Palette.LCD_BG)
+			draw_arc(c, 5.5, 0.0, TAU, 20, Palette.LCD_TEXT, 2.5, true)
 	# the next beep: dial tone level at the dial noise level
 	var mk: Dictionary = view.get("mask", {})
 	if bool(view["accepting"]) and bool(mk.get("on", false)):

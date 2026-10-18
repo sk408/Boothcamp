@@ -12,6 +12,9 @@ extends Node
 ## (v3) Narrow-band masking noise for the OTHER ear (start_masker()): white noise through a
 ## 1/3-octave band-pass at the test frequency, level from AudioSafety.masker_to_rms() and every
 ## sample through AudioSafety.clamp_masker_sample() (quiet: a hiss, never a blast). 50 ms ramps.
+## (v3) Bone channel (`bone`): the oscillator shakes the whole skull (interaural attenuation 0), so a
+## bone tone plays in the test ear's channel AND, BONE_CROSS_DB softer, in the other one: you can
+## hear why the other cochlea answers. Same safe mapping and clamp; air tones stay one-channel.
 
 enum Stimulus { PURE, PULSED, WARBLE }
 
@@ -43,6 +46,11 @@ var _ramp := 0.0        ## on/off ramp position 0..1
 var _target := 0.0      ## 1 while the tone is on
 var _amp := 0.0         ## smoothed peak amplitude
 var _t_on := 0.0        ## seconds since the tone started (pulse clock)
+
+# ---- v3 bone channel
+const BONE_CROSS_DB := -10.0
+## true while the tone goes to the bone oscillator (set before start_tone()).
+var bone: bool = false
 
 # ---- v3 masker
 const MASKER_RAMP_S := 0.05
@@ -155,6 +163,7 @@ func render(frames: int) -> PackedVector2Array:
 	var glide := 1.0 - exp(-1.0 / (LEVEL_GLIDE_S * MIX_RATE))
 	var dt := 1.0 / MIX_RATE
 	var right := ear == "right"
+	var cross := db_to_linear(BONE_CROSS_DB) if bone else 0.0
 	for i in frames:
 		_ramp = move_toward(_ramp, _target, ramp_step)
 		if _ramp <= 0.0 and _target <= 0.0:
@@ -169,7 +178,12 @@ func render(frames: int) -> PackedVector2Array:
 			f *= 1.0 + WARBLE_DEPTH * sin(TAU * _lfo)
 			_lfo = fmod(_lfo + WARBLE_RATE_HZ * dt, 1.0)
 		var v := AudioSafety.clamp_sample(sin(TAU * _phase) * _amp * env)
-		out[i] = Vector2(out[i].x, v) if right else Vector2(v, out[i].y)
+		if cross > 0.0:
+			# bone: the far cochlea gets it too, softer, on top of any masking noise there
+			var c := v * cross
+			out[i] = Vector2(AudioSafety.clamp_sample(out[i].x + c), v) if right else Vector2(v, AudioSafety.clamp_sample(out[i].y + c))
+		else:
+			out[i] = Vector2(out[i].x, v) if right else Vector2(v, out[i].y)
 		_phase = fmod(_phase + f * dt, 1.0)
 		_t_on += dt
 	return out

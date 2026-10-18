@@ -3,6 +3,8 @@ extends Node
 ## game (with a unicorn slip), then Bonnie's board (reveal, toll bridge, referral stamp), with a
 ## screenshot at each step. Results are made up from Bonnie's profile; no audiometry runs here.
 ##   tools/scene_shot.sh res://story/dev_day2.tscn /abs/dir "1" 30   (shots come from the script)
+## Add --part=world (the 3D extras: basket, oscillator, ghost, masking, payoff), --part=placement or
+## --part=board to shoot only one part (default: all).
 
 const Hud := preload("res://story/hud.gd")
 const BonePlacement := preload("res://story/games/bone_placement.gd")
@@ -25,16 +27,111 @@ func _ready() -> void:
 
 
 func demo_start() -> void:
+	var part := Game.cli_value("part", "all")
+	if part in ["all", "world"]:
+		await _world()
+	if part in ["all", "placement"]:
+		await _placement()
+	if part in ["all", "board"]:
+		await _board()
+	if part == "title":
+		await _title()
+
+
+## The 3D extras, with the booth window shown picture-in-picture.
+func _world() -> void:
+	clinic.call("focus_camera", &"door", 0.0)
+	await _wait(0.3)
+	await clinic.call("walk_in")
+	clinic.call("focus_camera", &"desk", 0.0)
+	await _wait(0.3)
+	await _shot("dev_day2_w_basket")
+	clinic.call("put_down_basket")
+	Events.dialogue_line.emit("Bonnie", "Croissants for the waiting room!")
+	await _wait(0.8)
+	await _shot("dev_day2_w_desk")
+	await clinic.call("sit")
+	clinic.call("put_on_bone_oscillator", "right")
+	clinic.call("put_on_masking_phone", "left")
+	await clinic.call("focus_camera", &"face", 0.0)
+	await _wait(0.6)
+	await _shot("dev_day2_w_face")
+	clinic.call("focus_camera", &"ear_right", 0.0)
+	await _wait(0.3)
+	await _shot("dev_day2_w_ear_right")
+	clinic.call("focus_camera", &"ear_left", 0.0)
+	await _wait(0.3)
+	await _shot("dev_day2_w_ear_left")
+	# the booth window, big
+	var layer := CanvasLayer.new()
+	layer.layer = 5
+	add_child(layer)
+	var tr := TextureRect.new()
+	tr.texture = clinic.call("get_booth_texture")
+	tr.position = Vector2(140, 40)
+	tr.size = Vector2(1000, 625)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	layer.add_child(tr)
+	clinic.call("set_booth_view_active", true)
+	Events.transducer_changed.emit(&"bone", "right")
+	Events.tone_started.emit("right", 1000, 10)
+	await _wait(0.4)
+	await _shot("dev_day2_w_buzz")
+	Events.tone_stopped.emit("right", 1000, 10, 1.0)
+	Events.patient_reaction.emit(&"heard", {"ear": "right"})
+	Events.patient_reaction.emit(&"cross_heard", {"ear": "right", "via": "left", "db": 5, "masked": false})
+	await _wait(0.12)
+	await _shot("dev_day2_w_ghost_a")
+	await _wait(0.33)
+	await _shot("dev_day2_w_ghost_b")
+	await _wait(0.25)
+	await _shot("dev_day2_w_ghost_c")
+	await _wait(0.6)
+	await _shot("dev_day2_w_ghost_d")
+	await _wait(0.8)
+	Events.masker_changed.emit("left", 1000, 25, true)
+	await _wait(0.45)
+	await _shot("dev_day2_w_bust_a")
+	await _wait(0.4)
+	await _shot("dev_day2_w_bust_b")
+	await _wait(1.0)
+	await _shot("dev_day2_w_shh")
+	Events.patient_reaction.emit(&"tickle", {"ear": "right", "db": 35})
+	await _wait(0.25)
+	await _shot("dev_day2_w_tickle")
+	await _wait(1.2)
+	Events.patient_reaction.emit(&"overmasked", {"ear": "right", "masker_ear": "left", "mask_db": 70})
+	await _wait(0.3)
+	await _shot("dev_day2_w_overmasked")
+	Events.masker_changed.emit("left", 1000, 0, false)
+	layer.queue_free()
+	clinic.call("set_booth_view_active", false)
+	await _wait(1.5)
+	clinic.call("take_off_bone_oscillator")
+	await clinic.call("walk_to", &"desk", 1.5)
+	clinic.call("focus_camera", &"desk", 0.0)
+	clinic.call("give_croissant")
+	await _wait(0.45)
+	await _shot("dev_day2_w_croissant")
+	await _wait(1.0)
+	clinic.call("walk_out")
+	await _wait(1.6)
+	await _shot("dev_day2_w_wave_out")
+	await _wait(2.5)
+
+
+func _placement() -> void:
 	clinic.call("focus_camera", &"ear_right", 0.0)
 	var g := BonePlacement.new()
 	hud.call("add_game", g)
 	g.call_deferred("run")
 	await _wait(1.0)
 	await _shot("dev_day2_placement")
-	g.call("_place", "top")
-	await _wait(0.5)
-	await _shot("dev_day2_unicorn")
-	await _wait(1.2)
+	for spot: String in ["forehead", "top", "pinna", "nose"]:
+		g.call("_place", spot)
+		await _wait(0.45)
+		await _shot("dev_day2_slip_" + spot)
+		await _wait(1.6)
 	g.call("_place", "mastoid")
 	await _wait(0.6)
 	await _shot("dev_day2_placed")
@@ -43,18 +140,70 @@ func demo_start() -> void:
 	clinic.call("put_on_masking_phone", "left")
 	await _wait(0.6)
 	await _shot("dev_day2_oscillator_3d")
+	clinic.call("take_off_bone_oscillator")
+
+
+func _board() -> void:
 	var b := Day2Board.new()
 	hud.call("add_game", b)
 	await b.run_reveal(_results())
 	await _shot("dev_day2_reveal")
 	await b.show_gap()
+	await _wait(0.6)
 	await _shot("dev_day2_bridge")
+	b.show_carhart()
+	await _wait(1.0)
+	await _shot("dev_day2_carhart")
+	b.set_compact(true)
+	await _wait(0.8)
+	await _shot("dev_day2_compact")
+	b.show_type("CONDUCTIVE")
+	await _wait(0.8)
+	await _shot("dev_day2_type")
+	b.set_compact(false)
+	await _wait(0.6)
 	b.call_deferred("run_stamp")
 	await _wait(0.8)
 	await _shot("dev_day2_stamp_button")
 	b.call("_stamp")
 	await _wait(0.8)
 	await _shot("dev_day2_stamped")
+
+
+## The title's day picker: locked, then unlocked with a best grade on Day 1.
+func _title() -> void:
+	clinic.queue_free()
+	hud.queue_free()
+	var keep_settings: Dictionary = Game.settings.duplicate(true)
+	var keep_progress: Dictionary = Game.progress.duplicate(true)
+	Game.settings["unlock_all_days"] = false
+	Game.progress["patients"] = {"gus": {"best_score": 91.0, "best_grade": "A", "last_grade": "A", "plays": 2}}
+	Game.progress["chapters_done"] = []
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await _wait(0.6)
+	title.call("_on_notice_ok")
+	await _wait(0.8)
+	title.call("_on_days")
+	await _wait(0.8)
+	await _shot("dev_day2_title_days_locked")
+	var day2: Button = null
+	for b: Button in title.get("_day_buttons"):
+		if String(b.get_meta("chapter", "")) == "bonnie":
+			day2 = b
+	title.call("_pick_day", "bonnie", day2)
+	await _wait(0.5)
+	await _shot("dev_day2_title_days_refused")
+	Game.progress["chapters_done"] = ["gus"]
+	title.call("_refresh_days")
+	title.call("_set_hl", 1, false)
+	await _wait(0.6)
+	await _shot("dev_day2_title_days_open")
+	title.call("_set_hl", 2, false)
+	await _wait(0.3)
+	await _shot("dev_day2_title_days_toggle")
+	Game.settings = keep_settings
+	Game.progress = keep_progress
 
 
 func _wait(s: float) -> void:

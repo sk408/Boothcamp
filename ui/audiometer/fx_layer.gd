@@ -8,8 +8,12 @@ var _parts: Array[Dictionary] = []
 var _calls: Array[Dictionary] = []
 var _rings: Array[Dictionary] = []
 var _chips: Array[Dictionary] = []
-## Gus's speech bubble (one at a time): {"text", "rect": Rect2, "tail": Vector2, "t", "max"}
+## The patient's speech bubble (one at a time): {"text", "rect": Rect2, "tail": Vector2, "t", "max"}
 var _speech: Dictionary = {}
+## Name on the speech bubble's tab (the screen sets it from PatientProfile.short_name()).
+var speaker := "Gus"
+## (v3) The Cross-Hearing Ghost in flight: {"from", "to", "t", "max", "text", "sub", "said", "at"} or {}.
+var _ghost: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
 
@@ -64,7 +68,26 @@ func ring(at: Vector2, color: Color, radius: float = 60.0) -> void:
 func callout(text: String, at: Vector2, color: Color = Palette.SUNNY, size_px: int = 46, sub: String = "", rot_deg: float = -4.0, life: float = 1.3) -> void:
 	if _reduced():
 		size_px = int(size_px * 0.8)
-	_calls.append({"text": text, "pos": at, "t": 0.0, "max": life, "color": color, "size": size_px, "sub": sub, "rot": deg_to_rad(rot_deg)})
+	# (v3, integrator) two callouts in quick succession at the same spot stack instead of overlapping,
+	# and a long one ("Hughson would be proud!") is nudged in from the screen edge instead of clipped
+	var pos := at
+	if is_inside_tree():
+		var half := AoDraw.FONT_BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x * 0.5 + 18.0
+		var vw := get_viewport_rect().size.x
+		pos.x = clampf(pos.x, half, maxf(half, vw - half))
+		at.x = pos.x
+	var step := size_px * 1.25
+	for _i in 4:
+		var clash := false
+		for c: Dictionary in _calls:
+			if float(c["t"]) < float(c["max"]) * 0.8 and absf((c["pos"] as Vector2).y - pos.y) < step * 0.9 \
+					and absf((c["pos"] as Vector2).x - pos.x) < 260.0:
+				clash = true
+				break
+		if not clash:
+			break
+		pos.y += -step if at.y - step > size_px else step
+	_calls.append({"text": text, "pos": pos, "t": 0.0, "max": life, "color": color, "size": size_px, "sub": sub, "rot": deg_to_rad(rot_deg)})
 
 
 ## A small rounded label that pops, floats up a little and fades ("HEARD!", "...").
@@ -72,7 +95,16 @@ func chip(text: String, at: Vector2, fill: Color, text_color: Color = Palette.IN
 	_chips.append({"text": text, "pos": at, "t": 0.0, "max": life, "fill": fill, "ink": text_color, "size": size_px})
 
 
-## A comic speech bubble whose tail points at tail_to (Gus's booth quips). Replaces any other.
+## (v3) The Cross-Hearing Ghost: a little sheet ghost pops up at `from` (the test ear's chart),
+## swoops over to `to` (the other ear, which really heard the beep) and shouts its text there.
+## callout_at: where its shout goes (default: above `to`); keep it clear of the chart's symbols.
+func ghost(from: Vector2, to: Vector2, text: String = "BOO!", sub: String = "", callout_at: Vector2 = Vector2.INF) -> void:
+	var at := callout_at if callout_at != Vector2.INF else to + Vector2(0, -92)
+	_ghost = {"from": from, "to": to, "t": 0.0, "max": 2.0 if not _reduced() else 1.6, "text": text, "sub": sub, "said": false, "at": at}
+	queue_redraw()
+
+
+## A comic speech bubble whose tail points at tail_to (the patient's booth quips). Replaces any other.
 func speech(text: String, rect: Rect2, tail_to: Vector2, life: float = 3.2) -> void:
 	_speech = {"text": text, "rect": rect, "tail": tail_to, "t": 0.0, "max": life}
 	queue_redraw()
@@ -101,7 +133,7 @@ func splash(at: Vector2, count: int = 14) -> void:
 
 
 func busy() -> bool:
-	return not (_parts.is_empty() and _calls.is_empty() and _rings.is_empty() and _chips.is_empty() and _speech.is_empty())
+	return not (_parts.is_empty() and _calls.is_empty() and _rings.is_empty() and _chips.is_empty() and _speech.is_empty() and _ghost.is_empty())
 
 
 func _process(delta: float) -> void:
@@ -129,6 +161,16 @@ func _process(delta: float) -> void:
 		_speech["t"] = float(_speech["t"]) + delta
 		if float(_speech["t"]) >= float(_speech["max"]):
 			_speech = {}
+	if not _ghost.is_empty():
+		_ghost["t"] = float(_ghost["t"]) + delta
+		var gk := float(_ghost["t"]) / float(_ghost["max"])
+		if gk >= 0.42 and not bool(_ghost["said"]):
+			_ghost["said"] = true
+			var to: Vector2 = _ghost["to"]
+			callout(String(_ghost["text"]), _ghost["at"], Color("#efeaf7"), 44, String(_ghost["sub"]), 5.0, 1.5)
+			stars(to, 8, Palette.PLUM.lightened(0.4))
+		if gk >= 1.0:
+			_ghost = {}
 	queue_redraw()
 
 
@@ -159,6 +201,8 @@ func _draw() -> void:
 		_draw_chip(c)
 	if not _speech.is_empty():
 		_draw_speech()
+	if not _ghost.is_empty():
+		_draw_ghost()
 
 
 func _draw_chip(c: Dictionary) -> void:
@@ -201,9 +245,10 @@ func _draw_speech() -> void:
 	AoDraw.rbox(self, Rect2(lr.position + Vector2(0, 4), lr.size), Color(Palette.INK, 0.3 * alpha), 18)
 	AoDraw.rbox(self, lr, Color(Palette.PAPER, alpha), 18, 4, Color(Palette.INK, alpha))
 	draw_colored_polygon(tri, Color(Palette.PAPER, alpha))
-	var name_r := Rect2(lr.position + Vector2(14, -12), Vector2(54, 22))
+	var name_w := maxf(54.0, AoDraw.text_size(speaker, 14, AoDraw.FONT_BOLD).x + 22.0)
+	var name_r := Rect2(lr.position + Vector2(14, -12), Vector2(name_w, 22))
 	AoDraw.rbox(self, name_r, Color(Palette.SELECT_ORANGE, alpha), 11, 3, Color(Palette.INK, alpha))
-	AoDraw.text_c(self, name_r.get_center(), "Gus", 14, Color(Palette.INK, alpha), AoDraw.FONT_BOLD)
+	AoDraw.text_c(self, name_r.get_center(), speaker, 14, Color(Palette.INK, alpha), AoDraw.FONT_BOLD)
 	var lines := _wrap(String(_speech["text"]), 17, lr.size.x - 28.0)
 	var y := lr.position.y + 16.0 + (lr.size.y - 16.0) * 0.5 - (lines.size() - 1) * 11.0
 	for line: String in lines:
@@ -250,4 +295,52 @@ func _draw_callout(c: Dictionary) -> void:
 	var sub: String = c["sub"]
 	if sub != "":
 		AoDraw.text_c(self, Vector2(0, size_px * 0.78), sub, int(size_px * 0.42), Color(Palette.INK, alpha), AoDraw.FONT_BOLD, 8, Color(Palette.PAPER, alpha))
+	draw_set_transform(Vector2.ZERO)
+
+
+## (v3) The Cross-Hearing Ghost: pops up, swoops along an arc to the other ear, hovers, fades.
+func _draw_ghost() -> void:
+	var k := float(_ghost["t"]) / float(_ghost["max"])
+	var from: Vector2 = _ghost["from"]
+	var to: Vector2 = _ghost["to"]
+	var fly := clampf((k - 0.08) / 0.34, 0.0, 1.0)
+	var e := fly * fly * (3.0 - 2.0 * fly)
+	var mid := (from + to) * 0.5 + Vector2(0, -110)
+	var pos := from.lerp(mid, e).lerp(mid.lerp(to, e), e)
+	pos.y += sin(float(_ghost["t"]) * 9.0) * 5.0
+	var pop := clampf(k / 0.08, 0.0, 1.0)
+	var scale := (0.4 + 0.75 * pop) if k < 0.08 else 1.15 - 0.15 * clampf((k - 0.08) / 0.1, 0.0, 1.0)
+	var alpha := 1.0 if k < 0.8 else clampf((1.0 - k) / 0.2, 0.0, 1.0)
+	var lean := (to.x - from.x) * 0.0006 * (1.0 - fly) if fly < 1.0 else 0.0
+	# a wispy trail behind it
+	for i in 5:
+		var tk := clampf(e - 0.07 * (i + 1), 0.0, 1.0)
+		var tp := from.lerp(mid, tk).lerp(mid.lerp(to, tk), tk)
+		draw_circle(tp, 9.0 - i * 1.4, Color(1, 1, 1, 0.35 * alpha * (1.0 - i / 5.0)))
+	draw_set_transform(pos, lean, Vector2.ONE * scale)
+	var body := Color(1, 1, 1, alpha)
+	var ink := Color(Palette.INK, alpha)
+	var shape := PackedVector2Array()
+	for i in 13:
+		var a := PI + PI * i / 12.0
+		shape.append(Vector2(cos(a), sin(a)) * 24.0 + Vector2(0, -6))
+	for i in 7:
+		var x := 24.0 - 48.0 * i / 6.0
+		var wav := 6.0 * sin(float(_ghost["t"]) * 12.0 + i * 1.6)
+		shape.append(Vector2(x, 22.0 + (8.0 if i % 2 == 0 else 0.0) + wav * 0.4))
+	draw_colored_polygon(shape, Color(Palette.PLUM.lightened(0.6), 0.5 * alpha))
+	var inner := PackedVector2Array()
+	for p: Vector2 in shape:
+		inner.append(p * 0.9 + Vector2(0, -1))
+	draw_colored_polygon(inner, body)
+	var outline := shape.duplicate()
+	outline.append(shape[0])
+	draw_polyline(outline, ink, 3.0, true)
+	draw_circle(Vector2(-8, -8), 4.5, ink)
+	draw_circle(Vector2(8, -8), 4.5, ink)
+	draw_circle(Vector2(-6.5, -9.5), 1.5, body)
+	draw_circle(Vector2(9.5, -9.5), 1.5, body)
+	draw_arc(Vector2(0, 5), 5.0, 0.0, TAU, 16, ink, 3.0, true)
+	draw_circle(Vector2(-15, 1), 3.5, Color(Palette.CORAL, 0.45 * alpha))
+	draw_circle(Vector2(15, 1), 3.5, Color(Palette.CORAL, 0.45 * alpha))
 	draw_set_transform(Vector2.ZERO)

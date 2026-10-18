@@ -103,8 +103,9 @@ func _draw() -> void:
 	AoDraw.card(self, r, Palette.PAPER, 22)
 	var col := Palette.ear_color(ear)
 	# header: title + progress bar
-	AoDraw.text_l(self, Vector2(16, 20), title, 15, Palette.INK, AoDraw.FONT_BOLD)
-	var bar := Rect2(Vector2(112, 12), Vector2(size.x - 112 - 52, 16))
+	var tw := AoDraw.text_l(self, Vector2(16, 20), title, 15, Palette.INK, AoDraw.FONT_BOLD)
+	var bx := maxf(112.0, 16.0 + tw + 10.0)
+	var bar := Rect2(Vector2(bx, 12), Vector2(maxf(20.0, size.x - bx - 52), 16))
 	AoDraw.rbox(self, bar, Palette.CREAM.darkened(0.06), 8, 2, Palette.INK)
 	var k := float(done_count) / maxf(1.0, float(total_count))
 	if k > 0.0:

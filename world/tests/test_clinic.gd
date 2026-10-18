@@ -131,3 +131,50 @@ func test_story_extras() -> void:
 	var hp: Vector2 = c.call("get_head_screen_position")
 	assert_true(is_finite(hp.x) and is_finite(hp.y), "head projects")
 	await wait_seconds(0.3)
+
+
+## (v3) Day 2 with Bonnie: the basket, the bone oscillator and masking phone, the Cross-Hearing
+## Ghost (cross-hearing makes one; switching masking on shoos one), the new reactions, and the
+## payoff (a croissant for Hoot, then she waves and walks out).
+func test_day2_bonnie_extras() -> void:
+	Engine.time_scale = 4.0
+	Game.begin_visit("bonnie")
+	var c: Node3D = (load(CLINIC) as PackedScene).instantiate()
+	c.set("patient_id", "bonnie")
+	add_node(c)
+	await wait_frames(2)
+	for m: String in ["put_on_bone_oscillator", "take_off_bone_oscillator", "put_on_masking_phone", "put_down_basket", "give_croissant", "walk_out", "patient_name"]:
+		assert_has_method(c, m)
+	assert_eq(String(c.call("patient_name")), "Bonnie")
+	for k: StringName in [&"tickle", &"cross_heard", &"overmasked", &"wave"]:
+		assert_has(c.get("REACTIONS") as Array, k)
+	await c.call("walk_in")
+	c.call("put_down_basket")
+	await wait_seconds(0.2)
+	assert_true(c.get("_basket") != null, "the basket is on the desk")
+	await c.call("sit")
+	c.call("put_on_bone_oscillator", "right")
+	c.call("put_on_masking_phone", "left")
+	Events.audiometry_started.emit("bonnie", "right", true)
+	Events.transducer_changed.emit(&"bone", "right")
+	Events.tone_started.emit("right", 1000, 10)
+	await wait_frames(3)
+	Events.tone_stopped.emit("right", 1000, 10, 0.5)
+	c.call("play_patient_reaction", &"cross_heard", {"ear": "right", "via": "left", "db": 10, "masked": false})
+	await wait_frames(2)
+	assert_true(c.find_child("CrossHearingGhost", true, false) != null, "cross-hearing summons the Ghost")
+	await wait_seconds(2.5)
+	assert_true(c.find_child("CrossHearingGhost", true, false) == null, "it presses the button and poofs")
+	Events.masker_changed.emit("left", 1000, 30, true)
+	await wait_frames(2)
+	assert_true(c.find_child("CrossHearingGhost", true, false) != null, "masking on: the Ghost peeks out of the masked ear")
+	await wait_seconds(2.0)
+	assert_true(c.find_child("CrossHearingGhost", true, false) == null, "and gets shooed (poof)")
+	for k: StringName in [&"tickle", &"overmasked", &"wave"]:
+		c.call("play_patient_reaction", k, {"ear": "right"})
+		await wait_frames(2)
+	Events.masker_changed.emit("left", 1000, 30, false)
+	c.call("take_off_bone_oscillator")
+	await c.call("give_croissant")
+	await c.call("walk_out")
+	assert_false((c.call("get_patient") as Node3D).visible, "Bonnie left through the door")

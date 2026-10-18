@@ -12,6 +12,7 @@ const Hud := preload("res://story/hud.gd")
 const Earphones := preload("res://story/games/earphones.gd")
 const BonePlacement := preload("res://story/games/bone_placement.gd")
 const Day2Board := preload("res://story/games/day2_board.gd")
+const Otoscopy := preload("res://story/games/otoscopy.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -53,6 +54,7 @@ var dialogue: DialogueBox
 var screen: CanvasLayer
 var results: Dictionary = {}
 var _walk_done := true
+var _found_glasses := false   # the player tried the oscillator on her glasses (the running gag)
 
 
 func _ready() -> void:
@@ -119,13 +121,18 @@ func _intro() -> void:
 	await _wait(0.5)
 	get_tree().create_timer(1.4, false).timeout.connect(func() -> void: clinic.call("focus_camera", &"desk", 2.2))
 	await clinic.call("walk_in")
+	_react(&"wave")
 	await _say("Bonnie", "Morning! Bonnie Bunsworth, Bunsworth's Bakery. I brought croissants for the waiting room!")
+	clinic.call("put_down_basket")
 	clinic.call("hoot_emote", &"wing_up")
 	await _say("Hoot", "Day 2, trainee! Today we test through the bone, not just the air.")
 	clinic.call("gus_look", &"camera")
 	_react(&"confused")
 	await _say("Bonnie", "My right ear has gone all underwater. Like listening through a loaf of sourdough.")
+	await _say("Bonnie", "And I've lost my reading glasses. Again. Third time this week!")
 	clinic.call("gus_look", &"hoot")
+	clinic.call("hoot_emote", &"facepalm")
+	await _say("Hoot", "(Psst, trainee: they're on her head. Let's see when she notices.)")
 	await _say("Hoot", "One muffled ear. Let's find out WHERE the sound gets stuck. Questions first!")
 
 
@@ -177,10 +184,15 @@ func _otoscopy() -> void:
 	_phase(&"otoscopy")
 	hud.call("set_step", &"peek")
 	await clinic.call("focus_camera", &"otoscope", 0.8)
+	var g := Otoscopy.new()
+	hud.call("add_game", g)
+	await g.show_clear("right", "Bonnie's RIGHT ear: clear canal, shiny eardrum.")
 	await _say("Hoot", "Look before you beep! Canals clear, both eardrums healthy and shiny.")
 	await _say("Bonnie", "No croissant crumbs in there? I find them EVERYWHERE.")
 	await _say("Hoot", "Not a crumb. A healthy-looking eardrum can still hide a stiff middle ear.")
 	hud.call("add_clue", "Canals clear, eardrums look normal")
+	g.queue_free()
+	clinic.call("focus_camera", &"desk", 0.6)
 	Game.record_medal("otoscopy", "gold")
 	hud.call("complete_step", &"peek")
 
@@ -299,14 +311,18 @@ func _bone_placement() -> void:
 	_shot("bone_placement", 0.7)
 	await g.run()
 	var m := g.mistakes
+	_found_glasses = g.wrong_spots.has("top")
+	var was_unicorn := g.wrong_spots.has("forehead")
 	Game.record_medal("bc_placement", "gold" if m == 0 else ("silver" if m == 1 else "bronze"))
 	Game.set_visit_flag("bc_placement_mistakes", m)
 	await _wait(0.6)
 	g.queue_free()
 	clinic.call("put_on_bone_oscillator", "right")
 	await _wait(0.4)
-	if m >= 3:
+	if was_unicorn:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
+	if _found_glasses:
+		await _say("Bonnie", "And you found my glasses! They were on my HEAD? All morning?")
 	await _say("Hoot", "Snug on the mastoid, not touching the ear. Bone tones go 500 to 4000 Hz.")
 
 
@@ -406,6 +422,7 @@ func _evidence(b: Control) -> void:
 		kind = &"conductive"
 	var opts: Array[String] = ["Sensorineural: the inner ear itself.", "Conductive: blocked before the inner ear.", "Mixed: a bit of both."]
 	var answer := {&"sensorineural": 0, &"conductive": 1, &"mixed": 2}.get(kind, 1) as int
+	b.call("set_compact", true)   # the choices go under the shrunken chart
 	var tries := 0
 	while true:
 		tries += 1
@@ -419,10 +436,14 @@ func _evidence(b: Control) -> void:
 		else:
 			await _say("Hoot", "Close! Compare bone with normal, then compare air with bone.")
 	Game.record_medal("evidence", "gold" if tries == 1 else ("silver" if tries == 2 else "bronze"))
-	Juice.pop(b, 1.04, 0.3)
+	var title := String(ClinicRules.HEARING_TYPE_TITLES.get(kind, "Conductive loss"))
+	b.call("show_type", title)
 	Sfx.play(&"ding", 1.2, -6.0)
-	await _say("Hoot", "%s! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." % String(ClinicRules.HEARING_TYPE_TITLES.get(kind, "Conductive loss")))
+	_shot("type", 0.3)
+	await _say("Hoot", "%s! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." % title)
 	if bool(ear.get("carhart_notch", false)):
+		b.call("show_carhart")
+		_shot("carhart", 0.5)
 		await _say("Hoot", "See bone dip at 2k? A Carhart notch: a classic clue for otosclerosis.")
 	else:
 		await _say("Hoot", "Young, one ear, family history, normal eardrum: a doctor may suspect otosclerosis.")
@@ -449,15 +470,37 @@ func _referral(b: Control) -> void:
 			await _say("Hoot", "Five years of sourdough ears? A one-sided conductive loss needs a doctor now.")
 		opts.remove_at(c)
 	Game.record_medal("referral", medal)
+	b.call("set_compact", false)
 	await _say("Hoot", "Conductive loss with normal bone: refer to ENT. Often very treatable! Stamp it!")
 	await b.call("run_stamp")
 	_shot("stamp", 0.1)
 	_react(&"cheer")
 	await _say("Bonnie", "A doctor for my ear, then back to my buns. Deal! Croissant for the road?")
-	clinic.call("hoot_emote", &"cheer")
-	await _say("Hoot", "Lovely work, trainee. You found the ghost AND the gap!")
+	await _payoff(b)
 	hud.call("complete_step", &"refer")
+
+
+## The board fades, a croissant flies to Hoot, the glasses gag lands, and Bonnie waves goodbye.
+func _payoff(b: Control) -> void:
+	var t := b.create_tween()
+	t.tween_property(b, "modulate:a", 0.0, 0.35)
+	await t.finished
 	b.queue_free()
+	while not _walk_done:   # she strolled to the desk during the reveal
+		await _wait(0.2)
+	await clinic.call("focus_camera", &"desk", 0.5)
+	_shot("croissant", 0.45)
+	await clinic.call("give_croissant")
+	clinic.call("hoot_emote", &"cheer")
+	await _say("Hoot", "Mmf! I'm not going anywhere, but thank you! Lovely work, trainee.")
+	await _say("Hoot", "You busted the ghost AND found the gap!")
+	if not _found_glasses:
+		await _say("Hoot", "Oh, and Bonnie? Your glasses are on your head.")
+		_react(&"startle")
+		await _say("Bonnie", "...All MORNING? Don't tell the sourdough.")
+	clinic.call("focus_camera", &"door", 1.6)
+	_shot("goodbye", 1.6)
+	await clinic.call("walk_out")
 
 
 # ---------------------------------------------------------------- 13. results

@@ -26,6 +26,9 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | Boot one scene and take timed screenshots | `tools/scene_shot.sh res://world/clinic.tscn /abs/out/dir "1,3.5"` | ~20 s |
 | Windows build: `build/BoothCamp.exe` with the PCK embedded, plus `build/BoothCamp-win64.zip` (exe, README, font licence) | `tools/export_win.sh` (add `--xz` for an .xz too) | ~1 min |
 | Audio-safety movie: record both ears (Movie Maker AVI) and check routing, levels and the -12 dBFS ceiling per tone | `tools/movie_check.sh /abs/out/dir` | ~5 min |
+| **(v3)** Day 2 audio-safety movie: Bonnie's air, bone, masked bone and masked air with UI sounds muted; `tools/analyze_movie_bc.py` checks tone channel and level, the bone cross-feed (-10 dB) and the masker (other ear only, level, -24 dBFS cap); prints `AUDIO_CHECK PASS` | `tools/movie_check.sh /abs/out/dir --day=2` | ~20 min |
+| **(v3)** AudiOtron Day 2 teaching states (bone route, Ghost, masking deck, plateau, overmasking, finished audiogram) | `timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://ui/dev/dev_audiotron_day2.tscn --shots=/abs/dir --fresh` (add `--resolution 1920x1080` before `--` and a 1920x1080 xvfb screen for full HD) | ~3 min |
+| **(v3)** Chapter select by real input: fresh save (Day 2 locked and refused), then Day 2 after Day 1 on the same save | `tools/autoplay_check.sh --save=/abs/s.json --via-days --expect-days=gus --try-locked=bonnie` then `tools/autoplay_check.sh --save=/abs/s.json --keep-save --via-days --mouse --expect-days=gus,bonnie --pick=bonnie` (or `--toggle-unlock` on a fresh save) | ~30 s |
 
 The scripts expand to the commands below, if you need to tweak them:
 
@@ -98,6 +101,8 @@ Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `ri
 | `--mouse` | with `--autoplay`: drive everything with real mouse events (the mouse-only path) |
 | `--day=N` / `--chapter=id` | **(v3)** start that chapter (`--day=2` = Bonnie) and treat it as unlocked for this run; with `--autoplay` the bot plays it |
 | `--unlock-all` | **(v3)** every day open for this run (the save's "Unlock all days (demo)" setting is not changed) |
+| `--keep-save` | **(v3)** with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 on one `--save=`) |
+| `--via-days` | **(v3)** with `--autoplay`: start from the title's Days card (`--pick=`, `--try-locked=`, `--toggle-unlock`, `--expect-days=`; see CONTRACTS.md §7.1) |
 
 Scenes with a `demo_start()` for `--scene`:
 - `res://ui/audiometer/audiometer_screen.tscn`: a coached right-ear test of Gus;

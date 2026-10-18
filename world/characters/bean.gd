@@ -30,14 +30,15 @@ const DORIS := {
 	"hair": Color("#c9d3ea"), "hair_style": &"beehive", "mustache": false, "brows": false,
 	"glasses": &"cateye", "glasses_color": Color("#e5383b"), "walker": false, "prop": &"plate",
 }
-## (v3) Day 2: Bonnie Bunsworth, 34, baker. Bun with a wooden spoon in it, flour-dusted apron.
+## (v3) Day 2: Bonnie Bunsworth, 34, baker. Bun with a wooden spoon in it, flour-dusted apron,
+## mint reading glasses perched on her head (she is always looking for them), a basket of croissants.
 const BONNIE := {
-	"name": "Bonnie", "face": &"doris",
+	"name": "Bonnie", "face": &"bonnie",
 	"skin": Color("#e8b088"), "skin_shade": Color("#c98a62"), "nose": Color("#dd9670"),
 	"cardigan": Color("#f2a541"), "pants": Color("#4f6d8f"), "shirt": Color("#fff3dc"),
 	"accent": Color("#ff6f59"), "shoes": Color("#7a4b2a"),
 	"hair": Color("#8a4f2a"), "hair_style": &"bun", "mustache": false, "brows": false,
-	"glasses": &"", "glasses_color": Color("#5a3d2b"), "walker": false, "prop": &"", "apron": true,
+	"glasses": &"perched", "glasses_color": Color("#2fb3a3"), "walker": false, "prop": &"basket", "apron": true,
 }
 ## (v3) Pick a bean spec by patient id (unknown ids get Gus).
 static func spec_for(patient_id: String) -> Dictionary:
@@ -85,10 +86,12 @@ func build(config: Dictionary) -> void:
 		_build_walker()
 	if cfg["prop"] == &"plate":
 		_build_plate()
+	elif cfg["prop"] == &"basket":
+		_build_basket()
 	_build_button()
 	for k: String in ["hand_r", "hand_l", "foot_r", "foot_l"]:
 		_rest[k] = (parts[k] as Node3D).position
-	_set_hands(&"walker" if bool(cfg["walker"]) else (&"plate" if cfg["prop"] == &"plate" else &"rest"), 0.0)
+	_set_hands(_idle_pose(), 0.0)
 	set_expression(base_expr)
 
 
@@ -197,6 +200,8 @@ func _build_head() -> void:
 			_build_round_glasses(neck, hc)
 		&"cateye":
 			_build_cateye_glasses(neck, hc)
+		&"perched":
+			_build_perched_glasses(neck, hc)
 	# mustache
 	if bool(cfg["mustache"]):
 		var mus := Node3D.new()
@@ -320,6 +325,71 @@ func _build_cateye_glasses(neck: Node3D, hc: Vector3) -> void:
 		wing.rotation.z = -0.9 * side
 		Kit.sphere(g, 0.016, Vector3(0.235 * side, 0.1, 0.01), Color("#ffd23f"), Vector3.ONE, {"outline": 0.0}, 8)
 	Kit.box(g, Vector3(0.05, 0.016, 0.016), Vector3(0, 0.0, 0), col, {"outline": 0.0})
+
+
+## (v3) Bonnie's reading glasses, pushed up on top of her head (and promptly forgotten).
+func _build_perched_glasses(neck: Node3D, hc: Vector3) -> void:
+	var g := Node3D.new()
+	g.name = "Glasses"
+	g.position = hc + Vector3(0, 0.345, 0.16)
+	g.rotation.x = 0.55
+	neck.add_child(g)
+	parts["glasses"] = g
+	var col: Color = cfg["glasses_color"]
+	for side: int in [-1, 1]:
+		var rim := Kit.torus(g, 0.062, 0.084, Vector3(0.088 * side, 0, 0), col, {"outline": 0.007}, 20, 6)
+		rim.scale = Vector3(1.12, 1.0, 0.92)
+		var lens := Kit.cylinder(g, 0.062, 0.062, 0.006, Vector3(0.088 * side, 0.0, 0.0), Color("#dff6ff"), {"alpha": 0.55}, 16)
+		lens.scale = Vector3(1.12, 1.0, 0.92)
+		var shine := Kit.box(g, Vector3(0.04, 0.006, 0.012), Vector3(0.088 * side + 0.02, 0.006, -0.03), Color.WHITE, {"unshaded": true})
+		shine.rotation.y = 0.7
+		var arm := Kit.box(g, Vector3(0.014, 0.014, 0.22), Vector3(0.175 * side, -0.01, -0.12), col, {"outline": 0.0})
+		arm.rotation.y = 0.12 * side
+		arm.rotation.x = -0.25
+	Kit.box(g, Vector3(0.05, 0.014, 0.014), Vector3(0, 0.0, 0.04), col, {"outline": 0.0})
+	# a little flour on the lenses
+	Kit.sphere(g, 0.012, Vector3(-0.07, 0.008, 0.02), Color.WHITE, Vector3(1.5, 0.4, 1.0), {"unshaded": true}, 6)
+
+
+## (v3) Bonnie's basket of croissants for the waiting room.
+func _build_basket() -> void:
+	var b := Node3D.new()
+	b.name = "Basket"
+	b.position = Vector3(0, 0.78, 0.46)
+	(parts["body"] as Node3D).add_child(b)
+	parts["basket"] = b
+	build_basket(b)
+
+
+## A wicker basket with three croissants (also used by the clinic for the desk / payoff).
+static func build_basket(b: Node3D) -> void:
+	var wicker := Color("#c8874b")
+	Kit.cylinder(b, 0.17, 0.13, 0.13, Vector3.ZERO, wicker, {"outline": 0.008, "pattern": 4, "pattern_scale": 28.0, "pattern_color": wicker.darkened(0.15)}, 18)
+	var rim := Kit.torus(b, 0.15, 0.185, Vector3(0, 0.065, 0), wicker.darkened(0.1), {"outline": 0.006}, 20, 6)
+	rim.scale = Vector3(1, 0.6, 1)
+	var handle := Kit.arc_tube(b, 0.16, 0.014, 8.0, 172.0, 10, wicker.darkened(0.1), {"outline": 0.006})
+	handle.position = Vector3(0, 0.06, 0)
+	Kit.box(b, Vector3(0.3, 0.012, 0.22), Vector3(0, 0.07, 0), Color("#fff3dc"), {"outline": 0.0}).rotation.y = 0.4
+	for i in 3:
+		var c := build_croissant(b, Vector3(-0.08 + i * 0.08, 0.1 + 0.01 * (i % 2), 0.02 * (1 - i)), 0.85)
+		c.rotation = Vector3(0.2 * (i - 1), 0.5 * i, 0.15)
+
+
+## A croissant: a fat golden crescent of five puffs. Returns its root.
+static func build_croissant(parent: Node3D, pos: Vector3, s: float = 1.0) -> Node3D:
+	var c := Node3D.new()
+	c.name = "Croissant"
+	c.position = pos
+	c.scale = Vector3.ONE * s
+	parent.add_child(c)
+	var gold := Color("#e9a443")
+	for i in 5:
+		var a := deg_to_rad(lerpf(-70.0, 70.0, i / 4.0))
+		var r := 0.03 if i == 0 or i == 4 else (0.05 if i == 2 else 0.042)
+		var col := gold if i % 2 == 0 else gold.darkened(0.12)
+		var puff := Kit.sphere(c, r, Vector3(sin(a) * 0.06, 0.0, -cos(a) * 0.06 + 0.06), col, Vector3(1.0, 0.8, 1.25), {"outline": 0.006}, 10)
+		puff.rotation.y = -a
+	return c
 
 
 func _build_walker() -> void:
@@ -552,9 +622,33 @@ func stand_up() -> void:
 		var tw := _channel("walker")
 		tw.tween_property(parts["walker"], "position", Vector3(0, 0, 0.5), 0.35).set_trans(Tween.TRANS_BACK)
 		tw.parallel().tween_property(parts["walker"], "rotation:y", 0.0, 0.35)
-	_set_hands(&"walker" if bool(cfg["walker"]) else &"rest", 0.3)
+	_set_hands(_idle_pose(), 0.3)
 	await t.finished
 	seated = false
+
+
+## The hand pose when nothing special is happening (walker, plate, basket or empty hands).
+func _idle_pose() -> StringName:
+	if bool(cfg["walker"]):
+		return &"walker"
+	if parts.has("plate"):
+		return &"plate"
+	if parts.has("basket"):
+		return &"basket"
+	return &"rest"
+
+
+## (v3) Hand over the croissant basket: removes it from the hands and returns it (out of the tree,
+## its last global transform in meta "xf"), or null when not carrying one.
+func detach_basket() -> Node3D:
+	if not parts.has("basket"):
+		return null
+	var b: Node3D = parts["basket"]
+	parts.erase("basket")
+	b.set_meta("xf", b.global_transform)
+	b.get_parent().remove_child(b)
+	_set_hands(&"seated" if seated else &"rest", 0.25)
+	return b
 
 
 func set_holding_button(on: bool) -> void:
@@ -675,6 +769,52 @@ func react(kind: StringName, data: Dictionary = {}) -> void:
 			_point_wrong_way(ear)
 		&"nod":
 			_nod()
+		# (v3) Day 2 kinds
+		&"tickle":
+			_giggle(ear)
+		&"overmasked":
+			emote(&"spiral", &"wavy", 1.8, {"sweat": true})
+			_wobble(0.9)
+			_head_tilt(-0.2, 0.8)
+			pop_emote("?!", Color("#8e5cc4"))
+		&"cross_heard":
+			# her OTHER ear perks up: a quick glance that way
+			var other := 1.0 if ear == "right" else -1.0
+			emote(&"wide", &"o", 0.8, {"look": Vector2(other * 0.8, -0.2)})
+		&"wave":
+			_wave()
+
+
+## (v3) A felt, not heard, bone tone: she giggles and squirms (visual only).
+func _giggle(ear: String) -> void:
+	emote(&"happy", &"grin", 1.4, {"blush": true})
+	_brows(&"up")
+	var side := -1.0 if ear == "right" else 1.0
+	var torso: Node3D = parts["torso"]
+	var t := _channel("torso_rot")
+	for i in 6:
+		t.tween_property(torso, "rotation:z", 0.07 * (1.0 if i % 2 == 0 else -1.0), 0.06)
+	t.tween_property(torso, "rotation:z", 0.0, 0.1)
+	var head: Node3D = parts["head"]
+	var th := _channel("head")
+	th.tween_property(head, "rotation:z", 0.22 * -side, 0.12).set_trans(Tween.TRANS_BACK)
+	th.tween_interval(0.5)
+	th.tween_property(head, "rotation:z", 0.0, 0.25)
+	pop_emote("hee!", Color("#e08a1c"))
+
+
+## (v3) A cheery wave with the free hand (goodbyes).
+func _wave() -> void:
+	emote(&"happy", &"grin", 1.6)
+	var key := "hand_l"
+	var hand: Node3D = parts[key]
+	var rest: Vector3 = hand.get_meta("pose_pos", _rest[key])
+	var th := _channel(key)
+	th.tween_property(hand, "position", Vector3(0.6, 1.6, 0.15), 0.2).set_trans(Tween.TRANS_BACK)
+	for i in 3:
+		th.tween_property(hand, "position:x", 0.72, 0.14).set_trans(Tween.TRANS_SINE)
+		th.tween_property(hand, "position:x", 0.55, 0.14).set_trans(Tween.TRANS_SINE)
+	th.tween_property(hand, "position", rest, 0.3)
 
 
 func _press_button(ear: String) -> void:
@@ -895,6 +1035,8 @@ func _set_hands(pose: StringName, duration: float) -> void:
 					pos = Vector3(0.3 * side, 0.8, 0.38)
 			&"plate":
 				pos = Vector3(0.2 * side, 0.85, 0.42)
+			&"basket":
+				pos = Vector3(0.21 * side, 0.84, 0.44)
 		var hand: Node3D = parts[key]
 		hand.set_meta("pose_pos", pos)
 		if duration <= 0.0:

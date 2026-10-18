@@ -190,6 +190,22 @@ func show_left_clear() -> void:
 	await get_tree().create_timer(0.5).timeout
 
 
+## (coroutine, Day 2) A quick, input-free look at a healthy ear: the light sweeps, a caption names it.
+func show_clear(p_ear: String, text: String) -> void:
+	ear = p_ear
+	seed_visible = false
+	_seed_fly = 0.0
+	_set_hints(false)
+	light = view_center + Vector2(-60, -30)
+	_caption.text = text
+	Juice.pop(_caption, 1.2, 0.3)
+	Sfx.play(&"ding", 1.2, -6.0)
+	var t := create_tween()
+	t.tween_property(self, "light", view_center + Vector2(50, 30), 0.7).set_trans(Tween.TRANS_SINE)
+	t.tween_property(self, "light", view_center + Vector2(10, -10), 0.5).set_trans(Tween.TRANS_SINE)
+	await t.finished
+
+
 func _solve() -> void:
 	if found:
 		return

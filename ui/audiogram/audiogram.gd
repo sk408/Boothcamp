@@ -22,6 +22,15 @@ extends Control
 ## square): a masked air symbol replaces the plain one at its frequency and the air line runs
 ## through it; a masked bone symbol replaces the unmasked one; bone symbols sit beside the
 ## frequency line and are never connected (ASHA).
+## (v3, builder A) Three optional teaching overlays, all off by default (Day 1 never sets them):
+##   attention    test -> ear -> freq -> true: those symbols BLINK with an amber halo ("masking
+##                needed here", the masking assistant) and a legend pill appears
+##   show_gap     the air-bone gap as a bridge: posts from bone up to air with the gap in dB where
+##                it is over 10 dB (dashed and amber while the bone is unmasked: "suspicious";
+##                solid orange on masked bone), a deck joining the bone marks
+##   masker_view  {} or {"freq", "db", "role": &"noise" | &"leak", "hot": bool}: on the masked
+##                ear's chart a purple noise curtain down to the masker level "[35]"; on the test
+##                ear's chart the noise leaking back (masker - rule IA), coral when it overmasks
 
 signal draw_finished
 ## The player clicked the plot near a test frequency (AudiOtron uses it to jump there).
@@ -57,6 +66,23 @@ var layers: Dictionary = {}
 var cursor_test: StringName = &"ac"
 ## (v3) Which maximum-output line to shade: &"phones" (air) or &"bone".
 var max_output_transducer: StringName = &"phones"
+## (v3) Masking assistant: test -> ear -> freq -> true (blinking symbols). See the header.
+var attention: Dictionary = {}:
+	set(v):
+		attention = v
+		queue_redraw()
+## (v3) The air-bone gap bridge (see the header).
+var show_gap: bool = false:
+	set(v):
+		if v != show_gap:
+			show_gap = v
+			queue_redraw()
+## (v3) The masker on this chart (see the header).
+var masker_view: Dictionary = {}:
+	set(v):
+		if v != masker_view:
+			masker_view = v
+			queue_redraw()
 var cursor_freq: int = 1000
 var cursor_db: int = 40
 var cursor_visible: bool = false
@@ -68,6 +94,7 @@ var _bounce: Dictionary = {}     ## "ear:freq" -> seconds left of a melody bounc
 var _animating := false
 var _font: Font
 var _hover_freq := -1
+var _t := 0.0
 
 
 func _ready() -> void:
@@ -262,6 +289,9 @@ func _gui_input(event: InputEvent) -> void:
 # ---------------------------------------------------------------- animation
 
 func _process(delta: float) -> void:
+	_t += delta
+	if not attention.is_empty() or not masker_view.is_empty():
+		queue_redraw()  # blinking symbols, the wobbling noise curtain
 	if not _animating:
 		return
 	var busy := false
@@ -362,12 +392,20 @@ func _draw() -> void:
 	if _hover_freq > 0:
 		var hx := freq_to_x(_hover_freq)
 		draw_rect(Rect2(hx - 9.0, r.position.y, 18.0, r.size.y), Color(Palette.SELECT_ORANGE, 0.1))
+	if not masker_view.is_empty() and StringName(masker_view.get("role", &"")) == &"noise":
+		_draw_noise_curtain(r)
 	if cursor_visible:
 		_draw_cursor(r)
+	if not masker_view.is_empty() and StringName(masker_view.get("role", &"")) == &"leak":
+		_draw_leak(r)
 	for e: String in ["right", "left"]:
 		if ear != "both" and ear != e:
 			continue
+		if show_gap:
+			_draw_gap(e)
 		_draw_ear(e)
+	if _attention_count() > 0:
+		_draw_attention_legend(r)
 	AoDraw.ring(self, r.grow(2.0), Color(Palette.INK, 0.55), 6, 2)
 
 
@@ -521,8 +559,12 @@ func _draw_ear(e: String) -> void:
 		if age >= STAMP_IN_S and age < STAMP_IN_S + 0.4:
 			var k2 := (age - STAMP_IN_S) / 0.4
 			draw_arc(c, 12.0 + 26.0 * k2, 0.0, TAU, 32, Color(col, 0.6 * (1.0 - k2)), 3.0, true)
-		UiDraw.ear_symbol(self, c + Vector2(1.5, 2.0), e, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25))
-		UiDraw.ear_symbol(self, c, e, s, 4.0, bool(p["no_response"]))
+		var blink := _blink(&"ac", e, f)
+		if blink >= 0.0:
+			_draw_halo(c, blink)
+		var a := 1.0 if blink < 0.0 else 0.3 + 0.7 * blink
+		UiDraw.ear_symbol(self, c + Vector2(1.5, 2.0), e, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a))
+		UiDraw.ear_symbol(self, c, e, s, 4.0, bool(p["no_response"]), Color(col, a))
 
 
 ## (v3) Masked air, unmasked bone and masked bone symbols (no connecting lines for bone).
@@ -544,5 +586,162 @@ func _draw_layers(e: String) -> void:
 			if age >= STAMP_IN_S and age < STAMP_IN_S + 0.4:
 				var k2 := (age - STAMP_IN_S) / 0.4
 				draw_arc(c, 12.0 + 26.0 * k2, 0.0, TAU, 32, Color(col, 0.6 * (1.0 - k2)), 3.0, true)
-			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25))
-			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]))
+			var blink := _blink(test, e, f)
+			if blink >= 0.0:
+				_draw_halo(c, blink)
+			var a := 1.0 if blink < 0.0 else 0.3 + 0.7 * blink
+			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a))
+			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]), Color(col, a))
+
+
+# ---------------------------------------------------------------- v3 overlays (builder A)
+
+## Blink phase 0..1 for a symbol the masking assistant flags, or -1 when it is not flagged.
+func _blink(test: StringName, e: String, f: int) -> float:
+	var by_ear: Dictionary = attention.get(test, {})
+	if not (by_ear.get(e, {}) as Dictionary).has(f):
+		return -1.0
+	if bool(Game.settings.get("reduced_motion", false)):
+		return 0.75
+	return 0.5 + 0.5 * sin(_t * 6.5)
+
+
+func _attention_count() -> int:
+	var n := 0
+	for t: Variant in attention:
+		var by_ear: Dictionary = attention[t]
+		for e: String in by_ear:
+			if ear == "both" or e == ear:
+				n += (by_ear[e] as Dictionary).size()
+	return n
+
+
+func _draw_halo(c: Vector2, k: float) -> void:
+	draw_circle(c, 15.0 + 3.0 * k, Color(Palette.SELECT_ORANGE, 0.12 + 0.2 * k))
+	draw_arc(c, 15.0 + 3.0 * k, 0.0, TAU, 28, Color(Palette.SELECT_ORANGE, 0.35 + 0.45 * k), 2.5, true)
+
+
+## "blinking = mask me": the masking assistant's legend, bottom-left inside the plot.
+func _draw_attention_legend(r: Rect2) -> void:
+	var txt := "blinking = needs masking"
+	var w := AoDraw.text_size(txt, 11, AoDraw.FONT_BOLD).x + 30.0
+	var lr := Rect2(Vector2(r.position.x + 6.0, r.end.y - 26.0), Vector2(w, 20.0))
+	AoDraw.rbox(self, lr, Color(Palette.PAPER, 0.92), 10, 2, Palette.SELECT_ORANGE)
+	var k := 0.5 + 0.5 * sin(_t * 6.5)
+	draw_circle(lr.position + Vector2(12, 10), 5.0, Color(Palette.SELECT_ORANGE, 0.4 + 0.6 * k))
+	AoDraw.text_l(self, lr.position + Vector2(22, 10), txt, 11, Palette.INK, AoDraw.FONT_BOLD)
+
+
+## The best bone of an ear on this chart: masked where stamped, else unmasked. freq -> [db, masked]
+func _best_bone(e: String) -> Dictionary:
+	var out := {}
+	var un := _layer(&"bc", e)
+	for f: int in un:
+		if not bool(un[f]["no_response"]):
+			out[f] = [int(un[f]["db"]), false]
+	var m := _layer(&"bc_masked", e)
+	for f: int in m:
+		if not bool(m[f]["no_response"]):
+			out[f] = [int(m[f]["db"]), true]
+	return out
+
+
+## The air-bone gap as a little bridge (see the header). Posts only where the gap is over 10 dB.
+func _draw_gap(e: String) -> void:
+	var bone := _best_bone(e)
+	var air: Dictionary = points.get(e, {})
+	var fl: Array = bone.keys()
+	fl.sort()
+	var deck := PackedVector2Array()
+	var deck_masked := true
+	for f: int in fl:
+		if not air.has(f) or bool((air[f] as Dictionary)["no_response"]):
+			continue
+		var a_db := _ac_db(e, f)
+		var b_db := float((bone[f] as Array)[0])
+		var masked := bool((bone[f] as Array)[1])
+		var gap := int(a_db - b_db)
+		if not ClinicRules.is_conductive_gap(gap):
+			continue
+		var x := freq_to_x(f)
+		var top := Vector2(x, db_to_y(b_db) + 10.0)
+		var bot := Vector2(x, db_to_y(a_db) - 12.0)
+		if bot.y - top.y < 8.0:
+			continue
+		var col := Palette.SELECT_ORANGE if masked else Color(Palette.SELECT_ORANGE, 0.55)
+		var band := Rect2(Vector2(x - 5.0, top.y), Vector2(10.0, bot.y - top.y))
+		AoDraw.rbox(self, band, Color(Palette.SUNNY, 0.38 if masked else 0.16), 5)
+		if masked:
+			draw_line(top, bot, Color(col, 0.9), 2.0, true)
+		else:
+			AoDraw.dashed(self, top, bot, col, 2.0, 5.0, 4.0)
+		var tag := "%d" % gap if masked else "%d?" % gap
+		var tw := AoDraw.text_size(tag, 11, AoDraw.FONT_BOLD).x + 10.0
+		var tr := Rect2(Vector2(x + 6.0, (top.y + bot.y) * 0.5 - 9.0), Vector2(tw, 18.0))
+		AoDraw.rbox(self, tr, Palette.SELECT_ORANGE if masked else Color(Palette.PAPER, 0.95), 8, 0 if masked else 2, col)
+		AoDraw.text_c(self, tr.get_center(), tag, 11, Palette.PAPER if masked else Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
+		deck.append(Vector2(x, db_to_y(b_db) + 10.0))
+		deck_masked = deck_masked and masked
+	if deck.size() >= 2:
+		var col2 := Color(Palette.SELECT_ORANGE, 0.75 if deck_masked else 0.35)
+		for i in deck.size() - 1:
+			if deck_masked:
+				draw_line(deck[i], deck[i + 1], col2, 3.0, true)
+			else:
+				AoDraw.dashed(self, deck[i], deck[i + 1], col2, 2.0, 6.0, 5.0)
+
+
+## The masked ear's chart: a purple noise curtain at the test frequency down to the masker level.
+func _draw_noise_curtain(r: Rect2) -> void:
+	var f := int(masker_view.get("freq", 1000))
+	var db := float(masker_view.get("db", 0))
+	var x := freq_to_x(f)
+	var y0 := r.position.y
+	var y1 := clampf(db_to_y(db), r.position.y, r.end.y)
+	var w := 34.0
+	var col := Palette.PLUM
+	if y1 > y0 + 2.0:
+		draw_rect(Rect2(Vector2(x - w * 0.5, y0), Vector2(w, y1 - y0)), Color(col, 0.16))
+		# hissy wavy bottom edge and static specks: it's noise
+		var pts := PackedVector2Array()
+		for i in 9:
+			var px := x - w * 0.5 + w * i / 8.0
+			pts.append(Vector2(px, y1 + sin(_t * 18.0 + i * 1.9) * 2.5))
+		draw_polyline(pts, Color(col, 0.85), 3.0, true)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(_t * 12.0)
+		for i in 10:
+			var sp := Vector2(x + rng.randf_range(-w * 0.45, w * 0.45), rng.randf_range(y0 + 4.0, y1 - 4.0))
+			draw_circle(sp, 1.6, Color(col, 0.5))
+	var tag := "[%d]" % int(db)
+	var tw := AoDraw.text_size(tag, 13, AoDraw.FONT_BOLD).x + 12.0
+	var tr := Rect2(Vector2(x + w * 0.5 + 3.0, y1 - 10.0), Vector2(tw, 20.0))
+	if tr.end.x > r.end.x:
+		tr.position.x = x - w * 0.5 - 3.0 - tw
+	AoDraw.rbox(self, tr, col, 9)
+	AoDraw.text_c(self, tr.get_center(), tag, 13, Palette.PAPER, AoDraw.FONT_BOLD)
+
+
+## The test ear's chart: how loud the masker is by the time it leaks back across the head
+## (masker - the rule IA). Coral when it reaches what we are measuring: overmasking.
+func _draw_leak(r: Rect2) -> void:
+	var f := int(masker_view.get("freq", 1000))
+	var db := float(masker_view.get("db", 0))
+	if db < float(DB_TOP):
+		return
+	var hot := bool(masker_view.get("hot", false))
+	var x := freq_to_x(f)
+	var y := db_to_y(db)
+	var col := Palette.CORAL if hot else Color(Palette.PLUM, 0.75)
+	var half := 26.0
+	var pts := PackedVector2Array()
+	for i in 11:
+		var px := x - half + 2.0 * half * i / 10.0
+		pts.append(Vector2(px, y + sin(_t * 14.0 + i * 1.3) * 2.0))
+	draw_polyline(pts, col, 3.0 if hot else 2.0, true)
+	var tag := "TOO MUCH!" if hot else "leak"
+	var tw := AoDraw.text_size(tag, 10, AoDraw.FONT_BOLD).x
+	var lx := x + half + 4.0
+	if lx + tw > r.end.x - 2.0:
+		lx = x - half - 4.0 - tw
+	AoDraw.text_l(self, Vector2(lx, y), tag, 10, col, AoDraw.FONT_BOLD)

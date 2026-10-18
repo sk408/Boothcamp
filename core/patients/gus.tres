@@ -41,3 +41,5 @@ fatigue_per_tone = 0.001
 min_tone_s = 0.6
 rhythm_sensitivity = 0.4
 tags = PackedStringArray("presbycusis", "tutorial", "chapter_0")
+pronoun = "he"
+nickname = "Gus"

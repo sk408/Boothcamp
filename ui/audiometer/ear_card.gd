@@ -2,6 +2,8 @@ class_name AoEarCard
 extends Control
 ## AoEarCard: one ear's audiogram card on the AudiOtron (ui/ only): a sticker-style card with a
 ## coloured header (ear name, ASHA symbol, progress pips, "TESTING" badge) and the Audiogram.
+## (v3) masker_text: while the masking noise plays into this ear, its level shows in the header
+## as a purple "NOISE [35]" pill with a hiss (the masked ear's side, like an audiometer's Ch2).
 
 const HEADER_H := 40.0
 const AUDIOGRAM_SCENE := preload("res://ui/audiogram/audiogram.tscn")
@@ -13,6 +15,12 @@ var active: bool = false:
 			active = v
 			queue_redraw()
 var progress_done: int = 0
+## (v3) "NOISE [35]" while the masker plays into this ear, else "".
+var masker_text: String = "":
+	set(v):
+		if v != masker_text:
+			masker_text = v
+			queue_redraw()
 var progress_total: int = 7
 var audiogram: Audiogram
 var _t := 0.0
@@ -56,7 +64,7 @@ func set_progress(done: int, total: int) -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	_flash = maxf(0.0, _flash - delta * 0.8)
-	if active or _flash > 0.0:
+	if active or _flash > 0.0 or masker_text != "":
 		queue_redraw()
 
 
@@ -80,6 +88,15 @@ func _draw() -> void:
 		var br := Rect2(Vector2(62 + tw, sc.y - 11), Vector2(78, 22))
 		AoDraw.rbox(self, br, Palette.SUNNY, 11, 2, Palette.INK)
 		AoDraw.text_c(self, br.get_center(), "TESTING", 12, Palette.INK, AoDraw.FONT_BOLD)
+	elif masker_text != "":
+		var mw := AoDraw.text_size(masker_text, 13, AoDraw.FONT_BOLD).x + 40.0
+		var mr := Rect2(Vector2(62 + tw, sc.y - 12), Vector2(mw, 24))
+		AoDraw.rbox(self, mr, Palette.PLUM, 12, 2, Palette.INK)
+		AoDraw.text_l(self, mr.position + Vector2(10, 12), masker_text, 13, Palette.PAPER, AoDraw.FONT_BOLD)
+		for i in 4:
+			var xx := mr.end.x - 24.0 + i * 5.0
+			var hh := 4.0 + 6.0 * absf(sin(_t * 17.0 + i * 1.3))
+			draw_line(Vector2(xx, mr.get_center().y - hh * 0.5), Vector2(xx, mr.get_center().y + hh * 0.5), Palette.PAPER, 2.0)
 	elif progress_total > 0 and progress_done >= progress_total:
 		var bd := Rect2(Vector2(62 + tw, sc.y - 11), Vector2(64, 22))
 		AoDraw.rbox(self, bd, Palette.MINT, 11, 2, Palette.INK)

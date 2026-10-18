@@ -74,6 +74,15 @@ const MOUSE_ANCHORS: Dictionary = {
 ## (v3) The bot's own stamps per sheet: test -> ear -> freq -> dB (for masked start levels).
 var _mine: Dictionary = {}
 var _plateaus := 0
+## (v3, integrator) --via-days: start the level from the title's Days card instead of Play, with
+## real input (mouse clicks with --mouse, else ui_* key actions). --pick=<chapter id> picks the card
+## (default Game.next_chapter_id()); --try-locked=<id> first presses that card and expects it to
+## refuse; --toggle-unlock presses "Unlock all days (demo)" first; --expect-days=gus,bonnie checks
+## the unlocked list. The result gets a "days" report and problems for any failed expectation.
+var _via_days := false
+var _days_opened := false
+var _days_report: Dictionary = {}
+var _days_problems: PackedStringArray = []
 
 
 func _ready() -> void:
@@ -93,6 +102,7 @@ func _ready() -> void:
 	for sig: Signal in [Events.dialogue_line, Events.audiometer_state_changed, Events.tone_stopped, Events.scene_changed]:
 		sig.connect(func(_a: Variant = null, _b: Variant = null, _c: Variant = null, _d: Variant = null) -> void: _progress())
 	_mouse = Game.cli_flag("mouse")
+	_via_days = Game.cli_flag("via-days")
 	Events.scene_changed.connect(func(path: String, _n: Node) -> void:
 		if _want_title and path.ends_with("title_screen.tscn"):
 			_back_at_title = true)
@@ -158,6 +168,13 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 		if _mouse:
 			await _mouse_results_continue()
 		_finish()
+		return
+	if _via_days and beat == &"title_start" and not _days_opened:
+		_days_opened = true
+		await _open_days()
+		return
+	if _via_days and beat == &"chapter_select":
+		await _pick_via_days(info)
 		return
 	if _mouse:
 		await _mouse_beat(beat, info)
@@ -653,6 +670,89 @@ func _mouse_results_continue() -> void:
 		_mouse_misses.append("title after results")
 
 
+# ---------------------------------------------------------------- v3: the title's Days card
+
+## Title menu -> "Days", like a player: click it (--mouse) or move the highlight with ui_down and
+## press ui_accept (keys). The title then emits the chapter_select beat.
+func _open_days() -> void:
+	if _mouse:
+		await _click_text("Days")
+		return
+	for i in 8:
+		var b := _find_visible_text("Days") as Button
+		if b != null and b.text.begins_with(">"):
+			break
+		await _tap(&"ui_down")
+	await _tap(&"ui_accept")
+
+
+## A day card or the demo toggle on the Days card, found by what it shows (its label meta, which
+## the title also draws on the card).
+func _days_button(match_label: String) -> Button:
+	var title := get_tree().get_first_node_in_group("title_screen")
+	if title == null:
+		return null
+	for b: Button in title.get("_day_buttons"):
+		if b.is_visible_in_tree() and String(b.get_meta("label", "")).begins_with(match_label):
+			return b
+	return null
+
+
+## Press one Days-card button: a click (--mouse), or ui_right until it glows and ui_accept (keys).
+func _press_days_button(b: Button) -> void:
+	if b == null:
+		_days_problems.append("days: button missing")
+		return
+	if _mouse:
+		await _click(b.get_global_rect().get_center())
+		return
+	# the highlight a player sees: a card glows (meta "hl"), a plain button reads "> text <"
+	var title := get_tree().get_first_node_in_group("title_screen")
+	var buttons: Array = title.get("_day_buttons")
+	for i in buttons.size() + 1:
+		if bool(b.get_meta("hl", false)) or b.text.begins_with(">"):
+			break
+		await _tap(&"ui_right")
+	await _tap(&"ui_accept")
+
+
+func _pick_via_days(info: Dictionary) -> void:
+	var unlocked: Array = info.get("chapters", [])
+	_days_report["unlocked"] = unlocked.duplicate()
+	var expect := String(Game.cli_value("expect-days", ""))
+	if expect != "" and ",".join(PackedStringArray(unlocked.map(func(x: Variant) -> String: return String(x)))) != expect:
+		_days_problems.append("days: unlocked %s, expected %s" % [str(unlocked), expect])
+	var locked_id := String(Game.cli_value("try-locked", ""))
+	if locked_id != "":
+		var ch := Game.chapter(locked_id)
+		var card := _days_button(String(ch.get("title", "?")))
+		_days_report["locked_label"] = String(card.get_meta("label", "")) if card != null else ""
+		if card == null or not bool(card.get_meta("locked", false)):
+			_days_problems.append("days: %s should show as locked" % locked_id)
+		var before := int(_resolved.get(&"chapter_select", 0))
+		await _press_days_button(card)
+		await _wait(0.8)
+		var refused := int(_resolved.get(&"chapter_select", 0)) == before and Game.is_chapter_unlocked(locked_id) == false
+		_days_report["locked_refused"] = refused
+		if not refused:
+			_days_problems.append("days: the locked %s card started a level" % locked_id)
+		await _shot("days_locked_refused")
+	if Game.cli_flag("toggle-unlock"):
+		await _press_days_button(_days_button("Unlock all days"))
+		await _wait(0.5)
+		_days_report["toggled"] = bool(Game.settings.get("unlock_all_days", false))
+		_days_report["unlocked_after_toggle"] = Game.unlocked_chapter_ids()
+		if not bool(Game.settings.get("unlock_all_days", false)):
+			_days_problems.append("days: the demo toggle did not switch on")
+		await _shot("days_toggled")
+	var pick := String(Game.cli_value("pick", info.get("next", "gus")))
+	_days_report["picked"] = pick
+	var card2 := _days_button(String(Game.chapter(pick).get("title", "?")))
+	if card2 != null and bool(card2.get_meta("locked", false)):
+		_days_problems.append("days: %s is still locked" % pick)
+	await _press_days_button(card2)
+
+
 # ---------------------------------------------------------------- finish
 
 func _finish() -> void:
@@ -685,6 +785,15 @@ func _finish() -> void:
 		report["mouse_only"] = true
 		report["mouse_misses"] = _mouse_misses
 		report["back_at_title"] = _back_at_title
+	if _via_days:
+		_days_report["played"] = String(_summary.get("chapter_id", ""))
+		_days_report["chapters_done"] = Game.progress.get("chapters_done", [])
+		report["days"] = _days_report
+		if not _days_opened or not _days_report.has("picked"):
+			problems.append("days: the Days card never opened")
+		elif String(_summary.get("chapter_id", "")) != String(_days_report["picked"]):
+			problems.append("days: picked %s but played %s" % [_days_report["picked"], _summary.get("chapter_id", "")])
+		problems.append_array(_days_problems)
 	report["problems"] = problems
 	print("AUTOPLAY_RESULT ", JSON.stringify(report))
 	var code := 0

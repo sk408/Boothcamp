@@ -36,6 +36,7 @@ signal reaction(kind: StringName, data: Dictionary)
 signal presentation_closed(ear: String, freq: int, rec: Dictionary)
 
 ## Hoot's one-liners per technique kind (original wording, 18 words max, CONTRACTS.md §4.5).
+## {He} {he} {his} {His} {him} are the patient's pronouns: tip_text() fills them in.
 const TIPS: Dictionary[StringName, String] = {
 	&"wrong_step": "Heard it? Down 10. Missed it? Up 5. That's the whole dance!",
 	&"start_too_high": "Start around 40 dB and work down. Ears aren't pinatas!",
@@ -43,17 +44,17 @@ const TIPS: Dictionary[StringName, String] = {
 	&"store_wrong_level": "Threshold is the LOWEST level heard twice on the way up. Check your trail!",
 	&"tone_too_short": "Was that a mosquito? Hold each beep for 1 to 2 seconds.",
 	&"tone_too_long": "Long beeps make patients sleepy. 1 to 2 seconds is the sweet spot.",
-	&"rhythmic": "He's learned your groove and presses on the beat! Vary the gaps between beeps.",
-	&"too_loud": "Hair blast! Way above his threshold. Come back down gently.",
-	&"retest_mismatch": "Retest is off by more than 5 dB: re-instruct him and recheck the earlier pitches.",
+	&"rhythmic": "{He}'s learned your groove and presses on the beat! Vary the gaps between beeps.",
+	&"too_loud": "Hair blast! Way above {his} threshold. Come back down gently.",
+	&"retest_mismatch": "Retest is off by more than 5 dB: re-instruct {him} and recheck the earlier pitches.",
 	&"start_not_1k": "Start each ear at 1000 Hz, the friendliest pitch in town.",
 	&"missed_retest": "Before the low pitches, re-check 1000 Hz. Trust, but verify!",
 	&"nr_too_early": "No response is only for a miss at the AudiOtron's loudest level.",
 	&"marathon": "Tired patients guess. Bracket quickly and store!",
-	&"store_far_off": "That stamp is far from his real hearing. Bracket carefully before you store.",
-	&"not_instructed": "He's pressing for the air-con hum! Always say: press for EVERY beep.",
-	&"phones_swapped": "He's pointing at the other ear. Red = Right!",
-	&"short_gap": "Leave at least a beep's worth of quiet between beeps, or he guesses.",
+	&"store_far_off": "That stamp is far from {his} real hearing. Bracket carefully before you store.",
+	&"not_instructed": "{He}'s pressing for the air-con hum! Always say: press for EVERY beep.",
+	&"phones_swapped": "{He}'s pointing at the other ear. Red = Right!",
+	&"short_gap": "Leave at least a beep's worth of quiet between beeps, or {he} guesses.",
 	# v3: bone conduction and masking (docs/CHAPTER2.md section 5)
 	&"mask_wrong_step": "Masked dance: heard? Noise up 5. Missed? Tone up 5. Nothing else moves!",
 	&"mask_too_low": "Start the noise at the other ear's air threshold + 10, plus occlusion for low bone.",
@@ -85,6 +86,12 @@ const MASK_DIAL_START_DB := 10
 const MASK_PAR_SLACK := 2
 ## (v3) A masked search may start this far from the unmasked threshold.
 const MASK_START_TOLERANCE_DB := 10
+## (v3) Plateau grace for accuracy. A plateau needs the same level heard four times in a row (at the
+## start level and after 3 noise raises); right at threshold a real patient answers about 3 times in
+## 4, so a by-the-book plateau lands 5 dB above the cochlear threshold about two times in three, and
+## after a wobble one more step up. That is the method, not a slip: a masked stamp above the truth
+## gets this much extra room before the usual test-retest tolerance (true_db unchanged).
+const MASKED_GRACE_DB := 5
 
 var patient: PatientProfile
 var sim: PatientSim
@@ -1373,6 +1380,8 @@ func _make_info(recs: Array, errs: Array[StringName], no_response: bool, kind: S
 	var true_db := response_truth(ear, freq)
 	var err_db := float(db - true_db)
 	var acc := ClinicRules.accuracy_for_error(err_db)
+	if ClinicRules.test_is_masked(test) and err_db > 0.0:
+		acc = ClinicRules.accuracy_for_error(maxf(0.0, err_db - MASKED_GRACE_DB))
 	if no_response:
 		acc = 1.0 if true_db > _top() else 0.0
 	var strokes := recs.size()
@@ -1491,13 +1500,19 @@ func _clean(kind: StringName) -> void:
 	technique.emit(kind, {"ear": ear, "freq": freq, "db": db, "combo": combo, "multiplier": mult, "points": gained})
 
 
+## The tip for a technique kind, with this patient's pronouns ("" when there is none).
+func tip_text(kind: StringName) -> String:
+	var t: String = TIPS.get(kind, "")
+	return patient.say(t) if patient != null else PatientProfile.pronouns(t, "he")
+
+
 ## counts_as_check: false for extra observations (timing, rhythm, blasts) that still break the
 ## combo and cost technique; true when the check was already counted (steps, stores).
 func _error(kind: StringName, data: Dictionary, counts_as_check: bool) -> void:
 	var d := data.duplicate()
 	d["ear"] = ear
 	d["freq"] = freq
-	d["message"] = TIPS.get(kind, "")
+	d["message"] = tip_text(kind)
 	if not scoring:
 		d["auto"] = true
 		technique.emit(kind, d)
@@ -1518,5 +1533,5 @@ func _observe(kind: StringName, data: Dictionary) -> void:
 	var d := data.duplicate()
 	d["ear"] = ear
 	d["freq"] = freq
-	d["message"] = TIPS.get(kind, "")
+	d["message"] = tip_text(kind)
 	technique.emit(kind, d)

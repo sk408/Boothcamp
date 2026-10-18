@@ -9,6 +9,7 @@ extends Control
 ## footer "This is a game, not a hearing test." is always on screen.
 
 const UiKit := preload("res://story/ui_kit.gd")
+const Portraits := preload("res://story/portraits.gd")
 const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
 
@@ -34,6 +35,10 @@ var _days_card: PanelContainer
 var _menu_buttons: Array[Button] = []
 var _day_buttons: Array[Button] = []
 var _days_note: Label
+const CARD_SIZE := Vector2(340, 318)
+## Who is on each day's card (a Portraits speaker) and the card's tint.
+const DAY_FACES: Dictionary = {"gus": "Gus", "bonnie": "Bonnie"}
+const DAY_TINTS: Dictionary = {"gus": Color("#bfeee6"), "bonnie": Color("#ffe3c2")}
 
 
 func _ready() -> void:
@@ -65,6 +70,10 @@ func _process(delta: float) -> void:
 			_show_disclaimer()
 	_logo.queue_redraw()
 	queue_redraw()
+	if _state == &"days":
+		for b: Button in _day_buttons:
+			if b.has_meta("chapter"):
+				b.queue_redraw()
 
 
 func _draw() -> void:
@@ -140,6 +149,7 @@ func _on_days() -> void:
 	_refresh_days()
 	_days_card.visible = true
 	Juice.bounce_in(_days_card, 0.4)
+	_logo.create_tween().tween_property(_logo, "modulate:a", 0.0, 0.2)
 	_buttons = _day_buttons
 	_set_hl(0, false)
 	Sfx.play(&"whoosh", 1.2, -8.0)
@@ -152,6 +162,7 @@ func _days_back() -> void:
 		return
 	Events.input_resolved.emit(&"chapter_select")
 	_days_card.visible = false
+	_logo.create_tween().tween_property(_logo, "modulate:a", 1.0, 0.25)
 	_buttons = _menu_buttons
 	_show_title()
 
@@ -162,7 +173,11 @@ func _pick_day(id: String, b: Button) -> void:
 	if not Game.is_chapter_unlocked(id):
 		Juice.shake(b, 6.0, 0.25)
 		Sfx.play(&"error", 1.0, -8.0)
-		_days_note.text = "Finish the day before to open this one, or switch on \"Unlock all days\"."
+		var req := Game.chapter(String(Game.chapter(id).get("requires", "")))
+		_days_note.text = "%s opens when you finish Day %d. Or switch on \"Unlock all days\"." % [
+			String(Game.chapter(id).get("title", "This day")).get_slice(":", 0), int(req.get("day", 1))]
+		_days_note.add_theme_color_override("font_color", Palette.CORAL.darkened(0.25))
+		Juice.pop(_days_note, 1.1, 0.25)
 		return
 	_start_chapter(id, &"chapter_select")
 
@@ -182,19 +197,35 @@ func _refresh_days() -> void:
 			continue
 		var ch := Game.chapter(id)
 		var label := String(ch["title"])
-		if not Game.is_chapter_unlocked(id):
+		var rec: Dictionary = pats.get(String(ch["patient_id"]), {})
+		var best := String(rec.get("best_grade", ""))
+		var open := Game.is_chapter_unlocked(id)
+		if not open:
 			label += "  (locked)"
-		else:
-			var best := String((pats.get(String(ch["patient_id"]), {}) as Dictionary).get("best_grade", ""))
-			if Game.is_chapter_done(id) and best != "":
-				label += "  [%s]" % best
+		elif Game.is_chapter_done(id) and best != "":
+			label += "  [%s]" % best
 		b.set_meta("label", label)
+		b.set_meta("locked", not open)
+		b.set_meta("best", best if open else "")
 		b.tooltip_text = String(ch.get("teaches", ""))
+		var status := b.get_node_or_null("Status") as Label
+		if status != null:
+			var req := Game.chapter(String(ch.get("requires", "")))
+			if not open:
+				status.text = "Finish Day %d to open" % int(req.get("day", 1))
+			elif int(rec.get("plays", 0)) > 0:
+				status.text = "Played %d time%s" % [int(rec["plays"]), "" if int(rec["plays"]) == 1 else "s"]
+			else:
+				status.text = "New!"
+			status.add_theme_color_override("font_color", Palette.CORAL.darkened(0.2) if not open else Palette.INK_SOFT)
+		b.modulate = Color(1, 1, 1, 0.92) if not open else Color.WHITE
+		b.queue_redraw()
 	for b: Button in _day_buttons:
 		if String(b.get_meta("toggle", "")) == "unlock":
 			b.set_meta("label", "Unlock all days (demo): %s" % ("ON" if bool(Game.settings.get("unlock_all_days", false)) else "OFF"))
 	if _days_note != null:
 		_days_note.text = "New days open when you finish the one before."
+		_days_note.add_theme_color_override("font_color", Palette.INK_SOFT)
 
 
 func _on_options() -> void:
@@ -226,9 +257,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _state != &"menu" and _state != &"days":
 		return
-	if event.is_action_pressed(&"ui_down"):
+	if event.is_action_pressed(&"ui_down") or (_state == &"days" and event.is_action_pressed(&"ui_right")):
 		_set_hl((_hl + 1) % _buttons.size())
-	elif event.is_action_pressed(&"ui_up"):
+	elif event.is_action_pressed(&"ui_up") or (_state == &"days" and event.is_action_pressed(&"ui_left")):
 		_set_hl((_hl - 1 + _buttons.size()) % _buttons.size())
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
 		_buttons[_hl].pressed.emit()
@@ -242,6 +273,15 @@ func _set_hl(i: int, sound: bool = true) -> void:
 	for j in _buttons.size():
 		var b := _buttons[j]
 		var on := j == i
+		if b.has_meta("chapter"):
+			# a day card: a glowing ring and a little lift instead of "> text <"
+			var was := bool(b.get_meta("hl", false))
+			b.set_meta("hl", on)
+			if on and not was:
+				b.pivot_offset = b.size * 0.5
+				Juice.pop(b, 1.04, 0.2)
+			b.queue_redraw()
+			continue
 		b.theme_type_variation = &"AccentButton" if on else &""
 		b.text = ("> " if on else "") + String(b.get_meta("label")) + ("  <" if on else "")
 	if sound:
@@ -354,46 +394,141 @@ func _build() -> void:
 	row.add_child(ok)
 
 
-## (v3) The day picker card: a button per chapter, the demo unlock toggle, Back.
+## (v3) The day picker: one big card per day (portrait, title, what it teaches, best grade, lock),
+## then the demo unlock toggle and Back. Keyboard: Up/Down (or Left/Right) + Enter, Esc = Back.
 func _build_days(root: Control) -> void:
 	_days_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
-	_days_card.position = Vector2(92, 300)
-	_days_card.custom_minimum_size = Vector2(460, 0)
+	_days_card.set_anchors_preset(Control.PRESET_CENTER)
+	_days_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_days_card.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_days_card.offset_top = -40   # sizes to its content, centred a little above the middle
+	_days_card.offset_bottom = -40
 	_days_card.visible = false
 	root.add_child(_days_card)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", 12)
 	_days_card.add_child(v)
-	var head := UiKit.label("Pick a day", 26, Palette.INK, 700)
+	var head := UiKit.label("Pick a day", 32, Palette.INK, 700)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 22)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(row)
 	for ch: Dictionary in Game.chapters():
 		var id := String(ch["id"])
-		var b := UiKit.button(String(ch["title"]), &"", Vector2(420, 54))
-		b.set_meta("label", String(ch["title"]))
-		b.set_meta("chapter", id)
-		b.add_theme_font_size_override("font_size", 22)
+		var b := _day_card(ch)
 		b.pressed.connect(func() -> void: _pick_day(id, b))
-		_add_day_button(v, b)
-	var t := UiKit.button("Unlock all days (demo): OFF", &"", Vector2(420, 44))
+		_add_day_button(row, b)
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 14)
+	foot.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(foot)
+	var t := UiKit.button("Unlock all days (demo): OFF", &"", Vector2(400, 50))
 	t.set_meta("label", "Unlock all days (demo): OFF")
 	t.set_meta("toggle", "unlock")
-	t.add_theme_font_size_override("font_size", 17)
+	t.add_theme_font_size_override("font_size", 18)
 	t.pressed.connect(_toggle_unlock_all)
-	_add_day_button(v, t)
-	var back := UiKit.button("Back", &"", Vector2(420, 44))
+	_add_day_button(foot, t)
+	var back := UiKit.button("Back", &"", Vector2(200, 50))
 	back.set_meta("label", "Back")
-	back.add_theme_font_size_override("font_size", 18)
+	back.add_theme_font_size_override("font_size", 20)
 	back.pressed.connect(_days_back)
-	_add_day_button(v, back)
-	_days_note = UiKit.label("New days open when you finish the one before.", 15, Palette.INK_SOFT, 500)
+	_add_day_button(foot, back)
+	_days_note = UiKit.label("New days open when you finish the one before.", 16, Palette.INK_SOFT, 600)
 	_days_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_days_note.custom_minimum_size = Vector2(420, 0)
+	_days_note.custom_minimum_size = Vector2(620, 0)
 	_days_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(_days_note)
+	if UiKit.show_key_hints():
+		var hr := UiKit.hint_row([["Left", "Right"], "+", ["Enter"], "   ", ["Esc"], "back   or click"], 15)
+		hr.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_child(hr)
 
 
-func _add_day_button(v: VBoxContainer, b: Button) -> void:
+## One day's card: a flat button that draws itself (_draw_day_card); its labels are children, so
+## the title text ("Day 2: Bonnie Bunsworth") is what a click or a screen reader finds.
+func _day_card(ch: Dictionary) -> Button:
+	var id := String(ch["id"])
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = CARD_SIZE
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.set_meta("label", String(ch["title"]))
+	b.set_meta("chapter", id)
+	b.draw.connect(_draw_day_card.bind(b))
+	var title := UiKit.label(String(ch["title"]), 23, Palette.INK, 700)
+	title.name = "Title"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.position = Vector2(10, 182)
+	title.size = Vector2(CARD_SIZE.x - 20, 32)
+	b.add_child(title)
+	var teach := UiKit.label(String(ch.get("teaches", "")), 18, Palette.INK_SOFT, 600)
+	teach.name = "Teaches"
+	teach.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	teach.position = Vector2(10, 218)
+	teach.size = Vector2(CARD_SIZE.x - 20, 26)
+	b.add_child(teach)
+	var status := UiKit.label("", 17, Palette.INK_SOFT, 700)
+	status.name = "Status"
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.position = Vector2(10, 266)
+	status.size = Vector2(CARD_SIZE.x - 20, 26)
+	b.add_child(status)
+	return b
+
+
+func _draw_day_card(b: Button) -> void:
+	var id := String(b.get_meta("chapter", ""))
+	var ch := Game.chapter(id)
+	var hl := bool(b.get_meta("hl", false))
+	var locked := bool(b.get_meta("locked", false))
+	var r := Rect2(Vector2.ZERO, b.size)
+	var tint: Color = DAY_TINTS.get(id, Palette.CREAM)
+	if hl:
+		UiDraw.rounded_rect(b, r.grow(7.0), Palette.SUNNY, 30)
+	UiDraw.rounded_rect(b, Rect2(r.position + Vector2(0, 6), r.size), Color(Palette.INK, 0.18), 24)
+	UiDraw.rounded_rect(b, r, Palette.PAPER, 24, 4, Palette.INK)
+	# the tinted top with the patient's portrait
+	var top := Rect2(Vector2(4, 4), Vector2(b.size.x - 8, 150))
+	UiDraw.rounded_rect(b, top, tint.lerp(Palette.PAPER, 0.35) if not locked else Color("#e6e0d6"), 20)
+	for i in 6:
+		var x := 26.0 + i * 58.0
+		b.draw_circle(Vector2(x, 34.0 + 18.0 * float(i % 2)), 5.0, Color(Color.WHITE, 0.45))
+	var pc := Vector2(b.size.x * 0.5, 100)
+	var bob := sin(_t * 2.4 + (0.0 if id == "gus" else 1.7)) * (3.0 if hl and not locked else 0.0)
+	Portraits.draw(b, String(DAY_FACES.get(id, "")), pc + Vector2(0, bob), 66.0, false, fmod(_t + pc.x, 4.2) < 0.12)
+	# the DAY chip
+	var f := UiKit.font(700)
+	var chip := "DAY %d" % int(ch.get("day", 1))
+	var cw := f.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	UiDraw.rounded_rect(b, Rect2(Vector2(16, 14), Vector2(cw + 24, 32)), Palette.INK if not locked else Palette.INK_SOFT, 14)
+	b.draw_string(f, Vector2(28, 37), chip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.PAPER)
+	# best grade badge
+	var best := String(b.get_meta("best", ""))
+	if best != "":
+		var bc := Vector2(b.size.x - 44, 44)
+		b.draw_circle(bc + Vector2(0, 3), 27.0, Color(Palette.INK, 0.25))
+		b.draw_circle(bc, 27.0, Palette.grade_color(best))
+		b.draw_arc(bc, 27.0, 0, TAU, 32, Palette.INK, 4.0, true)
+		var gw := f.get_string_size(best, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+		b.draw_string(f, bc + Vector2(-gw * 0.5, 11), best, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.INK)
+		b.draw_string(f, bc + Vector2(-16, 44), "BEST", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Palette.INK_SOFT)
+	# a divider under the title
+	b.draw_line(Vector2(60, 256), Vector2(b.size.x - 60, 256), Color(Palette.INK, 0.12), 2.0)
+	if locked:
+		# frosted portrait and a big padlock
+		b.draw_circle(pc, 72.0, Color(Palette.PAPER, 0.62))
+		var lk := pc + Vector2(0, 10)
+		b.draw_arc(lk + Vector2(0, -22), 20.0, PI, TAU, 16, Palette.INK, 13.0, true)
+		b.draw_arc(lk + Vector2(0, -22), 20.0, PI, TAU, 16, Color("#b9c0cc"), 6.0, true)
+		UiDraw.rounded_rect(b, Rect2(lk + Vector2(-32, -24), Vector2(64, 52)), Palette.SUNNY, 12, 4, Palette.INK)
+		b.draw_circle(lk + Vector2(0, -2), 7.0, Palette.INK)
+		b.draw_line(lk + Vector2(0, -2), lk + Vector2(0, 14), Palette.INK, 5.0)
+
+
+func _add_day_button(v: Container, b: Button) -> void:
 	var idx := _day_buttons.size()
 	b.mouse_entered.connect(func() -> void:
 		if _state == &"days" and _hl != idx:

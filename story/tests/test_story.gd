@@ -282,3 +282,103 @@ func test_voice_bank_is_quiet() -> void:
 			for i in range(0, data.size(), 2):
 				peak = maxf(peak, absf(data.decode_s16(i) / 32767.0))
 			assert_true(peak <= ceiling, "%s syllable peak %.4f under %.1f dBFS" % [who, peak, Voice.VOICE_PEAK_DBFS])
+
+
+# ---------------------------------------------------------------- (v3) Day 2
+
+## Every wrong spot is a slip with its own gag; the keyboard walks the spots and Enter places.
+func test_bone_placement_gags_and_keyboard() -> void:
+	Game.begin_visit("bonnie")
+	var g: Control = (load("res://story/games/bone_placement.gd") as GDScript).new()
+	add_node(g)
+	g.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	await wait_frames(2)
+	var run := func() -> void:
+		await g.call("run")
+	run.call()
+	await wait_frames(2)
+	var slips := 0
+	for spot: String in ["forehead", "top", "pinna"]:
+		g.call("_place", spot)
+		slips += 1
+		assert_eq(String(g.get("_gag")), spot, "%s shows its gag" % spot)
+		await wait_seconds(1.25)
+	assert_eq(int(g.get("mistakes")), slips)
+	assert_eq(g.get("wrong_spots"), ["forehead", "top", "pinna"])
+	# she faces right, so the Left arrow walks the spots front (nose) to back; the mastoid is second to last
+	var zones: Array = g.get("ZONES")
+	var target := -1
+	for i in zones.size():
+		if String(zones[i][0]) == "mastoid":
+			target = i
+	for i in target + 1:
+		await tap_action(&"ui_left")
+	await tap_action(&"ui_accept")
+	assert_true(bool(g.get("placed")), "Enter places it on the highlighted mastoid")
+	Hoot.clear()
+
+
+## The board shrinks for the choices, shows the type badge and the Carhart callout, and stamps.
+func test_day2_board_compact_type_carhart_stamp() -> void:
+	var b: Control = (load("res://story/games/day2_board.gd") as GDScript).new()
+	add_node(b)
+	await wait_frames(2)
+	var scale := Engine.time_scale
+	Engine.time_scale = 6.0
+	b.call("set_compact", true)
+	await wait_seconds(0.5)
+	var card: Control = b.get("_card")
+	assert_true(card.get_global_rect().size.y < 340.0, "compact board fits above the choices")
+	assert_true(card.get_global_rect().position.y < 30.0, "and sits at the top")
+	b.call("show_type", "Conductive loss")
+	b.call("show_carhart")
+	await wait_frames(3)
+	assert_eq(String(b.get("_type_text")), "CONDUCTIVE LOSS")
+	b.call("set_compact", false)
+	await wait_seconds(0.5)
+	Engine.time_scale = scale
+	assert_eq(card.scale, Vector2.ONE, "full size again for the stamp")
+	var run := func() -> void:
+		await b.call("run_stamp")
+	run.call()
+	await wait_frames(2)
+	await tap_action(&"ui_accept")
+	assert_true(bool(b.get("stamped")), "Enter stamps")
+	Hoot.clear()
+
+
+## Day 2's otoscopy is a look, not a game: no beat, the seed stays hidden.
+func test_otoscopy_show_clear_needs_no_input() -> void:
+	var g := Otoscopy.new()
+	add_node(g)
+	await wait_frames(2)
+	await g.show_clear("right", "Bonnie's RIGHT ear: clear canal, shiny eardrum.")
+	assert_false(g.seed_visible, "nothing to find")
+	assert_true(_last(&"otoscopy_find").is_empty(), "no beat")
+
+
+## Title Days: cards for each day, Left/Right moves between them, the label meta stays the contract.
+func test_title_day_cards_keyboard() -> void:
+	Game.reset_save()
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_node(title)
+	await wait_frames(3)
+	title.call("_on_notice_ok")
+	await wait_seconds(0.4)
+	title.call("_on_days")
+	await wait_frames(2)
+	var cards: Array = []
+	for b: Button in title.get("_day_buttons"):
+		if b.has_meta("chapter"):
+			cards.append(b)
+	assert_eq(cards.size(), Game.chapters().size(), "one card per day")
+	assert_true(bool((cards[0] as Button).get_meta("hl", false)), "Day 1 highlighted first")
+	assert_true(bool((cards[1] as Button).get_meta("locked", false)), "Day 2 locked on a fresh save")
+	await tap_action(&"ui_right")
+	assert_eq(int(title.get("_hl")), 1, "Right moves to Day 2")
+	assert_true(bool((cards[1] as Button).get_meta("hl", false)))
+	assert_eq((cards[1] as Button).text, "", "cards keep their own labels")
+	await tap_action(&"ui_accept")
+	assert_eq(title.get("_state"), &"days", "Enter on a locked day does not start it")
+	await tap_action(&"ui_cancel")
+	assert_eq(title.get("_state"), &"menu", "Esc goes back")

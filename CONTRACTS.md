@@ -28,6 +28,7 @@ Contract changes from that integration are marked **(v2)**.
 **(v3) Chapter 2** (Day 2, Bonnie Bunsworth: bone conduction + masking; design in `docs/CHAPTER2.md`) adds
 chapters and unlocks, bone and masked tests, the masker, and the Day 2 level. Every v3 change is marked
 **(v3)**. Day 1 behaves exactly as before: every v3 parameter has a default that reproduces v2.
+Additions from the Chapter 2 builders, merged at integration, are marked **(v3, builders)**.
 
 ### §1.2 How modules may touch each other
 
@@ -77,6 +78,9 @@ chapters and unlocks, bone and masked tests, the masker, and the Day 2 level. Ev
   test frequency) in the non-test ear only. Its level comes from `AudioSafety.masker_to_rms(db_em)` (the tone
   mapping minus 6 dB, RMS capped at **-24 dBFS**), every sample goes through `AudioSafety.clamp_masker_sample()`,
   with 50 ms ramps. Overmasking is a visual gag.
+- **(v3, builders) Bone tones** play in the test ear's channel and, `ToneGenerator.BONE_CROSS_DB` (-10 dB) softer, in
+  the other channel too ("bone has no interaural attenuation"), through the same `hl_to_peak()` mapping and
+  `clamp_sample()`. Air tones stay one-channel. `tools/movie_check.sh --day=2` measures both (§7.1).
 - **"Too loud" gags are visual only:** shake, hair blast, Hoot. Never play a loud sound.
 - **Every tone lights an on-screen indicator** (the TONE lamp) and every patient press lights the PRESS
   lamp. **(v3)** Every masker lights the NOISE box on the LCD and the squiggles in the booth window, and fires
@@ -293,6 +297,10 @@ New beats are fine if they follow the same rule. Add them to this table through 
   button / key N, shown when the next chapter is open; the level then calls `Game.start_chapter(summary.next_chapter_id)`).
 - **(v3)** HUD: `set_steps(steps, labels, title, colors)` replaces Day 1's step tracker.
 - **(v3)** Earphones game: `setup(clinic, pronoun := "his")`.
+- **(v3, builders)** Day 2 board (`story/games/day2_board.gd`): `run_reveal(results)`, `show_gap()` (the toll
+  bridge), `set_compact(on)`, `show_type(text)`, `show_carhart()`, `run_stamp()`. `Otoscopy.show_clear(ear, caption)`
+  is an input-free look at a healthy ear. The title's Days card keeps `_day_buttons` (metas `label`, `chapter`,
+  `toggle`, `locked`, `hl`), `_pick_day`, `_toggle_unlock_all` and `_days_back` for the tests and the bot.
 - Pause menu: group `pause_menu`, with `open()` / `close()` / `is_open()` and the key-style toggle. The `pause` action toggles it.
 
 ---------------------------------------------------------------------------------------------
@@ -318,6 +326,11 @@ ia_phones_db: int (60)  ia_inserts_db: int (75)  ia_bone_db: int (0)   # this he
 occlusion_scale: float (1.0)             # x ClinicRules.OCCLUSION_DB
 get_bc_threshold(ear, freq) -> int       # never poorer than air
 get_bc_thresholds(ear), has_bone_data(), get_ia(transducer) -> int
+# (v3, builders) pronouns for every text about the patient
+pronoun: String ("he" / "she" / "they")  nickname: String ("" = first word of display_name)
+short_name() -> String                   # "Gus", "Bonnie"
+say(text) -> String                      # fills {he} {He} {his} {His} {him} and {name}
+static pronouns(text, which) -> String   # the same without a patient
 ```
 
 The defaults in brackets are intentionally neutral. Each patient's file stores its own values.
@@ -405,6 +418,10 @@ ear's bone estimate). The player can switch sheets with the controls (transducer
 sheet: `test_for(transducer, mask_on)`), but the test finishes when the goal sheet is complete. Masked
 measurements start at the unmasked stamp; after a masked store the noise dial moves to the next frequency's
 initial level. The masker plays in the non-test ear whenever masking is on (§1.3).
+**(v3, builders)** The route lesson: a COACHED `bc` plan with the masking deck starts on AIR while the ear has no
+bone stamps yet, so the player presses B (uncoached bone plans start on bone). With `hoot_turn_after` 0 Hoot runs
+the whole test ("My turn!"); when his turn starts right after the coached stamp, the coach's "now you lead" line
+is skipped (integrator).
 
 Events it emits:
 - `audiometry_started`;
@@ -483,6 +500,9 @@ Before the first `start_test`, `accepting_input` is false and `stored` is empty.
 **(v3)** `true_db` is the response threshold for that sheet: unmasked bone = whichever cochlea answers first
 (the better one), masked bone = the bone threshold, air (masked or not) = the air threshold. A masked
 store is the plateau level when a plateau was found, else the ascending threshold.
+**(v3, builders)** Masked accuracy grace: a masked stamp ABOVE the truth is scored as if it were
+`AudiometrySession.MASKED_GRACE_DB` (5) dB closer (5 above = exact, 10 above = 0.8), because the plateau's
+single presentations at a ~75 % threshold drift upwards. `true_db` and `error_db` are unchanged.
 **(v2)** `par` is dynamic: the median presentations of a textbook search from the level this measurement
 started at (typically 7-13), not the constant 7.
 
@@ -492,6 +512,8 @@ it during the test.
 ### §4.5 Technique kinds (`Events.technique_event(kind, data)`)
 
 `data` always has `ear` and `freq`. Error kinds also carry `message`: a Hoot line of 18 words or fewer, from `AudiometrySession.TIPS`.
+**(v3, builders)** `TIPS` hold pronoun tokens (`{he}`, `{his}`, ...): read them with `session.tip_text(kind)`. The
+`message` in the signal data is already filled in for the patient.
 
 **Errors.** Each one breaks the combo and lowers the technique score.
 
@@ -573,6 +595,10 @@ var layers: Dictionary                        # test -> ear -> freq -> point (th
 var cursor_test: StringName = &"ac"           # the cursor ghost's symbol
 var max_output_transducer: StringName = &"phones"   # &"bone" shades the bone maximum output
 # show_results() also loads "ac_masked", "bc" and "bc_masked" (§5.1 v3)
+# (v3, builders) optional layers, all off by default (Day 1 never sets them):
+var attention: Dictionary                     # test -> ear -> freq -> true: the masking assistant's blinking symbols
+var show_gap: bool                            # the air-bone gap bridge (dashed "45?" posts on unmasked bone, solid on masked)
+var masker_view: Dictionary                   # the masker on this chart: {freq, db, ...} draws the noise curtain
 ```
 
 What it draws:
@@ -634,6 +660,8 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   mask, mask_tr)` (via `ClinicRules.response_threshold`), `last_heard_by` (&"test" / &"cross", reactions only).
 - `ToneGenerator` (Node): `AudioStreamGenerator` at 44.1 kHz on the Tones bus.
   - **(v3)** masker: `start_masker(ear, freq, db_em)`, `set_masker(freq, db_em)`, `stop_masker()`, through `AudioSafety` (§1.3).
+  - **(v3, builders)** `bone: bool` (set by the AudiOtron when the route is bone) and `BONE_CROSS_DB` -10: a bone tone also
+    plays in the other channel, 10 dB softer (§1.3).
   - 25 ms raised-cosine ramps.
   - The right ear plays on the R channel.
   - `start_tone(ear, freq, hl)`, `stop_tone()`, `set_level(hl)`, `is_on()`, `current_peak()`.
@@ -753,6 +781,14 @@ var patient_id := ""                           # set BEFORE add_child: "bonnie" 
 func put_on_bone_oscillator(ear := "right") -> void   # headband + vibrator on the mastoid (takes the earphones off)
 func put_on_masking_phone(ear := "left") -> void      # one earphone for the noise during bone tests
 func take_off_bone_oscillator() -> void               # removes both
+# (v3, builders) story extras, called by name:
+func put_down_basket() -> void                        # Bonnie's croissant basket onto the desk (sit() calls it too)
+func give_croissant() -> void                         # coroutine: a croissant hops to Hoot
+func walk_out() -> void                               # coroutine: stand, wave, out through the door
+func patient_name() -> String                         # "Gus", "Bonnie" (lip-sync follows this speaker)
+# (v3, builders) the clinic also listens to Events.masker_changed (the first masker-on of a test busts a peeking
+# Ghost: "SHOO!"), technique_event(&"plateau_found") ("BUSTED!"), transducer_changed and the tone events (the
+# oscillator buzzes with rings and "bzz" while a bone tone plays). All visual only.
 ```
 **(v2)** `set_world_saturation` muffles at the sound sources (quieter, lower), never with bus effects. Nobody adds
 or removes bus effects at runtime: it can deadlock the audio thread (world/INTEGRATION_NOTES.md).
@@ -768,8 +804,10 @@ In the cartoon world, Gus's right ear is world −X. The red cup goes on it.
 `squint`, `yawn`, `cheer`, `confused`, `point_wrong_way`, `nod`, `wince`.
 
 **(v3)** The session also emits `cross_heard` {ear, via, db, masked} (the Ghost), `tickle` {ear, db} (a felt low
-bone tone) and `overmasked` {ear, masker_ear, mask_db}. The AudiOtron shows them as gags; the clinic ignores
-kinds it does not know.
+bone tone) and `overmasked` {ear, masker_ear, mask_db}. **(v3, builders)** `Clinic.REACTIONS` lists them, plus `wave`
+(the story's hello and goodbye), and the clinic plays them: the 3D Cross-Hearing Ghost (`world/characters/ghost.gd`)
+flies from the test ear to the other ear, Bonnie giggles at a tickle, and overmasking gives her spiral eyes.
+The AudiOtron shows its own gags too (the BOO! on the chart). Unknown kinds are still ignored.
 
 `data` may include `ear`, `intensity` (0..1) and `db`. Reactions are visual and must be safe to fire every
 tone. `too_loud_blast` is a hair-blast or wobble, and with `no_startle` it becomes a small wobble.
@@ -795,6 +833,8 @@ New kinds go through `world/INTEGRATION_NOTES.md`.
 | `--mouse` **(v2)** | with `--autoplay`: the bot plays the whole level with real mouse events only (exit 6 if a target is missing) |
 | `--day=N` / `--chapter=id` **(v3)** | Play (and the bot) starts that chapter; it counts as unlocked |
 | `--unlock-all` **(v3)** | every chapter unlocked for this run |
+| `--keep-save` **(v3, integrator)** | with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 with the same `--save=`) |
+| `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`), `--try-locked=<id>` (press that card first and expect a refusal), `--toggle-unlock` (press "Unlock all days (demo)" first), `--expect-days=gus,bonnie` (the unlocked list). The result gets a `days` report; a failed expectation is a problem (exit 4) |
 
 ### §7.2 What the bot relies on (must keep working)
 
@@ -848,6 +888,8 @@ Anyone may `Events.screenshot_requested.emit("name")`. It only does something wi
 The bot saves:
 - one shot per phase, named like `05_audiometry_right.png` (**v3**: `_<test>` is appended for non-`ac` tests, e.g. `audiometry_right_bc_masked`);
 - **(v3)** `audiometry_<ear>_<test>_first_store`, `audiometry_<ear>_<test>_hoot_turn`, `audiometry_<ear>_plateau`;
+- **(v3)** the story's own: `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`, `day2_carhart`, `day2_stamp`,
+  `day2_croissant`, `day2_goodbye`; with `--via-days`: `days_locked_refused`, `days_toggled`;
 - `audiometry_<ear>_first_tone`, `audiometry_<ear>_first_store`, `audiometry_<ear>_complete`;
 - `results_final`.
 

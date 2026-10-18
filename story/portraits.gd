@@ -196,8 +196,19 @@ static func _bonnie(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink
 	ci.draw_circle(h, hr + 3.0, INK)
 	ci.draw_circle(h, hr, Color("#e8b088"))
 	_ellipse(ci, h + Vector2(0, -hr * 0.78), Vector2(hr * 0.9, hr * 0.34), hair)
+	# her "lost" reading glasses, perched on top of her head all along
+	var teal := Color("#2fb3a3")
+	for s: float in [-1.0, 1.0]:
+		var lc := h + Vector2(hr * 0.24 * s, -hr * 0.86)
+		ci.draw_circle(lc, hr * 0.17, Color("#dff6ff"))
+		ci.draw_arc(lc, hr * 0.17, 0, TAU, 16, INK, 4.5, true)
+		ci.draw_arc(lc, hr * 0.17, 0, TAU, 16, teal, 2.5, true)
+		ci.draw_line(lc + Vector2(-hr * 0.07, -hr * 0.06), lc + Vector2(-hr * 0.02, -hr * 0.1), Color(1, 1, 1, 0.9), 1.5, true)
+	ci.draw_line(h + Vector2(-hr * 0.07, -hr * 0.88), h + Vector2(hr * 0.07, -hr * 0.88), teal, 2.5, true)
 	for s: float in [-1.0, 1.0]:
 		var e := h + Vector2(hr * 0.38 * s, -hr * 0.02)
+		for k in 3:
+			ci.draw_circle(h + Vector2(hr * (0.42 + 0.1 * k) * s, hr * (0.22 + 0.05 * (k % 2))), maxf(1.2, hr * 0.03), Color("#b0703f"))
 		_eye(ci, e, hr * 0.2, blink)
 		ci.draw_line(e + Vector2(hr * 0.12 * s, -hr * 0.2), e + Vector2(hr * 0.26 * s, -hr * 0.3), INK, 2.5, true)
 		_ellipse(ci, h + Vector2(hr * 0.55 * s, hr * 0.35), Vector2(hr * 0.15, hr * 0.08), Color(1, 0.45, 0.45, 0.45))

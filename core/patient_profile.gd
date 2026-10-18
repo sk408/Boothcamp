@@ -52,6 +52,40 @@ extends Resource
 
 @export_group("Story")
 @export var tags: PackedStringArray = []
+## "he", "she" or "they": fills the {he} {He} {his} {His} {him} tokens in coach and tip texts.
+@export_enum("he", "she", "they") var pronoun: String = "he"
+## What Hoot and the speech bubbles call the patient ("Gus"). Empty = first word of display_name.
+@export var nickname: String = ""
+
+
+const _PRONOUNS := {
+	"he": {"he": "he", "He": "He", "his": "his", "His": "His", "him": "him"},
+	"she": {"he": "she", "He": "She", "his": "her", "His": "Her", "him": "her"},
+	"they": {"he": "they", "He": "They", "his": "their", "His": "Their", "him": "them"},
+}
+
+
+## The short name the game calls this patient ("Gus", "Bonnie").
+func short_name() -> String:
+	if nickname != "":
+		return nickname
+	var parts := display_name.split(" ", false)
+	return parts[0] if not parts.is_empty() else id.capitalize()
+
+
+## Replaces the pronoun tokens ({he} {He} {his} {His} {him}) and {name} in a text.
+func say(text: String) -> String:
+	return PatientProfile.pronouns(text, pronoun).replace("{name}", short_name())
+
+
+## Pronoun tokens for any pronoun ("he" when unknown). Static so texts without a patient work too.
+static func pronouns(text: String, which: String) -> String:
+	if text.find("{") < 0:
+		return text
+	var map: Dictionary = _PRONOUNS.get(which, _PRONOUNS["he"])
+	for k: String in ["He", "His", "he", "his", "him"]:
+		text = text.replace("{%s}" % k, String(map[k]))
+	return text
 
 
 ## True threshold for an ear and frequency. Interpolates on a log-frequency axis if the

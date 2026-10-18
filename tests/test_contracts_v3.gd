@@ -202,3 +202,39 @@ func _tap(action: StringName) -> void:
 	await wait_frames(2)
 	_send(action, false)
 	await wait_frames(2)
+
+
+## (v3, builders) The additions merged at integration: pronouns, tip_text, the masked grace, the bone
+## channel, the audiogram's optional layers and the clinic's new reactions and story extras.
+func test_v3_builder_additions() -> void:
+	var bonnie: PatientProfile = Game.load_patient("bonnie") as PatientProfile
+	var gus: PatientProfile = Game.load_patient("gus") as PatientProfile
+	for p in ["pronoun", "nickname"]:
+		assert_true(p in bonnie, "PatientProfile.%s" % p)
+	assert_eq(bonnie.short_name(), "Bonnie")
+	assert_eq(gus.short_name(), "Gus")
+	assert_eq(bonnie.say("{He} said {his} name is {name}."), "She said her name is Bonnie.")
+	assert_eq(gus.say("{He} said {his} name is {name}."), "He said his name is Gus.")
+	assert_eq(PatientProfile.pronouns("ask {him}", "she"), "ask her")
+	assert_true(AudiometrySession.MASKED_GRACE_DB >= 0, "masked grace constant")
+	var session := AudiometrySession.new(bonnie)
+	assert_has_method(session, "tip_text", "AudiometrySession (v3, builders)")
+	for kind: StringName in AudiometrySession.TIPS:
+		assert_false(session.tip_text(kind).contains("{"), "tip %s has no unfilled token" % kind)
+	var tg := ToneGenerator.new()
+	assert_true("bone" in tg, "ToneGenerator.bone")
+	assert_eq(ToneGenerator.BONE_CROSS_DB, -10.0)
+	tg.free()
+	var ag: Node = (load(AUDIOGRAM) as PackedScene).instantiate()
+	for p in ["attention", "show_gap", "masker_view"]:
+		assert_true(p in ag, "Audiogram.%s" % p)
+	assert_false(bool(ag.get("show_gap")), "the gap bridge is off by default")
+	ag.free()
+	var clinic_script: Script = load("res://world/clinic.gd")
+	var reactions: Array = clinic_script.get_script_constant_map()["REACTIONS"]
+	for k: StringName in [&"tickle", &"cross_heard", &"overmasked", &"wave"]:
+		assert_has(reactions, k, "Clinic.REACTIONS (v3, builders)")
+	var clinic: Node = (load(CLINIC) as PackedScene).instantiate()
+	for m in ["put_down_basket", "give_croissant", "walk_out", "patient_name"]:
+		assert_has_method(clinic, m, "Clinic (v3, builders)")
+	clinic.free()

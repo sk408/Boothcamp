@@ -22,6 +22,29 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `story_reveal_title`, `story_evidence_board`, `story_evidence_solved`, `story_fitting_grey`,
   `story_fitting_colour`, `story_fitting_dishes`. Without `--shots` these calls do nothing.
 
+## v3 (Day 2)
+
+- **Beats:** Day 2 adds `bc_placement` (solver: oscillator on the mastoid), `referral_stamp` (solver:
+  stamp) and the title's `chapter_select` (solver: start `Game.next_chapter_id()`); the rest are
+  `dialogue` / `choice` as on Day 1. The payoff (croissant, glasses, walk out) is dialogue only.
+- **Placement mini-game** (`story/games/bone_placement.gd`): spots nose (BOOP!), forehead (a unicorn
+  horn), jaw, `top` = her reading glasses perched on her head ("My glasses!"), pinna (a drawn
+  feedback squeal, never a loud sound), bun, and the mastoid. Note: CHAPTER2.md section 6 puts the
+  unicorn on the top of the head; it moved to the forehead so the top could be the glasses gag.
+- **Board** (`story/games/day2_board.gd`, story-internal): `run_reveal(results)`, `show_gap()` (the
+  toll bridge: plank deck along the masked bone marks, stone pillars down to the air marks with a dB
+  sign each, a toll booth with a bobbing barrier, and a little dog-bone car driving the deck),
+  `set_compact(on)` (shrinks the chart to the top so dialogue choices fit below), `show_type(text)`,
+  `show_carhart()` (ring on the 2 kHz bone mark + label), `run_stamp()`. Anchors `reveal_audiogram`,
+  `abg_bridge`, `referral_stamp`.
+- **Otoscopy:** `Otoscopy.show_clear(ear, caption)` is an input-free look at a healthy ear (Day 2).
+- **Title:** Days shows one illustrated card per day (portrait, title, what it teaches, best grade
+  badge, plays, padlock + "Finish Day 1 to open" when locked), the "Unlock all days (demo)" toggle
+  and Back. Up/Down or Left/Right + Enter, Esc = Back, or click. The card's title is a child Label, so
+  the mouse bot's `_click_text("Day 1: Grand")` still lands on the card. Day 1's flow is unchanged.
+- **Screenshots (Day 2):** `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`,
+  `day2_carhart`, `day2_stamp`, `day2_croissant`, `day2_goodbye`.
+
 ## Dev tool
 
 `story/dev_gallery.tscn` shows each story screen with made-up results and requests `gallery_*` shots:
@@ -29,7 +52,8 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
     xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 \
       --audio-driver Dummy --fixed-fps 30 -- --scene=res://story/dev_gallery.tscn --shots=/abs/dir --speed=2
 
-It is not part of the game flow.
+It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (`--part=world`,
+`placement`, `board`, `title`, default all but title).
 
 ## Tests
 

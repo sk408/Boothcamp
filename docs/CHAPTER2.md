@@ -153,18 +153,19 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 
 ## 6. Oscillator placement mini-game (`story/games/bone_placement.gd`)
 
-Bonnie in profile on a cream card, facing left, so the visible ear is her RIGHT. The grey "bone buzzer" sits
-in a tray. Drag it onto a spot, or click a spot; keyboard Left/Right (or the frequency keys) moves a highlight,
-Enter/Space places. Beat `bc_placement` (solver = place on the mastoid). Anchors `oscillator`,
+Bonnie in profile on a cream card, facing RIGHT, so the visible ear is her RIGHT (a profile facing left would
+show her left ear; fixed at integration). The grey "bone buzzer" sits in a tray. Drag it onto a spot, or click a
+spot; keyboard Left/Right (or the frequency keys) moves a highlight (Left walks from her nose towards the back
+of her head), Enter/Space places. Beat `bc_placement` (solver = place on the mastoid). Anchors `oscillator`,
 `mastoid_target_right`.
 
 | Spot | Result | Gag | Hoot |
 |---|---|---|---|
 | **Mastoid** (behind the ear, on bone) | correct | buzz rings, "Bone on bone!" | "Perfect: on the mastoid bone, behind the ear, not touching it." |
-| Ear flap (pinna) | slip | buzz arcs around the ear, "Bzzz! Tickles!" | "Off the ear flap! Touching the pinna makes it buzz. Behind the ear, on bone." |
-| Forehead | slip | "Hmm, not today" | "Foreheads work for some tests. Today: the mastoid, just behind her right ear." |
-| Nose | slip | the nose flashes, "BOOP!" | "Boop! A nose is cartilage. Find the bony bump behind her ear." |
-| Top of head | slip | a golden **unicorn horn** sprouts, "UNICORN!" | "A majestic unicorn! Sadly not a clinical position. Behind the ear, please." |
+| Ear flap (pinna) | slip | a drawn feedback squeal (no loud sound), "SQUEEEE!" | "Off the ear flap! Touching the pinna leaks buzz into the canal. Behind it, on bone." |
+| Forehead | slip | a golden **unicorn horn** sprouts, "UNICORN!" | "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her right ear." |
+| Nose | slip | the nose flashes, "BOOP!" | "Boop! A nose is cartilage, not bone. Find the bony bump behind her ear." |
+| Top of head | slip | her lost reading glasses, "My glasses!" (the running gag) | "Her lost glasses! Mystery solved. The buzzer needs skin over bone, behind the ear." |
 | Jaw | slip | chattering teeth lines | "She'd hear her teeth chatter! Higher and further back: the mastoid." |
 | Bun | slip | flour puff | "That's a bun, not a bone! Lovely bun though. Try behind her ear." |
 

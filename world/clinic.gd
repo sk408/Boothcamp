@@ -13,18 +13,25 @@ extends Node3D
 ##   play_birdsong(), get_head_screen_position(), take_off_glasses() / put_on_glasses(),
 ##   put_on_hearing_aids(), get_muffle().
 ## (v3) patient_id (set before add_child: "bonnie" = Day 2), put_on_bone_oscillator(ear),
-##   put_on_masking_phone(ear), take_off_bone_oscillator().
+##   put_on_masking_phone(ear), take_off_bone_oscillator(); story extras put_down_basket(),
+##   give_croissant() (coroutine), walk_out() (coroutine), patient_name().
+## (v3) Day 2 life: the oscillator buzzes while a bone tone plays, the masking cup puffs "shh"
+##   while the masker is on, and the Cross-Hearing Ghost (characters/ghost.gd) slips through the
+##   skull on cross_heard, and gets busted (poof) when masking switches on or a plateau is found.
 
 const Kit := preload("res://world/kit.gd")
 const Room := preload("res://world/room.gd")
 const Bean := preload("res://world/characters/bean.gd")
 const Owl := preload("res://world/characters/owl.gd")
+const Ghost := preload("res://world/characters/ghost.gd")
 const GREY_SHADER := preload("res://world/shaders/grey_world.gdshader")
 
 ## Every reaction kind the patient understands (Events.patient_reaction / play_patient_reaction).
 const REACTIONS: Array[StringName] = [
 	&"heard", &"missed", &"false_alarm", &"too_loud_blast", &"startle", &"grooving", &"bored",
 	&"straining", &"squint", &"yawn", &"cheer", &"confused", &"point_wrong_way", &"nod", &"wince",
+	# (v3) from the Day 2 session (and the story's goodbye wave)
+	&"tickle", &"cross_heard", &"overmasked", &"wave",
 ]
 ## Camera shots for focus_camera(). (&"title" and &"fitting" are extras for the story.)
 const SHOTS: Array[StringName] = [&"wide", &"door", &"desk", &"booth", &"ear_right", &"ear_left", &"face", &"otoscope", &"title", &"fitting"]
@@ -68,7 +75,23 @@ var _title_idle := 0.0
 ## (The patient node keeps the name `gus` so every existing call keeps working.)
 var patient_id := ""
 var _bone: Node3D
+var _bone_box: Node3D
+var _bone_rings: Node3D
 var _mask_phone: Node3D
+var _mask_cup: Node3D
+var _basket: Node3D
+var _transducer: StringName = &"phones"
+var _tone_on := false
+var _masker_on := false
+var _masker_db := 0
+var _shh_t := 0.0
+var _ghost: Node3D
+var _ghost_busted_this_test := false
+var _ghost_last_bust := -100.0
+## The Ghost is big enough to read in the AudiOtron's little booth window.
+const GHOST_SIZE := 1.6
+## Where Bonnie leaves her croissant basket (on the desk, left of the otoscope cradle).
+const BASKET_DESK_POS := Vector3(-1.95, 0.86, -0.62)
 
 
 func _enter_tree() -> void:
@@ -104,9 +127,21 @@ func _ready() -> void:
 	Events.hoot_tip_shown.connect(_on_hoot_tip)
 	Events.audiometry_started.connect(func(_p: String, _e: String, _c: bool) -> void: _set_booth_lamp(true))
 	Events.audiometry_finished.connect(func(_r: Dictionary) -> void: _set_booth_lamp(false))
-	Events.tone_started.connect(func(_e: String, _f: int, _d: int) -> void: _set_tone_lamp(true))
-	Events.tone_stopped.connect(func(_e: String, _f: int, _d: int, _s: float) -> void: _set_tone_lamp(false))
+	Events.tone_started.connect(func(_e: String, _f: int, _d: int) -> void:
+		_set_tone_lamp(true)
+		_tone_on = true)
+	Events.tone_stopped.connect(func(_e: String, _f: int, _d: int, _s: float) -> void:
+		_set_tone_lamp(false)
+		_tone_on = false)
 	_set_tone_lamp(false)
+	# (v3) Day 2
+	Events.audiometry_started.connect(func(_p: String, _e: String, _c: bool) -> void: _ghost_busted_this_test = false)
+	Events.audiometry_finished.connect(func(_r: Dictionary) -> void:
+		_tone_on = false
+		_set_masker(false, 0))
+	Events.transducer_changed.connect(func(tr: StringName, _e: String) -> void: _transducer = tr)
+	Events.masker_changed.connect(_on_masker_changed)
+	Events.technique_event.connect(_on_technique_event)
 
 
 ## Standalone boot (main.gd --scene=res://world/clinic.tscn): a showcase of every animation.
@@ -208,6 +243,7 @@ func _process(delta: float) -> void:
 	fish.rotation.y = 0.0 if cos(_t * 0.45) > 0.0 else PI
 	if _grey_layer.visible:
 		_grey_mat.set_shader_parameter("center", _head_uv())
+	_process_day2(delta)
 	# title screen: Gus does a little something every few seconds
 	if _title_mode:
 		_title_idle -= delta
@@ -261,6 +297,7 @@ func walk_to(spot: StringName, duration: float = 2.2) -> void:
 func sit() -> void:
 	if bool(gus.get("seated")):
 		return
+	put_down_basket()
 	var chair: Vector3 = SPOTS[&"booth"]
 	var front: Vector3 = refs["chair_front"]
 	if gus.position.distance_to(chair) > 0.2:
@@ -361,6 +398,13 @@ func play_patient_reaction(kind: StringName, data: Dictionary = {}) -> void:
 			hoot.call("emote", &"hop")
 		&"point_wrong_way":
 			hoot.call("emote", &"facepalm")
+		&"cross_heard":
+			_ghost_cross(data)
+		&"tickle":
+			_wiggle_oscillator(1.0)
+		&"overmasked":
+			hoot.call("emote", &"gasp")
+			_noise_storm()
 
 
 ## 0 = grey and muffled world .. 1 = full colour (fitting). The colour returns as a wave
@@ -536,10 +580,13 @@ func put_on_hearing_aids() -> void:
 	Sfx.play(&"sparkle", 1.0, -6.0)
 
 
-## (v3) The bone oscillator: a thin headband over the crown and the little vibrator box pressed on
-## the mastoid, just behind the test ear (never touching the pinna).
+## (v3) The bone oscillator: a springy steel headband over the crown, the little beige vibrator
+## pressed on the mastoid just behind the test ear (never touching the pinna), a pad on the other
+## side and a cable. Takes the earphones off first.
 func put_on_bone_oscillator(ear: String = "right") -> void:
-	take_off_bone_oscillator()
+	if _bone and is_instance_valid(_bone):
+		_bone.queue_free()
+	_bone = null
 	take_off_earphones()
 	var head: Node3D = gus.get("parts")["head"]
 	var hc: Vector3 = gus.get("parts")["head_center"]
@@ -548,24 +595,60 @@ func put_on_bone_oscillator(ear: String = "right") -> void:
 	_bone.name = "BoneOscillator"
 	_bone.position = hc
 	head.add_child(_bone)
-	var band := Kit.arc_tube(_bone, 0.43, 0.02, 4, 176, 14, Color("#8d94a6"), {"outline": 0.008})
-	band.rotation.x = -0.42
-	var box := Node3D.new()
-	box.position = Vector3(0.33 * side, -0.07, -0.13)
-	_bone.add_child(box)
-	Kit.box(box, Vector3(0.07, 0.1, 0.08), Vector3.ZERO, Color("#5c6370"), {"outline": 0.01})
-	Kit.sphere(box, 0.022, Vector3(0.03 * side, 0.02, 0.03), Color("#ffd23f"), Vector3.ONE, {"unshaded": true}, 8)
-	Kit.capsule(box, 0.008, 0.3, Vector3(0, -0.18, 0), Color("#4d4d5c"), {"outline": 0.0}, 6)
-	Kit.sphere(_bone, 0.04, Vector3(-0.4 * side, 0.02, -0.12), Color("#8d94a6"), Vector3(0.6, 1.0, 1.0), {"outline": 0.008}, 10)
-	box.scale = Vector3.ONE * 0.3
-	var t := box.create_tween()
-	t.tween_property(box, "scale", Vector3(1.25, 0.8, 1.25), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	t.tween_property(box, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	# the band: a coronal arc, tilted back a little and twisted so the test end sits behind the ear
+	var band_root := Node3D.new()
+	band_root.rotation = Vector3(-0.18, 0.22 * side, 0.0)
+	_bone.add_child(band_root)
+	var steel := Color("#b9c0cc")
+	Kit.arc_tube(band_root, 0.43, 0.012, -14.0, 194.0, 22, steel, {"outline": 0.006})
+	# the pad on the far side (above the other ear)
+	var pad := Kit.sphere(band_root, 0.045, Vector3(-0.43 * side * cos(deg_to_rad(14.0)), -0.43 * sin(deg_to_rad(14.0)), 0.0), Color("#4d4d5c"), Vector3(0.45, 1.0, 1.0), {"outline": 0.008}, 12)
+	pad.name = "Pad"
+	# the vibrator on the mastoid: behind and a little below the ear canal
+	_bone_box = Node3D.new()
+	_bone_box.name = "Vibrator"
+	_bone_box.position = Vector3(0.35 * side, -0.1, -0.15)
+	_bone_box.rotation.y = 0.35 * side
+	_bone.add_child(_bone_box)
+	var beige := Color("#e3d9c6")
+	Kit.box(_bone_box, Vector3(0.06, 0.1, 0.085), Vector3.ZERO, beige, {"outline": 0.009})
+	Kit.cylinder(_bone_box, 0.026, 0.026, 0.012, Vector3(-0.028 * side, 0.0, 0.0), Color("#8d94a6"), {"outline": 0.004}, 12).rotation.z = PI / 2.0
+	Kit.box(_bone_box, Vector3(0.012, 0.05, 0.03), Vector3(0.028 * side, 0.0, 0.0), Color("#5c6370"), {"outline": 0.0})
+	Kit.sphere(_bone_box, 0.009, Vector3(0.03 * side, 0.03, 0.0), Color("#9ee34b"), Vector3.ONE, {"unshaded": true}, 8)
+	# the band meets the vibrator from above
+	Kit.capsule(_bone_box, 0.011, 0.12, Vector3(0.0, 0.08, 0.0), steel, {"outline": 0.005}, 8)
+	# cable down the neck
+	var cable := Kit.capsule(_bone_box, 0.007, 0.34, Vector3(0.006 * side, -0.2, 0.01), Color("#2e2442"), {"outline": 0.0}, 6)
+	cable.rotation.x = 0.12
+	# buzz rings, shown while a bone tone plays
+	_bone_rings = Node3D.new()
+	_bone_rings.name = "Buzz"
+	_bone_rings.position = Vector3(0.05 * side, 0.0, 0.0)
+	_bone_rings.visible = false
+	_bone_box.add_child(_bone_rings)
+	for k in 2:
+		var arc := Kit.arc_tube(_bone_rings, 0.07 + 0.045 * k, 0.008, -55.0, 55.0, 6, Color("#ffd23f"), {"unshaded": true})
+		arc.rotation.y = 0.0 if side > 0 else PI
+		arc.rotation.x = PI / 2.0
+	# a "bzz" that can be read even in the little booth window
+	var bzz := Kit.label(_bone_rings, "bzz", Vector3(0.1 * side, 0.1, 0.06), 64, Color("#e08a1c"), 14, 700)
+	bzz.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	bzz.no_depth_test = true
+	bzz.render_priority = 4
+	bzz.name = "Bzz"
+	_bone_box.scale = Vector3.ONE * 0.3
+	var t := _bone_box.create_tween()
+	t.tween_property(_bone_box, "scale", Vector3(1.3, 0.75, 1.3), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(_bone_box, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	band_root.scale = Vector3(1.25, 1.35, 1.25)
+	var tb := band_root.create_tween()
+	tb.tween_property(band_root, "scale", Vector3.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Sfx.play(&"pop", 0.8, -6.0)
 	gus.call("set_holding_button", true)
 
 
-## (v3) One earphone on the non-test ear, for the masking noise during bone tests.
+## (v3) One earphone on the non-test ear, for the masking noise during bone tests. The other
+## cup rests on the head behind the oscillator band (as in a real booth).
 func put_on_masking_phone(ear: String = "left") -> void:
 	if _mask_phone and is_instance_valid(_mask_phone):
 		_mask_phone.queue_free()
@@ -577,17 +660,22 @@ func put_on_masking_phone(ear: String = "left") -> void:
 	_mask_phone.position = hc
 	head.add_child(_mask_phone)
 	var col := Color("#e5383b") if ear == "right" else Color("#2d6cdf")
-	var cup := Node3D.new()
-	cup.position = Vector3(0.425 * side, -0.02, 0.0)
-	_mask_phone.add_child(cup)
-	var shell := Kit.cylinder(cup, 0.13, 0.14, 0.1, Vector3(0.02 * side, 0, 0), col, {"outline": 0.012}, 20)
+	var band_root := Node3D.new()
+	band_root.rotation.x = 0.32
+	_mask_phone.add_child(band_root)
+	Kit.arc_tube(band_root, 0.415, 0.026, 90.0 - 88.0 * side, 90.0 + 30.0 * side, 10, Color("#4d4d5c"), {"outline": 0.01})
+	_mask_cup = Node3D.new()
+	_mask_cup.position = Vector3(0.425 * side, -0.02, 0.0)
+	_mask_phone.add_child(_mask_cup)
+	var shell := Kit.cylinder(_mask_cup, 0.13, 0.14, 0.1, Vector3(0.02 * side, 0, 0), col, {"outline": 0.012}, 20)
 	shell.rotation.z = PI / 2.0
-	Kit.label(cup, "R" if ear == "right" else "L", Vector3(0.075 * side, 0, 0), 48, Color.WHITE, 0, 700).rotation.y = PI / 2.0 * side
-	var strap := Kit.arc_tube(_mask_phone, 0.41, 0.026, 90.0 - 82.0 * side, 90.0, 8, Color("#4d4d5c"), {"outline": 0.01})
-	strap.position = Vector3(0, 0, 0.04)
-	cup.scale = Vector3.ONE * 0.4
-	var t := cup.create_tween()
-	t.tween_property(cup, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var cushion := Kit.torus(_mask_cup, 0.06, 0.13, Vector3(-0.045 * side, 0, 0), Color("#2e2442"), {"outline": 0.0}, 20, 6)
+	cushion.rotation.z = PI / 2.0
+	Kit.label(_mask_cup, "R" if ear == "right" else "L", Vector3(0.075 * side, 0, 0), 48, Color.WHITE, 0, 700).rotation.y = PI / 2.0 * side
+	_mask_cup.scale = Vector3.ONE * 0.4
+	var t := _mask_cup.create_tween()
+	t.tween_property(_mask_cup, "scale", Vector3(0.8, 1.2, 1.2), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(_mask_cup, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	Sfx.play(&"pop", 1.0, -6.0)
 
 
@@ -596,7 +684,229 @@ func take_off_bone_oscillator() -> void:
 		if n and is_instance_valid(n):
 			n.queue_free()
 	_bone = null
+	_bone_box = null
+	_bone_rings = null
 	_mask_phone = null
+	_mask_cup = null
+
+
+## The patient's display name ("Gus", "Bonnie"): the dialogue speaker whose mouth flaps.
+func patient_name() -> String:
+	return String((gus.get("cfg") as Dictionary).get("name", "Gus")) if gus else "Gus"
+
+
+## (v3) Bonnie sets her croissant basket down on the desk (story extra; sit() does it too).
+func put_down_basket() -> void:
+	if _basket != null or gus == null:
+		return
+	var b: Node3D = gus.call("detach_basket")
+	if b == null:
+		return
+	_basket = b
+	add_child(b)
+	b.global_transform = b.get_meta("xf") as Transform3D
+	var t := b.create_tween()
+	var land := Transform3D(Basis(Vector3.UP, -0.3), BASKET_DESK_POS + Vector3(0, 0.065, 0))
+	t.tween_property(b, "global_transform", land, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(b, "scale", Vector3(1.15, 0.85, 1.15), 0.06)
+	t.tween_property(b, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	t.tween_callback(_sfx.bind(&"thunk", 1.4, -12.0))
+
+
+## (v3, coroutine) A croissant hops from the basket into Hoot's wings; Hoot munches, crumbs fly.
+func give_croissant() -> void:
+	var from: Vector3 = BASKET_DESK_POS + Vector3(0, 0.2, 0) if _basket != null else (gus.call("head_world") as Vector3) + Vector3(0, -0.3, 0.3)
+	var to: Vector3 = hoot.global_position + Vector3(0, 0.17, 0.3)
+	var c: Node3D = Bean.build_croissant(self, from, 1.6)
+	var fly := func(k: float) -> void:
+		c.position = from.lerp(to, k) + Vector3(0, sin(k * PI) * 0.6, 0)
+		c.rotation.z = k * TAU
+	var t := create_tween()
+	t.tween_method(fly, 0.0, 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	_sfx(&"whoosh", 1.3, -8.0)
+	await t.finished
+	hoot.call("emote", &"hop")
+	_sfx(&"pop", 1.3, -6.0)
+	var crumbs := func() -> void:
+		Kit.burst(self, to, [Color("#e9a443"), Color("#ffd23f"), Color("#fff3dc")], 8, 1.2, -4.0, 0.03, 0.6)
+	var munch := create_tween()
+	for i in 3:
+		munch.tween_property(c, "scale", Vector3.ONE * (1.6 - 0.5 * (i + 1)), 0.12)
+		munch.tween_callback(crumbs)
+		munch.tween_interval(0.12)
+	munch.tween_callback(c.queue_free)
+	await munch.finished
+	hoot.call("talk", 0.6)
+
+
+## (v3, coroutine) The patient waves, walks to the waiting-room door and out; the door closes.
+func walk_out() -> void:
+	if bool(gus.get("seated")):
+		await stand()
+	gus.call("react", &"wave", {})
+	await _wait(0.6)
+	var path: Array[Vector3] = _route(gus.position, refs["door_spot_inside"] as Vector3)
+	if _in_booth(gus.position):
+		_booth_door_open(true)
+	await gus.call("walk_path", path, 1.5)
+	await _door_burst()
+	await gus.call("walk_path", [refs["door_spot_outside"]], 1.5)
+	gus.visible = false
+	_door_close()
+
+
+# ---------------------------------------------------------------- (v3) Day 2 life
+
+func _process_day2(delta: float) -> void:
+	# the oscillator buzzes while a bone tone plays (lamp-like: it shows every bone tone)
+	if _bone_box != null and is_instance_valid(_bone_box):
+		var buzzing := _tone_on and _transducer == &"bone"
+		_bone_rings.visible = buzzing
+		if buzzing:
+			_bone_box.position.z = -0.15 + 0.006 * sin(_t * 90.0)
+			_bone_rings.scale = Vector3.ONE * (0.85 + 0.25 * fmod(_t * 3.0, 1.0))
+			var bzz := _bone_rings.get_node_or_null("Bzz") as Label3D
+			if bzz != null:
+				bzz.rotation.z = 0.12 * sin(_t * 40.0)
+	# the masking cup puffs a little "shh" while the masker plays (bigger with more noise)
+	if _masker_on and _mask_cup != null and is_instance_valid(_mask_cup):
+		_shh_t -= delta
+		if _shh_t <= 0.0:
+			_shh_t = lerpf(0.9, 0.35, clampf(_masker_db / 80.0, 0.0, 1.0))
+			_shh_puff()
+
+
+func _set_masker(on: bool, db: int) -> void:
+	_masker_on = on
+	_masker_db = db
+
+
+func _on_masker_changed(ear: String, _freq: int, db: int, on: bool) -> void:
+	var was := _masker_on
+	_set_masker(on, db)
+	if on and not was and not _ghost_busted_this_test:
+		# masking switched on: the Ghost peeks out of the masked ear and gets shooed away
+		_ghost_busted_this_test = true
+		_ghost_bust(ear, "SHOO!")
+
+
+func _on_technique_event(kind: StringName, data: Dictionary) -> void:
+	if kind == &"plateau_found" and _t - _ghost_last_bust > 3.0:
+		var masked := "left" if String(data.get("ear", "right")) == "right" else "right"
+		_ghost_bust(masked, "BUSTED!")
+
+
+## A little purple "shh" squiggle drifts off the masking cup.
+func _shh_puff() -> void:
+	var side := 1.0 if _mask_cup.position.x > 0.0 else -1.0
+	var l := Kit.label(_mask_cup, "shh", Vector3(0.12 * side, 0.08, 0.04), 44, Color("#8e5cc4"), 10, 700)
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.render_priority = 4
+	l.modulate.a = 0.0
+	var t := l.create_tween()
+	t.tween_property(l, "modulate:a", 0.9, 0.12)
+	t.parallel().tween_property(l, "position", Vector3(0.3 * side, 0.22, 0.06), 1.0).set_trans(Tween.TRANS_SINE)
+	t.parallel().tween_property(l, "rotation:z", -0.4 * side, 1.0)
+	t.tween_property(l, "modulate:a", 0.0, 0.2)
+	t.tween_callback(l.queue_free)
+
+
+## Overmasking: a burst of purple noise around the head (visual only; the masker stays quiet).
+func _noise_storm() -> void:
+	if gus == null:
+		return
+	var h: Vector3 = gus.call("head_world")
+	Kit.burst(self, h, [Color("#8e5cc4"), Color("#b9a8e6"), Color("#ff6f59")], 22, 1.6, 0.0, 0.035, 0.7, Vector3.UP, 180.0)
+	for i in 3:
+		get_tree().create_timer(0.1 * i).timeout.connect(func() -> void:
+			if _mask_cup != null and is_instance_valid(_mask_cup):
+				_shh_puff())
+
+
+func _wiggle_oscillator(amount: float) -> void:
+	if _bone_box == null or not is_instance_valid(_bone_box):
+		return
+	var t := _bone_box.create_tween()
+	for i in 6:
+		t.tween_property(_bone_box, "rotation:z", 0.25 * amount * (1.0 if i % 2 == 0 else -1.0), 0.05)
+	t.tween_property(_bone_box, "rotation:z", 0.0, 0.08)
+
+
+func _ghost_ready() -> bool:
+	return gus != null and gus.visible and (_ghost == null or not is_instance_valid(_ghost))
+
+
+## The Cross-Hearing Ghost: the tone went in at the test ear, slipped through the skull (behind the
+## head) and popped out at the OTHER ear, which answered: "boo!", then it taps the button hand.
+func _ghost_cross(data: Dictionary) -> void:
+	if not _ghost_ready():
+		return
+	var test_ear := String(data.get("ear", "right"))
+	var via := String(data.get("via", "left" if test_ear == "right" else "right"))
+	var masked := bool(data.get("masked", false))
+	var hc: Vector3 = gus.call("head_world")
+	var out_test: Vector3 = (gus.call("ear_world", test_ear) as Vector3)
+	var out_via: Vector3 = (gus.call("ear_world", via) as Vector3)
+	var start := hc + (out_test - hc) * 1.15 + Vector3(0, -0.05, -0.12)
+	var behind := hc + gus.global_transform.basis.z * -0.55 + Vector3(0, 0.05, 0)
+	var pop := hc + (out_via - hc) * 1.75 + Vector3(0, 0.06, 0.08)
+	var hand: Vector3 = ((gus.get("parts") as Dictionary)["hand_r"] as Node3D).global_position + Vector3(0, 0.26, 0.12)
+	var g: Node3D = Ghost.new()
+	_ghost = g
+	add_child(g)
+	g.global_position = start
+	g.call("set_mood", &"sneaky" if masked else &"boo")
+	g.call("appear", GHOST_SIZE)
+	var glide := func(k: float) -> void:
+		if is_instance_valid(g):
+			g.global_position = _bezier(start, behind, pop, k)
+	var t := create_tween()
+	t.tween_interval(0.18)
+	t.tween_method(glide, 0.0, 1.0, 0.45).set_trans(Tween.TRANS_SINE)
+	t.tween_callback(func() -> void:
+		if is_instance_valid(g):
+			g.call("say", "boo!"))
+	t.tween_interval(0.35)
+	t.tween_property(g, "global_position", hand, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_property(g, "scale", Vector3(1.2, 0.6, 1.2) * GHOST_SIZE, 0.07)
+	t.tween_property(g, "scale", Vector3.ONE * GHOST_SIZE, 0.12)
+	t.tween_callback(func() -> void:
+		if is_instance_valid(g):
+			g.call("poof", ""))
+
+
+## Masking catches the Ghost: it peeks out of the masked ear, the noise hits, X eyes, poof.
+func _ghost_bust(masked_ear: String, text: String) -> void:
+	if not _ghost_ready():
+		return
+	_ghost_last_bust = _t
+	var hc: Vector3 = gus.call("head_world")
+	var ear_p: Vector3 = gus.call("ear_world", masked_ear)
+	var peek := hc + (ear_p - hc) * 1.8 + Vector3(0, 0.1, 0.1)
+	var g: Node3D = Ghost.new()
+	_ghost = g
+	add_child(g)
+	g.global_position = hc + (ear_p - hc) * 1.1
+	g.call("set_mood", &"boo")
+	g.call("appear", GHOST_SIZE)
+	var t := create_tween()
+	t.tween_property(g, "global_position", peek, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_interval(0.2)
+	t.tween_callback(func() -> void:
+		if is_instance_valid(g):
+			g.call("set_mood", &"busted")
+			if _mask_cup != null and is_instance_valid(_mask_cup):
+				_shh_puff())
+	for i in 4:
+		t.tween_property(g, "global_position", peek + Vector3(0.025 * (1.0 if i % 2 == 0 else -1.0), 0, 0), 0.05)
+	t.tween_callback(func() -> void:
+		if is_instance_valid(g):
+			g.call("poof", text))
+
+
+static func _bezier(a: Vector3, b: Vector3, c: Vector3, k: float) -> Vector3:
+	return a.lerp(b, k).lerp(b.lerp(c, k), k)
 
 
 # ---------------------------------------------------------------- construction
@@ -793,6 +1103,9 @@ func _on_shake(strength: float, duration: float) -> void:
 
 func _on_dialogue_line(speaker: String, text: String) -> void:
 	var secs := clampf(text.length() / (45.0 * maxf(0.2, float(Game.settings.get("text_speed", 1.0)))), 0.5, 5.0)
+	if speaker == patient_name() and speaker != "Gus":
+		gus.call("talk", secs)
+		return
 	match speaker:
 		"Gus":
 			gus.call("talk", secs)

@@ -64,3 +64,5 @@ fatigue_per_tone = 0.0006
 min_tone_s = 0.5
 rhythm_sensitivity = 0.5
 tags = PackedStringArray("otosclerosis", "conductive", "unilateral", "chapter_2")
+pronoun = "she"
+nickname = "Bonnie"

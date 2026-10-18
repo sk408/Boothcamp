@@ -4,11 +4,12 @@ extends SubViewport
 ## It only re-renders when the expression changes (UPDATE_ONCE), so it is cheap.
 ##
 ## State (set with set_state / set_part):
-##   eyes:  &"open" &"happy" &"closed" &"wide" &"squint" &"sleepy" &"wink" &"worried" &"stars"
+##   eyes:  &"open" &"happy" &"closed" &"wide" &"squint" &"sleepy" &"wink" &"worried" &"stars" &"spiral" (v3, dizzy)
 ##   mouth: &"smile" &"grin" &"flat" &"frown" &"o" &"yawn" &"wavy" &"talk" &"oops" &"tongue"
 ##   look:  Vector2 pupil offset (-1..1)
 ##   blush, sweat, tear: bool
-## style: &"gus", &"doris" or &"owl" (layout and colours differ).
+## style: &"gus", &"doris", &"owl" or (v3) &"bonnie" (layout and colours differ; Bonnie has
+## lashes, freckles and a dab of flour on one cheek).
 ## Layout: texture covers face_size metres of the head, centred on face_offset (see the shader).
 
 const SIZE := 256
@@ -49,6 +50,12 @@ func _init(face_style: StringName = &"gus") -> void:
 			eye_r = 27.0
 			mouth_y = 168.0
 			mouth_w = 16.0
+		&"bonnie":
+			eye_y = 110.0
+			eye_dx = 41.0
+			eye_r = 23.0
+			mouth_y = 180.0
+			mouth_w = 31.0
 
 
 func _ready() -> void:
@@ -105,10 +112,12 @@ func _paint() -> void:
 	for side: int in [-1, 1]:
 		var e := Vector2(128 + eye_dx * side, eye_y)
 		_paint_eye(c, e, side, eyes, look)
-	if bool(state.get("blush", false)) or style == &"doris":
+	if bool(state.get("blush", false)) or style == &"doris" or style == &"bonnie":
 		var a := 0.55 if bool(state.get("blush", false)) else 0.3
 		for side: int in [-1, 1]:
 			_ellipse(c, Vector2(128 + (eye_dx + 22) * side, eye_y + 40), Vector2(17, 9), Color(1.0, 0.45, 0.45, a))
+	if style == &"bonnie":
+		_paint_bonnie_extras(c, eyes)
 	var mouth: StringName = state.get("mouth", &"smile")
 	if talk_open and mouth != &"yawn":
 		mouth = &"talk"
@@ -157,6 +166,15 @@ func _paint_eye(c: Control, e: Vector2, side: int, eyes: StringName, look: Vecto
 		&"stars":
 			_star(c, e, r * 1.05, Color("#ffd23f"))
 			_star(c, e, r * 0.5, Color("#fff6c8"))
+		&"spiral":
+			# dizzy swirl (too much noise)
+			c.draw_circle(e, r + 3.5, INK)
+			c.draw_circle(e, r, WHITE)
+			var sp := PackedVector2Array()
+			for i in 29:
+				var a := i * 0.62 * float(side)
+				sp.append(e + Vector2(cos(a), sin(a)) * (r * 0.9 * i / 28.0))
+			c.draw_polyline(sp, INK, 3.5, true)
 		_:
 			var pr := r * 0.52
 			var white_r := r
@@ -200,14 +218,33 @@ func _lid_color() -> Color:
 			return Color("#fff4e2")
 		&"doris":
 			return Color("#ffd6b0")
+		&"bonnie":
+			return Color("#e8b088")
 	return Color("#ffcf9e")
+
+
+## (v3) Bonnie: lashes on the outer corners, freckles across the nose, a dab of flour.
+func _paint_bonnie_extras(c: Control, eyes: StringName) -> void:
+	if eyes in [&"open", &"wide", &"worried", &"sleepy"]:
+		for side: int in [-1, 1]:
+			var e := Vector2(128 + eye_dx * side, eye_y)
+			for k in 2:
+				var a := -PI / 2.0 + side * (0.75 + 0.42 * k)
+				var from := e + Vector2(cos(a), sin(a)) * (eye_r + 2.0)
+				c.draw_line(from, from + Vector2(cos(a), sin(a)) * 10.0 + Vector2(4.0 * side, -2.0), INK, 4.0, true)
+	var freckle := Color("#b06a44", 0.75)
+	for p: Vector2 in [Vector2(-44, 30), Vector2(-34, 38), Vector2(-52, 40), Vector2(-42, 47), Vector2(44, 30), Vector2(34, 38), Vector2(52, 40), Vector2(42, 47)]:
+		c.draw_circle(Vector2(128, eye_y) + p, 3.0, freckle)
+	# flour on her right cheek (the texture's left)
+	_ellipse(c, Vector2(128 - eye_dx - 18, eye_y + 56), Vector2(11, 5), Color(1, 1, 1, 0.95))
+	_ellipse(c, Vector2(128 - eye_dx - 4, eye_y + 62), Vector2(4, 3), Color(1, 1, 1, 0.9))
 
 
 func _paint_mouth(c: Control, mouth: StringName) -> void:
 	var m := Vector2(128, mouth_y)
 	var w := mouth_w
 	var lw := 6.0
-	var lip := Color("#d9465f") if style == &"doris" else INK
+	var lip := Color("#d9465f") if style == &"doris" else (Color("#c4453f") if style == &"bonnie" else INK)
 	var inside := Color("#7a2a3a")
 	var tongue := Color("#ff8a8a")
 	if style == &"owl":
