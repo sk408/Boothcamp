@@ -193,7 +193,8 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 
 - **The Cross-Hearing Ghost.** ~~The first time an unmasked bone tone is answered by the LEFT cochlea, the
   booth window shows a big "BOO!" callout.~~ **(v4)** The Ghost demo: one tone on the right mastoid, the LEFT
-  cochlea answers, the Ghost flies from the right chart to the left one with "Bone 5, air 50? BOO!", the 3D Ghost
+  cochlea answers, the Ghost flies from the right chart to the left one with "Bone 5, air 50? BOO!" (**(polish)** the level she really
+  answered at: "Bone 10" after a missed first beep), the 3D Ghost
   slips round the back of her skull and taps her button hand. Bonnie: "A ghost in my skull?! I KNEW that oven was
   haunted."
 - **(v4) Hoot's masking movie** (§16): Righty and Lefty, the snail cochleas; the skull wall; the jelly-head bone
@@ -451,10 +452,12 @@ a soft fanfare and two door knocks (outro).
 | builder B (story) | Animate the ten sets of §16 on the stage. Keep `SETS` and `show_scene()`; captions and cues stay in the data. Cartoon, readable at 1280x720, no vendor art. Check with `dev_explainer.tscn` | `story/explainers/explainer_stage.gd` | **done**: every set animated as a pure function of `t` (no placeholder left); plus the generic data-only `card` set and the card fallback for unknown sets (`docs/ADDING_A_CHAPTER.md`), the scene title chip, the title's "Hoot's Movies" button. **(polish)** The wall's meter is 30 / 35 / 70 against Lefty's 5 dB tag (§16 row 3), the plateau is drawn the audiogram way up, and a movie may bring its own sets script (`MOVIE.stage`, `story/explainers/explainer_sets.gd`, `CONTRACTS.md` §3.4) so later chapters never edit the stage |
 | builder B | Polish the left placement art if needed (it is the unmirrored drawing; tray bottom-left), the quick right placement, and the left 3D oscillator shot (`ear_left`) | `story/games/bone_placement.gd`, `world/clinic.gd` | the designer's v4 versions are in; checked in the rendered run (`bc_placement_left`, `day2_bone_placement_right`) |
 | builder B | Day 2 board: the left `>` marks next to the right `[` on the reveal; the bridge stays on the right ear | `story/games/day2_board.gd` | the designer's v4 version is in; checked on `day2_reveal` / `day2_bridge` and the golf card. `dev_day2.tscn --part=board` now builds v4 results (left `>`, right `[`) |
-| builder A | The `demo_tone` plan's look: TONE glowing as the only live control, the other controls dimmed, the Ghost's "Bone 5, air 50? BOO!" | `ui/audiometer/audiometer_screen.gd` | **done** (`CONTRACTS.md` §4.2 v4: banner, locks with "just TONE!", GHOST TEST badge, quest note, "?" bone ranges, the Ghost lands on her left `>`; integrator: no booth punch-in during the demo, it hid the callout) |
+| builder A | The `demo_tone` plan's look: TONE glowing as the only live control, the other controls dimmed, the Ghost's "Bone 5, air 50? BOO!" (the heard level) | `ui/audiometer/audiometer_screen.gd` | **done** (`CONTRACTS.md` §4.2 v4: banner, locks with "just TONE!", GHOST TEST badge, quest note, "?" bone ranges, the Ghost lands on her left `>`; integrator: no booth punch-in during the demo, it hid the callout) |
 | builder A | The coach on the LEFT bone sheet (the first bone test is now the left ear): the route lesson (B), no masking talk (no gap on the left) | `ui/audiometer/*` | **done** (`ui/tests/test_audiotron_v4.gd`); masked right bone's coach names the unmasked (left) bone as its start |
 | integrator | Steve review of §3, §4 (v4 lines) and §16; `tools/movie_check.sh --day=2` (the movie's stings stay quiet) | | movie_check run at integration and again at the polish pass; Steve's review of the polish lines pending |
 | polisher | The audiology and fun + bugs reviews of Steve's feedback build: "other ear", "at least 40 / 55", the criterion with her numbers, masked air vs the left BONE, Space like dialogue, `seen_at`, the skip line, the pause button, the ref-counted music duck, the demo's idle clock, `masking_deck: false`, the recap card, the movie list | everywhere above | **done** (`tests/test_contracts_v4.gd` covers each) |
 
 Known small points: the 1 kHz level cursor can overlap the 1 kHz "?" range a little during the demo; the optional
-250 Hz left bone bonus hole makes masked right bone ask for 250 Hz too (the rules see a gap there: one more plateau).
+250 Hz left bone bonus hole makes masked right bone ask for 250 Hz too (the rules see a gap there: one more plateau);
+**(polish)** the 12-second recap card plays at every visit's masking phase (a refresher, never listed; Esc skips it),
+and the full movie plays again on a later visit until it has been watched to the plateau scene (`seen_at`).
