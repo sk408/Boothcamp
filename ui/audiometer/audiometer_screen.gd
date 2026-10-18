@@ -265,6 +265,7 @@ func demo_start() -> void:
 ##                                  seconds (instant_measure, stamps fly in) instead of an x8 turn
 ##   (polish) "skip_hoot_retest": bool  Hoot's turn / montage skips the 1 kHz retest (Day 2)
 ##   (polish) "nothing_title": String   the callout when the goal sheet needs nothing (e.g. no masking)
+##   (polish) "start_db": int           the first level of a non-air plan (default: the textbook start)
 ## A goal sheet that is already complete (nothing to mask) finishes at once with that callout.
 func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dictionary = {}) -> void:
 	if session == null or session.patient.id != patient.id:
@@ -314,7 +315,8 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	else:
 		var rem := session.required_remaining(ear)
 		session.set_freq(rem[0] if not rem.is_empty() else ClinicRules.START_FREQ)
-		session.set_level(session.recommended_start(ear, session.freq))
+		# (polish) "start_db": the plan's own first level (Day 2's 250 Hz bonus hole starts at 40)
+		session.set_level(int(_plan["start_db"]) if _plan.has("start_db") else session.recommended_start(ear, session.freq))
 		if coached and _masking_ui and session.goal_test == &"bc" and session.stored_thresholds(ear, &"bc").is_empty():
 			# the route lesson: the first coached bone test starts on air, so the player presses B
 			session.set_transducer(session.air_transducer)

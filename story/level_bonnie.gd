@@ -344,6 +344,7 @@ func _bone() -> void:
 	await _test("right", true, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true,
 		"hoot_turn_after": 2, "done_title": "BONE DONE!",
 		"intro": "Bone time! %s = bone. Same dance: down 10, up 5. Start at 1k." % Game.key_label(&"transducer_bone")})
+	await _bonus_hole()
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
 	var bone := ClinicRules.sheet_thresholds(results, "right", &"bc")
@@ -355,6 +356,20 @@ func _bone() -> void:
 	await _say("Hoot", "Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!")
 	await _say("Bonnie", "A ghost in my skull?! I KNEW that oven was haunted.")
 	hud.call("complete_step", &"bone")
+
+
+## (polish) The optional 250 Hz bone "bonus hole": loud low bone tones are FELT before they are
+## heard (ClinicRules.VIBROTACTILE_DB 250: 30), so it starts at 40 and the first buzz tickles.
+## Skipping is fine (many clinics skip 250 Hz bone); the textbook answer (the bot's) plays it.
+func _bonus_hole() -> void:
+	var opts: Array[String] = ["Bonus hole! Bring on the tickle.", "Skip it: 500 to 4000 Hz is plenty."]
+	var c: int = await dialogue.choose("Bonus hole: bone at 250 Hz? Warning: low buzzes tickle!", opts, 0)
+	if c != 0:
+		await _say("Hoot", "Fair! Many clinics skip 250 Hz bone: a loud low buzz gets felt, not heard.")
+		return
+	await _test("right", false, {"test": "bc", "bc_freqs": [250], "masking_controls": true, "hoot_turn_after": 99,
+		"start_db": 40, "done_title": "BONUS HOLE!",
+		"intro": "250 Hz, starting at 40. Watch her face on the first buzz!"})
 
 
 # ---------------------------------------------------------------- 9. masking
@@ -489,7 +504,7 @@ func _evidence(b: Control) -> void:
 	if bool(ear.get("carhart_notch", false)):
 		b.call("show_carhart")
 		_shot("carhart", 0.5)
-		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: a stiff middle ear fakes a small bone dip. Her cochlea is fine!")
+		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: the stiff middle ear fakes a small bone dip. Her cochlea is fine, and it often recovers after surgery!")
 	else:
 		await _say("Hoot", "Young, one ear, family history, normal eardrum: a doctor may suspect otosclerosis.")
 	await _say("Hoot", "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!")
