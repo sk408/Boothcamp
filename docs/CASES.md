@@ -9,7 +9,7 @@ Contract additions are in `CONTRACTS.md` §11 (cases). Steve reviews every clini
 |---|---|
 | Teaches | reading clues; red flags; audiogram shapes; tympanogram types; comparing with old charts; the fit / refer / doctor-today decision |
 | Length | target 8-9 minutes per case with "quick visit" on (the default); see the budget in section 4 |
-| Opens | from the chapter select, any order, every day open from the start (`requires` is only a "suggested next" badge). The first case a player opens starts with Hoot's one-line Case Files briefing. |
+| Opens | from the chapter select, any order, every day open from the start (`requires` is only a "suggested next" badge; until the main thread removes chapter 2's day locks, "Unlock all days" opens them). The first case a player opens starts with Hoot's one-line Case Files briefing. |
 | Level scene | `res://story/level_case.tscn` (`story/level_case.gd`), one runner for every case |
 | Case data | `story/cases/<case_id>.json`: **the source of truth for every line that ships**. `docs/CASE_SCRIPTS.md` is generated from it (`python3 tools/case_scripts.py`) so the full scripts can be read and signed off. Patient truth in `core/patients/<id>.tres`. |
 | Rules | `core/cases/case_rules.gd` (`CaseRules`): decisions, red flags, asymmetry, the sudden-loss definition, tympanogram types and curve |
@@ -59,7 +59,8 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
 | Left air (X) | 15 | 20 | 20 | 25 | 35 | 45 | 60 | 70 | 60 | 45 |
 
 - Shape `notch` both ears: the 3-6k floor is 25 dB below 2k and recovers 25 dB at 8k.
-- Ears within 5 dB everywhere: symmetric (5 dB is test-retest wobble). Flavour only: he says the left, his hi-hat
+- Ears within 5 dB everywhere: symmetric (5 dB is test-retest wobble; the card says "Left and right ears match", since
+  the measured chart can wobble a little more). Flavour only: he says the left, his hi-hat
   side, might be worse; no line claims the chart shows it.
 - Bone: Hoot, right mastoid, unmasked (= right air; the right is the better cochlea, so no Ghost). Unmasked bone
   is the better cochlea, so it stands for both ears: left air minus it is 0-5 dB, so no gap is possible on either
@@ -78,7 +79,7 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
 - Left shape `rising` (low average 46.7, high average 26.7). Right normal. Asymmetric.
 - The spring test shows the low pitches 25 dB better. On its own that only proves a change; her report of good and
   bad days (in her opening lines, always heard) is what makes it fluctuating. The spring test was not itself
-  asymmetric (only 250 Hz differs by 15).
+  asymmetric: 250, 1k and 8k each differ from her right ear by 15, but never two neighbouring frequencies.
 - Unmasked bone on the left reads her RIGHT cochlea (about 10 / 5 / 10 / 15 at 500 / 1k / 2k / 4k): false gaps at
   500, 1k and 2k, so masked bone runs there and lands on the air values (no real gap).
 - Masked air: the rule (left air - 40 >= the right cochlea's bone estimate) asks for it at 250 and 1k, each exactly
@@ -132,9 +133,9 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 | 3 | `otoscopy` | A quick look (`Otoscopy.show_clear`); the caption names the canal size (roomy / average-sized / narrow). Clue card. | dialogue |
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
 | 5 | `instructions` | One line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. | dialogue |
-| 6 | `audiometry` | The case's test plan (section 4), then bone and the masked tests the rules ask for (Hoot). | the AudiOtron's tone beats |
-| 7 | `reveal` | The case board: the audiogram stamps in (with any chart on file dashed behind it). Hoot: "What shape do you see?" | dialogue |
-| 8 | `evidence` | The shape question (for Dash, the type of loss from the measured bone). Only after the right answer does the shape come alive with its title (section 6). Then the type badge and the chart's cards join the case file. Medal `evidence`. | choice |
+| 6 | `audiometry` | The case's test plan (section 4), then bone and the masked tests the rules ask for (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when the measured bone ear agrees with the case; otherwise Hoot says a neutral line. | the AudiOtron's tone beats |
+| 7 | `reveal` | The case board: the audiogram stamps in. Hoot: "What shape do you see?" | dialogue |
+| 8 | `evidence` | The shape question (for Dash, the type of loss). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file. Medal `evidence`. | choice |
 | 9 | `decision` | Three rubber stamps: FIT / REFER / DOCTOR TODAY. A wrong stamp gets Hoot's reason and another try. Then "present the clue that proves it" from up to nine shuffled cards; each wrong card can have its own reply. Medal `decision`. | choice (stamp tray), choice (clue cards) |
 | 10 | (payoff) | FIT: hearing aids pop on + counselling (Rocco also picks his earplugs). REFER: the letter folds into a paper boat. TODAY: Hoot phones the ear doctor and books this afternoon. The patient waves goodbye. | dialogue, choice |
 | 11 | `results` | The Daily Decibel with the case's own headlines and medal row (Chat, Tymp, Pattern, Call). | results_continue |
@@ -188,7 +189,7 @@ beside the curve (adults about 0.9-2.0 mL).
 1. Pick the ear tip for the canal the otoscope showed (narrow = small, average-sized = medium, roomy = large).
    Too small: "hisss, LEAK!"; too big: "it won't go in"; the right one seals with a "pop".
 2. Right then left curve draw themselves (red, blue).
-3. The question. Rocco: "What type is it?" (A / B / C, shuffled). The others ask the patient's own worry: Marina
+3. The question. Rocco: "What type are both of Rocco's tympanograms?" (A / B / C, shuffled). The others ask the patient's own worry: Marina
    "Her ear feels full. Is it fluid behind the eardrum?"; Dash "Dash says it's wax. Does the tymp agree?";
    Ginger "Is her middle ear the problem?".
 4. Medal `tymp`: gold = the right tip and the right answer first time; silver = one slip (tip or answer); bronze =
@@ -229,8 +230,8 @@ Counselling that ships: Rocco, aids often make ringing less noticeable; the dama
 preventable; earplugs at every gig and rehearsal; musicians' earplugs; on stage aids out, earplugs in; a yearly
 test. Marina, the safety net ("Hearing suddenly worse? Doctor that day. Weakness, numbness, double vision or
 slurred speech? Emergency!"); aids may help between spells once a doctor has looked; her first mate takes the wheel
-until a doctor clears her. Dash, same day to an ENT (or the emergency department if no ENT can see him today),
-audiogram sent ahead; "Sooner is better. Doctors still treat after three days, but today beats tomorrow." Ginger,
+until a doctor clears her. Dash, same day to an ENT, audiogram sent ahead ("No ear doctor free today? Then the
+emergency department. Same day, either way."); face droop, numbness, slurred speech or double vision mean the ER now; "Sooner is better. Doctors still treat after three days, but today beats tomorrow." Ginger,
 aids tuned for the middle pitches; offer a routine genetic counselling referral alongside (not before) the fitting;
 a yearly test, since some family patterns slowly change.
 

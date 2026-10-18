@@ -88,7 +88,7 @@
 			"before": [["Hoot", "Now the bone buzzer, on his right: is it the middle ear, or deeper?"]]}
 	],
 	"after_audiometry": [
-		["Hoot", "Unmasked bone matches both ears' air: no gap on either side."]
+		["Hoot", "Bone sits right on the air: no gap. Not the middle ear."]
 	],
 	"reveal": {
 		"pattern": "notch",
@@ -114,7 +114,7 @@
 	},
 	"findings": [
 		{"tag": "notch", "text": "Dip at 4k, better at 8k (noise notch)"},
-		{"tag": "symmetric", "text": "Both ears match (within 5 dB)", "when": "symmetric"},
+		{"tag": "symmetric", "text": "Left and right ears match", "when": "symmetric"},
 		{"tag": "snhl", "text": "Bone matches air: no gap"}
 	],
 	"decision": {
@@ -166,7 +166,7 @@
 			"Do-over": "ROCCO BACK FOR AN ENCORE; BRINGS DRUMSTICKS"
 		},
 		"subheads": {
-			"S": "A textbook notch at 4k and a perfect call. The Decibelles buy musicians' earplugs in bulk.",
+			"S": "A textbook notch at 4k, charted cleanly. The Decibelles buy musicians' earplugs in bulk.",
 			"A": "No red flags and a real need: fit, then protect what's left.",
 			"B": "The notch showed up; a few stamps wandered. Hoot recommends practice.",
 			"C": "Look for the dip at 4k and the comeback at 8k.",

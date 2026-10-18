@@ -16,11 +16,13 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"id", "patient_id", "speaker", "case_title", "look", "intro", "history", "red_flags", "otoscopy", "tymp",
 	"instructions", "audiometry", "reveal", "evidence", "findings", "decision", "clue_pick", "payoff", "paper",
 ]
-const PATTERNS: PackedStringArray = ["notch", "rising", "flat_one", "cookie", "slope"]
+const PATTERNS: PackedStringArray = ["notch", "rising", "flat_one", "cookie"]   # each has a CaseBoard animation
 const BURSTS: PackedStringArray = ["", "firework", "cymbal"]
 const ACTIONS: PackedStringArray = ["react", "hoot", "do", "choose"]
 const DOS: PackedStringArray = ["hearing_aids", "letter", "boat", "phone"]
 const WHENS: PackedStringArray = ["", "symmetric", "asymmetric"]
+## Where a clue card came from (its header on the case board, CaseBoard.SRC_TITLES).
+const CLUE_SOURCES: PackedStringArray = ["history", "note", "look", "tymp", "flag", "test"]
 ## Hoot's coaching lines stay short (house style).
 const HOOT_MAX_WORDS := 18
 const LOOK_NAMES: PackedStringArray = ["face", "hair_style", "glasses", "prop"]
@@ -91,6 +93,17 @@ static func truth(patient: PatientProfile, ear: String) -> Dictionary:
 	for f: int in t:
 		out[f] = int(t[f])
 	return out
+
+
+## The type of loss the case teaches for an ear, from the patient's truth (bone = air without bone data).
+static func truth_type(patient: PatientProfile, ear: String) -> StringName:
+	if patient == null:
+		return &"unknown"
+	var air := truth(patient, ear)
+	var bone := {}
+	for f: int in air:
+		bone[f] = patient.get_bc_threshold(ear, f)
+	return ClinicRules.hearing_type(air, bone)
 
 
 ## Every line of Hoot's in a case file (for the word-count test), as ["where", "text"].
@@ -225,6 +238,8 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("finding %s: when must be symmetric or asymmetric" % fd.get("tag", ""))
 		elif String(fd.get("when", "")) == "":
 			tags[String(fd.get("tag", ""))] = true
+		if not CLUE_SOURCES.has(String(fd.get("src", "test"))):
+			out.append("finding %s: src must be one of %s" % [fd.get("tag", ""), ", ".join(CLUE_SOURCES)])
 	var tymp: Dictionary = c["tymp"]
 	if not CaseRules.TIP_SIZES.has(StringName(String(tymp.get("tip", "")))):
 		out.append("tymp tip must be small, medium or large")

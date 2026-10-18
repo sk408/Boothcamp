@@ -46,7 +46,8 @@ Caption: *Rocco's RIGHT ear: a roomy canal, shiny eardrum.*
 ### Tympanometer
 Tip: large (roomy canal). Right: type A, peak -15 daPa, 0.9 mL, canal 1.5 mL. Left: type A, peak -10 daPa, 0.8 mL, canal 1.6 mL.
 
-Question: **What type is it?** (A / B / C, shuffled)
+Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
+- A wrong pick: Hoot: Type X would be (its shape). Look where the peak sits, and how tall.
 
 - **Hoot:** Type A both sides: no fluid, no blockage. The bone test will tell us if it's deeper.
 
@@ -60,7 +61,10 @@ Question: **What type is it?** (A / B / C, shuffled)
 - Right BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
   - before: **Hoot:** Now the bone buzzer, on his right: is it the middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot).
-- **Hoot:** Unmasked bone matches both ears' air: no gap on either side.
+
+After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+
+- **Hoot:** Bone sits right on the air: no gap. Not the middle ear.
 
 ### The chart, the shape question, the reveal
 - **Hoot:** Here's Rocco's chart, trainee. What shape do you see?
@@ -74,14 +78,14 @@ Question: **What type is it?** (A / B / C, shuffled)
 - **Hoot:** Pretty much. The damage so far is permanent. More damage is preventable.
 - **Hoot:** Noise notches usually sit between 3k and 6k, deepest near 4k.
 
-Cards from the chart: *Dip at 4k, better at 8k (noise notch)*; *Both ears match (within 5 dB)* (if symmetric); *Bone matches air: no gap*
+Cards from the chart: *Dip at 4k, better at 8k (noise notch)*; *Left and right ears match* (if symmetric); *Bone matches air: no gap*
 
 ### The call
 - **FIT** (right): No red flags, and he misses words in noisy pubs: hearing aids help. Earplugs every gig!
 - **REFER**: Careful is good! But no red flags: ears match, no pain, no spins, nothing sudden.
 - **DOCTOR TODAY**: Nothing sudden: it crept up over thirty years of drumming. Not an emergency.
 
-Present the evidence: **Present the evidence: why is it safe to fit Rocco today?**
+**Present the evidence: why is it safe to fit Rocco today?**
 - Proof cards (tags): no_red_flags, symmetric, both_ears. Right: Exactly! Nothing on the red-flag list, and ears that match: fitting is the right call.
 - Wrong card (default): True, but it doesn't prove he's safe to fit. Look for the red-flag check!
   - noise_years: That's why he has a loss, not why it's safe to fit. Find the red-flag check!
@@ -105,7 +109,7 @@ Present the evidence: **Present the evidence: why is it safe to fit Rocco today?
 - **Rocco:** Earplugs in. Ba-dum-TSS!
 
 ### The Daily Decibel
-- S: **DRUMMER'S NOTCH NAILED; OWL PRESCRIBES EARPLUGS** A textbook notch at 4k and a perfect call. The Decibelles buy musicians' earplugs in bulk.
+- S: **DRUMMER'S NOTCH NAILED; OWL PRESCRIBES EARPLUGS** A textbook notch at 4k, charted cleanly. The Decibelles buy musicians' earplugs in bulk.
 - A: **ROCCO HEARS HI-HAT AGAIN; PUB DEMANDS QUIETER SOLOS** No red flags and a real need: fit, then protect what's left.
 - B: **NOTCH FOUND, DRUMMER FITTED, CYMBALS ON NOTICE** The notch showed up; a few stamps wandered. Hoot recommends practice.
 - C: **SOME BEEPS DROPPED THE BEAT, CONFIRMS OWL** Look for the dip at 4k and the comeback at 8k.
@@ -172,10 +176,13 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
 - Left BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
   - before: **Hoot:** Now the bone buzzer, on her left. Watch out for the Ghost!
 - Then masked bone and masked air wherever the rules ask (Hoot).
+
+After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+
 - **Hoot:** Masked bone sits with the air: no gap. Not the middle ear.
 
 ### The chart, the shape question, the reveal
-- **Hoot:** Today's chart, with her spring test dashed. What does her left ear show?
+- **Hoot:** Here's today's chart. What does her left ear show?
 - **Question:** What does Marina's left ear show?
   - (right) Rising: worst in the LOW pitches.
   - A noise notch at 4k.: Hoot: No dip at 4k: her high pitches are nearly fine.
@@ -193,7 +200,7 @@ Cards from the chart: *Left ear only* (if asymmetric); *Hearing comes and goes*;
 - **REFER** (right): Spins, a full roaring ear, hearing with tides: set course for the ear doctor!
 - **DOCTOR TODAY**: Spells for months, none today, no sudden drop in three days. Soon, not today.
 
-Present the evidence: **Present the evidence: why does Marina need a doctor first?**
+**Present the evidence: why does Marina need a doctor first?**
 - Proof cards (tags): spinning, left_only, fluctuating, changed, left_full, roar. Right: Exactly! Dizziness and a one-sided, changing loss: a doctor looks first.
 - Wrong card (default): True, but that's not a red flag. What would worry a doctor?
   - ear_clear: Those are normal: they don't send her to a doctor.
@@ -212,7 +219,7 @@ Present the evidence: **Present the evidence: why does Marina need a doctor firs
 - **Marina:** Aye aye. My first mate takes the wheel till the doctor clears me.
 
 ### The Daily Decibel
-- S: **CAPTAIN'S SPINNING SPELLS SPOTTED; OWL SALUTES SHARP TRAINEE** A rising loss, a spring comparison and a perfect call. The ferry runs on time.
+- S: **CAPTAIN'S SPINNING SPELLS SPOTTED; OWL SALUTES SHARP TRAINEE** A rising loss, a spring comparison and a clean chart. The ferry runs on time.
 - A: **FERRY CAPTAIN STEERED TO EAR DOCTOR; LOW TIDE IN LEFT EAR** Dizziness plus a one-sided, changing loss: a doctor looks first.
 - B: **MARINA REFERRED; TRAINEE FINDS SEA LEGS** The rising pattern showed; a few stamps drifted.
 - C: **SOME BEEPS LOST AT SEA, CONFIRMS OWL** Watch the low pitches, and compare with old results.
@@ -282,6 +289,9 @@ Question: **Dash says it's wax. Does the tymp agree?**
 - Right BC (Hoot at x8): "Bone check at Hoot speed: where is the trouble?"
   - before: **Hoot:** Wax would block air but not bone. The bone buzzer will tell us!
 - Then masked bone and masked air wherever the rules ask (Hoot).
+
+After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+
 - **Hoot:** Masked bone is in. Let's see where it landed.
 
 ### The chart, the shape question, the reveal
@@ -290,7 +300,7 @@ Question: **Dash says it's wax. Does the tymp agree?**
   - (right) Sensorineural: bone is down with the air.
   - Conductive: blocked, like wax.: Hoot: Then bone would be near normal. His masked bone is down with the air.
   - Mixed: a bit of both.: Hoot: Mixed needs a gap too. His bone and air sit together.
-  - (graded against the measured type of the right ear)
+  - (graded against the type of loss in the right ear)
 - *(the flat_one comes alive: ONE EAR, OVERNIGHT)*
 - **Hoot:** Right ear needs 40 to 60 dB, left ear normal. One ear, overnight.
 - **Dash:** So it's not wax?
@@ -305,7 +315,7 @@ Cards from the chart: *Right ear down, bone too: inner ear or nerve*; *Left ear 
 - **REFER**: A routine referral could take weeks. A sudden loss can't wait: TODAY.
 - **DOCTOR TODAY** (right): Hot delivery! Sudden sensorineural loss is urgent: treatment works best early. Doctor TODAY!
 
-Present the evidence: **Present the evidence: why TODAY and not next month?**
+**Present the evidence: why TODAY and not next month?**
 - Proof cards (tags): sudden, onset, first_time, one_ear_snhl, dizzy. Right: Exactly! Sudden, one ear, inner ear or nerve: the doctor sees him today.
   - dizzy: Yes! Dizzy with a sudden loss: another red flag. Today.
 - Wrong card (default): True, but that wouldn't make it a rush. What makes it urgent?
@@ -320,13 +330,14 @@ Present the evidence: **Present the evidence: why TODAY and not next month?**
 - **Hoot:** Hoot here, Booth Camp. Sudden loss in the right ear since yesterday. Can you see him today?
 - **Hoot:** Three o'clock? Perfect. His audiogram is on its way to you now.
 - **Hoot:** Dash, the ear doctor sees you at three. Go straight there, pizzas or not.
+- **Hoot:** No ear doctor free today? Then the emergency department. Same day, either way.
 - *(patient: cheer)*
 - **Dash:** Same day? Faster than my pizzas! Thanks, owl!
 
 ### The Daily Decibel
 - S: **SUDDEN LOSS SPOTTED IN RECORD TIME; PIZZA STILL HOT** One ear, overnight, bone down too: a same-day referral. Sooner was better.
 - A: **PIZZA BOSS RUSHED TO EAR DOCTOR SAME DAY; TOPPINGS DEBATE CONTINUES** A sudden one-sided loss can't wait: doctor today.
-- B: **DASH SENT TO DOCTOR TODAY; OWL CHECKS WATCH** The call was right; a few stamps wandered.
+- B: **DASH SENT TO DOCTOR TODAY; OWL CHECKS WATCH** Sent to the doctor today; a few stamps wandered.
 - C: **SOME BEEPS ARRIVED COLD, CONFIRMS OWL** Sudden plus sensorineural means doctor today.
 - Do-over: **TRAINEE DEMANDS REMATCH; DASH ALREADY AT THE DOCTOR** Remember: sudden hearing loss is urgent, even after three days. Dash made his appointment anyway.
 
@@ -393,10 +404,13 @@ Question: **Is her middle ear the problem?**
 - Right BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
   - before: **Hoot:** Now the bone buzzer: middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot).
-- **Hoot:** Unmasked bone matches BOTH ears' air: no gap on either side.
+
+After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+
+- **Hoot:** Bone sits right on the air: no gap. Not the middle ear.
 
 ### The chart, the shape question, the reveal
-- **Hoot:** Here's her chart, with the old one dashed. What shape do you see?
+- **Hoot:** Here's her chart. What shape do you see?
 - **Question:** What shape is Ginger's hearing loss?
   - (right) A cookie bite: worst in the middle pitches.
   - A ski slope: worst in the high pitches.: Hoot: Look at 4k and 8k: they come back up.
@@ -405,10 +419,10 @@ Question: **Is her middle ear the problem?**
 - **Chip:** Hey, that's MY look!
 - **Hoot:** Worse in the middle, better at both ends: a cookie bite! These often run in families.
 - **Ginger:** So that's why Chip and I get along.
-- **Hoot:** And it matches her chart from nine years ago, within 5 dB. Stable.
+- **Hoot:** And it matches her chart from nine years ago. Stable.
 - **Hoot:** The middle pitches carry lots of speech, so words drop out of voices.
 
-Cards from the chart: *Worst in the middle pitches (cookie bite)*; *Both ears match (within 5 dB)* (if symmetric); *Bone matches air: no gap*; *Same bite as nine years ago: stable*
+Cards from the chart: *Worst in the middle pitches (cookie bite)*; *Left and right ears match* (if symmetric); *Bone matches air: no gap*; *Same bite as nine years ago: stable*
 
 ### The call
 - **FIT** (right): Sweet call! Stable for years, ears match, no red flags: hearing aids tuned for the middle pitches.
@@ -436,7 +450,7 @@ Present the evidence: **Her dad and grandma have it too. Why is it still safe to
 - **Chip:** Same time next year, owl. Bring snacks.
 
 ### The Daily Decibel
-- S: **COOKIE BITE CRACKED; PUPPET DEMANDS CREDIT** A textbook cookie bite, stable for nine years, and a perfect call.
+- S: **COOKIE BITE CRACKED; PUPPET DEMANDS CREDIT** A textbook cookie bite, stable for nine years, charted cleanly.
 - A: **VENTRILOQUIST HEARS THE BACK ROW AGAIN; CHIP STEALS THE SHOW** Stable, matching ears, no red flags: fit, tune for the middle, offer a genetics chat.
 - B: **MIDDLE PITCHES FOUND, GINGER FITTED; CHIP UNIMPRESSED** The bite showed up; a few stamps missed their cue.
 - C: **SOME BEEPS MISSED THEIR CUE, CONFIRMS OWL** Look for the dip between 1k and 2k.

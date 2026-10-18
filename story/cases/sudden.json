@@ -161,6 +161,7 @@
 		["Hoot", "Hoot here, Booth Camp. Sudden loss in the right ear since yesterday. Can you see him today?"],
 		["Hoot", "Three o'clock? Perfect. His audiogram is on its way to you now."],
 		["Hoot", "Dash, the ear doctor sees you at three. Go straight there, pizzas or not."],
+		["Hoot", "No ear doctor free today? Then the emergency department. Same day, either way."],
 		{"react": "cheer"},
 		["Dash", "Same day? Faster than my pizzas! Thanks, owl!"]
 	],
@@ -175,7 +176,7 @@
 		"subheads": {
 			"S": "One ear, overnight, bone down too: a same-day referral. Sooner was better.",
 			"A": "A sudden one-sided loss can't wait: doctor today.",
-			"B": "The call was right; a few stamps wandered.",
+			"B": "Sent to the doctor today; a few stamps wandered.",
 			"C": "Sudden plus sensorineural means doctor today.",
 			"Do-over": "Remember: sudden hearing loss is urgent, even after three days. Dash made his appointment anyway."
 		}

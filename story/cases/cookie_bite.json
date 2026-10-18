@@ -105,7 +105,7 @@
 			"before": [["Hoot", "Now the bone buzzer: middle ear, or deeper?"]]}
 	],
 	"after_audiometry": [
-		["Hoot", "Unmasked bone matches BOTH ears' air: no gap on either side."]
+		["Hoot", "Bone sits right on the air: no gap. Not the middle ear."]
 	],
 	"reveal": {
 		"pattern": "cookie",
@@ -117,13 +117,13 @@
 			"thresholds": {"250": 15, "500": 20, "1000": 40, "2000": 50, "4000": 25, "8000": 15}
 		},
 		"ask": [
-			["Hoot", "Here's her chart, with the old one dashed. What shape do you see?"]
+			["Hoot", "Here's her chart. What shape do you see?"]
 		],
 		"lines": [
 			["Chip", "Hey, that's MY look!"],
 			["Hoot", "Worse in the middle, better at both ends: a cookie bite! These often run in families."],
 			["Ginger", "So that's why Chip and I get along."],
-			["Hoot", "And it matches her chart from nine years ago, within 5 dB. Stable."]
+			["Hoot", "And it matches her chart from nine years ago. Stable."]
 		]
 	},
 	"evidence": {
@@ -135,7 +135,7 @@
 	},
 	"findings": [
 		{"tag": "cookie", "text": "Worst in the middle pitches (cookie bite)"},
-		{"tag": "symmetric", "text": "Both ears match (within 5 dB)", "when": "symmetric"},
+		{"tag": "symmetric", "text": "Left and right ears match", "when": "symmetric"},
 		{"tag": "snhl", "text": "Bone matches air: no gap"},
 		{"tag": "stable_chart", "text": "Same bite as nine years ago: stable"}
 	],
@@ -182,7 +182,7 @@
 			"Do-over": "GINGER AND CHIP BOOKED FOR AN ENCORE"
 		},
 		"subheads": {
-			"S": "A textbook cookie bite, stable for nine years, and a perfect call.",
+			"S": "A textbook cookie bite, stable for nine years, charted cleanly.",
 			"A": "Stable, matching ears, no red flags: fit, tune for the middle, offer a genetics chat.",
 			"B": "The bite showed up; a few stamps missed their cue.",
 			"C": "Look for the dip between 1k and 2k.",

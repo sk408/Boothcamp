@@ -105,7 +105,13 @@ def render(c):
         for o in ty["quiz"]["options"]:
             out.append(f"- {'(right) ' if o[1] else ''}{o[0]}" + (f": Hoot: {o[2]}" if o[2] else ""))
     else:
-        out.append("Question: **What type is it?** (A / B / C, shuffled)")
+        if ty["right"]["type"] == ty["left"]["type"]:
+            asks = [f"What type are both of {sp}'s tympanograms?"]
+        else:
+            asks = [f"What type is the {e.upper()} ear's tympanogram?" for e in ("right", "left")]
+        for q in asks:
+            out.append(f"Question: **{q}** (A / B / C, shuffled)")
+        out.append("- A wrong pick: Hoot: Type X would be (its shape). Look where the peak sits, and how tall.")
     out.append("")
     script(ty.get("after", []), out)
     out.append("")
@@ -119,6 +125,10 @@ def render(c):
         for e in p.get("before", []):
             out.append(f"  - before: **{e[0]}:** {e[1]}")
     out.append("- Then masked bone and masked air wherever the rules ask (Hoot).")
+    out.append("")
+    out.append("After the tests (said when the measured bone ear agrees with the case; "
+               "otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):")
+    out.append("")
     script(c.get("after_audiometry", []), out)
     rv = c["reveal"]
     ev = c["evidence"]
@@ -131,7 +141,7 @@ def render(c):
         why = ev["wrong"][i] if i < len(ev.get("wrong", [])) and ev["wrong"][i] else ""
         out.append(f"  - {mark}{o}" + (f": Hoot: {why}" if why else ""))
     if ev.get("answer_from_type"):
-        out.append("  - (graded against the measured type of the %s ear)" % ev["answer_from_type"])
+        out.append("  - (graded against the type of loss in the %s ear)" % ev["answer_from_type"])
     out.append(f"- *(the {rv['pattern']} comes alive: {rv['title']})*")
     script(rv.get("lines", []), out)
     if ev.get("right"):
@@ -147,7 +157,8 @@ def render(c):
         mark = " (right)" if k == dec["answer"] else ""
         out.append(f"- **{CALLS[k]}**{mark}: {dec['lines'][k]}")
     out.append("")
-    out.append(f"Present the evidence: **{cp['prompt']}**")
+    p = cp["prompt"]
+    out.append(f"**{p}**" if p.startswith("Present the evidence") else f"Present the evidence: **{p}**")
     out.append(f"- Proof cards (tags): {', '.join(cp['answers'])}. Right: {cp['right_line']}")
     for t, line in cp.get("right_lines", {}).items():
         out.append(f"  - {t}: {line}")

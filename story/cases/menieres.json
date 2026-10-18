@@ -116,7 +116,7 @@
 			"thresholds": {"250": 25, "500": 20, "1000": 20, "2000": 15, "4000": 20, "8000": 30}
 		},
 		"ask": [
-			["Hoot", "Today's chart, with her spring test dashed. What does her left ear show?"]
+			["Hoot", "Here's today's chart. What does her left ear show?"]
 		],
 		"lines": [
 			["Hoot", "Low pitches about 25 dB worse than spring, and she has good days: hearing that comes and goes."],
@@ -133,7 +133,7 @@
 	},
 	"findings": [
 		{"tag": "left_only", "text": "Left ear only", "when": "asymmetric"},
-		{"tag": "fluctuating", "text": "Hearing comes and goes"},
+		{"tag": "fluctuating", "text": "Hearing comes and goes", "src": "history"},
 		{"tag": "changed", "text": "Low pitches 25 dB worse than in spring"},
 		{"tag": "snhl", "text": "Bone matches air: no gap"}
 	],
@@ -178,7 +178,7 @@
 			"Do-over": "MARINA BACK TOMORROW, FIRST MATE AT THE WHEEL; BRINGS FISH PIE"
 		},
 		"subheads": {
-			"S": "A rising loss, a spring comparison and a perfect call. The ferry runs on time.",
+			"S": "A rising loss, a spring comparison and a clean chart. The ferry runs on time.",
 			"A": "Dizziness plus a one-sided, changing loss: a doctor looks first.",
 			"B": "The rising pattern showed; a few stamps drifted.",
 			"C": "Watch the low pitches, and compare with old results.",

@@ -71,7 +71,10 @@ Requests for the integrator and the title owner:
 - **Day picker (agreed with the main thread, which owns `title_screen.gd`).** Each case chapter in
   `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and `tint` (the card colour). The chapter
   select rework falls back to those keys when `DAY_FACES` / `DAY_TINTS` has no entry, and lays out any number of
-  chapters in a scrolling grid. Until it lands, Days 6 to 9 show the default cream card with no portrait.
+  chapters in a scrolling grid. **Until it lands, the Days row overflows:** six 340 px cards in one HBoxContainer
+  (2150 px) put the Day 1 card off the left edge, where a mouse player can't click it (the Play button and the
+  keyboard still work). Merge the cases after the rework, or wrap the row in a horizontal ScrollContainer and call
+  `ensure_control_visible` on the highlighted card. Days 6 to 9 also show the default cream card with no portrait.
   `Portraits` already draws every case speaker (it falls back to `CasePortraits`).
 - **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 9) both append to `Game.CHAPTERS`
   and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`). Keep both blocks, speech first.
@@ -89,7 +92,7 @@ Requests for the integrator and the title owner:
   `"Do-over"`) and `medal_beats`; when present they win over the per-chapter tables. Already wired, listed
   here so it isn't undone at merge.
 - **Voice.** `Voice.register(speaker, spec)` adds a babble voice for a case speaker (built-in speakers can't
-  be overwritten). Case speakers with no voice fall back to Gus's.
+  be overwritten). Case speakers with no registered voice are silent; missing keys in a case's voice spec take Gus's values.
 - **Portraits.** Unknown speakers fall back to `story/case_portraits.gd`. Chip (Ginger's puppet) has a cookie
   portrait.
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,

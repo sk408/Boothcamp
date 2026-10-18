@@ -199,3 +199,24 @@ func test_extra_speakers_get_a_portrait_and_a_voice() -> void:
 	assert_true(Voice.has_voice("Chip"))
 	Voice.register("Gus", {"f0": 999.0})
 	assert_near(float((Voice.SPEAKERS["Gus"] as Dictionary)["f0"]), 128.0, 0.01, "built-in voices stay")
+
+
+func test_type_of_loss_follows_the_truth() -> void:
+	# the type badge and Dash's type question are graded against the patient's truth, like the lines
+	for id: String in EXPECTED:
+		var c := _case(id)
+		var p := Game.load_patient(String(c["patient_id"])) as PatientProfile
+		var ear := String((c["reveal"] as Dictionary).get("ear", "right"))
+		ear = "right" if ear == "both" else ear
+		assert_eq(CaseData.truth_type(p, ear), &"sensorineural", "%s %s ear" % [id, ear])
+	var marina := Game.load_patient("marina") as PatientProfile
+	assert_eq(CaseData.truth_type(marina, "right"), &"normal", "Marina's good ear")
+	assert_eq(CaseData.truth_type(null, "right"), &"unknown")
+
+
+func test_finding_sources_are_checked() -> void:
+	var c := _case("menieres").duplicate(true)
+	assert_true(CaseData.validate(c).is_empty())
+	(c["findings"] as Array).append({"tag": "x", "text": "x", "src": "gossip"})
+	var problems := CaseData.validate(c)
+	assert_true("; ".join(problems).contains("src must be"), "an unknown card source is reported")

@@ -1014,16 +1014,18 @@ Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from th
 | 3D costume bits | `world/characters/case_extras.gd` (`CaseExtras.attach(bean, spec)`) | cases |
 
 **Registering a case.** One `Game.CHAPTERS` entry per case, scene `res://story/level_case.tscn`, with the extra keys
-`case` (the JSON id), `face` (the portrait speaker for the day picker) and `tint` (the card colour). `requires` is only
-a "suggested next" badge: every day is open. `LevelCase.pick_case_id()`: the chapter's `case`, else `--case=<id>`,
+`case` (the JSON id), `face` (the portrait speaker for the day picker) and `tint` (the card colour). `requires` is meant
+only as a "suggested next" badge with every day open; until the main thread removes chapter 2's day locks,
+`Game.is_chapter_unlocked` still enforces it ("Unlock all days" opens them all). `LevelCase.pick_case_id()`: the chapter's `case`, else `--case=<id>`,
 else the first registered case.
 
 **Phases** (`Events.phase_changed`): `intro`, `history`, `otoscopy`, `tymp`, `instructions`, `audiometry` (one per
 test, info `{ear, test}`), `reveal`, `evidence`, `decision`, `results`. `Game.PHASES` gained `tymp` and `decision`.
 
 **Beats.** No new beat kinds. Everything is `dialogue`, `choice` (history, tip, tymp question, shape, earplugs,
-the stamp tray, the clue cards), the AudiOtron's own beats, and `results_continue`. Every choice is shuffled with
-`Game.rng`; `info.best` follows the shuffle. Stamp and card buttons are flat Buttons whose Label children start with
+the stamp tray, the clue cards), the AudiOtron's own beats, and `results_continue`. The stamp tray
+(FIT / REFER / DOCTOR TODAY) and the tip sizes (Small / Medium / Large) keep a fixed order; every other choice is
+shuffled with `Game.rng` and `info.best` follows the shuffle. Stamp and card buttons are flat Buttons whose Label children start with
 the option text, so the mouse bot clicks them by their first 18 characters (tests keep those prefixes unique).
 
 **Hooks in other modules (all additive).**

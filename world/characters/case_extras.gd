@@ -66,7 +66,8 @@ func build(bean: Node3D, spec: Dictionary) -> void:
 
 func _on_dialogue_line(who: String, text: String) -> void:
 	if who == _puppet_voice and _puppet_voice != "":
-		_puppet_talk = clampf(text.length() / 45.0, 0.5, 5.0)
+		# as long as the dialogue box types the line (the clinic's lip-sync uses the same rate)
+		_puppet_talk = clampf(text.length() / (45.0 * maxf(0.2, float(Game.settings.get("text_speed", 1.0)))), 0.5, 5.0)
 
 
 func _process(delta: float) -> void:

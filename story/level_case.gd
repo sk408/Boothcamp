@@ -529,7 +529,9 @@ func _audiometry() -> void:
 		var pd: Dictionary = p
 		var ear := String(pd["ear"])
 		var plan := {"test": String(pd["test"]), "hoot_turn_after": int(pd.get("hoot_turn_after", 0))}
-		if pd.has("intro"):
+		# an intro for a Hoot-speed test ("Left at Hoot speed!") only fits when Hoot really runs it:
+		# with Quick visit off the player runs everything and the screen says its own line
+		if pd.has("intro") and (_quick() or int(plan["hoot_turn_after"]) > 0):
 			plan["intro"] = String(pd["intro"])
 		if plan["test"] == "bc":
 			main_ear = ear
@@ -550,15 +552,17 @@ func _audiometry() -> void:
 			_close_screen(cam)
 			clinic.call("focus_camera", &"face", 0.5)
 			clinic.call("put_on_masking_phone", other)
-			await _say("Hoot", "Bone buzzes both cochleas. I'll keep the %s ear busy with noise." % other)
+			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
+				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
 			_open_screen()
 			await _test(main_ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 0,
-				"intro": "Masked bone at Hoot speed: the shhh goes in the %s ear." % other})
+				"intro": ("Masked bone at Hoot speed: the shhh goes in the %s ear." if _quick()
+					else "Masked bone: the shhh goes in the %s ear.") % other})
 		if not ClinicRules.masked_freqs_needed(results, main_ear, &"ac_masked", _air_transducer()).is_empty():
 			_close_screen(cam)
 			clinic.call("take_off_bone_oscillator")
 			clinic.call("put_on_earphones", true)
-			await _say("Hoot", "Loud air tones can cross the head too. Masked air, Hoot speed!")
+			await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
 			_open_screen()
 			await _test(main_ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
 				"intro": "Masked air: same plateau dance, noise in the %s ear." % other})
@@ -570,7 +574,19 @@ func _audiometry() -> void:
 	clinic.call("take_off_earphones")
 	clinic.call("focus_camera", &"face", 0.4)
 	hud.call("complete_step", &"beeps")
-	await _play(case_data.get("after_audiometry", []))
+	# the case's line describes the true chart ("bone sits with the air: no gap"); if the player's
+	# stamps left a gap on the bone ear, it would contradict the screen, so say a neutral line
+	var measured: StringName = ((results.get("ears", {}) as Dictionary).get(main_ear, {}) as Dictionary).get("hearing_type", &"unknown")
+	if main_ear == "" or measured == CaseData.truth_type(patient, main_ear):
+		await _play(case_data.get("after_audiometry", []))
+	else:
+		await _say("Hoot", "Bone's in. Let's lay it over the air and see what it says.")
+
+
+## Quick visit (the default): Hoot runs the tests the plan gives him. Off: the player runs everything.
+## Read when needed, since the pause menu can change it mid-visit.
+func _quick() -> bool:
+	return screen != null and bool(screen.get("quick_visit"))
 
 
 ## An ear with air but no bone test of its own: the other ear's UNMASKED bone reads the better cochlea,
@@ -638,11 +654,11 @@ func _evidence(b: Control) -> void:
 	for o: Variant in ev["options"]:
 		all.append(String(o))
 	var answer := int(ev["answer"])
-	var ear_info: Dictionary = (results.get("ears", {}) as Dictionary).get(_case_ear(), {})
-	var kind: StringName = ear_info.get("hearing_type", &"sensorineural")
+	# the type badge and an "answer_from_type" question follow the patient's TRUE type, like every
+	# authored line around them (a few wandering stamps must not make the game insist on "mixed")
+	var kind: StringName = CaseData.truth_type(patient, _case_ear())
 	if ev.has("answer_from_type"):
-		var info: Dictionary = (results.get("ears", {}) as Dictionary).get(String(ev["answer_from_type"]), {})
-		answer = int(TYPE_ANSWERS.get(info.get("hearing_type", &""), answer))
+		answer = int(TYPE_ANSWERS.get(CaseData.truth_type(patient, String(ev["answer_from_type"])), answer))
 	var answer_text := all[answer]
 	var wrong: Array = ev.get("wrong", [])
 	b.call("set_compact", true)
@@ -694,7 +710,7 @@ func _add_findings() -> void:
 			"asymmetric":
 				if not asym:
 					continue
-		_add_clue(String(fd["tag"]), String(fd["text"]), "clue", "test")
+		_add_clue(String(fd["tag"]), String(fd["text"]), "clue", String(fd.get("src", "test")))
 
 
 # ---------------------------------------------------------------- 9. the call: stamp it, then prove it

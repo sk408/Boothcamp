@@ -200,7 +200,10 @@ func show_pattern() -> void:
 	_title.pivot_offset = _title.size * 0.5
 	_place_title()
 	_title.visible = _title.text != ""
-	Juice.pop(_title, 1.7, 0.45)
+	# pop, but settle at the chart's scale (Juice.pop would settle at 1.0, too big on a compact chart)
+	var sc := _sc()
+	_title.scale = Vector2.ONE * sc * (lerpf(1.0, 1.7, 0.3) if Juice._reduced() else 1.7)
+	create_tween().tween_property(_title, "scale", Vector2.ONE * sc, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Sfx.play(&"ding", 1.0, -4.0)
 	await get_tree().create_timer(0.6, false).timeout
 
@@ -381,9 +384,11 @@ func _move_card(sc: float, visible_at: Vector2) -> void:
 func _set_prompt(prompt: String) -> void:
 	_banner_label.text = prompt
 	_banner.reset_size()
-	# reset_size grows to the right only: centre it again, clear of the pause button
-	_banner.offset_left = -_banner.size.x / 2.0
-	_banner.offset_right = _banner.size.x / 2.0
+	# reset_size grows to the right only: centre it again (read the width first: setting
+	# offset_left changes size)
+	var w := _banner.size.x
+	_banner.offset_left = -w / 2.0
+	_banner.offset_right = w / 2.0
 	Juice.pop(_banner, 1.06, 0.2)
 
 
