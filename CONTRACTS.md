@@ -1014,9 +1014,8 @@ Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from th
 | 3D costume bits | `world/characters/case_extras.gd` (`CaseExtras.attach(bean, spec)`) | cases |
 
 **Registering a case.** One `Game.CHAPTERS` entry per case, scene `res://story/level_case.tscn`, with the extra keys
-`case` (the JSON id), `face` (the portrait speaker for the day picker) and `tint` (the card colour). `requires` is meant
-only as a "suggested next" badge with every day open; until the main thread removes chapter 2's day locks,
-`Game.is_chapter_unlocked` still enforces it ("Unlock all days" opens them all). `LevelCase.pick_case_id()`: the chapter's `case`, else `--case=<id>`,
+`case` (the JSON id), `face` (the portrait speaker for the day picker) and `tint` (the card colour). `requires` only picks
+the suggested ("UP NEXT") day; every day is open. `LevelCase.pick_case_id()`: the chapter's `case`, else `--case=<id>`,
 else the first registered case.
 
 **Phases** (`Events.phase_changed`): `intro`, `history`, `otoscopy`, `tymp`, `instructions`, `audiometry` (one per

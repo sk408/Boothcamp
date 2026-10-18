@@ -41,8 +41,7 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `abg_bridge`, `referral_stamp`.
 - **Otoscopy:** `Otoscopy.show_clear(ear, caption)` is an input-free look at a healthy ear (Day 2).
 - **Title:** Days shows one illustrated card per day (portrait, title, what it teaches, best grade
-  badge, plays, padlock + "Finish Day 1 to open" when locked), the "Unlock all days (demo)" toggle
-  and Back. Up/Down or Left/Right + Enter, Esc = Back, or click. The card's title is a child Label, so
+  badge, plays, UP NEXT on the suggested day) in a scrolling grid, and Back. Up/Down or Left/Right + Enter, Esc = Back, or click. The card's title is a child Label, so
   the mouse bot's `_click_text("Day 1: Grand")` still lands on the card. Day 1's flow is unchanged.
 - **Screenshots (Day 2):** `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`,
   `day2_carhart`, `day2_stamp`, `day2_croissant`, `day2_goodbye`.
@@ -68,26 +67,16 @@ the voice ceiling.
 The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
 Requests for the integrator and the title owner:
 
-- **Day picker (agreed with the main thread, which owns `title_screen.gd`).** Each case chapter in
-  `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and `tint` (the card colour). The chapter
-  select rework falls back to those keys when `DAY_FACES` / `DAY_TINTS` has no entry, and lays out any number of
-  chapters in a scrolling grid. **Until it lands, the Days row overflows:** six 340 px cards in one HBoxContainer
-  (2150 px) put the Day 1 card off the left edge, where a mouse player can't click it (the Play button and the
-  keyboard still work). Merge the cases after the rework, or wrap the row in a horizontal ScrollContainer and call
-  `ensure_control_visible` on the highlighted card. Days 6 to 9 also show the default cream card with no portrait.
-  `Portraits` already draws every case speaker (it falls back to `CasePortraits`).
+- **Day picker.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and
+  `tint` (the card colour), which the Days grid uses. `Portraits` draws every case speaker (it falls back to
+  `CasePortraits`).
 - **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 9) both append to `Game.CHAPTERS`
   and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`). Keep both blocks, speech first.
-- **No locks.** `requires` on the case chapters is a "suggested next" badge only; every day stays open.
 - **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` lists right-ear masked rows only. Marina's masked tests are
   on her LEFT ear, so her masked holes are not scored. Please add `["bc_masked", "L  ]", "left"]` and
   `["ac_masked", "L  X+", "left"]` (or whatever symbols you prefer).
-- **Daily Decibel width (affects Day 1 too).** The button column grows with the "Next: <chapter title>" text, and the
-  bottom row is already about 1220 px wide without it. "Next: Day 7: Captain Marina Gale  [N]" pushes the paper off
-  the right edge (seen in the Day 6 screenshots); "Next: Day 2: Bonnie Bunsworth  [N]" on Day 1 is nearly as long.
-  Suggested fix in `daily_decibel.gd`: give the column a fixed width and set `clip_text = true` with
-  `text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS` on the Next button, or label it "Next: Day %d  [N]".
-  The pause corner button also covers the end of "Weather: 100% chance of beeps".
+- **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
+  covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
   `"Do-over"`) and `medal_beats`; when present they win over the per-chapter tables. Already wired, listed
   here so it isn't undone at merge.
@@ -97,5 +86,5 @@ Requests for the integrator and the title owner:
   portrait.
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (12 tests). `python3 tools/case_scripts.py --check` fails if
+- **Tests:** `story/tests/test_cases.gd` (14 tests). `python3 tools/case_scripts.py --check` fails if
   `docs/CASE_SCRIPTS.md` is out of date with the case JSON.

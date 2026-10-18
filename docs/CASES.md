@@ -9,7 +9,7 @@ Contract additions are in `CONTRACTS.md` §11 (cases). Steve reviews every clini
 |---|---|
 | Teaches | reading clues; red flags; audiogram shapes; tympanogram types; comparing with old charts; the fit / refer / doctor-today decision |
 | Length | target 8-9 minutes per case with "quick visit" on (the default); see the budget in section 4 |
-| Opens | from the chapter select, any order, every day open from the start (`requires` is only a "suggested next" badge; until the main thread removes chapter 2's day locks, "Unlock all days" opens them). The first case a player opens starts with Hoot's one-line Case Files briefing. |
+| Opens | from the chapter select, any order, every day open from the start (`requires` only picks the suggested "UP NEXT" day). The first case a player opens starts with Hoot's one-line Case Files briefing. |
 | Level scene | `res://story/level_case.tscn` (`story/level_case.gd`), one runner for every case |
 | Case data | `story/cases/<case_id>.json`: **the source of truth for every line that ships**. `docs/CASE_SCRIPTS.md` is generated from it (`python3 tools/case_scripts.py`) so the full scripts can be read and signed off. Patient truth in `core/patients/<id>.tres`. |
 | Rules | `core/cases/case_rules.gd` (`CaseRules`): decisions, red flags, asymmetry, the sudden-loss definition, tympanogram types and curve |

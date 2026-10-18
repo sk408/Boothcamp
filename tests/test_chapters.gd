@@ -47,9 +47,11 @@ func test_registry() -> void:
 ## (polish) Steve's rule: every chapter is open from the start, in any order.
 func test_every_day_open_from_the_start() -> void:
 	Game.reset_save()
+	var all_ids: Array[String] = []
 	for c: Dictionary in Game.chapters():
 		assert_true(Game.is_chapter_unlocked(String(c["id"])), "open: " + String(c["id"]))
-	assert_eq(Game.unlocked_chapter_ids(), ["gus", "bonnie"] as Array[String])
+		all_ids.append(String(c["id"]))
+	assert_eq(Game.unlocked_chapter_ids(), all_ids)
 	assert_eq(Game.suggested_chapter_id(), "gus", "a fresh save suggests Day 1")
 	assert_eq(Game.next_chapter_id(), "gus")
 	assert_false(Game.DEFAULT_SETTINGS.has("unlock_all_days"), "no demo unlock setting any more")
@@ -93,17 +95,25 @@ func test_finishing_day1_suggests_day2() -> void:
 ## Day 2 played first (picked from the Days card): Day 1 is still the suggested day.
 func test_any_order() -> void:
 	Game.reset_save()
+	var ids := Game.unlocked_chapter_ids()
+	var last: String = ids[ids.size() - 1]
 	Game.begin_visit("bonnie")
 	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
 	var s := Game.finish_visit()
 	assert_eq(s["chapter_id"], "bonnie")
-	assert_eq(s["next_chapter_id"], "gus", "the paper's Next goes to the suggested day after the last one")
+	assert_eq(s["next_chapter_id"], "gus" if last == "bonnie" else ids[2], "the paper's Next: the following day")
 	assert_eq(Game.suggested_chapter_id(), "gus")
 	assert_eq(Game.next_chapter_id(), "gus")
+	if last != "bonnie":
+		Game.begin_visit(last)
+		assert_eq(Game.finish_visit()["next_chapter_id"], "gus", "the paper's Next goes to the suggested day after the last one")
 	Game.begin_visit("gus")
 	var s2 := Game.finish_visit()
 	assert_eq(s2["next_chapter_id"], "bonnie", "Day 1 done: Next is Day 2 (already played)")
-	Game.begin_visit("bonnie")
+	for id: String in ids.slice(2):
+		Game.begin_visit(id)
+		Game.finish_visit()
+	Game.begin_visit(last)
 	var s3 := Game.finish_visit()
 	assert_eq(s3["next_chapter_id"], "", "the last day with every day done: no Next")
 	assert_eq(Game.suggested_chapter_id(), "", "every day done: nothing suggested")
@@ -205,7 +215,7 @@ func test_title_day_picker() -> void:
 	await wait_frames(2)
 	assert_has(beats, &"chapter_select")
 	var info: Dictionary = beats[&"chapter_select"][0]
-	assert_eq(info["chapters"], ["gus", "bonnie"], "every day open on a fresh save")
+	assert_eq(info["chapters"], Game.unlocked_chapter_ids(), "every day open on a fresh save")
 	assert_eq(info["next"], "gus")
 	assert_eq(info["suggested"], "gus")
 	var day1: Button = null
@@ -222,7 +232,7 @@ func test_title_day_picker() -> void:
 	assert_false(day2.has_meta("locked"), "no lock state at all")
 	var hint_s: Control = title.get("_days_hint_scroll")
 	if hint_s != null:
-		assert_false(hint_s.visible, "2 days fit: no 'wheel scrolls' hint")
+		assert_false(hint_s.visible, "the shipped days fit: no 'wheel scrolls' hint")
 	title.call("_days_back")
 	assert_eq(title.get("_state"), &"menu")
 	title.call("_on_days")
