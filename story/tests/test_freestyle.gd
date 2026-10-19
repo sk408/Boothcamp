@@ -376,7 +376,8 @@ func test_look_first_counts_any_test() -> void:
 
 ## (FS-05) Every masked frequency on headphones leaves at least 20 dB between the starting noise and
 ## the overmasking line, so a 15 dB plateau fits without the warning. Conservative: the occlusion
-## allowance whenever the masked ear's own gap allows it, and the better cochlea for masked air's line.
+## allowance whenever the masked ear's own gap allows it, and for masked air's line the better cochlea
+## at the nearest stamped bone frequency (the AudiOtron's stand-in, AudiometrySession._nearest_freq).
 func test_masking_windows_fit_a_plateau() -> void:
 	for id: String in FsData.CASE_IDS:
 		var p := _patient(id)
@@ -388,7 +389,10 @@ func test_masking_windows_fit_a_plateau() -> void:
 				var limit := ClinicRules.overmask_limit(p.get_bc_threshold(ear, f), &"bc_masked", 0, &"phones")
 				assert_true(limit - start >= 20, "%s %s masked bone %d Hz: noise starts at %d, overmasking at %d" % [id, ear, f, start, limit])
 			for f: int in FsRules.truth_masked_air(p, ear, &"phones"):
-				var bf := f if ClinicRules.BC_FREQS.has(f) else (250 if f < 250 else 4000)
+				var bf := 0
+				for b: int in ClinicRules.BC_REQUIRED:
+					if bf == 0 or absf(log(float(b) / f)) < absf(log(float(bf) / f)) - 0.0001:
+						bf = b
 				var start2 := ClinicRules.initial_masking(p.get_threshold(other, f), f, &"ac_masked", 0, &"phones")
 				var limit2 := ClinicRules.overmask_limit(p.get_threshold(ear, f), &"ac_masked",
 					p.get_threshold(ear, f) - FsRules.better_cochlea(p, bf), &"phones")

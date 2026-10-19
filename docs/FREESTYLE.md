@@ -518,7 +518,8 @@ does now); answer only where you disagree, by number. The first seven change the
 - **FS-08:** bone before the otoscope is the look-first slip too (4.5). Its line gives the reason without
   claiming wax changes bone: "Look before any test, bone too: what you see explains the chart."
 - **FS-09, FS-15:** the wording in 4 and 4.4.
-- **FS-10:** Penny's reply calls 25 dB "a common adult normal" and gives WHO's: a better-ear average under 20.
+- **FS-10:** Penny's reply calls 25 dB "a common adult normal" and gives WHO's: a better-ear four-tone average
+  (500, 1k, 2k, 4k) under 20.
 - **FS-11:** Hoot's answer to Hector's puzzle now says the raised voices are loud enough for his slow ear. The
   other half of the classic explanation (a stiff ear also turns the background down) fits two stiff ears, and
   Hector's right ear is normal, so the game leaves it out.

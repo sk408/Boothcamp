@@ -589,6 +589,8 @@ func _masking() -> void:
 	var best := MASK_STEPS.size() - 1
 	for step: Dictionary in FsRules.workup(case_data, patient, results, _air_transducer()):
 		var id := String(step["id"])
+		if id == "bc_masked" and not FsRules.bone_done(results):
+			continue   # (FS-01) masked bone waits for unmasked bone: not the pro's pick yet
 		if (id == "bc_masked" or id == "ac_masked") and not FsRules.step_done(step, done, results):
 			for i in MASK_STEPS.size():
 				if MASK_STEPS[i][0] == id and MASK_STEPS[i][1] == String(step["ear"]):
