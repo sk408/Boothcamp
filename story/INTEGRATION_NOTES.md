@@ -166,7 +166,7 @@ Requests for the integrator and the title owner:
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
   Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (35 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Tests:** `story/tests/test_cases.gd` (37 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
   a warning without python3).
 

@@ -99,7 +99,11 @@
 		["Ginger", "Beeps only. Got it."]
 	],
 	"audiometry": [
-		{"ear": "right", "test": "ac", "hoot_turn_after": 7, "intro": "Right ear's yours. Watch the middle pitches!"},
+		{"ear": "right", "test": "ac", "hoot_turn_after": 8, "intro": "Right ear's yours. Watch the middle pitches!",
+			"if_tested": {"750": [
+				["Hoot", "Extra stop at 750! A 500-to-1k jump of 20 dB or more gets tested in between."],
+				["Hoot", "Hearing aids care exactly where her loss begins. Now we know."]
+			]}},
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed. Same shape?"},
 		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
 			"before": [["Hoot", "Now the bone buzzer: middle ear, or deeper?"]]}

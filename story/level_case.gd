@@ -50,8 +50,12 @@ const BORROW_BONE_DB := 10
 const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
 ## The runner's own lines (case_scripts.py prints them too: keep the two in step).
 ## The first look in every case: the other ear, before the case's own (both ears get a look before
-## any probe or insert goes in). %s: the speaker, then the ear in capitals.
-const OTHER_EAR_CAPTION := "%s's %s ear first: a clear canal, a healthy eardrum."
+## any probe or insert goes in), with a fresh speculum (clinical review A1). %s: the speaker, then the
+## ear in capitals.
+const OTHER_EAR_CAPTION := "Fresh speculum. %s's %s ear first: a clear canal, a healthy eardrum."
+## (Clinical review A1) Before the case's own instructions on every first visit: the routine around
+## the test (the morning listening check, the response button, the dials out of the patient's view).
+const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
 ## After masked bone, when no ear needed masked air (built from the stamps).
 const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bone needed masking today!"
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
@@ -547,6 +551,8 @@ func _instructions(lines: Variant, first_pass: bool = true) -> void:
 	if first_pass:
 		hud.call("set_step", &"beeps")
 	clinic.call("focus_camera", &"desk", 0.8)
+	if first_pass:
+		await _say("Hoot", ROUTINE_LINE)
 	await _play(lines)
 	if first_pass:
 		Game.set_visit_flag("instructed", true)
@@ -606,6 +612,17 @@ func _aside(cam: Camera3D, lines: Variant, shot: StringName = &"face") -> void:
 	_open_screen()
 
 
+## An air step's "if_tested" lines ({"750": script}): each plays once the ear's stamps asked for
+## that half-octave (its neighbours differ by 20 dB or more) and it is on the chart, so the line
+## explains it only when it happened (a half-octave the player stamps unasked says nothing).
+func _if_tested(cam: Camera3D, ear: String, by_freq: Dictionary) -> void:
+	var stored := ClinicRules.sheet_thresholds(results, ear, &"ac")
+	var needed := ClinicRules.required_interoctaves(stored)
+	for f: String in by_freq:
+		if stored.has(int(f)) and needed.has(int(f)):
+			await _aside(cam, by_freq[f])
+
+
 ## A test step's plan for the AudiOtron: the test, Hoot's turn, an intro that fits, and any PLAN_KEYS
 ## (Hoot's montage) passed straight through.
 func _plan_from(pd: Dictionary) -> Dictionary:
@@ -652,6 +669,8 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 			if pd.has("before"):
 				await _aside(cam, pd["before"])
 		await _test(ear, plan, info)
+		if first_pass and plan["test"] == "ac":
+			await _if_tested(cam, ear, pd.get("if_tested", {}))
 	var masked_bone := false
 	var masked_air := false
 	var bone_ears: Array[String] = bc_ears.duplicate()
