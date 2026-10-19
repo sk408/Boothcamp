@@ -23,6 +23,8 @@ Engine: Godot 4.7.2, statically typed GDScript, Compatibility (OpenGL) renderer,
 | **(Speech)** `core/speech/**`, `ui/speech/**`, `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | Day 3: the SPEECH screen and its logic (§9) |
 | **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-9: the case files and their runner (§11) |
 
+**Export presets.** `export_presets.cfg` has two presets, "Windows Desktop" and "Web" (Steve's, 2026-10-19; `.github/workflows/pages.yml` deploys the web build to GitHub Pages on every push to main). A run-time data file that is not a Godot resource (patient and case JSON, word lists) must be in BOTH presets' `include_filter`, or the exported game runs without it.
+
 The foundation stubs in `core/`, `ui/`, `world/` and `story/` have been replaced by the builders' real modules
 (integrated 2026-10-17). Owners may keep changing their internals, but must keep the public API in this file.
 Contract changes from that integration are marked **(v2)**.
