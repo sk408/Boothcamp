@@ -770,6 +770,18 @@ static func wrs_same_range(pct: float, n: int) -> Vector2i:
 static func wrs_referral(asymmetric: bool, below_right: bool, below_left: bool, rollover: bool) -> StringName:
 	return &"refer" if asymmetric or rollover or below_right != below_left else &""
 
+
+## The comfortable window wrs_level_ok accepts, as whole dB (the LCD and the coach show it):
+## PTA + 30..40 and at least 50 (PTA 15: 50-60; 40: 70-80), widened to hold the textbook level and
+## never past MAX_DB.
+static func wrs_window(pta: float) -> Vector2i:
+	var target := wrs_level(pta)
+	if is_nan(pta):
+		return Vector2i(WRS_MIN_OK_DB, 70)
+	var lo := ceili(maxf(float(WRS_MIN_OK_DB), pta + WRS_ABOVE_PTA_DB - WRS_WINDOW_DB))
+	var hi := floori(maxf(float(WRS_MIN_DB) + WRS_WINDOW_DB, pta + WRS_ABOVE_PTA_DB + WRS_WINDOW_DB))
+	return Vector2i(mini(lo, target), mini(MAX_DB, maxi(hi, target)))
+
 # ---------------------------------------------------------------- Party Noise Test (Day 5)
 
 const SIN_LEVEL_DB := 70
