@@ -114,6 +114,18 @@ signal patient_reaction(kind: StringName, data: Dictionary)
 ## Small screen shake request (0..1). Listeners respect Game.settings.reduced_motion.
 signal screen_shake(strength: float, duration_s: float)
 
+# --- chapter-2-feedback (v4): Hoot's movies (story/explainers/, CONTRACTS.md §3.4) ---
+
+## The explainer player (story/explainers/explainer_player.tscn) started a movie.
+## source: "day_start" (a level plays it as a beat), "pause" (the pause menu's replay button),
+## "title" (the title's Options card), "dev" (dev scenes and tests).
+signal explainer_started(movie_id: String, source: String)
+## The player moved to scene `index` (0-based) of the movie; scene_id = the scene's "id".
+## Listeners: screenshots, logs, tests. Fires for every scene shown, skipped or not.
+signal explainer_scene(movie_id: String, index: int, scene_id: String)
+## The movie ended. skipped: the player pressed Skip (Esc) before the last scene finished.
+signal explainer_finished(movie_id: String, skipped: bool)
+
 # --- mike / speech --- (Days 3-5, the SPEECH screen emits; CONTRACTS.md §9)
 
 ## The SPEECH screen began testing one ear. test: &"srt" (later &"wrs", &"sin"). It is NOT the

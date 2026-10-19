@@ -74,7 +74,10 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"mike": [["history", "Chat"], ["instructions", "Explain"], ["familiarize", "Words"], ["evidence", "Case"], ["referral", "Next"]],
 }
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
+## (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >" row, shown only when that
+## ear has no masked-bone sheet. (cases) The left-ear masked rows for a case whose poorer ear is the left
+## one (Marina: "L  ]" and "L  □", no "L  >").
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "L  >", "left"], ["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
 	["bc_masked", "L  ]", "left"], ["ac_masked", "L  □", "left"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
@@ -627,7 +630,7 @@ func _row_tag(ear: String, sheet: StringName) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size = Vector2(40, 40)
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	c.tooltip_text = {&"ac": "air", &"bc_masked": "masked bone", &"ac_masked": "masked air"}.get(test, "")
+	c.tooltip_text = {&"ac": "air", &"bc": "bone", &"bc_masked": "masked bone", &"ac_masked": "masked air"}.get(test, "")
 	c.draw.connect(func() -> void:
 		var col := Palette.ear_color(ear)
 		var f := UiKit.font(700)
@@ -655,7 +658,10 @@ func _golf_card(res: Dictionary) -> Control:
 		grid.add_child(l)
 	var rows: Array[Array] = [["freqs", "R  O", "right"], ["freqs", "L  X", "left"]]
 	for extra: Array in GOLF_EXTRA_ROWS:
-		if not ((ears.get(String(extra[2]), {}) as Dictionary).get(String(extra[0]), {}) as Dictionary).is_empty():
+		var ear_sheets: Dictionary = ears.get(String(extra[2]), {})
+		if String(extra[0]) == "bc" and not (ear_sheets.get("bc_masked", {}) as Dictionary).is_empty():
+			continue
+		if not (ear_sheets.get(String(extra[0]), {}) as Dictionary).is_empty():
 			rows.append(extra)
 	for row: Array in rows:
 		var e := String(row[2])

@@ -98,9 +98,10 @@ func chip(text: String, at: Vector2, fill: Color, text_color: Color = Palette.IN
 ## (v3) The Cross-Hearing Ghost: a little sheet ghost pops up at `from` (the test ear's chart),
 ## swoops over to `to` (the other ear, which really heard the beep) and shouts its text there.
 ## callout_at: where its shout goes (default: above `to`); keep it clear of the chart's symbols.
-func ghost(from: Vector2, to: Vector2, text: String = "BOO!", sub: String = "", callout_at: Vector2 = Vector2.INF) -> void:
+## (v4) life: seconds on screen (the Ghost demo lets it linger so the player can read the shout).
+func ghost(from: Vector2, to: Vector2, text: String = "BOO!", sub: String = "", callout_at: Vector2 = Vector2.INF, life: float = 2.0) -> void:
 	var at := callout_at if callout_at != Vector2.INF else to + Vector2(0, -92)
-	_ghost = {"from": from, "to": to, "t": 0.0, "max": 2.0 if not _reduced() else 1.6, "text": text, "sub": sub, "said": false, "at": at}
+	_ghost = {"from": from, "to": to, "t": 0.0, "max": life if not _reduced() else life * 0.8, "text": text, "sub": sub, "said": false, "at": at}
 	queue_redraw()
 
 
@@ -167,7 +168,7 @@ func _process(delta: float) -> void:
 		if gk >= 0.42 and not bool(_ghost["said"]):
 			_ghost["said"] = true
 			var to: Vector2 = _ghost["to"]
-			callout(String(_ghost["text"]), _ghost["at"], Color("#efeaf7"), 44 if String(_ghost["text"]).length() <= 6 else 32, String(_ghost["sub"]), 5.0, 1.5)
+			callout(String(_ghost["text"]), _ghost["at"], Color("#efeaf7"), 44 if String(_ghost["text"]).length() <= 6 else 32, String(_ghost["sub"]), 5.0, maxf(1.5, float(_ghost["max"]) * 0.55))
 			stars(to, 8, Palette.PLUM.lightened(0.4))
 		if gk >= 1.0:
 			_ghost = {}

@@ -6,8 +6,11 @@ extends Control
 ## back; every slip counts.
 ## Mouse: drag the oscillator onto a spot, or just click a spot.
 ## Keyboard: Left/Right (or the frequency keys) move the highlight, Enter/Space places it.
-## Story-internal:  var g := BonePlacement.new(); hud.add_game(g); await g.run()
-## Beat: bc_placement (solver = place on the mastoid). Anchors: "oscillator", "mastoid_target_right".
+## Story-internal:  var g := BonePlacement.new(); g.setup("left"); hud.add_game(g); await g.run()
+## Beat: bc_placement (solver = place on the mastoid). Anchors: "oscillator", "mastoid_target_<ear>".
+## (v4) setup(ear, quick) BEFORE add_child: ear "left" draws her LEFT side (profile facing left), "right"
+## (the default) her right side. quick = the second placement of the visit (Day 2 moves the buzzer
+## to the poorer ear for the Ghost demo): a short caption, same zones and gags.
 
 signal _changed
 
@@ -26,22 +29,31 @@ const WOOD := Color("#d9a066")
 ## ("top" is where her reading glasses are perched.)
 const ZONES: Array = [
 	["nose", Vector2(-166, 8), 24.0, "Boop! A nose is cartilage, not bone. Find the bony bump behind her ear.", "BOOP!"],
-	["forehead", Vector2(-112, -62), 30.0, "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her right ear.", "UNICORN!"],
+	["forehead", Vector2(-112, -62), 30.0, "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her {side} ear.", "UNICORN!"],
 	["jaw", Vector2(-62, 112), 28.0, "She'd hear her teeth chatter! Higher and further back: the mastoid.", "Chatter chatter!"],
 	["top", Vector2(-14, -146), 32.0, "Her lost glasses! Mystery solved. Glasses off before the headband; the buzzer goes behind the ear.", "My glasses!"],
 	["pinna", Vector2(36, 6), 30.0, "Off the ear flap! Touching the pinna leaks buzz into the canal. Behind it, on bone.", "SQUEEEE!"],
 	["mastoid", Vector2(96, 54), 28.0, "Perfect: on the mastoid bone, behind the ear, not touching it.", "Bone on bone!"],
 	["bun", Vector2(74, -180), 40.0, "That's a bun, not a bone! Lovely bun though. Try behind her ear.", "Fresh bun!"],
 ]
-## (integrator) The head is drawn facing RIGHT: a profile facing right shows the RIGHT ear (one
-## facing left would show her left ear). ZONES and the drawing code below are written for a
-## left-facing head; the drawing is mirrored about HEAD_C.x and _zoff() mirrors the zone offsets.
-const MIRROR := true
+## (integrator) The head is drawn facing RIGHT for her right ear: a profile facing right shows the
+## RIGHT ear (one facing left shows her left ear). ZONES and the drawing code below are written for a
+## left-facing head; for the right ear the drawing is mirrored about HEAD_C.x and _zoff() mirrors the
+## zone offsets. (v4) _mir follows the ear (setup()): the left ear is the unmirrored drawing.
+var _mir := true
 const SPOT_NAMES: Dictionary = {"nose": "nose", "forehead": "forehead", "jaw": "jaw", "top": "glasses", "pinna": "ear flap", "mastoid": "behind the ear", "bun": "bun"}
 const GLASSES := Color("#2fb3a3")
 const BEIGE := Color("#e3d9c6")
 const STEEL := Color("#b9c0cc")
 
+## (v4) Which mastoid: "right" (default) or "left". Set with setup() before the node enters the tree.
+var ear := "right"
+## (v4) The second placement of a visit: a short caption (the player knows the game by now).
+var quick := false
+## (v4) Her reading glasses still perched on her head (false once she found them: the second
+## placement draws her head without them and "top" is a plain slip).
+var glasses_on := true
+const TOP_BARE := ["Top of her head? Glasses gone, so: behind the ear, on the bony mastoid.", "Bonk!"]
 var mistakes := 0
 var placed := false
 var wrong_spots: Array[String] = []
@@ -61,7 +73,19 @@ var _hints: HBoxContainer
 var _face := &"smile"             # smile, o (surprised), happy
 
 
+## (v4) Pick the mastoid ("left" / "right") and the short second-placement mode. Call before add_child.
+func setup(p_ear: String = "right", p_quick: bool = false) -> void:
+	ear = "left" if p_ear == "left" else "right"
+	quick = p_quick
+	_mir = ear == "right"
+
+
+func _target_id() -> String:
+	return "mastoid_target_" + ear
+
+
 func _ready() -> void:
+	_mir = ear == "right"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var dim := ColorRect.new()
@@ -75,7 +99,10 @@ func _ready() -> void:
 	top.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(top)
-	_caption = UiKit.label("Put the bone oscillator on her MASTOID: the bony bump just behind the ear.", 26, Palette.PAPER, 700, 10, Palette.INK)
+	var cap := "Put the bone oscillator on her MASTOID: the bony bump just behind the ear."
+	if quick:
+		cap = "Swap sides! Her %s mastoid: the same bony bump, behind the %s ear." % [ear.to_upper(), ear]
+	_caption = UiKit.label(cap, 26, Palette.PAPER, 700, 10, Palette.INK)
 	_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	top.add_child(_caption)
 	_hints = HBoxContainer.new()
@@ -100,7 +127,7 @@ func _ready() -> void:
 		hit.mouse_exited.connect(func() -> void: _hover = "" if _hover == id else _hover)
 		_card.add_child(hit)
 		_zones[id] = hit
-	Hoot.register_anchor("mastoid_target_right", _zones["mastoid"])
+	Hoot.register_anchor(_target_id(), _zones["mastoid"])
 	_osc = Control.new()
 	_osc.size = OSC + Vector2(20, 20)
 	_osc.pivot_offset = _osc.size * 0.5
@@ -115,7 +142,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Hoot.unregister_anchor("oscillator")
-	Hoot.unregister_anchor("mastoid_target_right")
+	Hoot.unregister_anchor(_target_id())
 	Hoot.clear_bubble_hint()
 
 
@@ -125,7 +152,8 @@ func _layout() -> void:
 	var right := _card.position.x + CARD.x + 12.0
 	if size.x - right >= 260.0:
 		Hoot.set_bubble_hint(Rect2(Vector2(right, _card.position.y), Vector2(size.x - right - 12.0, 200.0)))
-	_osc_home = Vector2(CARD.x - 92.0, CARD.y - 96.0)
+	# the tray sits in the empty corner in front of her face (the head faces right for her right ear)
+	_osc_home = Vector2(CARD.x - 92.0, CARD.y - 96.0) if _mir else Vector2(92.0, CARD.y - 96.0)
 	if not placed and not _dragging and _gag == "":
 		_osc.position = _osc_home - _osc.size * 0.5
 
@@ -136,7 +164,7 @@ func run() -> void:
 	_accepting = true
 	_set_hints()
 	Juice.bounce_in(_osc, 0.4)
-	Events.awaiting_input.emit(&"bc_placement", {"targets": ["mastoid_target_right"], "mistakes": mistakes}, _solve)
+	Events.awaiting_input.emit(&"bc_placement", {"targets": [_target_id()], "ear": ear, "quick": quick, "mistakes": mistakes}, _solve)
 	while not placed:
 		await _changed
 	_accepting = false
@@ -157,14 +185,21 @@ func _set_hints() -> void:
 
 
 ## A zone's offset from HEAD_C as drawn (mirrored when the head faces right).
-static func _zoff(z: Array) -> Vector2:
+func _zoff(z: Array) -> Vector2:
 	var v: Vector2 = z[1]
-	return Vector2(-v.x, v.y) if MIRROR else v
+	return Vector2(-v.x, v.y) if _mir else v
 
 
 ## Mirror an x offset that was tuned for the left-facing drawing.
-static func _mx(v: Vector2) -> Vector2:
-	return Vector2(-v.x, v.y) if MIRROR else v
+func _mx(v: Vector2) -> Vector2:
+	return Vector2(-v.x, v.y) if _mir else v
+
+
+## A zone's Hoot line for this side ({side} = "right" / "left").
+func _line(z: Array) -> String:
+	if String(z[0]) == "top" and not glasses_on:
+		return String(TOP_BARE[0])
+	return String(z[3]).replace("{side}", ear)
 
 
 func _zone(id: String) -> Array:
@@ -222,11 +257,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _accepting or _gag != "" or not event.is_pressed() or event.is_echo():
 		return
 	# ZONES run front (nose) to back; the arrow that walks towards the back of her head goes up
-	var back_key := &"ui_left" if MIRROR else &"ui_right"
-	var front_key := &"ui_right" if MIRROR else &"ui_left"
-	if event.is_action_pressed(front_key) or event.is_action_pressed(&"freq_down" if not MIRROR else &"freq_up"):
+	var back_key := &"ui_left" if _mir else &"ui_right"
+	var front_key := &"ui_right" if _mir else &"ui_left"
+	if event.is_action_pressed(front_key) or event.is_action_pressed(&"freq_down" if not _mir else &"freq_up"):
 		_kb = maxi(0, _kb - 1) if _kb >= 0 else ZONES.size() - 1
-	elif event.is_action_pressed(back_key) or event.is_action_pressed(&"freq_up" if not MIRROR else &"freq_down"):
+	elif event.is_action_pressed(back_key) or event.is_action_pressed(&"freq_up" if not _mir else &"freq_down"):
 		_kb = mini(ZONES.size() - 1, _kb + 1) if _kb >= 0 else 0
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
 		if _kb < 0:
@@ -258,9 +293,9 @@ func _place(id: String) -> void:
 		Sfx.play(&"pop")
 		Sfx.play(&"ding", 1.2, -8.0)
 		Juice.float_text(self, String(z[4]), spot_at + _mx(Vector2(-70.0, 96.0)), Palette.MINT.darkened(0.3), 30)
-		Events.patient_reaction.emit(&"nod", {"ear": "right"})
+		Events.patient_reaction.emit(&"nod", {"ear": ear})
 		if mistakes == 0:
-			Hoot.say(String(z[3]), Hoot.NORMAL, "mastoid_target_right")
+			Hoot.say(_line(z), Hoot.NORMAL, _target_id())
 		_changed.emit()
 		return
 	mistakes += 1
@@ -272,12 +307,15 @@ func _place(id: String) -> void:
 	_face = &"o"
 	match id:
 		"top":
-			Sfx.play(&"ding", 1.5, -10.0)
+			if glasses_on:
+				Sfx.play(&"ding", 1.5, -10.0)
+			else:
+				Sfx.play(&"boing", 1.1 + 0.05 * mistakes)
 		"pinna":
 			Sfx.play(&"squeak", 1.6, -12.0)   # the squeal is drawn, never played loud
 		_:
 			Sfx.play(&"boing", 1.1 + 0.05 * mistakes)
-	Events.patient_reaction.emit(&"confused" if id != "pinna" else &"wince", {"ear": "right"})
+	Events.patient_reaction.emit(&"confused" if id != "pinna" else &"wince", {"ear": ear})
 	var float_at := spot_at + Vector2(0.0, -56.0)
 	match id:
 		"forehead":
@@ -287,8 +325,9 @@ func _place(id: String) -> void:
 		"top":
 			float_at = spot_at + _mx(Vector2(-160.0, 64.0))
 	float_at.y = maxf(float_at.y, _card.position.y + 100.0)
-	Juice.float_text(self, String(z[4]), float_at, Palette.CORAL if id != "top" else GLASSES.darkened(0.25), 30)
-	Hoot.say(String(z[3]), Hoot.HIGH, "mastoid_target_right")
+	var float_txt := String(TOP_BARE[1]) if id == "top" and not glasses_on else String(z[4])
+	Juice.float_text(self, float_txt, float_at, Palette.CORAL if id != "top" or not glasses_on else GLASSES.darkened(0.25), 30)
+	Hoot.say(_line(z), Hoot.HIGH, _target_id())
 	await get_tree().create_timer(1.1, false).timeout
 	_gag = ""
 	_face = &"smile"
@@ -330,10 +369,10 @@ func _draw_card() -> void:
 	UiDraw.rounded_rect(c, Rect2(Vector2(0, 8), CARD), Color(Palette.INK, 0.25), 28)
 	UiDraw.rounded_rect(c, Rect2(Vector2.ZERO, CARD), Palette.CREAM, 28, 4, Palette.INK)
 	var f := UiKit.font(700)
-	var cap_x := CARD.x - 24.0 - 420.0 if MIRROR else 24.0
-	var cap_al := HORIZONTAL_ALIGNMENT_RIGHT if MIRROR else HORIZONTAL_ALIGNMENT_LEFT
-	c.draw_string(f, Vector2(cap_x, 40), "BONNIE'S RIGHT SIDE", cap_al, 420, 16, Palette.INK_SOFT)
-	c.draw_string(UiKit.font(500), Vector2(cap_x, 62), "She faces %s: her right ear is the one you see." % ("right" if MIRROR else "left"), cap_al, 420, 14, Palette.INK_SOFT)
+	var cap_x := CARD.x - 24.0 - 420.0 if _mir else 24.0
+	var cap_al := HORIZONTAL_ALIGNMENT_RIGHT if _mir else HORIZONTAL_ALIGNMENT_LEFT
+	c.draw_string(f, Vector2(cap_x, 40), "BONNIE'S %s SIDE" % ear.to_upper(), cap_al, 420, 16, Palette.INK_SOFT)
+	c.draw_string(UiKit.font(500), Vector2(cap_x, 62), "She faces %s: her %s ear is the one you see." % [ear, ear], cap_al, 420, 14, Palette.INK_SOFT)
 	var h := HEAD_C
 	_flip(c, true)
 	# shoulders + apron, neck
@@ -389,7 +428,8 @@ func _draw_card() -> void:
 	c.draw_arc(bun_c + Vector2(-6, -4), 26.0, -2.6, -0.6, 12, HAIR.lightened(0.25), 4.0, true)
 	_blob(c, _ellipse(spoon_b + Vector2(10, -6), Vector2(16, 11)), WOOD, 3.0)
 	# her reading glasses, perched on top of her head (she has been looking for them all morning)
-	_draw_glasses(c, h + Vector2(-14, -146) + Vector2(0, -10.0 * absf(sin(_gag_t * 6.0)) if _gag == "top" else 0.0))
+	if glasses_on:
+		_draw_glasses(c, h + Vector2(-14, -146) + Vector2(0, -10.0 * absf(sin(_gag_t * 6.0)) if _gag == "top" else 0.0))
 	# the ear (pinna): helix rim, a curl inside, the canal opening, a lobe
 	var ear_c := h + Vector2(36, 6)
 	var ear_wob := Vector2(2.0 * sin(_gag_t * 60.0), 0.0) if _gag == "pinna" else Vector2.ZERO
@@ -417,7 +457,7 @@ func _draw_card() -> void:
 		for i in 6:
 			var a := TAU * i / 6.0 + _gag_t * 2.0
 			c.draw_circle(bun_c + Vector2(cos(a), sin(a)) * (50.0 + 40.0 * _gag_t), 7.0 - 3.0 * _gag_t, Color(Color.WHITE, maxf(0.0, 1.0 - _gag_t)))
-	elif _gag == "top":
+	elif _gag == "top" and glasses_on:
 		for i in 3:
 			UiDraw.star(c, h + Vector2(-14, -176) + Vector2(cos(i * 2.1 + _gag_t * 3.0), sin(i * 2.1 + _gag_t * 3.0)) * 46.0, 8.0, Palette.SUNNY)
 	# the band over her head once it is on
@@ -438,7 +478,7 @@ func _draw_card() -> void:
 
 ## Mirror the head drawing about HEAD_C.x (on) or back to plain card coordinates (off).
 func _flip(c: Control, on: bool) -> void:
-	if on and MIRROR:
+	if on and _mir:
 		c.draw_set_transform(Vector2(2.0 * HEAD_C.x, 0.0), 0.0, Vector2(-1.0, 1.0))
 	else:
 		c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -511,7 +551,7 @@ func _draw_zone(id: String, at: Vector2, r: float) -> void:
 		UiDraw.cross(_card, at, 10.0, Color(Palette.CORAL.darkened(0.2), 0.8), 3.0)
 	if hl:
 		var f := UiKit.font(700)
-		var spot_name: String = SPOT_NAMES.get(id, id)
+		var spot_name: String = SPOT_NAMES.get(id, id) if id != "top" or glasses_on else "top of head"
 		var w := f.get_string_size(spot_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		_card.draw_string_outline(f, at + Vector2(-w * 0.5, r + 20.0), spot_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 6, Palette.PAPER)
 		_card.draw_string(f, at + Vector2(-w * 0.5, r + 20.0), spot_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK)

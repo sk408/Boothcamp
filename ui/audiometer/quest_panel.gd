@@ -28,6 +28,12 @@ var title: String = "TEST PLAN":
 		if v != title:
 			title = v
 			queue_redraw()
+## (v4) A short note under the tokens, "\n" for a second line (the Ghost demo: "ONE beep, buzzer on her RIGHT.\nNothing gets stored."). "" = none.
+var note: String = "":
+	set(v):
+		if v != note:
+			note = v
+			queue_redraw()
 ## (v3) The sheet the tokens belong to: done tokens wear its audiogram symbol (O, <, [, triangle...).
 var test: StringName = &"ac":
 	set(v):
@@ -105,12 +111,13 @@ func _draw() -> void:
 	# header: title + progress bar
 	var tw := AoDraw.text_l(self, Vector2(16, 20), title, 15, Palette.INK, AoDraw.FONT_BOLD)
 	var bx := maxf(112.0, 16.0 + tw + 10.0)
-	var bar := Rect2(Vector2(bx, 12), Vector2(maxf(20.0, size.x - bx - 52), 16))
-	AoDraw.rbox(self, bar, Palette.CREAM.darkened(0.06), 8, 2, Palette.INK)
 	var k := float(done_count) / maxf(1.0, float(total_count))
-	if k > 0.0:
-		AoDraw.rbox(self, Rect2(bar.position + Vector2(2, 2), Vector2((bar.size.x - 4) * k, bar.size.y - 4)), Palette.MINT if k < 1.0 else Palette.SUNNY, 6)
-	AoDraw.text_r(self, Vector2(size.x - 14, 20), "%d%%" % int(round(k * 100.0)), 14, Palette.INK, AoDraw.FONT_BOLD)
+	if total_count > 0:   # (v4) no bar when nothing is to be stamped (the Ghost demo)
+		var bar := Rect2(Vector2(bx, 12), Vector2(maxf(20.0, size.x - bx - 52), 16))
+		AoDraw.rbox(self, bar, Palette.CREAM.darkened(0.06), 8, 2, Palette.INK)
+		if k > 0.0:
+			AoDraw.rbox(self, Rect2(bar.position + Vector2(2, 2), Vector2((bar.size.x - 4) * k, bar.size.y - 4)), Palette.MINT if k < 1.0 else Palette.SUNNY, 6)
+		AoDraw.text_r(self, Vector2(size.x - 14, 20), "%d%%" % int(round(k * 100.0)), 14, Palette.INK, AoDraw.FONT_BOLD)
 	# tokens
 	var per_row := maxi(1, int((size.x - 20.0 + GAP) / (TOKEN.x + GAP)))
 	var row_w := per_row * TOKEN.x + (per_row - 1) * GAP
@@ -154,6 +161,12 @@ func _draw() -> void:
 			AoDraw.rbox(self, nr, Palette.CORAL, 7, 2, Palette.INK)
 			AoDraw.text_c(self, nr.get_center(), "NEW", 10, Palette.PAPER, AoDraw.FONT_BOLD)
 		_hot.append([cell, int(it["freq"])])
+	if note != "":
+		var lines := note.split("\n")
+		var ly := size.y - 14.0 - 18.0 * (lines.size() - 1)
+		for ln: String in lines:
+			AoDraw.text_c(self, Vector2(size.x * 0.5, ly), ln, 14, Palette.INK_SOFT, AoDraw.FONT_BOLD)
+			ly += 18.0
 	if _complete_t > 0.0:
 		var a := clampf(_complete_t / 0.4, 0.0, 1.0)
 		AoDraw.text_c(self, Vector2(size.x * 0.5, size.y - 18), "100%  ALL STAMPED!", 16, Color(Palette.SELECT_ORANGE, a), AoDraw.FONT_BOLD, 6, Color(Palette.PAPER, a))

@@ -7,9 +7,10 @@ extends Node
 ## Every sound is normalised to AudioSafety.SFX_PEAK_DBFS and plays on the "Sfx" bus.
 ## The "boing" gag sound is normal loudness: comedy is visual, never loud.
 ## Add new sounds by adding a _gen_<name>() function and the name to SOUNDS.
-## Music: Sfx.music_start() / music_stop() / music_duck(on). One gentle ~8.6 s marimba loop,
+## Music: Sfx.music_start() / music_stop() / music_duck(on, owner). One gentle ~8.6 s marimba loop,
 ## synthesized on a worker thread at boot, on the "Music" bus, well below the effects. The
-## AudiOtron ducks it to silence so the test beeps are always alone.
+## AudiOtron and Hoot's movies duck it to silence (reference-counted owners) so the test
+## beeps are always alone.
 
 const MIX_RATE := 22050
 const VOICES := 10
@@ -39,6 +40,7 @@ var _music_samples := PackedFloat32Array()
 var _music_task := -1
 var _music_want := false
 var _music_ducked := false
+var _duck_owners: Dictionary = {}  ## owner key -> true
 var _music_tween: Tween
 
 
@@ -93,20 +95,41 @@ func music_stop() -> void:
 		_music.stop()
 
 
-## Duck the music to silence (the AudiOtron) or bring it back.
-func music_duck(on: bool) -> void:
-	_music_ducked = on
+## Duck the music to silence or bring it back. Reference-counted by owner: each caller passes
+## its own key ("audiotron:<id>", "explainer:<id>") and the music stays ducked while ANY owner
+## still holds it, so a movie that ends over an open AudiOtron (or the reverse) never brings
+## the marimba back under the test beeps. An empty key is one shared anonymous owner.
+func music_duck(on: bool, who: String = "") -> void:
+	var key := who if who != "" else "_"
+	if on:
+		_duck_owners[key] = true
+	else:
+		_duck_owners.erase(key)
+	var want := not _duck_owners.is_empty()
+	if want == _music_ducked:
+		return
+	_music_ducked = want
 	if _music == null:
 		return
 	if _music_tween != null and _music_tween.is_valid():
 		_music_tween.kill()
 	_music_tween = create_tween()
-	if on:
+	if want:
 		_music_tween.tween_property(_music, "volume_db", -60.0, 0.4)
 		_music_tween.tween_callback(func() -> void: _music.stream_paused = true)
 	else:
 		_music.stream_paused = false
 		_music_tween.tween_property(_music, "volume_db", MUSIC_DB, 1.2)
+
+
+## True while any owner holds the music ducked.
+func is_music_ducked() -> bool:
+	return _music_ducked
+
+
+## Who is holding the duck right now (tests, debugging).
+func music_duck_owners() -> Array:
+	return _duck_owners.keys()
 
 
 func is_music_playing() -> bool:

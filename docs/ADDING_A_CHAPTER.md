@@ -21,6 +21,7 @@ so branches don't collide.
 | Characters and props | `world/characters/<name>.gd`, `world/props/<name>.gd` |
 | Tests | `<module>/tests/test_<chapter_id>_*.gd` (the runner finds them) |
 | Dev shot scene | `story/dev_<chapter_id>.tscn` or `ui/dev/dev_<thing>.tscn` |
+| **(v4)** Hoot's movie (optional) | `story/explainers/movies/<movie_id>.gd` + one line in `story/explainers/movies.gd` (below) |
 
 ### Speech audiometry (SRT, WRS, speech in noise)
 
@@ -62,6 +63,88 @@ so branches don't collide.
   `DAY_FACES` / `DAY_TINTS` tables win when they have the id; otherwise the card uses these keys, else a cream card
   with a star. So a chapter branch never needs to edit `story/title_screen.gd`.
 - Keep `title` as `"Day N: Name"` and `day` unique. The bot finds a card by its title (`--via-days --pick=<id>`).
+
+## Hoot's movies: an animated explainer for your chapter (v4)
+
+A chapter may open with a short cartoon that explains its one hard idea before the patient arrives (Day 2:
+"Hoot's masking movie", `docs/CHAPTER2.md` §16). Movies are **data**: you write a scene list; the shared player
+types the captions, plays the stings and asks the stage to draw each scene. API: `CONTRACTS.md` §3.4. You never
+need to edit the shared stage or player: everything below lives in your chapter's own files plus one registry line.
+
+1. **Write the data:** `story/explainers/movies/<movie_id>.gd` (or a file in your chapter's folder):
+   ```gdscript
+   extends RefCounted
+   const MOVIE: Dictionary = {
+   	"id": "tymp", "title": "Hoot's tymp movie", "subtitle": "The Wobbly Drum",
+   	"chapter": "rocco",            # the Game.CHAPTERS id that plays it and offers the replay
+   	"narrator": "Hoot",
+   	"seen_at": "drum",             # optional: reaching this scene counts as seen (default: the last scene)
+   	"stage": "res://story/rocco/tymp_sets.gd",   # optional: your own sets script (step 3)
+   	"scenes": [
+   		{"id": "drum", "set": "drum", "title": "The wobbly drum", "duration": 8.0,
+   			"captions": ["Meet the eardrum: a tiny drum skin that wobbles with every sound."],
+   			"teaches": "The eardrum moves with sound.",       # one idea per scene
+   			"board": "What the stage draws and animates (never shown).",
+   			"params": {}, "cues": [{"t": 0.4, "sfx": "pop", "vol_db": -8.0}]},
+   	],
+   }
+   ```
+   Rules: captions are Hoot lines, **18 words or fewer**; one idea per scene; the whole movie **about 60-100 s**
+   (`Movies.validate()` allows 45-110); cues are `Sfx` names (`CONTRACTS.md` §2.4) at **-6 dB or softer**
+   (the player caps them); anything loud ("too loud", noise, overmasking) is **drawn, never played**. Facts and
+   numbers come from `ClinicRules` and are reviewed by Steve; the test should check them against the rules.
+   A one-card **recap** for later in the day is a movie too: `"short": true` (5-30 s), never listed for replay
+   (Day 2's `masking_recap.gd`).
+2. **Register it:** one line in `story/explainers/movies.gd` `MOVIES` (`"tymp": "res://story/explainers/movies/tymp.gd"`).
+3. **Pick the sets: built-in, the no-code card, or your own sets script.**
+   - **Built-in sets** (`explainer_stage.gd` `SETS`): the ten masking sets (`meet`, `air`, `wall`, `bone`, `ghost`,
+     `mask`, `under`, `over`, `plateau`, `outro`), drawn from their `params` (`docs/CHAPTER2.md` §16). Reuse them when
+     the idea fits (a head, two cochleas, a cup, the buzzer, the shhh cloud).
+   - **No code:** `"set": "card"` draws a chunky title card from data alone: `"params": {"heading": "The Wobbly Drum",
+     "lines": ["Sound pushes the drum in.", "It wobbles back out."], "icon": "note", "tint": "#e9f4ff"}`. At most
+     4 lines of 36 characters (`Movies.validate()` checks); they pop in one by one (`line_at: [s]` to time them).
+     Icons: `""`, `"snails"`, `"ghost"`, `"cloud"`, `"note"`, `"dial"`, `"hoot"`; `"hoot": false` hides the waving
+     Hoot. A `set` nobody knows also falls back to a card with the scene's `title`, so a new movie plays (as cards)
+     before its art exists (`Movies.validate(id, Stage2D.SETS)` still lists the unknown set, so the art is not
+     forgotten).
+   - **Your own sets script** (your chapter's files, no shared edit): point `MOVIE.stage` at a script like
+     ```gdscript
+     extends "res://story/explainers/explainer_sets.gd"
+     const SETS: Array[StringName] = [&"drum"]
+
+     func _set_drum() -> void:   # a pure function of t: no tweens, nodes or RNG
+     	var wob := sin(t * 9.0) * 12.0 * _k(1.0, 2.0)   # starts wobbling between 1 and 2 s
+     	s._circ(Vector2(440, 250) + Vector2(wob, 0), 70.0, Stage2D.SKULL)   # the eardrum, chunky ink outline
+     	s._chip(String(params.get("word", "wobble!")), Vector2(440, 80), Stage2D.GOLD, 26, Stage2D.INK, _pop(0.5))
+     ```
+     The stage hands every set it does not know to this script, inside its own `_draw()`: you get the same `t`,
+     `duration`, `params`, `scene_id` and `scene_title` as a built-in set; `s` is the stage (all its helpers:
+     `s._snail()`, `s._cloud()`, `s._note()`, `s._text()`, `s._chip()`, `s._push()` / `s._pop_xf()`, `s.draw_*()`),
+     `Stage2D.<COLOR>` its palette (`INK`, `NOISE`, `GOLD`, `SKULL`...), and `_k()`, `_pop()`, `_ring()` are on the
+     base. `Movies.validate(id, Stage2D.SETS)` accepts your SETS and reports a missing script or a missing
+     `_set_<id>()`. A working example: `tests/fixtures/fake_movie.gd` + `tests/fixtures/fake_movie_sets.gd`.
+   - Give each scene a short `"title"` (the numbered chip in the stage's corner).
+   - Check it with
+     `timeout 400 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 30 -- --scene=res://story/explainers/dev_explainer.tscn --shots=/abs/dir --movie=tymp --speed=2`
+     (one shot per scene, `explainer_tymp_<NN>_<scene>`; `--at=0.2,0.6,0.95` shoots several moments, `--from=drum
+     --only` one scene, `--reduced-motion` with that setting on, `--extra-movie=res://...gd` for a movie file you
+     have not registered yet), and LOOK at every shot.
+4. **Play it from your level** (copy `level_bonnie._movie()`): emit phase `explainer` {movie, source, seen}, then
+   instance `res://story/explainers/explainer_player.tscn`, `await player.call("play", id, "day_start")`, free it.
+   Once `Game.is_movie_seen(id)` is true, offer it with a choice (best = skip) instead of playing it again. If the
+   result says `skipped`, have Hoot say where it lives (pause menu, "Watch <title>"). A recap mid-day: copy
+   `level_bonnie._recap()`. The player emits the `explainer` beat (solver = skip), so the autoplay bot and
+   `--mouse` need no edits.
+5. **Replay is free:** the pause menu offers every movie whose `chapter` is the current chapter (one: a "Watch
+   <title>" button; two or more: a "Hoot's Movies..." vertical list with the day, title and length per row), and
+   every movie on the title's Options and its "Hoot's Movies" button. Recaps (`"short": true`) are never listed.
+   Nothing to add; check the list with `dev_explainer --list`.
+6. **Test it:** add your movie to a test like `tests/test_contracts_v4.gd` (`Movies.validate(id, Stage2D.SETS)` is
+   empty, the scene ids, the facts against `ClinicRules`).
+
+The player's controls are the same for every movie: Space / Enter / a click advance like the dialogue box (finish
+the caption, then the scene's next caption, then the next scene), Esc = skip the movie, P = pause; buttons "Next"
+(the last scene: "Start the day" / "Done"), "Skip movie" and "II" (pause). The music is ducked while it plays.
 
 ## Shared files: additive changes only
 

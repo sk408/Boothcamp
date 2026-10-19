@@ -6,7 +6,11 @@
 `speech_value()`, the speech signals in `autoload/events.gd`, the speech constants in
 `autoload/audio_safety.gd`, the `familiarize` / `speech` phases and the `mike` chapter in `autoload/game.gd`.
 
-## Change request: the headless exit hang (`core/tone_generator.gd`)
+## Change request: the headless exit hang (`core/tone_generator.gd`) (done)
+
+**Done** at the merge of main into the Day 2 feedback branch: `ToneGenerator` now keeps the streams of
+freed generators in the same small static list (`_retired`, last 16, filled on `NOTIFICATION_PREDELETE`).
+Nothing else changed: Day 1 and Day 2 tones and the masker sound and route exactly as before.
 
 The "summary printed, then timeout" hang in `world/INTEGRATION_NOTES.md` has a cause, found with gdb on a
 hung run:

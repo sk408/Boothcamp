@@ -147,3 +147,14 @@ Requests for the integrator and the title owner:
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
 - **Tests:** `story/tests/test_cases.gd` (14 tests). `python3 tools/case_scripts.py --check` fails if
   `docs/CASE_SCRIPTS.md` is out of date with the case JSON.
+
+## Merge: main (Days 3, 6-9) into the Day 2 feedback (v4)
+
+- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` is the union of both sides: v4's `["bc", "L  >", "left"]` first
+  (Day 2's unmasked bone on the better, left ear), then `R  [`, `R  O+`, and the cases' `L  ]`, `L  □`. A row only
+  shows when that sheet has stamps, so Day 1 and Day 3 show none, Day 2 shows `L  >`, `R  [`, `R  O+` as on the
+  feedback branch, and Rocco, Dash and Ginger as on main. Marina (her bone is tested on her left ear) shows only
+  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet, so her paper fits 1280x720.
+- **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
+- **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button
+  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save).
