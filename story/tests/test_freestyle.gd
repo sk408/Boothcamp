@@ -267,3 +267,129 @@ func test_clipboard_stays_above_the_tray() -> void:
 	for l: Node in panel.find_children("*", "Label", true, false):
 		text += (l as Label).text + "\n"
 	assert_true(text.contains("Note 2:"), "red flags are never dropped")
+
+
+# ---------------------------------------------------------------- the visit's own rules
+
+## A visit with only its state set (never added to the tree, so no clinic): for the pure checks.
+func _visit(id: String) -> Node:
+	var lv: Node = LevelFreestyle.new()
+	lv.set("case_id", id)
+	lv.set("case_data", _case(id))
+	lv.set("patient", _patient(id))
+	return lv
+
+
+func _sheet(vals: Dictionary) -> Dictionary:
+	var out := {}
+	for f: int in vals:
+		out[f] = {"stored_db": int(vals[f])}
+	return out
+
+
+## One ear's chart as the AudiOtron stores it: air, unmasked bone (optional) and masked bone (optional).
+func _ear(air: Dictionary, bc: Dictionary, bc_masked: Dictionary = {}) -> Dictionary:
+	var e := {"freqs": _sheet(air)}
+	if not bc.is_empty():
+		e["bc"] = _sheet(bc)
+	if not bc_masked.is_empty():
+		e["bc_masked"] = _sheet(bc_masked)
+	var bone := bc.duplicate()
+	for f: int in bc_masked:
+		bone[f] = bc_masked[f]
+	e["hearing_type"] = ClinicRules.hearing_type(air, bone)
+	return e
+
+
+## Melody's right ear: unmasked bone on the right mastoid hears the good left cochlea, so the chart
+## reads conductive. That reading is not accepted until masked bone is run, and Hoot names the truth.
+func test_an_unmasked_gap_is_not_an_accepted_type() -> void:
+	var lv := _visit("fs_melody")
+	var p := _patient("fs_melody")
+	var cross := {}
+	var own := {}
+	for f: int in ClinicRules.BC_REQUIRED:
+		cross[f] = FsRules.better_cochlea(p, f)
+		own[f] = int(FsRules.truth_bone(p, "right").get(f, p.get_threshold("right", f)))
+	var air_r := FsRules.truth_air(p, "right")
+	var air_l := FsRules.truth_air(p, "left")
+	lv.set("results", {"ears": {"right": _ear(air_r, cross), "left": _ear(air_l, {})}})
+	assert_eq(lv.call("measured_type", "right"), &"conductive", "the cross-heard chart reads conductive")
+	assert_true(bool(lv.call("unmasked_gap", "right")), "the gap was never masked")
+	assert_eq(lv.call("accepted_types", "right"), [&"sensorineural"], "only the truth counts")
+	lv.set("results", {"ears": {"right": _ear(air_r, cross, own), "left": _ear(air_l, {})}})
+	assert_false(bool(lv.call("unmasked_gap", "right")), "masked bone answers it")
+	assert_has(lv.call("accepted_types", "right"), &"sensorineural")
+	lv.free()
+
+
+## A wandering stamp (Penny's right ear charted at 30 dB once) still counts: the chart's own reading.
+func test_a_wandering_stamp_still_counts() -> void:
+	var lv := _visit("fs_penny")
+	var p := _patient("fs_penny")
+	var air := FsRules.truth_air(p, "right")
+	air[4000] = 30
+	var bc := {}
+	for f: int in ClinicRules.BC_REQUIRED:
+		bc[f] = int(air[f])
+	lv.set("results", {"ears": {"right": _ear(air, bc), "left": _ear(FsRules.truth_air(p, "left"), {})}})
+	assert_eq(lv.call("accepted_types", "right"), [&"normal", &"sensorineural"], "the truth and the chart's own reading")
+	lv.free()
+
+
+## "Look before you insert" counts what went in an ear before the otoscope, not the tray's order.
+func test_look_first_counts_probes_only() -> void:
+	var lv := _visit("fs_penny")
+	var p := _patient("fs_penny")
+	lv.set("results", {"ears": {"right": _ear(FsRules.truth_air(p, "right"), {}), "left": _ear(FsRules.truth_air(p, "left"), {})}})
+	lv.set("done", {&"chat": true, &"otoscopy": true, &"air": true})
+	lv.set("asked", Array(_case("fs_penny")["key_questions"]))
+	var oto := func() -> String:
+		for r: Dictionary in (lv.call("workup_report") as Dictionary)["rows"]:
+			if String(r["tool"]) == "otoscopy":
+				return String(r["state"])
+		return ""
+	assert_eq(oto.call(), "ok")
+	lv.set("probe_before_look", true)
+	assert_eq(oto.call(), "slip", "a probe or earphone before the look is the slip")
+	lv.free()
+
+
+## A double-click on a tray card cannot also answer the next row (mouse presses wait out the arming).
+func test_tray_ignores_a_double_click() -> void:
+	var tray := FsTray.new()
+	add_node(tray)
+	var labels: Array[String] = ["Right ear first", "Left ear first"]
+	var got: Array = []
+	var run := func() -> void:
+		got.append(await tray.choose("Which ear goes first?", labels, 0))
+	run.call()
+	await wait_frames(2)
+	var cards: Array = tray.get("_cards")
+	(cards[0] as Button).pressed.emit()
+	await wait_frames(3)
+	assert_eq(got, [], "a press while the row arms is ignored")
+	await wait_seconds(0.3)
+	(cards[1] as Button).pressed.emit()
+	await wait_frames(3)
+	assert_eq(got, [1], "a press once armed answers")
+
+
+## The title's menu card (six buttons for a returning player, with stats) ends above the safety footer.
+func test_title_menu_clears_the_footer() -> void:
+	Game.reset_save()
+	Game.progress["plays"] = 3
+	Game.progress["coins"] = 80
+	Game.progress["patients"] = {"gus": {"best_grade": "S", "best_score": 95.0}, "bonnie": {"best_grade": "A", "best_score": 85.0}}
+	Game.progress["upgrades"] = ["comfy_chair", "insert_earphones"]
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_node(title)
+	await wait_frames(3)
+	title.call("_on_notice_ok")
+	await wait_seconds(0.6)
+	var buttons: Array = title.get("_menu_buttons")
+	assert_eq(buttons.size(), 6, "Play, Days, Freestyle, New player, Options, Quit")
+	var card := title.get("_menu_card") as Control
+	var foot := title.get_viewport_rect().size.y - float(title.get("FOOTER_H"))
+	assert_true(card.get_global_rect().end.y <= foot, "the card ends at %d, the footer starts at %d" % [int(card.get_global_rect().end.y), int(foot)])
+	Game.reset_save()

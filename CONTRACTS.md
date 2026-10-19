@@ -1315,15 +1315,21 @@ with their option text, so the mouse bot clicks them by their first 18 character
 
 **Visit and medals.** Medals `fs_chat` (Chat), `fs_workup` (Workup), `fs_chart` (Chart), `fs_call` (Call). The
 paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit's own score. Summary keys:
-`freestyle_case`, `visit_score`, `headlines`, `subheads`, `medal_beats`, `continue_text` ("Back to the waiting
-room"), `continue_scene` (the waiting room), `next_chapter_id` "" and `first_clear` false. Visit flags:
-`freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`, `freestyle_types`, `freestyle_slips`,
-`decision_first`, `decision`, `decision_tries`.
+`freestyle_case`, `visit_score`, `headlines`, `subheads`, `medal_beats`, `continue_text` ("Waiting room"),
+`continue_scene` (the waiting room), `next_chapter_id` "" and `first_clear` false. Visit flags:
+`freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`, `freestyle_types`, `freestyle_tymp_misreads`,
+`freestyle_slips`, `decision_first`, `decision`, `decision_tries`.
+
+**The AudiOtron between tests.** One screen per visit. Between tests it stays in the tree (its Hoot anchors are
+registered once) but is hidden and `PROCESS_MODE_DISABLED`, unregistered from `Stage.audiometer`, with the booth
+view off and the music back; the next test re-registers it. It is freed when the patient walks to the desk.
 
 **Hooks in other modules (all additive).**
-- `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`); with six menu buttons they are 42 px tall.
+- `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`) after Days; Options and Quit share the last
+  row (Up/Down and Left/Right walk the buttons in order) so six buttons still clear the safety footer.
 - `story/case_portraits.gd`: `CasePortraits.register(who, look)` (walk-ins aren't chapters, so they register).
-- `story/daily_decibel.gd`: the summary's optional `continue_text` labels the main button (default "Back to the title").
+- `story/daily_decibel.gd`: the summary's optional `continue_text` labels the main button (default "Back to the title";
+  keep it short, the paper must fit 1280 px).
 - `tools/autoplay_bot.gd`: `--mouse` clicks `continue_text` and counts `continue_scene` as being back;
   `--via-freestyle` presses the title's Freestyle button; the report gains `freestyle` {case, medals, visit_score}.
 
@@ -1331,4 +1337,5 @@ room"), `continue_scene` (the waiting room), `next_chapter_id` "" and `first_cle
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, the tymp tip
-matches the canal, speakers are unique game-wide, button prefixes are unique.
+matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
+screen, an unmasked gap is never an accepted chart type, and the title's menu ends above the footer.

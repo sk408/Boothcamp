@@ -27,6 +27,9 @@ var _hl := -1
 var _t := 0.0
 var _accepting := false
 var _leaving := false
+## Seconds since the last input: a room left alone goes back to the title (a booth display), like the paper.
+var _idle := 0.0
+const IDLE_S := 90.0
 
 
 func _ready() -> void:
@@ -51,6 +54,10 @@ func demo_start() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if _accepting:
+		_idle += delta
+		if _idle > IDLE_S:
+			_back()
 	for b: Button in _cards:
 		b.queue_redraw()
 
@@ -247,14 +254,23 @@ func _back() -> void:
 	Events.goto_scene.emit(TITLE_SCENE)
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion or event.is_pressed():
+		_idle = 0.0
+	# Esc means Back here, before the pause menu turns it into Paused (as on the title's Days card)
+	if _accepting and event.is_action_pressed(&"ui_cancel") and not event.is_echo():
+		var pm := get_tree().get_first_node_in_group("pause_menu")
+		if pm == null or not bool(pm.call("is_open")):
+			_back()
+			get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _accepting or not event.is_pressed() or event.is_echo():
 		return
 	var n := _buttons.size()
 	var nc := _cards.size()
-	if event.is_action_pressed(&"ui_cancel"):
-		_back()
-	elif event.is_action_pressed(&"ui_right"):
+	if event.is_action_pressed(&"ui_right"):
 		_set_hl((_hl + 1) % n)
 	elif event.is_action_pressed(&"ui_left"):
 		_set_hl((_hl - 1 + n) % n if _hl >= 0 else n - 1)

@@ -152,13 +152,14 @@ Requests for the integrator and the title owner:
 
 Everything is in `story/freestyle/` plus `core/patients/fs_*.tres`. Changes to shared files are additive:
 
-- **Title menu.** A **Freestyle** button between Days and Options. With **New player** that makes six buttons, so
-  `btn_h` drops from 48 to 42 when there are more than five (the card still clears the safety footer). If another
-  branch adds a menu button too (for example a movies button), keep both and check the card still clears the footer.
+- **Title menu.** A **Freestyle** button after Days. With **New player** that makes six buttons, so Options and
+  Quit now share the last row (Up/Down and Left/Right walk the buttons in order) and the card still clears the
+  safety footer (`test_title_menu_clears_the_footer`). If another branch adds a menu button too (for example a
+  movies button), keep both and run that test.
 - **Game.PHASES** gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief` (append after the
   speech and cases blocks).
 - **CasePortraits.register(who, look)**: walk-ins aren't chapters, so the waiting room registers their looks.
-- **Daily Decibel**: the summary's optional `continue_text` labels the main button ("Back to the waiting room");
+- **Daily Decibel**: the summary's optional `continue_text` labels the main button ("Waiting room");
   default unchanged.
 - **Autoplay bot**: with `--mouse` it clicks `continue_text` and treats the summary's `continue_scene` like the title;
   new `--via-freestyle` (title -> Freestyle); the report gains `freestyle`. `_open_days()` now calls the shared

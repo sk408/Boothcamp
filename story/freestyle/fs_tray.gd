@@ -90,6 +90,7 @@ func _open(prompt: String, labels: Array[String], best: int, colors: Dictionary)
 	_build_cards()
 	_prompt_label.text = prompt
 	for c in _hints.get_children():
+		_hints.remove_child(c)   # out now, so the prompt pill is sized for the new row only
 		c.queue_free()
 	if UiKit.show_key_hints():
 		_hints.add_child(UiKit.hint_row([["1"], "-", [str(_labels.size())], "or", ["Left", "Right"], "+", [Game.key_label(&"advance_dialogue")], "or click"], 15))
@@ -153,7 +154,9 @@ func _build_cards() -> void:
 			b.add_theme_color_override(cs, Palette.INK)
 		b.set_meta("tool", t)
 		var idx := i
-		b.pressed.connect(func() -> void: _choose(idx))
+		b.pressed.connect(func() -> void:
+			if _armed <= 0.0:   # a double-click's second press must not answer the next row
+				_choose(idx))
 		b.mouse_entered.connect(func() -> void:
 			if _accepting and _hl != idx:
 				_set_hl(idx, false))
@@ -217,8 +220,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		var k := (event as InputEventKey).keycode
 		if k < KEY_1 or k > KEY_9:
 			k = (event as InputEventKey).physical_keycode
-		if k >= KEY_1 and k <= KEY_9 and k - KEY_1 < _cards.size():
-			_choose(k - KEY_1)
+		var idx := -1
+		if k >= KEY_1 and k <= KEY_9:
+			idx = k - KEY_1
+		elif k >= KEY_KP_1 and k <= KEY_KP_9:   # the numpad, as DialogueBox takes it
+			idx = k - KEY_KP_1
+		if idx >= 0 and idx < _cards.size():
+			_choose(idx)
 			get_viewport().set_input_as_handled()
 			return
 	if event.is_action_pressed(&"ui_right") or event.is_action_pressed(&"freq_up"):

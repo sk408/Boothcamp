@@ -72,7 +72,7 @@ var clipboard: Control
 var chart: Control
 var debrief_card: Control
 var results: Dictionary = {}
-## Tools run so far ({tool: true}) and in what order (for "look before you insert").
+## Tools run so far ({tool: true}; masked runs as {"bc_masked:right": true}) and the tray's picks in order.
 var done: Dictionary = {}
 var order: Array[StringName] = []
 ## Deck questions asked, in order.
@@ -84,6 +84,11 @@ var bone_side := ""
 var masked_runs: Array[String] = []
 var chart_slips := 0
 var call_slips := 0
+## Wrong tympanogram types named (Hoot explains each; not a Chart slip, see FREESTYLE.md §5).
+var tymp_misreads := 0
+## True once a probe or earphone went in before the otoscope looked (the "look first" slip).
+var probe_before_look := false
+var props: Control
 var _cam: Camera3D
 var _seated := false
 var _instructed := false
@@ -181,12 +186,11 @@ func _do(what: String) -> void:
 			await _wait(1.2)
 			clinic.call("focus_camera", &"desk", 0.6)
 		"letter", "phone", "boat":
-			var props := CaseProps.new()
-			hud.call("add_game", props)
+			if props == null:
+				props = CaseProps.new()
+				hud.call("add_game", props)
+			# the phone stays on the desk through the call's lines; _goodbye hangs up
 			await props.call("play", what)
-			if what == "phone":
-				await _wait(0.8)
-				props.call("hang_up")
 
 
 ## True the first time a player opens freestyle (no walk-in finished yet).
@@ -303,16 +307,20 @@ func _chat() -> void:
 	while asked.size() < FsRules.CHAT_BUDGET:
 		var keys := FsRules.keys_left(case_data, asked)
 		var best_id := keys[0] if not keys.is_empty() else ""
+		# the board covers the clipboard's column: the clipboard shows while the patient answers
+		clipboard.visible = false
 		var qid: String = await board.call("ask", asked, FsRules.CHAT_BUDGET - asked.size(), best_id, patient.short_name())
 		if qid == "":
 			break
 		asked.append(qid)
 		_react(&"nod")
+		clipboard.visible = true
 		for line: String in FsData.answer_lines(case_data, qid):
 			await _say(speaker, line)
 		var a: Dictionary = (case_data["answers"] as Dictionary).get(qid, {})
 		clipboard.call("add_note", FsData.answer_note(case_data, qid), "flag" if bool(a.get("flag", false)) else "note")
-		clipboard.visible = true
+		await _wait(0.4)   # the note lands before the board comes back
+	clipboard.visible = true
 	done[&"chat"] = true
 	Game.set_visit_flag("freestyle_asked", asked.duplicate())
 
@@ -369,6 +377,7 @@ func _tymp() -> void:
 		sizes.remove_at(ch)
 		opts.remove_at(ch)
 	Game.set_visit_flag("freestyle_tip_tries", tries)
+	_probe_in()
 	_react(&"nod")
 	_shot("tymp_sweep", 1.0)
 	await g.call("measure", "right", ty["right"])
@@ -383,10 +392,11 @@ func _tymp() -> void:
 			var pick: int = await tray.call("choose", "What type is the %s ear's tympanogram?" % ear.to_upper(), labels, types.find(truth))
 			if types[pick] == truth:
 				break
-			chart_slips += 1
+			tymp_misreads += 1
 			await _say("Hoot", "Type %s would be %s. Look where the peak sits, and how tall." % [types[pick], CaseRules.TYMP_SHAPES[types[pick]]])
 			types.remove_at(pick)
 		g.call("reveal_type", ear)
+	Game.set_visit_flag("freestyle_tymp_misreads", tymp_misreads)
 	_shot("tymp_curves", 0.3)
 	clipboard.call("add_note", String(ty["note"]))
 	await _wait(0.6)
@@ -404,14 +414,24 @@ func _open_screen() -> void:
 	if screen == null:
 		screen = (load(AUDIOMETER_SCENE) as PackedScene).instantiate() as CanvasLayer
 		add_child(screen)
+	elif not screen.visible:
+		screen.process_mode = Node.PROCESS_MODE_INHERIT
+		Stage.register_audiometer(screen)
+		Sfx.music_duck(true)
 	screen.visible = true
 	_cam = clinic.call("get_main_camera")
 	_cam.current = false
 
 
+## Between tests the screen stays in the tree (its Hoot anchors are registered once, in _ready) but
+## stops: no false-alarm presses during a chat, and the pause corner and the music come back.
 func _close_screen() -> void:
 	if screen != null:
 		screen.visible = false
+		screen.process_mode = Node.PROCESS_MODE_DISABLED
+		Stage.unregister_audiometer(screen)
+		Stage.set_booth_view_active(false)
+		Sfx.music_duck(false)
 	if _cam != null:
 		_cam.current = true
 
@@ -452,6 +472,12 @@ func _stand_if_seated() -> void:
 		_seated = false
 
 
+## Something goes in an ear (tymp probe, earphones, a masking earphone): before the otoscope looked?
+func _probe_in() -> void:
+	if not done.has(&"otoscopy"):
+		probe_before_look = true
+
+
 func _walk_to_desk() -> void:
 	if screen != null:
 		screen.queue_free()
@@ -467,12 +493,14 @@ func _better_ear_truth() -> String:
 
 
 func _air() -> void:
-	await _to_booth()
+	# asked at the desk, with the chart and the clipboard's notes still in view
 	var better := _better_ear_truth()
 	var ch: int = await tray.call("choose", "Which ear goes first?", EAR_OPTIONS, 1 if better == "left" else 0)
 	var first := "right" if ch == 0 else "left"
 	if air_first == "":
 		air_first = first
+	await _to_booth()
+	_probe_in()
 	clinic.call("take_off_bone_oscillator")
 	clinic.call("put_on_earphones", true)
 	await _wait(0.5)
@@ -485,13 +513,14 @@ func _air() -> void:
 
 
 func _bone() -> void:
-	await _to_booth()
 	var better := _better_ear_measured()
 	var ch: int = await tray.call("choose", "Which side for the bone oscillator?", MASTOID_OPTIONS, 1 if better == "left" else 0)
 	var ear := "right" if ch == 0 else "left"
 	if bone_side == "":
 		bone_side = ear
+	await _to_booth()
 	await _bone_on(ear, false)
+	clinic.call("take_off_bone_oscillator")
 	done[&"bone"] = true
 
 
@@ -514,13 +543,16 @@ func _bone_on(ear: String, quiet: bool) -> void:
 	var plan := {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true, "hoot_turn_after": 0,
 		"montage": true, "skip_hoot_retest": true}
 	if quiet:
-		plan["intro"] = "Unmasked bone on the %s side first, at Hoot speed." % ear
+		plan["intro"] = ("Unmasked bone on the %s side first, at Hoot speed." if _quick() else "Unmasked bone on the %s side first.") % ear
 	await _test(ear, plan)
 	_close_screen()
 
 
 func _masking() -> void:
-	await _to_booth()
+	if not FsRules.air_done(results):
+		# masking levels come from the air chart: nothing to work from yet
+		await _say("You", "Masking works from the air chart. Air tones first!")
+		return
 	var best := MASK_STEPS.size() - 1
 	for step: Dictionary in FsRules.workup(case_data, patient, results, _air_transducer()):
 		var id := String(step["id"])
@@ -535,10 +567,17 @@ func _masking() -> void:
 		return
 	var ear := String(MASK_STEPS[ch][1])
 	var other := "left" if ear == "right" else "right"
-	masked_runs.append("%s:%s" % [test, ear])
-	done[StringName(masked_runs[-1])] = true
+	await _to_booth()
+	_probe_in()
+	var run := "%s:%s" % [test, ear]
+	if not masked_runs.has(run):
+		masked_runs.append(run)
+	# air is on the chart, so the AudiOtron's own rule decides; "nothing to mask" still counts as run
+	done[StringName(run)] = true
 	if test == "bc_masked":
 		if not FsRules.has_sheet(results, ear, &"bc"):
+			if bone_side == "":
+				bone_side = ear   # this unmasked bone counts for "bone on the better ear first"
 			await _bone_on(ear, true)
 		clinic.call("take_off_earphones")
 		clinic.call("put_on_bone_oscillator", ear)
@@ -585,13 +624,24 @@ func _refresh_clipboard() -> void:
 
 # ---------------------------------------------------------------- 3. the chart: type per ear
 
-## The type a player may name for an ear: the truth, or what their own chart shows when it differs.
+## The type a player may name for an ear: the truth, or what their own chart shows when it differs
+## (a few wandering stamps), but not a gap the chart asked to mask when nobody masked it.
 func accepted_types(ear: String) -> Array[StringName]:
 	var out: Array[StringName] = [FsRules.truth_type(patient, ear)]
-	var measured: StringName = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
-	if measured != &"unknown" and not out.has(measured):
+	var measured := measured_type(ear)
+	if measured != &"unknown" and not out.has(measured) and not unmasked_gap(ear):
 		out.append(measured)
 	return out
+
+
+func measured_type(ear: String) -> StringName:
+	return ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
+
+
+## True when this ear's air sits over 10 dB above unmasked bone and masked bone was never run on
+## it: the "gap" may be the other cochlea answering.
+func unmasked_gap(ear: String) -> bool:
+	return not FsRules.masked_bone_needed(results, ear).is_empty() and not FsRules.has_sheet(results, ear, &"bc_masked")
 
 
 func _chart_question() -> void:
@@ -611,16 +661,30 @@ func _chart_question() -> void:
 				labels.append(String(FsRules.TYPE_LABELS[k]))
 			var pick: int = await tray.call("choose", "What type of hearing is in the %s ear?" % ear.to_upper(), labels, kinds.find(ok_types[0]))
 			var k2 := kinds[pick]
+			var truth := FsRules.truth_type(patient, ear)
 			if ok_types.has(k2):
 				types_named[ear] = k2
 				Sfx.play(&"ding", 1.2, -6.0)
+				if k2 != truth:
+					# the chart's own reading counts; Hoot still says what the ear really is
+					await _say("Hoot", "That's what your chart shows. Underneath, the %s ear is %s: a few stamps wandered." % [ear, _type_word(truth)])
 				break
 			chart_slips += 1
-			await _say("Hoot", _type_hint(k2, ear))
+			if k2 == measured_type(ear) and unmasked_gap(ear):
+				await _say("Hoot", "Your chart shows that gap, but the %s ear's bone was never masked. The other cochlea may have answered. Masked bone shows it's %s." % [ear, _type_word(truth)])
+			else:
+				await _say("Hoot", _type_hint(k2, ear))
 			kinds.remove_at(pick)
 	Game.set_visit_flag("freestyle_types", types_named)
 	Game.record_medal("fs_chart", FsRules.medal_for_slips(chart_slips))
 	hud.call("complete_step", &"chart")
+
+
+## "sensorineural", "a mixed loss": a type name for Hoot's sentences.
+static func _type_word(t: StringName) -> String:
+	if t == &"mixed":
+		return "a mixed loss"
+	return String(t)
 
 
 ## Hoot's nudge after a wrong type: what that type would need to show.
@@ -718,7 +782,6 @@ func workup_report() -> Dictionary:
 	for k: Variant in keys:
 		if not asked.has(String(k)):
 			keys_missed.append(String(k))
-	var oto_at := order.find(&"otoscopy")
 	for step: Dictionary in steps:
 		var id := String(step["id"])
 		var ear := String(step["ear"])
@@ -737,13 +800,11 @@ func workup_report() -> Dictionary:
 				if not others.is_empty():
 					lines.append("Worth asking %s about: %s." % [patient.short_name(), ", ".join(others)])
 			"otoscopy":
-				var late := oto_at > 0 and (order.slice(0, oto_at).has(&"tymp") or order.slice(0, oto_at).has(&"air") \
-					or order.slice(0, oto_at).has(&"bone") or order.slice(0, oto_at).has(&"masking"))
 				if not done.has(&"otoscopy"):
 					slips += 1
 					rows.append({"tool": "otoscopy", "text": "Look in the ears", "state": "miss"})
 					lines.append("Always look in the ears first. Wax or a hole changes every test.")
-				elif late:
+				elif probe_before_look:
 					slips += 1
 					rows.append({"tool": "otoscopy", "text": "Look in the ears (but only after a probe went in)", "state": "slip"})
 					lines.append("Look before you put anything in an ear: tymp probe and earphones too.")
@@ -843,6 +904,8 @@ func _goodbye() -> void:
 	clipboard.visible = false
 	await clinic.call("focus_camera", &"desk", 0.5)
 	await _play(case_data["goodbye"])
+	if props != null:
+		props.call("hang_up")
 	clinic.call("focus_camera", &"door", 1.6)
 	_shot("goodbye", 1.6)
 	await clinic.call("walk_out")
@@ -872,7 +935,7 @@ func _results() -> void:
 	summary["medal_beats"] = MEDAL_BEATS
 	summary["next_chapter_id"] = ""
 	summary["first_clear"] = false
-	summary["continue_text"] = "Back to the waiting room"
+	summary["continue_text"] = "Waiting room"
 	summary["continue_scene"] = WAITING_ROOM
 	_record_best(String(case_data["patient_id"]), score, grade)
 	Events.level_finished.emit(summary)

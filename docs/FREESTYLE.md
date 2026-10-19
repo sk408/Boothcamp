@@ -20,7 +20,8 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
 ## 1. A visit, beat by beat
 
 1. **Waiting room.** Cards for every walk-in: portrait, name and age, a one-line teaser in their own words,
-   difficulty stars (1 to 3) and the best grade so far. **Surprise me** picks one at random. **Back** to the title.
+   difficulty stars (1 to 3) and the best grade so far. **Surprise me** picks one at random. **Back** (or Esc) to
+   the title; left alone for 90 s the room goes back to the title too (a booth display).
 2. **Walk-in.** The patient walks to the desk and says why they came (`hello`). The first visit ever opens with
    Hoot's one-line briefing.
 3. **The tool tray.** The player picks the next tool, any order, as often as they like:
@@ -30,22 +31,24 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
    - **Tympanometer**: pick the tip that seals, sweep both ears, name the type of each.
    - **Air tones**: pick which ear goes first, then air conduction on both ears.
    - **Bone conduction**: pick the mastoid, then unmasked bone (1k, 2k, 4k, 500).
-   - **Masking**: pick a masked test (masked bone or masked air, right or left ear), or "No masking needed".
+   - **Masking**: pick a masked test (masked bone or masked air, right or left ear), or "No masking". Masking
+     works from the air chart, so before air tones the player only gets "Air tones first!".
    - **Make the call**: ends the workup.
    The clipboard (left side) shows every note and every chart result so far; the chart card above the tray
    shows the audiogram once there is one. Done tools get a tick but can be run again. Every clinic choice (the
    tip, the tymp type, which ear first, the mastoid, the masked test, the chart type, the stamp) is a row of
-   big buttons in the tray, so the chart stays in view.
+   big buttons in the tray. Which ear, which mastoid and which masked test are asked at the desk before the
+   booth, so the chart and the clipboard stay in view (the tympanometer's own choices sit under its screen).
 4. **The chart.** "What type of hearing is in the RIGHT ear?" then the LEFT: normal, sensorineural, conductive,
-   mixed. Wrong picks get Hoot's hint and another go.
+   mixed. Wrong picks get Hoot's hint and another go (section 4.3).
 5. **The call.** Four rubber stamps: **FIT**, **REFER**, **DOCTOR TODAY**, **NO AIDS NEEDED**. A wrong stamp gets
    the case's own line for that stamp, then another go. Then "Why?": pick a reason (some cases have more than
    one right reason).
-6. **Debrief.** Hoot's lines from the case, then the **workup card**: what a pro would have run, in order, ticked
-   or crossed against what the player did, with one line for each slip (section 4.5).
+6. **Debrief.** The **workup card**: what a pro would have run, in order, ticked or crossed against what the
+   player did, with Hoot's line for each slip (section 4.5, up to four lines). Then Hoot's lines from the case.
 7. **Goodbye** (the case's lines; a FIT puts the hearing aids on) and the **Daily Decibel** with the
-   freestyle medals: Chat, Workup, Chart, Call. Its buttons go back to the waiting room or play the same patient
-   again.
+   freestyle medals: Chat, Workup, Chart, Call. Its buttons go back to the waiting room (**Waiting room**) or
+   play the same patient again.
 
 Audiometry uses the normal AudiOtron, never coached. With **Quick visit** on (the default) the player stamps the
 first three tones of each air ear and Hoot finishes at x8; bone and masked tests run as Hoot's montage. With
@@ -160,8 +163,13 @@ Air: the better ear first (by the patient's report; the debrief uses the true pu
 ### 4.3 The chart question
 
 Each ear's type is graded against the patient's truth (`ClinicRules.hearing_type`). When the player's own chart
-types the ear differently (a few wandering stamps), the type their chart shows also counts, and the debrief
-says what the truth was.
+types the ear differently (a few wandering stamps), the type their chart shows also counts, and Hoot says right
+away what the ear really is ("Underneath, the left ear is a mixed loss: a few stamps wandered.").
+
+One exception: a gap the chart asked to mask and nobody masked. When an ear's air sits more than 10 dB above
+the unmasked bone and that ear has no masked bone, its reading does not count (the gap may be the other cochlea
+answering). Picking it costs a Chart slip, and Hoot explains and names the true type. The workup card also
+flags the missing masked bone.
 
 ### 4.4 The call
 
@@ -176,7 +184,8 @@ says what the truth was.
 
 - a needed step not run (each one);
 - a needed key question not asked (the chat medal; red flags count double);
-- tympanometer or air tones before looking in the ears;
+- anything in an ear before looking in the ears: the tympanometer's probe, air tones' earphones or a masked
+  test (bone conduction sits on the mastoid, so it does not count);
 - the poorer ear first for air or bone when the ears differ by more than 5 dB.
 
 Extra tests are never slips (tymp on a normal ear is routine, "NOTHING TO MASK!" answers an unneeded masking
@@ -188,7 +197,7 @@ run), but the debrief says when one was not needed and why.
 |---|---|---|---|
 | Chat | every key question asked | one missed | more (or the red flags missed) |
 | Workup | no slips | one | more |
-| Chart | both ears right first time | one wrong pick | more |
+| Chart | both ears right first time | one wrong pick | more (tympanogram types are not counted here: Hoot explains a wrong one on the spot) |
 | Call | right stamp and a right reason first time | one wrong pick | more |
 
 Score on the paper: 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit's audiometry score
@@ -197,11 +206,13 @@ walk-in is kept in the save (`progress.patients[<id>].fs_best_grade`) for the wa
 
 ## 6. Hooks into shared code (all additive)
 
-- `story/title_screen.gd`: a **Freestyle** button on the title menu, between Days and Options (six buttons with
-  New player, so they are 42 px tall instead of 48).
+- `story/title_screen.gd`: a **Freestyle** button on the title menu, after Days. Options and Quit now share the
+  last row (Up/Down and Left/Right walk the buttons in order), so a returning player's six buttons and stats
+  still end above the safety footer.
 - `story/case_portraits.gd`: `CasePortraits.register(who, look)` so walk-ins get portraits.
 - `autoload/game.gd`: `PHASES` gains `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief`.
-- `story/daily_decibel.gd`: an optional summary `continue_text` (the main button's label).
+- `story/daily_decibel.gd`: an optional summary `continue_text` (the main button's label; keep it short, the
+  paper is 1280 px wide: freestyle uses "Waiting room").
 - `tools/autoplay_bot.gd`: after the paper, `--mouse` clicks the summary's `continue_text` and waits for its
   `continue_scene`; `--via-freestyle` starts from the title's Freestyle button; the report gains `freestyle`.
 - The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>`
@@ -210,7 +221,7 @@ walk-in is kept in the save (`progress.patients[<id>].fs_best_grade`) for the wa
 Not used: `Game.CHAPTERS`, the Days grid, `chapters_done`. The visit summary has `freestyle_case`,
 `visit_score` (the audiometry score before the medal blend), `headlines`, `subheads`, `medal_beats`,
 `continue_text`, `continue_scene`; visit flags `freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`,
-`freestyle_types`, `freestyle_slips`, `decision_first`, `decision`, `decision_tries`.
+`freestyle_types`, `freestyle_tymp_misreads`, `freestyle_slips`, `decision_first`, `decision`, `decision_tries`.
 
 Speech tests: the tray has a **Speech tests** tool reserved (`FsRules.SPEECH_SCREEN`); it stays hidden until
 word scores land (Day 4), so no walk-in needs speech yet.

@@ -131,7 +131,9 @@ func _make_button(i: int, text: String, in_grid: bool = true) -> Button:
 	for cs: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(cs, Palette.INK)
 	b.add_theme_color_override("font_disabled_color", Color(Palette.INK, 0.4))
-	b.pressed.connect(func() -> void: _choose(i))
+	b.pressed.connect(func() -> void:
+		if _armed <= 0.0:   # a double-click's second press must not ask a second question
+			_choose(i))
 	b.mouse_entered.connect(func() -> void:
 		if _accepting and not b.disabled and _hl != i:
 			_hl = i
@@ -187,12 +189,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		var k := (event as InputEventKey).keycode
 		if k < KEY_0 or k > KEY_9:
 			k = (event as InputEventKey).physical_keycode
+		var idx := -1
 		if k >= KEY_0 and k <= KEY_9:
-			var idx := 9 if k == KEY_0 else k - KEY_1
-			if idx < FsRules.QUESTIONS.size() and not _buttons[idx].disabled:
-				_choose(idx)
-				get_viewport().set_input_as_handled()
-				return
+			idx = 9 if k == KEY_0 else k - KEY_1
+		elif k >= KEY_KP_0 and k <= KEY_KP_9:   # the numpad, as DialogueBox takes it
+			idx = 9 if k == KEY_KP_0 else k - KEY_KP_1
+		if idx >= 0 and idx < FsRules.QUESTIONS.size() and not _buttons[idx].disabled:
+			_choose(idx)
+			get_viewport().set_input_as_handled()
+			return
 	var start := _hl if _hl >= 0 else -1
 	if event.is_action_pressed(&"ui_down"):
 		_hl = _step(start, COLS if start >= 0 and start < FsRules.QUESTIONS.size() - COLS else 1)
