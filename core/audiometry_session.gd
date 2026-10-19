@@ -865,7 +865,7 @@ static func _nearest_freq(by_freq: Dictionary, f: int) -> int:
 
 
 ## (v3) Do the rules ask for masking at (e, f) on the current transducer, from this visit's stamps?
-## Bone: the ear's air-bone gap (best air - unmasked bone, or the best bone estimate) is over 10 dB.
+## Bone: the ear's air-bone gap (best air - unmasked bone, or the best bone estimate) is 10 dB or more.
 ## (v4) Unmasked bone from EITHER mastoid counts (ClinicRules.unmasked_bone(), as masked_freqs_needed).
 ## Air: the ear's air threshold (or the dial level, before it is stored) - IA >= the non-test bone.
 func masking_needed_here(e: String = "", f: int = -1) -> bool:

@@ -123,7 +123,7 @@ static func truth_needs_bone(p: PatientProfile) -> bool:
 	return false
 
 
-## Masked bone from the truth: the bone frequencies where this ear's air sits more than 10 dB above
+## Masked bone from the truth: the bone frequencies where this ear's air sits 10 dB or more above
 ## the better cochlea (unmasked bone would show a gap that may be the other cochlea answering).
 static func truth_masked_bone(p: PatientProfile, ear: String) -> Array[int]:
 	var out: Array[int] = []
@@ -157,7 +157,7 @@ static func unmasked_bone(results: Dictionary) -> Dictionary:
 	return out
 
 
-## Masked bone the chart asks for on one ear: wherever its air sits more than 10 dB above the
+## Masked bone the chart asks for on one ear: wherever its air sits 10 dB or more above the
 ## unmasked bone (from either mastoid). Empty until some unmasked bone is stamped.
 static func masked_bone_needed(results: Dictionary, ear: String) -> Array[int]:
 	var out: Array[int] = []

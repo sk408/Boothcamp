@@ -101,8 +101,8 @@
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. I'll zip through the right!"},
 		{"ear": "left", "test": "ac", "hoot_turn_after": 8, "intro": "Left ear's all yours. Keep an eye on the low pitches!"},
-		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
-			"before": [["Hoot", "Now the bone buzzer, on her left. Watch out for the Ghost!"]]}
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Right ear at Hoot speed: bone for her better cochlea.",
+			"before": [["Hoot", "Bone buzzer on her better ear first: the right. Unmasked bone answers for her better cochlea."]]}
 	],
 	"after_audiometry": [
 		["Hoot", "Masked bone sits with the air: no gap. Not the middle ear."]

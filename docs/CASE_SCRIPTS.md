@@ -64,7 +64,7 @@ Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
     - **Hoot:** Now the bone buzzer, on his right: is it the middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
-After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
 - **Hoot:** Bone sits right on the air: no gap. Not the middle ear.
 
@@ -181,12 +181,12 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
 ### Test plan
 - Right AC (Hoot at x8): "Better ear first, like the pros. I'll zip through the right!"
 - Left AC (player for 8 stamps, then Hoot): "Left ear's all yours. Keep an eye on the low pitches!"
-- Left BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
+- Right BC (Hoot at x8): "Right ear at Hoot speed: bone for her better cochlea."
   - before:
-    - **Hoot:** Now the bone buzzer, on her left. Watch out for the Ghost!
+    - **Hoot:** Bone buzzer on her better ear first: the right. Unmasked bone answers for her better cochlea.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
-After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
 - **Hoot:** Masked bone sits with the air: no gap. Not the middle ear.
 
@@ -300,12 +300,12 @@ Question: **Dash says it's wax. Does the tymp agree?**
 ### Test plan
 - Left AC (Hoot at x8): "Better ear first, like the pros. Left at Hoot speed!"
 - Right AC (player for 3 stamps, then Hoot): "Right ear's yours. Start at 1k, as always."
-- Right BC (Hoot at x8): "Bone check at Hoot speed: where is the trouble?"
+- Left BC (Hoot at x8): "Left ear at Hoot speed: bone for his better cochlea."
   - before:
-    - **Hoot:** Wax would block air but not bone. The bone buzzer will tell us!
+    - **Hoot:** Wax would block air, not bone: bone settles it. Buzzer on his better ear first: the left.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
-After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
 - **Hoot:** Masked bone is in. Let's see where it landed.
 
@@ -423,7 +423,7 @@ Question: **Is her middle ear the problem?**
     - **Hoot:** Now the bone buzzer: middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
-After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
 - **Hoot:** Bone sits right on the air: no gap. Not the middle ear.
 
@@ -541,12 +541,12 @@ Question: **His right is flat. What does the canal volume say?**
 ### Test plan
 - Left AC (Hoot's montage): "Better ear first, like the pros. Hoot's montage: the left in a flash!"
 - Right AC (player for 2 stamps, then Hoot): "Right ear's yours: the side that went quiet. Start at 1k."
-- Right BC (Hoot at x8): "Bone at Hoot speed. Is the inner ear behind that plug okay?"
+- Left BC (Hoot's montage): "Hoot's montage: bone on his good left ear!"
   - before:
-    - **Hoot:** Bone skips the canal and the middle ear. If the cochlea's fine, bone will say so.
+    - **Hoot:** Bone mostly skips the canal and middle ear. Better ear first: the buzzer goes on his left.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
-After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
 - **Hoot:** Masked bone's in, Ghost chased off. Now: bone against air!
 
@@ -706,12 +706,12 @@ Question: **Skye says it just needs a good pop. What does the tymp say?**
 ### Test plan
 - Right AC (Hoot's montage): "Better ear first. Hoot's montage on the right: fasten your seatbelts!"
 - Left AC (player for 2 stamps, then Hoot): "Left ear's yours: the underwater side. Start at 1k."
-- Left BC (Hoot at x8): "Bone at Hoot speed. Does her inner ear hear fine?"
+- Right BC (Hoot's montage): "Hoot's montage: bone on her good right ear!"
   - before:
-    - **Hoot:** Bone buzzer on her left. Bone skips the middle ear. Watch for the Ghost!
+    - **Hoot:** Bone mostly skips the middle ear. Better ear first: the buzzer goes on her right.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 
-After the tests (said when the measured bone ear agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
 - **Hoot:** Masked bone's in. Let's see where her left ear's marks landed.
 
