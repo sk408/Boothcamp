@@ -161,16 +161,40 @@ otherwise estimated from the audiogram). Directional microphones (aided, Day 5's
 
 ## 6. Shared scoring
 
-- Every speech measurement is a **sheet** in the results (`CONTRACTS.md` §9.5): `srt`, `wrs` and `sin`, per ear
-  (`"both"` for the party test).
-- **Accuracy**: SRT = `ClinicRules.accuracy_for_error(|stored - true|)`; WRS and party test = the share of
-  items the player scored the same way the patient actually answered.
-- **Technique**: every verdict is a check (a textbook step, a correct score, the right level); errors break the
-  combo (section 8).
-- **Efficiency**: par / presentations. SRT par is `srt_par`; WRS par is the list length; party test par is 6 per list.
-- **Golf** only for SRT (it is a search, like a tone threshold). Hoot's turns are never scored.
-- The visit's accuracy, technique and efficiency average the scored speech measurements together with any scored
-  tone stamps (Hoot runs the tones on speech days, so usually none).
+The same rules for all three tests (`CONTRACTS.md` §9.5 and §9.15).
+
+- **Sheets and slots.** Every speech measurement is a **sheet** in the results: `speech.srt`, `speech.wrs` and
+  `speech.sin`, one sheet per **slot**. SRT and word-list slots are the ears; party slots are `"both"`,
+  `"aided_omni"` and `"aided_directional"` (or an ear, for a one-ear unaided test). A word-list or party sheet
+  holds every list run on its slot in `lists` (the comfortable list, a redo and the louder list on one ear; the
+  two lists of a party condition). Every sheet carries `stored_db` and `true_db`, so the "within 10 dB of the
+  truth" check works for all three tests.
+- **Units.** A sheet weighs its `units` in the visit: the counted lists the player ran on that slot (an SRT sheet
+  is 1). A redone list, a list Hoot ran and a sheet Hoot ran off-screen count 0. `scored_sheets` is the sum of the
+  units, and `merge_results` weighs each unit like `SHEET_WEIGHT` (3) tone stamps.
+- **Accuracy**: SRT = `ClinicRules.accuracy_for_error(|stored - true|)`; word and party lists = the share of the
+  player's items scored the way the patient actually answered (`matches / player items`). A wrong set-up costs
+  technique and golf, not accuracy. A sheet's accuracy counts once per unit.
+- **Technique**: every verdict is a check (a textbook step, a correct score, the right level, the noise when it
+  is needed); slips break the combo (section 8).
+- **Efficiency**: par / presentations. The SRT is a search: par is `srt_par`. Word and party lists are fixed (25
+  words, 6 sentences a list), so a sheet's `strokes` and `par` are both the player's presentations and efficiency
+  is 1.0 (a list cannot be cut short; a wrong set-up costs a new list, which technique and golf count).
+- **Golf**, one hole per measurement:
+  - SRT: one hole per ear, the player's words against `srt_par` (`ClinicRules.fair_golf`; a slip or an SRT
+    stored off its bracket gets no golf name).
+  - Word and party lists: each list the player runs is a hole. `golf_par` = the player's words or sentences;
+    `slips` = the misscored items (a word list confirmed wrong adds `LIST_CONFIRM_SLIP` 3);
+    `tee_bonus = LIST_TEE_BONUS` (2) only for a solo list whose set-up the player made unprompted (a party level
+    Hoot set never earns it); `golf_strokes = golf_par + slips - tee_bonus`; `golf = fair_golf(golf_strokes,
+    golf_par, slips == 0)`. A perfect solo list is a birdie, a clean coached list is par, and lists have no
+    eagles. The sheet's `golf` is its newest player list's; `holes` keeps every list's. A list with no player
+    items is `&"hoot"`.
+- **Hoot's work is never scored**: his words, sentences and off-screen lists stay out of accuracy, units and golf.
+- The visit's accuracy, technique and efficiency average the scored speech measurements (by units) together with
+  any scored tone stamps (Hoot runs the tones on speech days, so usually none).
+- Word lists add `speech.wrs_summary` (best scores, the flags and the referral) and party lists
+  `speech.sin_summary` (the band, the aided benefit and whether it is a real change): `CONTRACTS.md` §9.15.3.
 
 ## 7. Recordings (later)
 
