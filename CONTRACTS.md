@@ -1445,7 +1445,8 @@ test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a
 `audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
 `do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first
 stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),
-reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, bone is tested on that ear only.
+reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, unmasked bone goes on the better ear only; the runner then masks bone on each ear
+whose air sits over it (`CaseData.masked_bone_ears`, as on Day 2).
 `CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
 checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
 the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
@@ -1467,8 +1468,9 @@ the option text, so the mouse bot clicks them by their first 18 characters (test
 
 **Visit and medals.** Medals `history` (Chat), `tymp` (Tymp), `evidence` (Pattern), `decision` (Call). Visit flags:
 `case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`, and with a
-retest `retested`, `retest_type`. The retest has no medal and is unscored: the first visit's results are restored
-(`Game.set_audiometry_results`) and any heart lost during it is given back (`Game.gain_comfort`) before `finish_visit`. The summary gains `case_id`, `headlines`, `subheads`,
+retest `retested`, `retest_type`. The retest has no medal and is unscored: a case with a retest calls `finish_visit`
+before it (so quitting during the retest keeps the day), and afterwards the first visit's results are restored
+(`Game.set_audiometry_results`) and any heart lost during it is given back (`Game.gain_comfort`). The summary gains `case_id`, `headlines`, `subheads`,
 `medal_beats` (a wrong first stamp swaps the S to C headlines, `LevelCase.paper_for`).
 
 **Anchors.** `reveal_audiogram` (the board's chart), `case_stamps`, `case_clues`.

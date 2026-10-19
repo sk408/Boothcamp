@@ -254,19 +254,19 @@ func _stamped(p: PatientProfile, ear: String) -> Array[int]:
 
 ## A results dict from a patient's truth, as perfect stamps: air at _stamped in both ears, unmasked
 ## bone (the better cochlea: bone IA is 0) on bc_ears at BC_REQUIRED, and masked bone (the ear's
-## own) where masked_bone. wobble: [ear, sheet, freq, dB] adds dB to one stamp.
-func _perfect(p: PatientProfile, bc_ears: PackedStringArray, masked_bone: bool, wobble: Array = []) -> Dictionary:
+## own cochlea) on masked_ears. wobble: [ear, sheet, freq, dB] adds dB to one stamp.
+func _perfect(p: PatientProfile, bc_ears: PackedStringArray, masked_ears: PackedStringArray, wobble: Array = []) -> Dictionary:
 	var ears := {}
 	for ear: String in ["right", "left"]:
 		var other := "left" if ear == "right" else "right"
 		var e := {"freqs": {}, "bc": {}, "bc_masked": {}, "ac_masked": {}}
 		for f: int in _stamped(p, ear):
 			(e["freqs"] as Dictionary)[f] = {"stored_db": p.get_threshold(ear, f)}
-		if bc_ears.has(ear):
-			for f: int in ClinicRules.BC_REQUIRED:
+		for f: int in ClinicRules.BC_REQUIRED:
+			if bc_ears.has(ear):
 				(e["bc"] as Dictionary)[f] = {"stored_db": mini(p.get_bc_threshold(ear, f), p.get_bc_threshold(other, f))}
-				if masked_bone:
-					(e["bc_masked"] as Dictionary)[f] = {"stored_db": p.get_bc_threshold(ear, f)}
+			if masked_ears.has(ear):
+				(e["bc_masked"] as Dictionary)[f] = {"stored_db": p.get_bc_threshold(ear, f)}
 		ears[ear] = e
 	if wobble.size() == 4:
 		var sheet: Dictionary = (ears[String(wobble[0])] as Dictionary)[String(wobble[1])]
@@ -281,19 +281,62 @@ func _patient(id: String) -> PatientProfile:
 
 
 func test_masking_plans_unchanged_for_shipped_cases() -> void:
-	# masking now checks every ear; an ear without its own bone test (the better ear) never needs
-	# masked air, so no case gains a test it didn't run before
+	# the runner checks every air-tested ear for masked bone and every ear for masked air: with perfect
+	# stamps only a one-sided case's reveal ear needs masked bone, and the better ear never needs
+	# masked air, so no case gains a test it shouldn't run
 	for id: String in CaseData.chapter_case_ids():
 		var c := _case(id)
+		var p := _patient(id)
 		var bc_ears := CaseData.plan_ears(c["audiometry"], "bc")
-		for masked: bool in [false, true]:
-			var res := _perfect(_patient(id), bc_ears, masked)
+		var case_ear := String((c["reveal"] as Dictionary).get("ear", "both"))
+		var res := _perfect(p, bc_ears, PackedStringArray())
+		var masked_ears := PackedStringArray()
+		for ear: String in CaseData.masked_bone_ears(c["audiometry"]):
+			var need := ClinicRules.masked_freqs_needed(res, ear, &"bc_masked")
+			if ear == case_ear:
+				assert_false(need.is_empty(), "%s: masked bone on the %s (reveal) ear" % [id, ear])
+				masked_ears.append(ear)
+			else:
+				assert_eq(need, [] as Array[int], "%s: the %s ear needs no masked bone" % [id, ear])
+		for m: PackedStringArray in [PackedStringArray(), masked_ears]:
+			var r2 := _perfect(p, bc_ears, m)
 			for ear: String in CaseData.plan_ears(c["audiometry"], "ac"):
-				if bc_ears.has(ear):
+				if ear == case_ear or (case_ear == "both" and bc_ears.has(ear)):
 					continue
 				for tr: StringName in [&"phones", &"inserts"]:
-					assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", tr), [] as Array[int],
+					assert_eq(ClinicRules.masked_freqs_needed(r2, ear, &"ac_masked", tr), [] as Array[int],
 						"%s: the %s ear needs no masked air (%s)" % [id, ear, tr])
+
+
+func test_unmasked_bone_goes_on_the_better_ear() -> void:
+	# Steve's convention (as on Day 2): a one-sided case puts unmasked bone on the better ear only (it
+	# answers for the better cochlea wherever it sits); masked bone then follows on the reveal ear
+	for id: String in CaseData.chapter_case_ids():
+		var c := _case(id)
+		var case_ear := String((c["reveal"] as Dictionary).get("ear", "both"))
+		if case_ear != "right" and case_ear != "left":
+			continue
+		var p := _patient(id)
+		var better := "left" if case_ear == "right" else "right"
+		assert_true(ClinicRules.pta(CaseData.truth(p, better)) < ClinicRules.pta(CaseData.truth(p, case_ear)),
+			"%s: the reveal ear is the poorer one" % id)
+		assert_eq(CaseData.plan_ears(c["audiometry"], "bc"), PackedStringArray([better]), "%s: unmasked bone" % id)
+		assert_eq(CaseData.masked_bone_ears(c["audiometry"]), PackedStringArray([better, case_ear]), "%s: masked bone checks" % id)
+
+
+func test_case_air_transducer() -> void:
+	var saved: Variant = Game.progress.get("upgrades", null)
+	Game.progress["upgrades"] = []
+	assert_eq(CaseData.air_transducer(false), &"phones", "headphones until the inserts are owned")
+	Game.progress["upgrades"] = ["insert_earphones"]
+	assert_eq(CaseData.air_transducer(false), &"inserts")
+	assert_eq(CaseData.air_transducer(true), &"phones", "a blocked canal keeps the headphones")
+	if saved == null:
+		Game.progress.erase("upgrades")
+	else:
+		Game.progress["upgrades"] = saved
+	assert_true(CaseData.canal_blocked(_case("wax")), "Barnaby's canal is full of wax")
+	assert_false(CaseData.canal_blocked(_case("fluid")), "Skye's canal is clear")
 
 
 func test_conductive_truth_survives_a_wobble() -> void:
@@ -322,14 +365,15 @@ func test_conductive_cases_mask_bone_not_air() -> void:
 		var ear := String(CONDUCTIVE[id])
 		var other := "left" if ear == "right" else "right"
 		var p := _patient(id)
-		var bc_ears := PackedStringArray([ear])
-		var res := _perfect(p, bc_ears, false)
+		var bc_ears := PackedStringArray([other])   # unmasked bone on the better ear only
+		var res := _perfect(p, bc_ears, PackedStringArray())
 		assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked"), [1000, 2000, 4000, 500] as Array[int], "%s masked bone" % id)
+		assert_eq(ClinicRules.masked_freqs_needed(res, other, &"bc_masked"), [] as Array[int], "%s: no masked bone on the better ear" % id)
 		var transducers: Array[StringName] = [&"phones"]
 		if id != "wax":   # wax keeps headphones
 			transducers.append(&"inserts")
-		for masked: bool in [false, true]:
-			var r2 := _perfect(p, bc_ears, masked)
+		for m: PackedStringArray in [PackedStringArray(), PackedStringArray([ear])]:
+			var r2 := _perfect(p, bc_ears, m)
 			for e: String in ["right", "left"]:
 				for tr: StringName in transducers:
 					assert_eq(ClinicRules.masked_freqs_needed(r2, e, &"ac_masked", tr), [] as Array[int], "%s %s: no masked air (%s)" % [id, e, tr])
@@ -341,10 +385,10 @@ func test_conductive_cases_mask_bone_not_air() -> void:
 				assert_false(ClinicRules.masking_dilemma(init, limit), "%s %d Hz: %d below %d (%s)" % [id, f, init, limit, tr])
 		# one wandering stamp never adds masked air
 		for e: String in ["right", "left"]:
-			for sheet: String in ["freqs", "bc"]:
+			for sheet: String in ["freqs", "bc", "bc_masked"]:
 				for f: int in _stamped(p, e):
 					for d: int in [-5, 5]:
-						var rw := _perfect(p, bc_ears, true, [e, sheet, f, d])
+						var rw := _perfect(p, bc_ears, PackedStringArray([ear]), [e, sheet, f, d])
 						for chk: String in ["right", "left"]:
 							assert_eq(ClinicRules.masked_freqs_needed(rw, chk, &"ac_masked", &"phones"), [] as Array[int],
 								"%s: %s %s %d %+d adds masked air on the %s" % [id, e, sheet, f, d, chk])
@@ -430,7 +474,9 @@ func test_tymp_and_plug_rules_are_checked() -> void:
 		["a plug without a gap", func(c: Dictionary) -> void: c["reveal"]["pattern"] = "notch", "plug only goes"],
 		["a type question with two options", func(c: Dictionary) -> void: (c["evidence"]["options"] as Array).pop_back(), "exactly 3 options"],
 		["a montage with player stamps", func(c: Dictionary) -> void: c["audiometry"][0]["hoot_turn_after"] = 2, "montage is Hoot's"],
-		["bone on the other ear", func(c: Dictionary) -> void: c["audiometry"][2]["ear"] = "left", "reveal ear"],
+		["no bone on the better ear", func(c: Dictionary) -> void: (c["audiometry"] as Array).remove_at(2), "better ear (left) only"],
+		["unmasked bone on the poorer ear", func(c: Dictionary) -> void: c["audiometry"][2]["ear"] = "right", "better ear (left) only"],
+		["unmasked bone on both ears", func(c: Dictionary) -> void: (c["audiometry"] as Array).append({"ear": "right", "test": "bc"}), "better ear (left) only"],
 		["an unknown Hoot emote", func(c: Dictionary) -> void: (c["intro"] as Array).append({"hoot": "moonwalk"}), "unknown hoot emote"],
 		["an unknown speaker", func(c: Dictionary) -> void: (c["intro"] as Array).append(["Gerald", "Bzz."]), "unknown speaker"],
 		["a wrong-first headline for the answer", func(c: Dictionary) -> void: c["paper"]["wrong_first"]["refer"] = {"headline": "X"}, "not a wrong call"],
@@ -526,15 +572,18 @@ func test_findings_conditions() -> void:
 			assert_true(LevelCase.finding_shows(String((f as Dictionary).get("when", "")), {}, p, ear, asym), "%s %s shows on the truth" % [id, f["tag"]])
 
 
-func test_every_conductive_ear_has_its_own_bone() -> void:
-	# an ear with a gap can't borrow the other ear's bone (it would stay "unknown")
+func test_every_conductive_ear_gets_masked_bone() -> void:
+	# an ear with a gap can't borrow the other ear's bone (it would stay "unknown"): the runner checks
+	# it for masked bone, and against the better ear's unmasked bone the rules ask for it
 	for id: String in CaseData.chapter_case_ids():
 		var c := _case(id)
 		var p := _patient(id)
+		var res := _perfect(p, CaseData.plan_ears(c["audiometry"], "bc"), PackedStringArray())
 		for ear: String in ["right", "left"]:
 			var kind := CaseData.truth_type(p, ear)
 			if kind == &"conductive" or kind == &"mixed":
-				assert_true(CaseData.plan_ears(c["audiometry"], "bc").has(ear), "%s: the %s ear gets its own bone test" % [id, ear])
+				assert_true(CaseData.masked_bone_ears(c["audiometry"]).has(ear), "%s: the %s ear is checked for masked bone" % [id, ear])
+				assert_false(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty(), "%s: the %s ear gets masked bone" % [id, ear])
 
 
 func test_wrong_first_headlines() -> void:
@@ -559,6 +608,32 @@ func test_wrong_first_headlines() -> void:
 	(bare["paper"] as Dictionary).erase("wrong_first")
 	var gen := LevelCase.paper_for(bare, "today")
 	assert_true(String((gen["headlines"] as Dictionary)["A"]).contains("DOCTOR TODAY"), "a generic headline names the first stamp")
+
+
+func test_retest_restores_the_first_visit() -> void:
+	var saved_visit := Game.visit.duplicate(true)
+	var saved_pid := Game.current_patient_id
+	Game.begin_visit("barnaby")
+	var first_patient := Game.load_patient("barnaby") as PatientProfile
+	var first := {"ears": {"right": {"pta": 35}}, "score": 80}
+	var lc: Node = LevelCase.new()
+	lc.set("patient", Game.load_patient("barnaby_after"))
+	lc.set("results", {"ears": {"right": {"pta": 10}}})
+	Game.set_audiometry_results(lc.get("results"))
+	var comfort := Game.get_comfort()
+	Game.lose_comfort("retest_test", 2)
+	lc.call("_restore_first_visit", first, first_patient, comfort)
+	assert_eq(lc.get("results"), first, "the level's results are the first visit's again")
+	assert_eq(Game.visit["audiometry"], first, "so are the visit's (the paper reads them)")
+	assert_eq(lc.get("patient"), first_patient, "and the first visit's patient")
+	assert_eq(Game.get_comfort(), comfort, "hearts lost on the retest come back")
+	Game.gain_comfort("retest_test", 1)
+	var more := Game.get_comfort()
+	lc.call("_restore_first_visit", first, first_patient, comfort)
+	assert_eq(Game.get_comfort(), more, "a heart gained is never taken away")
+	lc.free()
+	Game.visit = saved_visit
+	Game.current_patient_id = saved_pid
 
 
 func test_merge_retest() -> void:
@@ -611,7 +686,7 @@ func test_wax_means_headphones() -> void:
 func test_new_gadgets_draw_every_view() -> void:
 	for view: String in CaseData.VIEWS:
 		var g: Control = add_node(CaseOtoscopy.new())
-		g.set("view", view)
+		g.set("case_view", view)
 		await wait_frames(2)
 		g.queue_free()
 	var props: Control = add_node(CaseProps.new())

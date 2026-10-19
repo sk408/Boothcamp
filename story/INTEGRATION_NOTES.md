@@ -136,11 +136,17 @@ Requests for the integrator and the title owner:
 - **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` has left-ear masked rows too (Marina's and Skye's masked tests are
   on the LEFT ear). Its rows are now `[sheet key, ear]`: the old label column was never read (`_row_tag` draws the
   symbol) and its U+25A1 square is not in Fredoka, so it was dropped at the integrator's request.
+  (cases follow-up) One-sided cases now put unmasked bone on the better ear only, as on Day 2, so Dash and
+  Barnaby show the `L  >` row, and a new `["bc", "right"]` row (`R  <`, after `L  >`, hidden like it when that ear
+  has masked bone) shows Marina's and Skye's right bone, and Rocco's and Ginger's.
 - **Notice to builder B: `story/games/case_otoscopy.gd`** extends `otoscopy.gd` and overrides `_draw_canal` (it
   draws the wax plug or the fluid on top of your healthy drum), reading `view_center`, `ear` and `_canal`, and
   calls `show_clear`. It also copies your drum's geometry from `_draw_canal` (centre offset (-6, 6), radii 112 x 98,
   tilt -0.25, colour #c9c6cf, cone of light (8, 8) / (56, 74) / (26, 84)). Please keep those names, and tell us if
-  the drum changes (or expose those numbers as constants and the cases will read them).
+  the drum changes (or expose those numbers as constants and the cases will read them). The copies live in an inner
+  class (`CaseLook`), so a constant you add to `otoscopy.gd` can never clash with them.
+- **Retest and `Game.finish_visit`.** A case with a retest (Barnaby) calls `finish_visit` before the retest, so a
+  player who quits during it keeps the day; `_results` reuses that summary (`tools/autoplay_bot.gd` checks it).
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.

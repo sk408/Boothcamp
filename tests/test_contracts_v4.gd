@@ -475,6 +475,7 @@ func test_results_show_left_bone() -> void:
 	var rows: Array = dd.get_script_constant_map()["GOLF_EXTRA_ROWS"]
 	assert_eq(rows[0], ["bc", "left"], "golf card: left bone '>' row")
 	assert_has(rows, ["bc_masked", "right"])
+	assert_has(rows, ["bc", "right"])   # (cases) a better right ear's unmasked bone
 
 
 # ---------------------------------------------------------------- (v4, builders) merged at integration

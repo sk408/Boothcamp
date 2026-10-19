@@ -353,9 +353,11 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("audiometry must test air in both ears")
 		var case_ear := String(rv.get("ear", "right"))
 		if case_ear == "right" or case_ear == "left":
-			var bc_ears := plan_ears(c["audiometry"], "bc")
-			if not bc_ears.has(case_ear) or bc_ears.size() > 1:
-				out.append("bone is tested on the reveal ear (%s) only, so masking runs on that ear" % case_ear)
+			# Steve: unmasked bone goes on the better ear; the runner then masks bone on the reveal ear
+			# wherever its air sits over that bone (masked_bone_ears), as on Day 2
+			var better := "left" if case_ear == "right" else "right"
+			if plan_ears(c["audiometry"], "bc") != PackedStringArray([better]):
+				out.append("unmasked bone goes on the better ear (%s) only; masked bone on the reveal ear (%s) follows" % [better, case_ear])
 	var pattern := String(rv["pattern"])
 	if not PATTERNS.has(pattern):
 		out.append("reveal pattern must be one of " + ", ".join(PATTERNS))
@@ -550,6 +552,30 @@ static func plan_ears(plan: Array, test: String) -> PackedStringArray:
 			if not out.has(ear):
 				out.append(ear)
 	return out
+
+
+## The ears the runner checks for masked bone after a case's plan, in order: the plan's bone ears, then
+## every other air-tested ear. Unmasked bone on the better ear alone shows the poorer ear's gap
+## (ClinicRules.unmasked_bone), so a one-sided case gets its masked bone on the case ear. Masked air
+## then follows on each air-tested ear (plan_ears(plan, "ac")). Used by level_case.gd and tools/monkey.gd.
+static func masked_bone_ears(plan: Array) -> PackedStringArray:
+	var out := plan_ears(plan, "bc")
+	for ear: String in plan_ears(plan, "ac"):
+		if not out.has(ear):
+			out.append(ear)
+	return out
+
+
+## A case's first-visit look found a canal full of wax (the otoscopy view "wax"): air goes through
+## headphones, since inserts go deep and could push the wax further.
+static func canal_blocked(c: Dictionary) -> bool:
+	return c.get("otoscopy", null) is Dictionary and String((c["otoscopy"] as Dictionary).get("view", "clear")) == "wax"
+
+
+## The air transducer for a case's tests: the inserts once owned, else headphones; always headphones
+## while the canal is blocked. Used by level_case.gd, tools/autoplay_bot.gd and tools/monkey.gd.
+static func air_transducer(blocked: bool) -> StringName:
+	return &"inserts" if Game.has_upgrade("insert_earphones") and not blocked else &"phones"
 
 
 ## paper.wrong_first: {decision: {headline, subhead?}} for each wrong first stamp (never the answer).
