@@ -253,7 +253,8 @@ walk-in is kept in the save (`progress.patients[<id>].fs_best_grade`) for the wa
 - The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>`
   wins (and is the bot's pick in the waiting room).
 
-Not used: `Game.CHAPTERS`, the Days grid, `chapters_done`. The visit summary has `freestyle_case`,
+Not used: `Game.CHAPTERS`, the Days grid, `chapters_done`. `Game.current_chapter_id` is set to `FsData.NOT_A_DAY`
+in the waiting room and every visit (4.6), so the pause menu never offers a leftover day's own movie. The visit summary has `freestyle_case`,
 `visit_score` (the audiometry score before the medal blend), `headlines`, `subheads`, `medal_beats`,
 `continue_text`, `continue_scene`; visit flags `freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`,
 `freestyle_types`, `freestyle_tymp_misreads`, `freestyle_slips`, `decision_first`, `decision`, `decision_tries`.
