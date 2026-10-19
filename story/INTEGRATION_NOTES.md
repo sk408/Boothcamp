@@ -103,8 +103,7 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   - Under the card, `recheck_note(sp)` prints "Hoot's recheck: SRT N dB on the right, by the book (X
     agreement). Not graded." when `speech.recheck.srt.right` exists.
   - The legend (`agreement_legend()`, two lines) gives the bands and the direction: words better than
-    beeps point to a non-organic loss; words worse, to instructions, language, word recognition or a
-    sloping loss.
+    beeps point to a non-organic loss; words worse, to instructions, language or word recognition.
   - Tone-only results keep the beep golf card.
 - **Daily Decibel fit (any day):** `show_summary` settles the paper at `fit_scale(size, window)`: exactly
   1 when its tilted box fits the window's height, else scaled down to fit with 8 px to spare above and

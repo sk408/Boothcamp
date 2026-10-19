@@ -531,7 +531,7 @@ func _speech() -> void:
 	elif poor:
 		# words WORSE than beeps point elsewhere (never at his story)
 		await _say("Hoot", "%s His is %d dB worse. Poor agreement!" % [within, diff])
-		await _say("Hoot", "Words worse than beeps? Think instructions, language, word scores or a sloping loss.")
+		await _say("Hoot", "Words worse than beeps? Think instructions, language or word scores.")
 	else:
 		await _say("Hoot", "%s His is %d dB apart. Let's look closer." % [within, absi(diff)])
 

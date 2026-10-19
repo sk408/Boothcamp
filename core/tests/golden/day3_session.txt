@@ -1006,7 +1006,7 @@
 "diff": 13,
 "ear": "right",
 "freq": -1,
-"message": "SRT 13 dB worse than the PTA: POOR agreement! Check instructions, language, word recognition, or a sloping loss.",
+"message": "SRT 13 dB worse than the PTA: POOR agreement! Check instructions, language and word recognition.",
 "pta": 71.66666666666667,
 "test": "srt"
 }], ["combo", 4, 2], ["technique", &"srt_low_start", {

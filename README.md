@@ -197,8 +197,8 @@ always lights the NOISE box and the booth squiggles, so Day 2 is playable withou
   patient said: half a word is a miss.
 - **PTA/SRT agreement:** a reliable SRT lands within about 6 dB of the PTA (12 is fair). The
   direction matters: Mike's SRT is about 40 dB better than his beeps, a classic sign of a
-  non-organic loss; an SRT worse than the PTA points to the instructions, language, word
-  recognition or a sloping loss instead.
+  non-organic loss; an SRT worse than the PTA points to the instructions, language or word
+  recognition instead.
 - **Never accuse:** most non-organic losses aren't fibs (stress, worry, even a real loss
   underneath). Gather the clues (the agreement, the whispered coffee, clear canals), stay kind,
   recheck, refer for objective tests, and tell his doctor about the sudden loss. The game never

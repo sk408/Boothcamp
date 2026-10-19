@@ -225,7 +225,8 @@ static func srt_textbook_words(start_db: int, srt_true: int) -> int:
 
 ## PTA/SRT agreement: |SRT - PTA| <= AGREE_GOOD_DB (6) good, <= AGREE_FAIR_DB (12) fair, else poor.
 ## The direction matters too (srt_pta_diff): an SRT much better than the PTA points to a non-organic
-## loss; a worse one to the instructions, language, word recognition or a sloping loss.
+## loss; a worse one to the instructions, language or word recognition. (A steep slope can make words
+## a little better than the three-tone average: pta_for_speech then uses the best two.)
 static func agreement(srt: int, pta: float) -> StringName:
 	if is_nan(pta) or srt == NO_SRT or srt < MIN_DB:
 		return &""
