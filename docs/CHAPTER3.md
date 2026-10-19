@@ -67,7 +67,7 @@ reaction 0.8-1.5 s (dramatic pauses), rhythm sensitivity 0.3, tags non_organic, 
 | Stored SRT | 30 (sometimes 25 or 35) | 30 |
 | Agreement | poor (about 40 dB) | poor |
 | Speech masking | not needed (85 - 40 = 45 is below his claimed left ear) | not needed |
-| Hoot's 1 kHz retest | 15 dB better than his first 1 kHz (about 55 vs 70) | (right ear only) |
+| Hoot's 1 kHz retest (`story/tests/test_level_mike.gd`) | 15 dB better than his first 1 kHz (about 55 vs 70) | (right ear only) |
 
 ## 3. Beat by beat (about 11 minutes)
 
