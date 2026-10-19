@@ -473,8 +473,8 @@ func test_day2_flow_order() -> void:
 func test_results_show_left_bone() -> void:
 	var dd: GDScript = load("res://story/daily_decibel.gd")
 	var rows: Array = dd.get_script_constant_map()["GOLF_EXTRA_ROWS"]
-	assert_eq(rows[0], ["bc", "L  >", "left"], "golf card: left bone '>' row")
-	assert_has(rows, ["bc_masked", "R  [", "right"])
+	assert_eq(rows[0], ["bc", "left"], "golf card: left bone '>' row")
+	assert_has(rows, ["bc_masked", "right"])
 
 
 # ---------------------------------------------------------------- (v4, builders) merged at integration

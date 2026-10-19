@@ -17,10 +17,15 @@ extends Node
 ## masking movie" replay (a real click) with the same keys: the menu comes back. Invariants: the
 ## scenes go 0, 1, 2, ... one at a time, every movie ends within MOVIE_MAX_S, nothing is left paused
 ## or in the explainer_player group.
+## (cases) --day=6 and up (any chapter with a "case"): that case's test plan on its patient (with
+## its montage and Hoot's turns), then masked bone on each bone-tested ear and masked air on each
+## air-tested ear wherever the stamps ask (the runner's order), then the case's retest plan if it
+## has one (a fresh session on the treated ear). The masking keys and Day 2's invariants apply.
 ## Prints MONKEY_RESULT {json}; exit 0 ok, 1 an invariant broke, 3 timeout.
 
 const ErrorCounter := preload("res://tools/autoplay_bot.gd").ScriptErrorCounter
 const Movies := preload("res://story/explainers/movies.gd")
+const CaseData := preload("res://story/case_data.gd")
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
 const MAX_GAME_S := 1500.0
 const ACTIONS: Array[StringName] = [&"present_tone", &"louder", &"softer", &"freq_up", &"freq_down", &"store",
@@ -52,6 +57,8 @@ var _base_scale := 1.0
 var _problems: PackedStringArray = []
 var _stats := {"inputs": 0, "clicks": 0, "pauses": 0, "short_beeps": 0, "long_beeps": 0, "hoot_turn_frames": 0, "stores": 0}
 var _day2 := false
+## Day 2 or a case day: the masking controls and their invariants.
+var _masking := false
 var _actions: Array[StringName] = ACTIONS.duplicate()
 var _masker_on := false
 var _tone_unheld_s := 0.0
@@ -81,10 +88,16 @@ func demo_start() -> void:
 	add_child(_screen)
 	Events.threshold_stored.connect(func(_e: String, _f: int, _d: int, _i: Dictionary) -> void: _stats["stores"] = int(_stats["stores"]) + 1)
 	Events.masker_changed.connect(func(_e: String, _f: int, _d: int, on: bool) -> void: _masker_on = on)
-	_day2 = Game.cli_chapter_id() == "bonnie"
-	if _day2:
+	var chapter_id := Game.cli_chapter_id()
+	_day2 = chapter_id == "bonnie"
+	var case_id := String(Game.chapter(chapter_id).get("case", "")) if chapter_id != "" else ""
+	_masking = _day2 or case_id != ""
+	if _masking:
 		_actions.append_array(ACTIONS_V3)
+	if _day2:
 		await _run_day2()
+	elif case_id != "":
+		await _run_case(case_id)
 	else:
 		_screen.call("demo_start")
 		await _screen.test_finished
@@ -120,11 +133,55 @@ func _run_day2() -> void:
 			_problem("masker still playing after the %s test" % String((t[2] as Dictionary)["test"]))
 
 
+## (cases) A case day's tests, in the runner's order (story/level_case.gd _audiometry).
+func _run_case(case_id: String) -> void:
+	var c := CaseData.load_case(case_id)
+	var pid := String(c["patient_id"])
+	Game.begin_visit(pid)
+	var patient := Game.load_patient(pid) as PatientProfile
+	var wax := String((c["otoscopy"] as Dictionary).get("view", "clear")) == "wax"
+	var tr: StringName = &"inserts" if Game.has_upgrade("insert_earphones") and not wax else &"phones"
+	var res := {}
+	for p: Variant in c["audiometry"]:
+		var pd: Dictionary = p
+		var plan := {"test": String(pd["test"]), "hoot_turn_after": int(pd.get("hoot_turn_after", 0)), "air_transducer": tr}
+		for k: String in CaseData.PLAN_KEYS:
+			if pd.has(k):
+				plan[k] = bool(pd[k])
+		if plan["test"] == "bc":
+			plan["bc_freqs"] = ClinicRules.BC_REQUIRED
+			plan["masking_controls"] = true
+		res = await _case_test(patient, String(pd["ear"]), plan)
+	for ear: String in CaseData.plan_ears(c["audiometry"], "bc"):
+		if not ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty():
+			res = await _case_test(patient, ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2, "air_transducer": tr})
+	for ear: String in CaseData.plan_ears(c["audiometry"], "ac"):
+		if not ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", tr).is_empty():
+			res = await _case_test(patient, ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0, "air_transducer": tr})
+	if c.get("retest", null) is Dictionary:
+		var rt: Dictionary = c["retest"]
+		var after := Game.load_patient(String(rt["patient_id"])) as PatientProfile
+		var tr2: StringName = &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
+		for p: Variant in rt["audiometry"]:
+			var pd: Dictionary = p
+			await _case_test(after, String(pd["ear"]), {"test": "ac", "hoot_turn_after": int(pd.get("hoot_turn_after", 0)), "air_transducer": tr2})
+
+
+func _case_test(patient: PatientProfile, ear: String, plan: Dictionary) -> Dictionary:
+	_screen.call("start_test", patient, ear, false, plan)
+	var r: Dictionary = await _screen.test_finished
+	_release_all()
+	_stats["tests"] = int(_stats.get("tests", 0)) + 1
+	if _masker_on:
+		_problem("masker still playing after the %s %s test" % [ear, String(plan["test"])])
+	return r
+
+
 func _process(delta: float) -> void:
 	if _done or _screen == null or not is_instance_valid(_screen):
 		return
 	_t += get_process_delta_time() if not get_tree().paused else delta
-	if Game.clock > (MAX_GAME_S_DAY2 if _day2 else MAX_GAME_S):
+	if Game.clock > (MAX_GAME_S_DAY2 if _masking else MAX_GAME_S):
 		_problem("timeout")
 		_finish(3)
 		return
@@ -146,7 +203,7 @@ func _process(delta: float) -> void:
 			_problem("tone on with nothing held (%.1f s)" % _tone_unheld_s)
 	else:
 		_tone_unheld_s = 0.0
-	if _day2:
+	if _masking:
 		var m := int(st.get("mask_db", 0))
 		if m < ClinicRules.MASK_MIN_DB or m > ClinicRules.MASK_MAX_DB:
 			_problem("noise dial at %d dB EM" % m)

@@ -9,12 +9,17 @@ extends Node3D
 ##   spiky_hair   a short spiky crest in the "hair" colour (counts as a hat)
 ##   puppet       a chocolate-chip cookie hand puppet on the left hand; its felt mouth flaps whenever
 ##                the spec's "puppet_voice" speaks (Events.dialogue_line), and hers stays still
+##   beekeeper_hat a wide straw hat (colour "beekeeper_hat") with its veil rolled up round the crown
+##   bee          Gerald, a tiny striped bee buzzing round the head (counts as a hat: he waits outside)
+##   pillbox_hat  a cabin-crew pillbox hat (colour "pillbox_hat"), tilted, with a gold wings badge;
+##                it hides the wooden spoon a "bun" hair style pokes through the bun
+##   neck_scarf   a scarf knotted at the collar (colour "neck_scarf")
 ## (band_tee is portrait-only.) Hats come off by themselves while earphones, the bone oscillator or the
 ## masking phone are on, and go back on afterwards.
 ##   CaseExtras.attach(bean, spec)    # returns the CaseExtras node ({} spec / no extras = null)
 
 const Kit := preload("res://world/kit.gd")
-const HATS: PackedStringArray = ["headband", "captain_cap", "cap"]
+const HATS: PackedStringArray = ["headband", "captain_cap", "cap", "beekeeper_hat", "pillbox_hat"]
 const HEAD_GEAR: PackedStringArray = ["Earphones", "BoneOscillator", "MaskingPhone"]
 
 var _head: Node3D
@@ -24,6 +29,9 @@ var _puppet: Node3D
 var _puppet_mouth: Node3D
 var _puppet_voice := ""
 var _puppet_talk := 0.0
+var _bee: Node3D
+var _bee_hc := Vector3.ZERO
+var _bee_wings: Array[Node3D] = []
 var _t := 0.0
 
 
@@ -60,6 +68,15 @@ func build(bean: Node3D, spec: Dictionary) -> void:
 			"puppet":
 				_puppet_voice = String(spec.get("puppet_voice", ""))
 				_cookie_puppet(parts.get("hand_l", null))
+			"beekeeper_hat":
+				_hats.append(_beekeeper_hat(hc, _col(spec, "beekeeper_hat", Color("#efe9d2"))))
+			"bee":
+				_hats.append(_gerald(hc))
+			"pillbox_hat":
+				_hats.append(_pillbox_hat(hc, _col(spec, "pillbox_hat", Color("#0f766e"))))
+				_tidy_bun(parts.get("bun", null))
+			"neck_scarf":
+				_neck_scarf(torso, _col(spec, "neck_scarf", Color("#ff7a59")))
 	if _puppet != null:
 		Events.dialogue_line.connect(_on_dialogue_line)
 
@@ -92,6 +109,9 @@ func _process(delta: float) -> void:
 				h.scale = Vector3.ONE * 0.6
 				var t := h.create_tween()
 				t.tween_property(h, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# after the hats check, so Gerald never flashes up at a stale spot when he flies back in
+	if _bee != null and _bee.visible:
+		_buzz()
 
 
 static func _col(spec: Dictionary, key: String, fallback: Color) -> Color:
@@ -170,6 +190,91 @@ func _spikes(hc: Vector3, col: Color) -> Node3D:
 	return n
 
 
+## A beekeeper's wide straw hat, tipped back a touch so the brim doesn't hide his eyes; the mesh veil
+## is rolled up into a fat sausage round the crown and tied with a drawstring bow.
+func _beekeeper_hat(hc: Vector3, col: Color) -> Node3D:
+	var n := _hat_root(hc, "BeekeeperHat")
+	n.rotation.x = -0.1
+	Kit.cylinder(n, 0.44, 0.6, 0.05, Vector3(0, 0.28, 0.0), col, {"outline": 0.01}, 32)
+	var weave := {"outline": 0.01, "pattern": 4, "pattern_scale": 30.0, "pattern_color": col.darkened(0.12)}
+	Kit.cylinder(n, 0.24, 0.29, 0.22, Vector3(0, 0.41, -0.01), col, weave, 24)
+	Kit.sphere(n, 0.24, Vector3(0, 0.52, -0.01), col, Vector3(1.0, 0.42, 1.0), {"outline": 0.01}, 20)
+	var veil := Color("#cfd4da")
+	Kit.torus(n, 0.25, 0.37, Vector3(0, 0.35, -0.01), veil, {"outline": 0.008, "pattern": 2, "pattern_scale": 40.0, "pattern_color": veil.darkened(0.18)}, 28, 8)
+	var string_col := veil.darkened(0.35)
+	for s: int in [-1, 1]:
+		var bow_loop := Kit.sphere(n, 0.03, Vector3(0.035 * s, 0.35, 0.37), string_col, Vector3(1.2, 0.7, 0.4), {"outline": 0.005}, 8)
+		bow_loop.rotation.z = 0.35 * s
+	Kit.sphere(n, 0.016, Vector3(0, 0.35, 0.38), string_col, Vector3.ONE, {"outline": 0.004}, 8)
+	return n
+
+
+## Gerald: a tiny striped bee with a stinger, antennae and buzzing wings. He orbits the head (posed
+## each frame by _buzz) and, being in _hats, waits outside while head gear is on.
+func _gerald(hc: Vector3) -> Node3D:
+	var n := _hat_root(hc, "Gerald")
+	_bee = n
+	_bee_hc = hc
+	var black := Color("#2b2b2b")
+	# body along +z (the way he flies), black bands, a black head at the front
+	Kit.sphere(n, 0.05, Vector3.ZERO, Color("#ffd23f"), Vector3(0.95, 0.9, 1.3), {"outline": 0.006}, 12)
+	for b: Vector2 in [Vector2(0.012, 0.049), Vector2(-0.022, 0.047)]:   # (z, radius)
+		var band := Kit.cylinder(n, b.y, b.y, 0.016, Vector3(0, 0, b.x), black, {"outline": 0.0}, 12)
+		band.rotation.x = PI / 2.0
+	Kit.sphere(n, 0.032, Vector3(0, 0.006, 0.075), black, Vector3.ONE, {"outline": 0.005}, 10)
+	for s: int in [-1, 1]:
+		Kit.sphere(n, 0.009, Vector3(0.014 * s, 0.016, 0.1), Color.WHITE, Vector3.ONE, {"outline": 0.0}, 6)
+		var feeler := Kit.capsule(n, 0.005, 0.05, Vector3(0.014 * s, 0.045, 0.09), black, {"outline": 0.0}, 6)
+		feeler.rotation = Vector3(0.4, 0.0, -0.4 * s)
+	var stinger := Kit.cylinder(n, 0.0, 0.012, 0.03, Vector3(0, 0, -0.075), black, {"outline": 0.0}, 8)
+	stinger.rotation.x = -PI / 2.0
+	# wings on pivots at the shoulders; _buzz flaps them
+	for s: int in [-1, 1]:
+		var pivot := Node3D.new()
+		pivot.position = Vector3(0.012 * s, 0.04, 0.01)
+		n.add_child(pivot)
+		Kit.sphere(pivot, 0.04, Vector3(0.035 * s, 0.0, -0.005), Color("#f2fbff"), Vector3(1.0, 0.2, 0.65), {"outline": 0.004, "rim": 0.5}, 10)
+		_bee_wings.append(pivot)
+	_buzz()
+	return n
+
+
+## Gerald's flight: a wobbly loop round the head at eye height (under the straw brim), a bob and a
+## bank, facing the way he flies, wings a blur.
+func _buzz() -> void:
+	var a := _t * 1.7
+	var orbit := 0.6 + 0.05 * sin(_t * 1.3)
+	_bee.position = _bee_hc + Vector3(sin(a) * orbit, 0.06 * sin(_t * 3.1), cos(a) * orbit)
+	_bee.rotation = Vector3(0.0, a + PI / 2.0, 0.15 * sin(_t * 5.0))
+	var flap := 0.35 + 0.45 * sin(_t * 42.0)
+	for w in _bee_wings:
+		w.rotation.z = signf(w.position.x) * flap
+
+
+## A cabin-crew pillbox hat, pinned at a jaunty tilt to one side in front of the bun, with a darker
+## band and a little gold wings badge on the front.
+func _pillbox_hat(hc: Vector3, col: Color) -> Node3D:
+	var n := _hat_root(hc, "PillboxHat")
+	n.rotation = Vector3(0.45, 0.0, 0.35)
+	Kit.cylinder(n, 0.15, 0.16, 0.12, Vector3(0, 0.39, 0), col, {"outline": 0.01}, 24)
+	Kit.cylinder(n, 0.163, 0.166, 0.032, Vector3(0, 0.348, 0), col.darkened(0.25), {"outline": 0.0}, 24)
+	var gold := Color("#ffd23f")
+	Kit.sphere(n, 0.022, Vector3(0, 0.4, 0.157), gold, Vector3(1.0, 1.0, 0.4), {"outline": 0.005}, 10)
+	for s: int in [-1, 1]:
+		var wing := Kit.sphere(n, 0.03, Vector3(0.04 * s, 0.405, 0.152), gold, Vector3(1.3, 0.45, 0.35), {"outline": 0.004}, 8)
+		wing.rotation.z = 0.3 * s
+	return n
+
+
+## Cabin crew keep a tidy bun: hide the wooden spoon that the bean's "bun" hair style pokes through it.
+func _tidy_bun(bun: Variant) -> void:
+	if not bun is Node3D:
+		return
+	for child: Node in (bun as Node3D).get_children():
+		if child is Node3D and not child is MeshInstance3D:
+			(child as Node3D).visible = false
+
+
 ## A chocolate-chip cookie hand puppet with googly eyes and a felt mouth, on the left hand.
 func _cookie_puppet(hand: Variant) -> void:
 	if not hand is Node3D:
@@ -222,3 +327,20 @@ func _delivery_bag(torso: Node3D) -> void:
 		var strap := Kit.box(torso, Vector3(0.06, 0.5, 0.03), Vector3(0.2 * s, 0.6, 0.0), Color("#2e2442"), {"outline": 0.0})
 		strap.rotation.x = 0.5
 		strap.position.z = -0.2
+
+
+## A silk scarf round the collar, knotted at one side with two tails, over the shirt and pearls.
+func _neck_scarf(torso: Node3D, col: Color) -> void:
+	var n := Node3D.new()
+	n.name = "NeckScarf"
+	torso.add_child(n)
+	# a fat ring where the head meets the torso, dipping at the front like the pearls do
+	var ring := Kit.torus(n, 0.195, 0.305, Vector3(0, 0.755, 0.05), col, {"outline": 0.008}, 24, 8)
+	ring.rotation.x = 0.32
+	ring.scale = Vector3(1.0, 1.3, 1.0)
+	# the knot just off-centre, over the shirt's V, and two tails hanging past the lapel
+	var knot_at := Vector3(0.1, 0.69, 0.335)
+	for s: int in [-1, 1]:
+		var tail := Kit.sphere(n, 0.065, knot_at + Vector3(0.035 * s + 0.02, -0.08, 0.02), col.darkened(0.08), Vector3(0.6, 1.3, 0.3), {"outline": 0.006}, 10)
+		tail.rotation.z = 0.35 * s + 0.15
+	Kit.sphere(n, 0.045, knot_at + Vector3(0, 0, 0.01), col, Vector3(1.1, 0.9, 0.8), {"outline": 0.007}, 10)

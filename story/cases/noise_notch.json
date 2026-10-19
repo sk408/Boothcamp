@@ -79,7 +79,8 @@
 	},
 	"instructions": [
 		["Hoot", "Tell him: press for every beep, even faint ones. Not for the cymbal in his head!"],
-		["Rocco", "Beeps yes, ringing no. Got it, boss."]
+		["Rocco", "Beeps yes, ringing no. Got it, boss."],
+		["Hoot", "Tip: with ringing ears, pulsed beeps stand out from the ring. Most audiometers can pulse them."]
 	],
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 6, "intro": "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"},
@@ -151,8 +152,8 @@
 			"prompt": "Which earplugs for a drummer?",
 			"options": [
 				["Cotton wool", 0, "Cotton wool? It barely blocks a thing, and it just fell in the snare."],
-				["Foam earplugs", 1, "Foam works, but it muffles the highs. A drummer wants it even."],
-				["Musicians' earplugs", 2, "Flat, even quieting: the cymbals still sound like cymbals. Rock on, safely!"]
+				["Foam earplugs", 1, "Foam works, but it cuts the highs more than the lows. A drummer wants it even."],
+				["Filtered musicians' earplugs", 2, "A filter turns pitches down more evenly than foam: cymbals still sound like cymbals. Rock on!"]
 			]
 		}},
 		["Hoot", "On stage: hearing aids out, earplugs in. And a hearing check every year."],
@@ -172,6 +173,10 @@
 			"B": "The notch showed up; a few stamps wandered. Hoot recommends practice.",
 			"C": "Look for the dip at 4k and the comeback at 8k.",
 			"Do-over": "Noise notches hide between 3k and 6k. Rocco will be back next Friday."
+		},
+		"wrong_first": {
+			"refer": {"headline": "DRUMMER REFERRED FOR BEING A DRUMMER; OWL OVERRULES", "subhead": "No red flags and ears that match: Rocco could be fitted today."},
+			"today": {"headline": "ROCCO RUSHED TO DOCTOR; DOCTOR ASKS FOR A DRUM SOLO", "subhead": "Thirty years of slow change is not an emergency."}
 		}
 	}
 }

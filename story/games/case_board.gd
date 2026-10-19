@@ -1,9 +1,12 @@
 extends Control
 ## CaseBoard (cases): the case file. First the audiogram stamps in; once the player has named the
 ## shape, its pattern comes alive (a crash cymbal, or a firework, out of a noise notch; a wave over a
-## low-pitch loss; an alarm clock by a one-sided loss; a cookie bite out of the middle pitches), with
-## any earlier chart on file ("previous") dashed behind it. Then the file opens: the chart on the
-## left, the clue cards on the right, and three rubber stamps underneath: FIT / REFER / DOCTOR TODAY.
+## low-pitch loss; an alarm clock by a one-sided loss; a cookie bite out of the middle pitches; an
+## air-bone gap plugged by a waxy cork, or filled with water and a rubber duck), with any earlier
+## chart on file ("previous") dashed behind it. The board-internal "retest" pattern (the runner builds
+## its case dict) dashes the first visit's chart behind today's, with mint arrows showing the climb.
+## Then the file opens: the chart on the left, the clue cards on the right, and three rubber stamps
+## underneath: FIT / REFER / DOCTOR TODAY.
 ## The player stamps the call, then presents the clue card that proves it (docs/CASES.md §3, §6, §7).
 ## The stamps and the cards are ordinary `choice` beats (same info as DialogueBox.choose), and their
 ## labels start with the option text, so the autoplay bot plays them by keys or by mouse with no route.
@@ -31,7 +34,7 @@ const FILE_SCALE := 0.56
 const FILE_CHART_AT := Vector2(22, 86)
 const GRID := Rect2(528, 86, 730, 276)
 const GRID_COLS := 3
-const MAX_CARDS := 9
+const MAX_CARDS := CaseData.MAX_CARDS
 const TRAY_Y := 384.0
 const STAMP_SIZE := Vector2(300, 112)
 const STAMP_COLORS: Dictionary[StringName, Color] = {&"fit": Color("#2f9e73"), &"refer": Color("#2d6cdf"), &"today": Color("#e5383b")}
@@ -39,6 +42,9 @@ const CARD_COLORS: Array[Color] = [Color("#fff1a8"), Color("#ffd9e8"), Color("#d
 const SRC_TITLES: Dictionary = {"history": "THEY SAID", "flag": "RED-FLAG CHECK", "look": "OTOSCOPE", "tymp": "TYMP", "test": "AUDIOGRAM", "note": "CASE NOTE"}
 const WAVE := Color("#36a3e7")
 const COOKIE := Color("#d99a5b")
+const WAX := Color("#c98a3a")
+const WAX_DARK := Color("#8a5a24")
+const GAP_STEPS := 24                   # samples along the gap band (500-4k)
 
 var case_data: Dictionary = {}
 var results: Dictionary = {}
@@ -193,6 +199,29 @@ func show_pattern() -> void:
 			get_tree().create_timer(0.55, false).timeout.connect(func() -> void:
 				Sfx.play(&"thunk", 1.5, -2.0)
 				Events.screen_shake.emit(0.25, 0.15))
+		"gap":
+			# the Audiogram's own bridge posts, and the other ear fades so the eye compares bone with air
+			if ag != null:
+				var other := "left" if _focus_ear() == "right" else "right"
+				ag.show_gap = true
+				create_tween().tween_method(func(a: float) -> void: ag.dim = {other: a}, 1.0, 0.3, 0.5)
+			if String(rv.get("plug", "wax")) == "fluid":
+				Sfx.play(&"whoosh", 0.45, -6.0)
+				for i in 3:
+					var pitch := 1.0 + 0.25 * i
+					get_tree().create_timer(0.4 + 0.2 * i, false).timeout.connect(func() -> void: Sfx.play(&"blip", pitch, -6.0))
+			else:
+				Sfx.play(&"whoosh", 0.7, -6.0)
+				get_tree().create_timer(0.45, false).timeout.connect(func() -> void:
+					Sfx.play(&"thunk", 0.7, -2.0)
+					Sfx.play(&"pop", 0.8, -4.0)
+					Events.screen_shake.emit(0.45, 0.2))
+		"retest":
+			Sfx.play(&"pop", 1.0, -4.0)
+			# the fanfare lands with the arrows (they shoot up once the earlier chart has drawn)
+			get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
+				Sfx.play(&"fanfare", 1.0, -4.0)
+				Sfx.play(&"sparkle", 1.0, -4.0))
 	await get_tree().create_timer(1.0, false).timeout
 	_title.text = String(rv.get("title", ""))
 	_title.reset_size()
@@ -231,6 +260,8 @@ func show_type(text: String) -> void:
 ## right, and the stamp tray rises. clues: [{tag, text, kind ("clue" / "flag"), src}].
 func open_file(p_clues: Array[Dictionary]) -> void:
 	clues.assign(p_clues.slice(0, MAX_CARDS))
+	if ag != null:
+		ag.dim = {}   # a "gap" reveal faded one ear: the case file shows both
 	compact = true
 	_remember_home()
 	_move_card(FILE_SCALE, FILE_CHART_AT)
@@ -538,6 +569,10 @@ func _air(ear: String) -> Dictionary:
 	return ClinicRules.best_thresholds(results, ear, false)
 
 
+func _bone(ear: String) -> Dictionary:
+	return ClinicRules.best_thresholds(results, ear, true)
+
+
 ## The ear a pattern points at ("both" = the poorer ear at the case's frequency).
 func _focus_ear() -> String:
 	var rv: Dictionary = case_data.get("reveal", {})
@@ -595,6 +630,10 @@ func _draw_fx() -> void:
 				_draw_flat_one()
 			"cookie":
 				_draw_cookie()
+			"gap":
+				_draw_gap()
+			"retest":
+				_draw_previous([500, 1000, 2000, 4000] as Array[int], true)
 	if _type_t >= 0.0:
 		_draw_type()
 	if _slam_t >= 0.0 and _slam != &"":
@@ -688,8 +727,9 @@ func _draw_cymbal(p: Vector2, s: float) -> void:
 
 
 ## An earlier chart on file (the case's reveal "previous"), dashed in the ear's colour behind
-## today's, with its label; arrows show the drop at drop_freqs.
-func _draw_previous(drop_freqs: Array[int]) -> void:
+## today's, with its label; coral arrows show the drop at freqs. With improve (the retest board),
+## mint arrows show the climb instead, wherever the earlier chart was 10 dB or more poorer.
+func _draw_previous(freqs: Array[int], improve := false) -> void:
 	var s := _sc()
 	var rv: Dictionary = case_data.get("reveal", {})
 	var prev: Dictionary = rv.get("previous", {})
@@ -724,14 +764,43 @@ func _draw_previous(drop_freqs: Array[int]) -> void:
 	if keys.size() > 0 and reveal_k >= 1.0:
 		var lp := _pt(int(keys[0]), float(pth[keys[0]])) + Vector2(-8, -18) * s
 		_fx.draw_string(f_font, lp, String(prev.get("label", "BEFORE")), HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s + 0.5), Color(col, 0.8))
-		for fq: int in drop_freqs:
-			if air.has(fq) and pth.has(fq):
+		for fq: int in freqs:
+			if improve:
+				if air.has(fq) and pth.has(fq) and int(pth[fq]) - int(air[fq]) >= 10:
+					_draw_gain(_pt(fq, float(air[fq])), _pt(fq, float(pth[fq])), int(pth[fq]) - int(air[fq]))
+			elif air.has(fq) and pth.has(fq):
 				var top := _pt(fq, float(pth[fq])) + Vector2(10, 6) * s
 				var bot := _pt(fq, float(air[fq])) + Vector2(10, -14) * s
 				if bot.y - top.y > 10.0:
 					_fx.draw_line(top, bot, Palette.CORAL, 3.0 * s, true)
 					UiDraw.arrow(_fx, bot, 11.0 * s, Vector2.DOWN, Palette.CORAL)
 					_fx.draw_string(f_font, (top + bot) * 0.5 + Vector2(8, 5) * s, "-%d" % (int(air[fq]) - int(pth[fq])), HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s + 0.5), Palette.CORAL)
+
+
+## A mint arrow from an earlier, poorer point up to today's, labelled with the dB gained. It shoots
+## up once the earlier chart has drawn in, and a star twinkles where it lands.
+func _draw_gain(today: Vector2, before: Vector2, gained: int) -> void:
+	var s := _sc()
+	# tight offsets so even a 10 dB climb (about 28 px at full size) still gets its arrow
+	var hi := today + Vector2(10, 12) * s
+	var lo := before + Vector2(10, -4) * s
+	var grow := clampf((_pattern_t - 1.2) / 0.35, 0.0, 1.0)
+	if lo.y - hi.y <= 4.0 * s or grow <= 0.0:
+		return
+	var tip := lo.lerp(hi, grow)
+	var col := Palette.MINT.darkened(0.2)
+	_fx.draw_line(lo, tip, col, 3.0 * s, true)
+	UiDraw.arrow(_fx, tip, 11.0 * s, Vector2.UP, col)
+	var f_font := UiKit.font(700)
+	var fs := int(17 * s + 0.5)
+	var lp := (lo + tip) * 0.5 + Vector2(8, 5) * s
+	var txt := "+%d" % gained
+	_fx.draw_string_outline(f_font, lp, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Palette.PAPER)
+	_fx.draw_string(f_font, lp, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.MINT.darkened(0.3))
+	var since := _pattern_t - 1.55
+	# stops while it is still a pixel wide (a vanishing polygon fails to triangulate)
+	if since > 0.0 and since < 0.7:
+		UiDraw.star(_fx, tip + Vector2(0, -12) * s, 8.0 * s * (1.0 - since / 0.8), Palette.SUNNY)
 
 
 ## A wave rolls over the low pitches; last spring's line sits above today's, dashed.
@@ -837,6 +906,244 @@ func _draw_cookie() -> void:
 			var f_font := UiKit.font(700)
 			_fx.draw_string_outline(f_font, c + Vector2(r + 8.0, -r * 0.4), "CHOMP!", HORIZONTAL_ALIGNMENT_LEFT, -1, int(26 * s + 0.5), 8, Palette.INK)
 			_fx.draw_string(f_font, c + Vector2(r + 8.0, -r * 0.4), "CHOMP!", HORIZONTAL_ALIGNMENT_LEFT, -1, int(26 * s + 0.5), Palette.SUNNY)
+
+
+## The air-bone gap on the focus ear: the band between the bone line and the air line (500-4k)
+## shades in, red dots sit on the posts where the gap is 15 or more, and what made the gap shows up
+## in it: a lumpy wax cork slams in between 1k and 2k ("plug": "wax"), or water rises with bubbles
+## and a rubber duck ("plug": "fluid"). The sticker gives the measured average gap, rounded to 5.
+func _draw_gap() -> void:
+	var s := _sc()
+	var rv: Dictionary = case_data.get("reveal", {})
+	var ear := _focus_ear()
+	var air := _air(ear)
+	var bone := _bone(ear)
+	var air_line := _gap_line(air)
+	if air_line.is_empty():
+		return
+	var bone_line := _gap_line(bone)
+	var fluid := String(rv.get("plug", "wax")) == "fluid"
+	# the band's sample positions: where both lines were measured
+	var xs := PackedFloat32Array()
+	if air_line.size() >= 2 and bone_line.size() >= 2:
+		var x0 := maxf(air_line[0].x, bone_line[0].x)
+		var x1 := minf(air_line[air_line.size() - 1].x, bone_line[bone_line.size() - 1].x)
+		if x1 - x0 > 10.0:
+			for i in GAP_STEPS + 1:
+				xs.append(lerpf(x0, x1, float(i) / GAP_STEPS))
+	var k := clampf(_pattern_t / 0.8, 0.0, 1.0)
+	if xs.size() >= 2 and k > 0.0:
+		# the shade grows down from the bone line to the air line
+		var tops := PackedVector2Array()
+		var bots := PackedVector2Array()
+		for x: float in xs:
+			var yb := _line_y(bone_line, x)
+			var ya := _line_y(air_line, x)
+			tops.append(Vector2(x, minf(yb, ya)))
+			bots.append(Vector2(x, lerpf(minf(yb, ya), maxf(yb, ya), k)))
+		_draw_strip(tops, bots, Color(Palette.SUNNY, 0.3))
+	# a little past halfway, so the cork clears the Audiogram's dB tag right of the 1k post
+	var x_plug := lerpf(_pt(1000, 0).x, _pt(2000, 0).x, 0.6)
+	var y_air := _line_y(air_line, x_plug)
+	var y_bone := _line_y(bone_line, x_plug) if not bone_line.is_empty() else y_air - 60.0 * s
+	if fluid:
+		_draw_water(xs, air_line, bone_line, x_plug)
+	else:
+		_draw_cork(Vector2(x_plug, (y_air + y_bone) * 0.5), y_air - y_bone)
+	# the red flag, visible: a dot on each post at 500, 1k and 2k with a gap of 15 or more
+	var gaps := CaseRules.air_bone_gaps(air, bone)
+	var shown := 0
+	for fq: int in [500, 1000, 2000]:
+		if int(gaps.get(fq, 0)) < 15:
+			continue
+		var appear := clampf((_pattern_t - 0.7 - 0.15 * shown) / 0.2, 0.0, 1.0)
+		shown += 1
+		if appear <= 0.0:
+			continue
+		var r := 6.0 * s * appear * (1.0 + 0.4 * sin(appear * PI) + 0.08 * sin(_t * 5.0))
+		var dp := _pt(fq, float(bone[fq])) + Vector2(0, 18) * s
+		_fx.draw_circle(dp, r + 2.0 * s, Palette.INK)
+		_fx.draw_circle(dp, r, Palette.RIGHT_RED)
+		_fx.draw_circle(dp + Vector2(-0.3, -0.3) * r, r * 0.3, Color(1, 1, 1, 0.6))
+	# the sticker, under the air line (no number when the ear has no bone to measure a gap from)
+	var avg := _avg_gap(gaps)
+	var word := "BLUB!" if fluid else "PLUGGED!"
+	var txt := word if avg < 0 else "%s ~%d dB" % [word, avg]
+	var since := _pattern_t - (1.0 if fluid else 0.5)
+	if since > 0.0:
+		_draw_sticker(Vector2(x_plug, y_air + 46.0 * s), txt, Palette.SKY if fluid else Palette.CORAL, since)
+
+
+## One ear's thresholds as chart points, left to right, at 500-4k.
+func _gap_line(th: Dictionary) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for fq: int in ClinicRules.AC_FREQS:
+		if fq >= 500 and fq <= 4000 and th.has(fq):
+			out.append(_pt(fq, float(th[fq])))
+	return out
+
+
+## The height of a line (points left to right, at least one) at x; flat past either end.
+func _line_y(line: PackedVector2Array, x: float) -> float:
+	if x <= line[0].x:
+		return line[0].y
+	for i in range(1, line.size()):
+		if x <= line[i].x:
+			return lerpf(line[i - 1].y, line[i].y, (x - line[i - 1].x) / maxf(0.001, line[i].x - line[i - 1].x))
+	return line[line.size() - 1].y
+
+
+## A filled strip between two lines sampled at the same x positions (top above bottom), kept at
+## least a pixel thick so the polygon never folds.
+func _draw_strip(top_pts: PackedVector2Array, bot_pts: PackedVector2Array, col: Color) -> void:
+	if top_pts.size() < 2 or top_pts.size() != bot_pts.size():
+		return
+	var poly := top_pts.duplicate()
+	for i in range(bot_pts.size() - 1, -1, -1):
+		poly.append(Vector2(bot_pts[i].x, maxf(bot_pts[i].y, top_pts[i].y + 1.0)))
+	_fx.draw_colored_polygon(poly, col)
+
+
+## The average of an ear's measured air-bone gaps (CaseRules.air_bone_gaps), rounded to 5;
+## -1 when there are none (no bone measured).
+func _avg_gap(gaps: Dictionary) -> int:
+	if gaps.is_empty():
+		return -1
+	var total := 0
+	for fq: int in gaps:
+		total += int(gaps[fq])
+	return maxi(0, roundi(float(total) / gaps.size() / 5.0) * 5)
+
+
+## A lumpy wax cork with a tiny wick drops into the gap at `rest` and squashes on landing (THUNK).
+## gap_px: the gap's height there, so the cork wedges in.
+func _draw_cork(rest: Vector2, gap_px: float) -> void:
+	var s := _sc()
+	var ry := clampf((gap_px / s - 10.0) * 0.5, 12.0, 22.0)
+	var rx := ry * 1.25
+	var k := clampf(_pattern_t / 0.45, 0.0, 1.0)
+	var since := maxf(0.0, _pattern_t - 0.45)
+	var at := rest + Vector2(0, -(1.0 - k) * (1.0 - k) * 190.0 * s)
+	# stretched as it falls, then a squash that wobbles out
+	var sq := cos(since * 24.0) * exp(-since * 5.0) * 0.3 if k >= 1.0 else -0.12
+	if k >= 1.0 and since < 0.45:
+		for side: float in [-1.0, 1.0]:
+			_fx.draw_circle(rest + Vector2(side * (rx + 6.0 + since * 50.0), ry * 0.6) * s, (5.0 - since * 9.0) * s, Color(Palette.INK_SOFT, 0.5 * (1.0 - since / 0.45)))
+	_fx.draw_set_transform(at, 0.0, Vector2(1.0 + sq, 1.0 - sq) * s)
+	var lump := PackedVector2Array()
+	for i in 14:
+		var a := TAU * i / 14.0
+		var bumpy := 1.0 + 0.08 * sin(i * 2.7) + 0.05 * cos(i * 5.3)
+		# a little narrower at the bottom, like a plug pushed into a canal
+		lump.append(Vector2(cos(a) * rx * bumpy * (1.0 - 0.15 * sin(a)), sin(a) * ry * bumpy))
+	var shadow := PackedVector2Array()
+	for q: Vector2 in lump:
+		shadow.append(q + Vector2(0, 4))
+	_fx.draw_colored_polygon(shadow, Color(Palette.INK, 0.22))
+	_fx.draw_colored_polygon(lump, WAX)
+	var outline := lump.duplicate()
+	outline.append(lump[0])
+	_fx.draw_polyline(outline, Palette.INK, 3.0, true)
+	for p: Vector2 in [Vector2(-0.45, 0.25), Vector2(0.3, 0.4), Vector2(0.1, -0.15)]:
+		_fx.draw_circle(Vector2(p.x * rx, p.y * ry), ry * 0.16, Color(WAX_DARK, 0.55))
+	_fx.draw_arc(Vector2(-rx * 0.3, -ry * 0.35), ry * 0.35, PI + 0.3, TAU - 0.6, 8, Color(1, 1, 1, 0.5), 3.0, true)
+	# the tiny wick
+	_fx.draw_polyline(PackedVector2Array([Vector2(0, -ry * 0.9), Vector2(-2, -ry - 5.0), Vector2(2, -ry - 9.0), Vector2(0, -ry - 13.0)]), Palette.INK, 2.5, true)
+	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Water from the air line up to just under the bone symbols, with a wobbly surface, bubbles that rise
+## and pop, and a rubber duck riding the surface up. xs: the band's sample positions (may be empty).
+func _draw_water(xs: PackedFloat32Array, air_line: PackedVector2Array, bone_line: PackedVector2Array, x_duck: float) -> void:
+	var s := _sc()
+	var rise := clampf((_pattern_t - 0.15) / 1.1, 0.0, 1.0)
+	if rise <= 0.0:
+		return
+	var surf := PackedVector2Array()
+	var bed := PackedVector2Array()
+	if xs.size() >= 2:
+		for x: float in xs:
+			var ya := _line_y(air_line, x)
+			# just under the bone symbols: half a bracket (8.5) + its stroke (2) + the wobble (4.5) + the surface line (1.5)
+			var yb := minf(_line_y(bone_line, x) + 17.0 * s, ya)
+			var wob := (sin(x * 0.07 / s + _t * 3.0) * 3.0 + sin(x * 0.15 / s - _t * 2.2) * 1.5) * s * rise
+			surf.append(Vector2(x, minf(lerpf(ya, yb, rise) + wob, ya - 1.0)))
+			bed.append(Vector2(x, ya))
+		_draw_strip(surf, bed, Color(WAVE, 0.28))
+		_fx.draw_polyline(surf, Color(WAVE, 0.9), 3.0 * s, true)
+		if rise > 0.35:
+			for j in 8:
+				var bx := lerpf(xs[0], xs[xs.size() - 1], (j + 0.5) / 8.0) + sin(_t * 1.7 + j * 1.9) * 4.0 * s
+				var y_bed := _line_y(bed, bx) - 6.0 * s
+				var y_top := _line_y(surf, bx) + 4.0 * s
+				if y_bed - y_top < 10.0 * s:
+					continue
+				var cyc := fmod(_pattern_t * 0.6 + j * 0.37, 1.0)
+				var r := (2.5 + j % 3) * s * (0.8 + 0.5 * cyc)
+				if cyc < 0.88:
+					var bp := Vector2(bx, lerpf(y_bed, y_top, cyc / 0.88))
+					_fx.draw_arc(bp, r, 0, TAU, 12, Color(1, 1, 1, 0.9), 1.5 * s, true)
+					_fx.draw_circle(bp + Vector2(-0.35, -0.35) * r, r * 0.3, Color(1, 1, 1, 0.8))
+				else:
+					# pop at the surface
+					var pk := (cyc - 0.88) / 0.12
+					_fx.draw_arc(Vector2(bx, y_top), r * (1.0 + pk * 1.5), 0, TAU, 12, Color(1, 1, 1, 0.8 * (1.0 - pk)), 1.5 * s, true)
+	var y_duck := _line_y(surf, x_duck) if surf.size() >= 2 else _line_y(air_line, x_duck)
+	_draw_duck(Vector2(x_duck, y_duck), minf(1.0, rise * 4.0))
+
+
+## A rubber duck bobbing with its water line at `at`; grow 0..1 pops it in.
+func _draw_duck(at: Vector2, grow: float) -> void:
+	var s := _sc()
+	_fx.draw_set_transform(at + Vector2(0, sin(_t * 2.6) * 1.5 * s), sin(_t * 1.9) * 0.12, Vector2.ONE * s * grow)
+	var tail := PackedVector2Array([Vector2(-14, -13), Vector2(-26, -22), Vector2(-18, -6)])
+	_fx.draw_colored_polygon(tail, Palette.SUNNY)
+	var tail_line := tail.duplicate()
+	tail_line.append(tail[0])
+	_fx.draw_polyline(tail_line, Palette.INK, 2.5, true)
+	var body := PackedVector2Array()
+	for i in 20:
+		var a := TAU * i / 20.0
+		body.append(Vector2(cos(a) * 19.0, sin(a) * 11.0 - 7.0))
+	_fx.draw_colored_polygon(body, Palette.SUNNY)
+	var body_line := body.duplicate()
+	body_line.append(body[0])
+	_fx.draw_polyline(body_line, Palette.INK, 2.5, true)
+	_fx.draw_arc(Vector2(-3, -10), 8.0, 0.25, PI - 0.25, 8, Palette.SUNNY.darkened(0.3), 2.5, true)
+	# the part under the water line, tinted
+	var under := PackedVector2Array()
+	var a0 := asin(7.0 / 11.0)
+	for i in 9:
+		var a := lerpf(a0, PI - a0, i / 8.0)
+		under.append(Vector2(cos(a) * 19.0, sin(a) * 11.0 - 7.0))
+	_fx.draw_colored_polygon(under, Color(WAVE, 0.5))
+	_fx.draw_circle(Vector2(10, -24), 11.5, Palette.INK)
+	_fx.draw_circle(Vector2(10, -24), 9.0, Palette.SUNNY)
+	var beak := PackedVector2Array([Vector2(17, -27), Vector2(28, -23), Vector2(17, -19)])
+	_fx.draw_colored_polygon(beak, Palette.SELECT_ORANGE)
+	var beak_line := beak.duplicate()
+	beak_line.append(beak[0])
+	_fx.draw_polyline(beak_line, Palette.INK, 2.0, true)
+	_fx.draw_circle(Vector2(12, -27), 2.2, Palette.INK)
+	_fx.draw_circle(Vector2(12.8, -27.8), 0.8, Color.WHITE)
+	for side: float in [-1.0, 1.0]:
+		_fx.draw_arc(Vector2(25.0 * side, 2.0), 4.0 + sin(_t * 4.0), PI + 0.5, TAU - 0.5, 6, Color(1, 1, 1, 0.8), 2.0, true)
+	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## A sticker slapped onto the chart at `at`: it pops in (since: seconds since it landed) and sits askew.
+func _draw_sticker(at: Vector2, txt: String, fill: Color, since: float) -> void:
+	var f_font := UiKit.font(700)
+	var fs := 20
+	var tw := f_font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var pop := 1.0 + 0.6 * maxf(0.0, 1.0 - since / 0.25)
+	_fx.draw_set_transform(at, -0.07, Vector2.ONE * _sc() * pop)
+	var box := Rect2(Vector2(-tw * 0.5 - 14.0, -21.0), Vector2(tw + 28.0, 34.0))
+	UiDraw.rounded_rect(_fx, Rect2(box.position + Vector2(0, 4), box.size), Color(Palette.INK, 0.2), 12)
+	UiDraw.rounded_rect(_fx, box, fill, 12, 3, Palette.INK)
+	_fx.draw_line(box.position + Vector2(12, 7), box.position + Vector2(34, 7), Color(1, 1, 1, 0.6), 3.0, true)
+	_fx.draw_string(f_font, Vector2(-tw * 0.5, 4), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.INK)
+	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_type() -> void:

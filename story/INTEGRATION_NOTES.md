@@ -121,7 +121,7 @@ It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (
 the Hoot bubble, the pause menu and its key-style label, the results continue beat, the title beats, and
 the voice ceiling.
 
-## Cases (Days 6 to 9, cases branch; CONTRACTS.md §11, docs/CASES.md)
+## Cases (Days 6 to 11, cases branch; CONTRACTS.md §11, docs/CASES.md)
 
 The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
 Requests for the integrator and the title owner:
@@ -129,11 +129,18 @@ Requests for the integrator and the title owner:
 - **Day picker.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and
   `tint` (the card colour), which the Days grid uses. `Portraits` draws every case speaker (it falls back to
   `CasePortraits`).
-- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 9) both append to `Game.CHAPTERS`
-  and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`). Keep both blocks, speech first.
-- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` now has left-ear masked rows too (Marina's masked tests are on her
-  LEFT ear): `["bc_masked", "L  ]", "left"]` and `["ac_masked", "L  □", "left"]` (the ASHA square). Additive,
-  added in the cases PR at the integrator's request.
+- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 11) both append to `Game.CHAPTERS`
+  and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`, `retest`). Keep both blocks,
+  speech first, and keep the exact `"case": "<id>"` spelling (`tools/case_scripts.py` finds the case order with a
+  regex).
+- **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` has left-ear masked rows too (Marina's and Skye's masked tests are
+  on the LEFT ear). Its rows are now `[sheet key, ear]`: the old label column was never read (`_row_tag` draws the
+  symbol) and its U+25A1 square is not in Fredoka, so it was dropped at the integrator's request.
+- **Notice to builder B: `story/games/case_otoscopy.gd`** extends `otoscopy.gd` and overrides `_draw_canal` (it
+  draws the wax plug or the fluid on top of your healthy drum), reading `view_center`, `ear` and `_canal`, and
+  calls `show_clear`. It also copies your drum's geometry from `_draw_canal` (centre offset (-6, 6), radii 112 x 98,
+  tilt -0.25, colour #c9c6cf, cone of light (8, 8) / (56, 74) / (26, 84)). Please keep those names, and tell us if
+  the drum changes (or expose those numbers as constants and the cases will read them).
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
@@ -144,9 +151,10 @@ Requests for the integrator and the title owner:
 - **Portraits.** Unknown speakers fall back to `story/case_portraits.gd`. Chip (Ginger's puppet) has a cookie
   portrait.
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
-  `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (14 tests). `python3 tools/case_scripts.py --check` fails if
-  `docs/CASE_SCRIPTS.md` is out of date with the case JSON.
+  `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
+  Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
+- **Tests:** `story/tests/test_cases.gd` (32 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+  --check` after the suite, so a stale `docs/CASE_SCRIPTS.md` fails the run.
 
 ## Merge: main (Days 3, 6-9) into the Day 2 feedback (v4)
 
@@ -154,7 +162,8 @@ Requests for the integrator and the title owner:
   (Day 2's unmasked bone on the better, left ear), then `R  [`, `R  O+`, and the cases' `L  ]`, `L  □`. A row only
   shows when that sheet has stamps, so Day 1 and Day 3 show none, Day 2 shows `L  >`, `R  [`, `R  O+` as on the
   feedback branch, and Rocco, Dash and Ginger as on main. Marina (her bone is tested on her left ear) shows only
-  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet, so her paper fits 1280x720.
+  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet. (cases, PR #3) The rows
+  are now `[sheet key, ear]`; `_row_tag` draws the symbol.
 - **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
 - **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button
   (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save).

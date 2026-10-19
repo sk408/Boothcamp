@@ -73,12 +73,10 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"bonnie": [["history", "Chat"], ["bc_placement", "Bone"], ["masking", "Mask"], ["evidence", "Case"], ["referral", "Refer"]],
 	"mike": [["history", "Chat"], ["instructions", "Explain"], ["familiarize", "Words"], ["evidence", "Case"], ["referral", "Next"]],
 }
-## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-## (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >" row, shown only when that
-## ear has no masked-bone sheet. (cases) The left-ear masked rows for a case whose poorer ear is the left
-## one (Marina: "L  ]" and "L  □", no "L  >").
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "L  >", "left"], ["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
-	["bc_masked", "L  ]", "left"], ["ac_masked", "L  □", "left"]]
+## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, ear] (_row_tag draws the
+## row's audiogram symbol). (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >"
+## row, shown only when that ear has no masked-bone sheet (a poorer left ear, like Marina's, shows "L  ]").
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "left"], ["bc_masked", "right"], ["ac_masked", "right"], ["bc_masked", "left"], ["ac_masked", "left"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),
@@ -656,15 +654,15 @@ func _golf_card(res: Dictionary) -> Control:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.custom_minimum_size = Vector2(44, 0)
 		grid.add_child(l)
-	var rows: Array[Array] = [["freqs", "R  O", "right"], ["freqs", "L  X", "left"]]
+	var rows: Array[Array] = [["freqs", "right"], ["freqs", "left"]]
 	for extra: Array in GOLF_EXTRA_ROWS:
-		var ear_sheets: Dictionary = ears.get(String(extra[2]), {})
+		var ear_sheets: Dictionary = ears.get(String(extra[1]), {})
 		if String(extra[0]) == "bc" and not (ear_sheets.get("bc_masked", {}) as Dictionary).is_empty():
 			continue
 		if not (ear_sheets.get(String(extra[0]), {}) as Dictionary).is_empty():
 			rows.append(extra)
 	for row: Array in rows:
-		var e := String(row[2])
+		var e := String(row[1])
 		var fl: Dictionary = (ears.get(e, {}) as Dictionary).get(String(row[0]), {})
 		grid.add_child(_row_tag(e, StringName(String(row[0]))))
 		for f in freqs:

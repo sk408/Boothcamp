@@ -1418,11 +1418,12 @@ Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from th
 | What | Where | Owner |
 |---|---|---|
 | Case data, one per case | `story/cases/<case_id>.json` (the source of truth for every line) | cases |
-| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural: no bone data, bone = air) | cases |
+| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural cases: no bone data, bone = air; conductive cases carry `bc_right` / `bc_left`). A retest profile `<id>_after.tres` (the ear after treatment) is loaded by the runner and never registered as a chapter | cases |
 | Runner (one for every case) | `story/level_case.gd` + `.tscn` | cases |
 | Loader and checks | `story/case_data.gd` (`CaseData`, preload by path) | cases |
 | Rules | `core/cases/case_rules.gd` (`class_name CaseRules`): decisions, red flags (2022 labeling), asymmetry, the sudden-loss definition, tympanogram types and curve | cases |
 | Case board, tymp gadget, hours clock, payoff props | `story/games/case_board.gd`, `case_tymp.gd`, `case_clock.gd`, `case_props.gd` | cases |
+| The look in the ear (healthy drum, wax plug, fluid) | `story/games/case_otoscopy.gd` (extends builder B's `otoscopy.gd`, overrides `_draw_canal`) | cases |
 | Portraits from a case's look | `story/case_portraits.gd` | cases |
 | 3D costume bits | `world/characters/case_extras.gd` (`CaseExtras.attach(bean, spec)`) | cases |
 
@@ -1432,7 +1433,22 @@ the suggested ("UP NEXT") day; every day is open. `LevelCase.pick_case_id()`: th
 else the first registered case.
 
 **Phases** (`Events.phase_changed`): `intro`, `history`, `otoscopy`, `tymp`, `instructions`, `audiometry` (one per
-test, info `{ear, test}`), `reveal`, `evidence`, `decision`, `results`. `Game.PHASES` gained `tymp` and `decision`.
+test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a case with a retest block, and
+`results`. Inside the retest, `otoscopy`, `tymp`, `instructions`, `audiometry` and `reveal` repeat with
+`info.retest = true` (the bot suffixes those phase shots `_retest`). `Game.PHASES` gained `tymp`, `decision` and
+`retest`.
+
+**Optional case keys (batch 2; all default to the Days 6-9 behaviour).** `otoscopy.view` `clear` / `wax` / `fluid`
+(a wax view keeps the first visit's air on headphones); `otoscopy.kind` and `findings[].kind` `clue` / `flag`;
+`tymp.<ear>.ecv_ml` (required: a B ear sits outside 0.6-0.9 mL, any other type inside 0.9-2.0); `findings[].when`
+`symmetric` / `asymmetric` / `conductive` / `abg_flag`; `reveal.pattern` `gap` with `reveal.plug` `wax` / `fluid`;
+`audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
+`do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first
+stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),
+reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, bone is tested on that ear only.
+`CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
+checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
+the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
 
 **Beats.** No new beat kinds. Everything is `dialogue`, `choice` (history, tip, tymp question, shape, earplugs,
 the stamp tray, the clue cards), the AudiOtron's own beats, and `results_continue`. The stamp tray
@@ -1450,15 +1466,23 @@ the option text, so the mouse bot clicks them by their first 18 characters (test
   per-chapter tables.
 
 **Visit and medals.** Medals `history` (Chat), `tymp` (Tymp), `evidence` (Pattern), `decision` (Call). Visit flags:
-`case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`. The
-summary gains `case_id`, `headlines`, `subheads`, `medal_beats`.
+`case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`, and with a
+retest `retested`, `retest_type`. The retest has no medal and is unscored: the first visit's results are restored
+(`Game.set_audiometry_results`) and any heart lost during it is given back (`Game.gain_comfort`) before `finish_visit`. The summary gains `case_id`, `headlines`, `subheads`,
+`medal_beats` (a wrong first stamp swaps the S to C headlines, `LevelCase.paper_for`).
 
 **Anchors.** `reveal_audiogram` (the board's chart), `case_stamps`, `case_clues`.
 
 **Screenshots** (with `--shots`): `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`,
-`_pattern`, `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
+`_pattern`, `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`,
+`_goodbye`; a retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
 
 **Tests.** `story/tests/test_cases.gd`: every registered case validates (`CaseData.validate`), Hoot lines are 18 words
 or fewer, choice prefixes are unique, each truth table shows its shape even with any single 5 dB wobble, asymmetry
 and the call match, Dash meets the sudden definition, the charts on file, tymp curve widths, the red-flag list,
-picker teasers give nothing away.
+picker teasers give nothing away; batch 2: the 0.6 mL blocked floor and canal-volume bands, the conductive truths
+survive a wobble and mask bone but not air, no shipped case gains a masked test, script names (reactions, emotes,
+props, speakers), patients match their chapters and validate, flat tymps read their canal volume, every new
+validate rule and broken file is reported, the retest profile, finding conditions, wrong-first headlines,
+`merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw. `tools/run_tests.sh` also
+fails when `docs/CASE_SCRIPTS.md` is stale.

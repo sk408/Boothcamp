@@ -23,6 +23,8 @@ const PHASES: Array[StringName] = [
 	&"familiarize", &"speech",
 	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
 	&"tymp", &"decision",
+	# cases batch 2: the patient comes back after treatment (Day 10's wax)
+	&"retest",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -49,6 +51,11 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_case.tscn", "requires": "marina", "case": "sudden", "face": "Dash", "tint": Color("#ffe0d6")},
 	{"id": "ginger", "day": 9, "title": "Day 9: Ginger Snapp", "patient_id": "ginger", "teaches": "Case file: the ventriloquist",
 		"scene": "res://story/level_case.tscn", "requires": "dash", "case": "cookie_bite", "face": "Ginger", "tint": Color("#f3e1ff")},
+	# cases batch 2: the conductive cases (where is the sound stuck?)
+	{"id": "barnaby", "day": 10, "title": "Day 10: Barnaby Bumble", "patient_id": "barnaby", "teaches": "Case file: the beekeeper",
+		"scene": "res://story/level_case.tscn", "requires": "ginger", "case": "wax", "face": "Barnaby", "tint": Color("#e6f4c4")},
+	{"id": "skye", "day": 11, "title": "Day 11: Skye Tailwind", "patient_id": "skye", "teaches": "Case file: the cabin crew",
+		"scene": "res://story/level_case.tscn", "requires": "barnaby", "case": "fluid", "face": "Skye", "tint": Color("#ffe4ef")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
