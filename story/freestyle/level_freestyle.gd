@@ -643,7 +643,7 @@ func measured_type(ear: String) -> StringName:
 	return ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
 
 
-## True when this ear's air sits over 10 dB above unmasked bone and masked bone was never run on
+## True when this ear's air sits 10 dB or more above unmasked bone and masked bone was never run on
 ## it: the "gap" may be the other cochlea answering.
 func unmasked_gap(ear: String) -> bool:
 	return not FsRules.masked_bone_needed(results, ear).is_empty() and not FsRules.has_sheet(results, ear, &"bc_masked")
@@ -853,7 +853,7 @@ func workup_report() -> Dictionary:
 					slips += 1
 					rows.append({"tool": "masking", "text": text, "state": "miss"})
 					if id == "bc_masked":
-						lines.append("The %s ear's air sat over 10 dB above bone. Masked bone shows the truth." % ear)
+						lines.append("The %s ear's air sat 10 dB or more above bone. Masked bone shows the truth." % ear)
 					else:
 						lines.append("Loud air tones in the %s ear can cross the head. Masked air was needed." % ear)
 	# extras: never slips, but say why they were not needed

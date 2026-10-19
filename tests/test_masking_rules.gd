@@ -57,9 +57,11 @@ func test_when_to_mask() -> void:
 	assert_true(ClinicRules.ac_masking_needed(45, 5), "45 - 40 = 5 >= 5")
 	assert_false(ClinicRules.ac_masking_needed(35, 5))
 	assert_false(ClinicRules.ac_masking_needed(55, 5, &"inserts"), "inserts give 55 dB")
-	# BC: air-bone gap over 10 dB
+	# BC: air-bone gap of 10 dB or more (clinical review E5, ASHA 2005 / BSA 2018 rule 2)
 	assert_true(ClinicRules.bc_masking_needed(50, 0))
-	assert_false(ClinicRules.bc_masking_needed(15, 5), "gap 10: no masked bone needed")
+	assert_true(ClinicRules.bc_masking_needed(15, 5), "gap 10: masked bone needed")
+	assert_false(ClinicRules.bc_masking_needed(10, 5), "gap 5: no masked bone")
+	assert_false(ClinicRules.is_conductive_gap(10), "but a 10 dB gap still names no conductive loss")
 
 
 func test_initial_masking_with_occlusion() -> void:

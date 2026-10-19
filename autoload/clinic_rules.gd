@@ -269,6 +269,10 @@ const MASK_MIN_DB := 0
 const MASK_MAX_DB := 100
 ## Air-bone gap: more than this = a conductive component (10 dB or less = no real gap).
 const ABG_CONDUCTIVE_DB := 10
+## (Clinical review E5) Bone masking: an air-bone gap of this or MORE asks for masked bone (ASHA
+## 2005; BSA 2018 8.6.2 rule 2: "better ... by 10 dB or more"). Naming the type of loss still uses
+## ABG_CONDUCTIVE_DB (over 10), so a 10 dB gap is masked but still reads as no real gap.
+const BC_MASK_GAP_DB := 10
 ## Referral red flag: a gap of at least this at EACH of these frequencies.
 const ABG_RED_FLAG_DB := 15
 const ABG_RED_FLAG_FREQS: Array[int] = [500, 1000, 2000]
@@ -418,9 +422,9 @@ static func ac_masking_needed(test_ac: int, nontest_bc: int, transducer: StringN
 	return test_ac - ia_rule(transducer, freq) >= nontest_bc
 
 
-## BC masking rule: the test ear's air-bone gap (AC - unmasked BC) is more than 10 dB.
+## BC masking rule: the test ear's air-bone gap (AC - unmasked BC) is 10 dB or more (BC_MASK_GAP_DB).
 static func bc_masking_needed(test_ac: int, bc_unmasked: int) -> bool:
-	return is_conductive_gap(test_ac - bc_unmasked)
+	return test_ac - bc_unmasked >= BC_MASK_GAP_DB
 
 
 ## Initial masking level (dB EM) in the non-test ear: its AC threshold + 10, plus the occlusion
@@ -545,7 +549,7 @@ static func unmasked_bone(results: Dictionary, freq: int) -> Variant:
 
 ## Frequencies that need a masked measurement for one ear, from the stored results (§5.1), in the
 ## recommended order. test = &"bc_masked": wherever the ear's air-bone gap (best AC - unmasked BC)
-## is > 10 dB; (v4) the unmasked BC may come from either mastoid (unmasked_bone()), so testing
+## is 10 dB or more (E5); (v4) the unmasked BC may come from either mastoid (unmasked_bone()), so testing
 ## unmasked bone on the better ear only is enough to see the poorer ear's gap.
 ## test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate.
 static func masked_freqs_needed(results: Dictionary, ear: String, test: StringName, phones: StringName = &"phones") -> Array[int]:
