@@ -29,7 +29,10 @@ holds only SpeechVoice: the word murmur in the test ear, the speech noise in the
     level (mean within 0.5 dB, each stretch within 1.5 dB); no noise sample above -24 dBFS minus the
     bus volumes;
   - no stray sound: every non-zero stretch of either channel is a logged word in its test ear or the
-    noise in its ear while it is on; the ceiling: no sample above -12 dBFS.
+    noise in its ear while it is on; the ceiling: no sample above -12 dBFS;
+  - the whole visit: the log has MOVIE_DONE and no AUTOPLAY_FAILED, both ears have a MOVIE_TEST line
+    and measured words, and each ear has words with the noise on in the other ear (a stalled or
+    cut-off capture of one ear never passes).
 Usage: python3 -I tools/analyze_movie_audio.py <speech.wav> <run.log> [fps] --speech
 Exit 0 when every check passes, 1 otherwise.
 """
@@ -206,8 +209,13 @@ def speech_main(wav_path, log_path, fps):
         fails.append("something peaks above -12 dBFS")
 
     words, noise, tests = [], [], []
+    done, gave_up = False, []
     for line in open(log_path, errors="replace"):
         p = line.split()
+        if p and p[0] == "MOVIE_DONE":
+            done = True
+        elif p and p[0].startswith("AUTOPLAY_FAILED"):
+            gave_up.append(line.strip())
         if len(p) >= 6 and p[0] == "MOVIE_WORD_ON":
             words.append({"ear": p[1], "db": int(p[2]), "fr": int(p[3]), "len": int(p[4]) / 1000.0 * sr, "id": p[5]})
         elif len(p) >= 5 and p[0] == "MOVIE_NOISE":
@@ -270,6 +278,7 @@ def speech_main(wav_path, log_path, fps):
     # ---- words
     rows, cut, leak_rows, quiet_checked = [], [], [], 0
     spans = {"left": [], "right": []}
+    masked_words = {"left": 0, "right": 0}
     for wd in words:
         want = wd["fr"] * spf + lag
         best = min((r for r in runs[wd["ear"]] if not r[2]), key=lambda r: abs(r[0] - want), default=None)
@@ -294,6 +303,7 @@ def speech_main(wav_path, log_path, fps):
         rows.append((wd, dev, rtol, db(np.abs(x[s0:s1]).max())))
         o = ch[other_of[wd["ear"]]][int(max(0, s0 - jit)):int(min(n, s1 + jit))]
         on = noise_at(other_of[wd["ear"]], s0, s1)
+        masked_words[wd["ear"]] += 1 if on else 0
         if not on:
             quiet_checked += 1
             if np.any(o):
@@ -372,6 +382,21 @@ def speech_main(wav_path, log_path, fps):
           " (every non-zero stretch is a logged word in its test ear or the speech noise in the other ear)")
     for e, a0, a1 in unexplained[:8]:
         fails.append(f"unexplained sound in the {e} ear at frames {a0:.1f}..{a1:.1f}")
+
+    # ---- the whole visit: both ears tested, each with words measured and some under the noise
+    if not done:
+        fails.append("no MOVIE_DONE: the recording stopped before the visit ended (a stall or a timeout)")
+    for g in gave_up[:2]:
+        fails.append(f"the bot gave up: {g}")
+    tested = sorted(set(te for te, _ in tests))
+    measured = sorted(set(r[0]["ear"] for r in rows))
+    print(f"ears tested {tested}, with measured words {measured}; words under the noise: "
+          f"right {masked_words['right']}, left {masked_words['left']}")
+    if tested != ["left", "right"] or measured != ["left", "right"]:
+        fails.append(f"both ears must be tested and measured (tested {tested}, measured {measured})")
+    for e in ("right", "left"):
+        if e in measured and masked_words[e] == 0:
+            fails.append(f"no {e}-ear word with the speech noise on in the other ear (MASK is on for words 4-7)")
     for f in fails[:20]:
         print("FAIL:", f)
     print("AUDIO_CHECK", "FAIL" if fails else "PASS")

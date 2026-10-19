@@ -19,7 +19,8 @@ extends Node
 ## holds words with and without the speech noise, and the noise following the dial. UI buses are
 ## muted as for Day 2; tools/analyze_movie_audio.py --speech checks the words (test ear only, level
 ## vs AudioSafety.speech_to_rms) and the noise (other ear only, level vs masker_to_rms, ceiling).
-## Any other --day is refused with a message and exit 2: nothing is recorded in its place.
+## Any other --day, and any --chapter, is refused with a message and exit 2: nothing is recorded in
+## its place.
 
 const CLINIC := "res://world/clinic.tscn"
 const AUDIOMETER := "res://ui/audiometer/audiometer_screen.tscn"
@@ -37,6 +38,10 @@ var _toggle_t := -100.0
 
 
 func demo_start() -> void:
+	if Game.cli.has("chapter"):
+		printerr("MOVIE: --chapter is not supported: pick the movie with --day=1 (Gus's air), --day=2 (Bonnie's bone and masking) or --day=3 (Mike's speech). Nothing recorded.")
+		Events.quit_requested.emit(2)
+		return
 	var day := String(Game.cli_value("day", "1"))
 	if day == "2":
 		await _day2()

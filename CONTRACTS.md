@@ -950,7 +950,8 @@ The bot saves:
   route keys (invariants: noise dial 0-100, no masker while MASK is off or after a test).
   **(Speech)** With `--day=3` it mashes Mike's SPEECH screen and the Day 3 board (invariants: the dial in range, the
   speech noise only with MASK on, other ear, mask level, never in Hoot's turn; the board's steps all end right).
-  Any other day is refused (exit 2), never played as Day 1; `tools/movie_check.sh` refuses the same way.
+  Any other day is refused (exit 2), never played as Day 1; `tools/movie_check.sh` (and `tools/movie_ac.tscn`)
+  refuse the same way any day other than 1-3, and any `--chapter` (they take `--day` only).
 - Runner: `godot --headless --path . -s res://tests/run_tests.gd [-- --filter=word --verbose]`.
   Exit codes: 0 = green, 1 = failures, 2 = no tests.
 
