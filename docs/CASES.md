@@ -64,8 +64,10 @@ pop her ear ("Hnnnngh!"), and her referral folds into a paper plane that lands o
 
 Frequencies 250, 500, 750, 1k, 1.5k, 2k, 3k, 4k, 6k, 8k. Every case uses the default real interaural attenuation
 (phones 60, inserts 75, bone 0), so no unmasked AIR reading is ever a cross-heard shadow, but every unmasked BONE
-reading on a poorer ear is the better cochlea answering (the Ghost from Day 2), so the runner adds masked bone
-wherever the rules ask. Every shape below survives any single 5 dB wobble (`story/tests/test_cases.gd`).
+reading is the better cochlea answering, wherever the buzzer sits (the Ghost from Day 2). So one-sided cases put
+unmasked bone on the better ear only (Steve's convention, as on Day 2), compare the poorer ear's air with it, and the
+runner adds masked bone on the poorer ear wherever the rules ask. Every shape below survives any single 5 dB wobble
+(`story/tests/test_cases.gd`).
 
 ### 2.1 Rocco (noise notch, symmetric)
 
@@ -96,8 +98,9 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
 - The spring test shows the low pitches 25 dB better. On its own that only proves a change; her report of good and
   bad days (in her opening lines, always heard) is what makes it fluctuating. The spring test was not itself
   asymmetric: 250, 1k and 8k each differ from her right ear by 15, but never two neighbouring frequencies.
-- Unmasked bone on the left reads her RIGHT cochlea (about 10 / 5 / 10 / 15 at 500 / 1k / 2k / 4k): false gaps at
-  500, 1k and 2k, so masked bone runs there and lands on the air values (no real gap).
+- Unmasked bone on her better (right) ear reads her right cochlea (about 10 / 5 / 10 / 15 at 500 / 1k / 2k / 4k).
+  Against her left air that is a gap at 500 and 1k (and 2k when its stamp lands at 10), so masked bone runs on the
+  left there and lands on the air values (no real gap).
 - Masked air: the rule (left air - 40 >= the right cochlea's bone estimate) asks for it at 250 and 1k, each exactly
   on the line, so a 5 dB wobble can drop one; the runner follows the stamped values. It confirms 50 / 45.
 - Last spell ten days ago, good days since, and no new drop: her hearing dips with spells and comes back, and today's
@@ -116,7 +119,8 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
 - Meets the sudden SNHL definition: 30 dB or more poorer at 3+ neighbouring frequencies (here 30-50 dB poorer than
   the left ear at all ten; with no old audiogram the other ear is the baseline), coming on within 72 hours
   (overnight, about 30 hours before the visit).
-- Unmasked right bone reads the LEFT cochlea; masked bone lands on the air values (45 / 55 / 55 / 55 at 500-4k,
+- Unmasked bone on his better (left) ear matches his left air: far under his right air, so masked bone runs on the
+  right and lands on the air values (45 / 55 / 55 / 55 at 500-4k,
   10 dB under the oscillator's limit at 4k and under the 500 Hz "felt" line).
 - Masked air by the rule from 1k up (not at 250 or 500: 40 - 40 and 45 - 40 are below the left ear's 10). It
   confirms the unmasked values: his real phones IA is 60.
@@ -152,7 +156,8 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
   any air or bone value at 500-4k changes the shape, the type or the flag (`story/tests/test_cases.gd`).
 - **Phones, not inserts:** with the canal full of wax the runner forces supra-aural phones for the first visit
   ("inserts go deep, and could push the wax further"); the retest may use inserts again.
-- Unmasked right bone reads the LEFT cochlea (a 5 dB Ghost), so masked bone runs at 1k, 2k, 4k and 500 (full
+- Unmasked bone on his better (left) ear (Hoot's montage) reads about 5; against his right air that is a gap, so
+  masked bone runs on the right at 1k, 2k, 4k and 500 (full
   plateaus, no dilemma: initial noise sits 20 dB or more under the overmasking limit). **No masked air**: right air
   minus 40 never reaches the left bone estimate (10 dB of margin), and Hoot says so from the stamps ("At these levels,
   air tones can't cross the head. Only bone needed masking today!").
@@ -173,7 +178,8 @@ wherever the rules ask. Every shape below survives any single 5 dB wobble (`stor
 - Left shape `flat` (PTA 35), right normal, asymmetric. Left type **conductive** (gaps of 25 at 500 / 1k / 2k / 4k),
   `abg_red_flag` true; neither changes under any single 5 dB wobble. The slight low-pitch tilt (40 at 250) suits
   fluid's stiffness-plus-mass effect without becoming a `rising` shape. Bone is flat: no Carhart dip (Bonnie's lesson).
-- Masked bone at 1k, 2k, 4k and 500 (left oscillator, noise in the right ear); no masked air with phones or inserts.
+- Unmasked bone on her better (right) ear (Hoot's montage), then masked bone on the left at 1k, 2k, 4k and 500
+  (left oscillator, noise in the right ear); no masked air with phones or inserts.
 - Tympanograms: right A (-15 daPa, 0.7 mL, canal 1.2 mL), left B with a normal 1.1 mL canal (fluid) (tip medium).
 
 ## 3. Beat by beat (one runner for every case)
@@ -189,7 +195,7 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 | 3 | `otoscopy` | A quick look (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); the caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
 | 5 | `instructions` | One line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. | dialogue |
-| 6 | `audiometry` | The case's test plan (section 4), then masked bone on each bone-tested ear and masked air on each air-tested ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every measured bone ear agrees with the case; otherwise Hoot says a neutral line. | the AudiOtron's tone beats |
+| 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. | the AudiOtron's tone beats |
 | 7 | `reveal` | The case board: the audiogram stamps in. Hoot: "What shape do you see?" | dialogue |
 | 8 | `evidence` | The shape question (for Dash and Barnaby, the type of loss; for Skye, where the sound is stuck). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file: a card with a `when` shows only when the measured chart says so (symmetric, asymmetric, conductive, or the air-bone-gap flag), and if any of them read differently on the truth tables Hoot says once: "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!" Medal `evidence`. | choice |
 | 9 | `decision` | Three rubber stamps: FIT / REFER / DOCTOR TODAY. A wrong stamp gets Hoot's reason and another try. Then "present the clue that proves it" from up to nine shuffled cards; each wrong card can have its own reply. Medal `decision`. | choice (stamp tray), choice (clue cards) |
@@ -215,10 +221,14 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
    right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 7 (1k, 2k, 4k, 3k, 8k, retest, 500: the bite's low
    edge is the player's). Barnaby: right ear, N = 2 (1k and 2k); on the retest, N = 1 (1k, where he was 35 two
    days ago). Skye: left ear, N = 2.
-3. Bone on the player's ear (Hoot). Rocco's and Ginger's unmasked bone sits within 10 dB of the air in both ears
-   (no air-bone gap), so no bone masking is needed.
-4. Masked bone on each bone-tested ear where `ClinicRules.masked_freqs_needed(results, ear, &"bc_masked")` is not
-   empty (Hoot; the oscillator moves if the ear changes).
+3. Unmasked bone (Hoot). One-sided cases: on the better ear only (Steve's convention, as on Day 2; x8 for Marina
+   and Dash, a montage for Barnaby and Skye), since it answers for the better cochlea wherever it sits;
+   `CaseData.validate` checks it. Symmetric cases (Rocco, Ginger): the right ear only; their
+   unmasked bone sits within 10 dB of the air in both ears (no air-bone gap), so no bone masking is needed.
+4. Masked bone on each ear (`CaseData.masked_bone_ears`: the plan's bone ears, then the other air-tested ears)
+   where `ClinicRules.masked_freqs_needed(results, ear, &"bc_masked")` is not empty: the ear's air against the best
+   unmasked bone from either mastoid (Hoot; the oscillator moves to that ear). Only the poorer ear of a one-sided
+   case ever needs it in the shipped cases (pinned by a test).
 5. Masked air on each air-tested ear where `masked_freqs_needed(results, ear, &"ac_masked")` is not empty (Hoot).
    Checking every ear changes nothing for the shipped cases: the better ear never needs it (pinned by a test).
    When masked bone ran and no ear needed masked air (Barnaby, Skye), Hoot says why.
@@ -333,6 +343,7 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
 | The hours clock | "SINCE IT STARTED 30 h 05 min", counting up in real (unscaled, unpaused) minutes, captioned "Sooner is better". No 72 h mark, no bar, no "too late". |
 | Tympanogram normal box | peak pressure -100 to +50 daPa, compensated peak 0.3 to 1.7 mL; adult canal volume about 0.9 to 2.0 mL |
 | Canal volume with a flat tymp | under 0.6 mL reads "blocked" (`TYMP_BLOCKED_ECV`); 0.9-2.0 "fluid"; over 2.0 "a hole". Every case's flat tymp sits outside 0.6-0.9 (`CaseData.validate`); every other type sits inside the adult band |
+| Bone order | one-sided cases: unmasked bone on the better ear only, then masked bone on the poorer ear wherever its air sits over that bone (Steve's convention, as on Day 2; `CaseData.validate` checks it) |
 | Wax and the earphones | while the canal is full of wax, air goes through headphones, never a foam insert |
 | Retest | a case's `retest` patient (`<id>_after.tres`) is the ear after treatment: the same bone, air back to bone. It belongs to no chapter and never starts a visit; the retest is unscored |
 | Tympanogram curve (drawing only) | compliance(p) = peak / (1 + ((p - peak pressure) / half-width)^2), compensated (canal volume removed, as tympanometers display); half-widths A 37.5 daPa (tympanometric width 75), C 45, As 40, Ad 30; B is flat near 0 |
@@ -344,8 +355,9 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
   coins. `decision`: gold = right stamp and right clue first time; silver = one slip; bronze = more.
 - Visit flags: `case_id`, `decision_first` (the first stamp), `decision` (the right call), `decision_tries`,
   `clue_tries`, `tymp_tip_tries`, `asked_red_flags`; with a retest, `retested` and `retest_type` (the measured type).
-- The retest is a victory lap: no medal, its stamps unscored; the first visit's results are restored before
-  `finish_visit`, and any comfort heart lost during the retest is given back. Its chart keeps the first visit's bone on
+- The retest is a victory lap: no medal, its stamps unscored. `finish_visit` runs before it, so a player who quits
+  during the retest keeps the day; afterwards the first visit's results come back, and any comfort heart lost during
+  the retest is given back. Its chart keeps the first visit's bone on
   the retested ear, so air can be seen climbing back to it.
 
 ## 10. Open questions for Steve
@@ -393,8 +405,8 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
     loss too".
 17. The canal-volume band: 0.9-2.0 mL printed as the adult band, a flat tymp below 0.6 read as "blocked", 0.6-0.9 a
     grey zone no case uses?
-18. Masking: masked bone at 500-4k with full plateaus and no masked air (phones; inserts for Skye); the unmasked-bone
-    Ghost is only 5 dB. Red cards: the 15+ gap card and "one ear only" in both cases, and wax at otoscopy: worth it,
+18. Masking: unmasked bone on the better ear only, then masked bone on the case ear at 500-4k with full plateaus
+    and no masked air (phones; inserts for Skye). Red cards: the 15+ gap card and "one ear only" in both cases, and wax at otoscopy: worth it,
     or too many red cards?
 19. Follow-up wording for Days 6-9: the pulsed-tone tip for Rocco and Marina ("pulsed beeps stand out from the ring.
     Most audiometers can pulse them"), "Filtered musicians' earplugs" with "A filter turns pitches down more evenly

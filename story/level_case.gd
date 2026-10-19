@@ -71,6 +71,9 @@ var clues: Array[Dictionary] = []
 var _walk_done := true
 ## Wax fills the canal (the otoscope's "wax" view): air goes through headphones, never a foam insert.
 var _canal_blocked := false
+## The scored visit's summary when a retest follows it: Game.finish_visit runs before the retest, so
+## quitting during the unscored victory lap keeps the day (chapters_done, coins, best grade).
+var _summary: Dictionary = {}
 
 
 ## The case this level should play.
@@ -274,6 +277,7 @@ func _run() -> void:
 	await _decision(board)
 	await _payoff(board)
 	if case_data.has("retest"):
+		_summary = Game.finish_visit()   # the scored visit ends here; the retest is a victory lap
 		await _retest()
 	await _results()
 
@@ -566,9 +570,7 @@ func _close_screen(cam: Camera3D) -> void:
 ## Headphones, or foam inserts once the upgrade is owned. Never an insert into a canal full of wax.
 ## The masking rules read the same transducer.
 func _air_transducer() -> StringName:
-	if _canal_blocked:
-		return &"phones"
-	return &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
+	return CaseData.air_transducer(_canal_blocked)
 
 
 func _test(ear: String, plan: Dictionary, info: Dictionary = {}) -> Dictionary:
@@ -606,8 +608,9 @@ func _plan_from(pd: Dictionary) -> Dictionary:
 	return plan
 
 
-## The case's test plan, then whatever masking the stamps ask for: masked bone on each bone-tested
-## ear, then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
+## The case's test plan, then whatever masking the stamps ask for: masked bone on each ear the rules
+## ask (CaseData.masked_bone_ears: one-sided cases test unmasked bone on the better ear, so the case
+## ear's masked bone needs no bone test of its own), then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
 ## no case lines, no step pill).
 func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	var cam := _open_screen()
@@ -639,10 +642,13 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 		await _test(ear, plan, info)
 	var masked_bone := false
 	var masked_air := false
+	var bone_ears: Array[String] = bc_ears.duplicate()
 	if first_pass:
-		for ear: String in bc_ears:
+		for ear: String in CaseData.masked_bone_ears(steps):
 			if ClinicRules.masked_freqs_needed(results, ear, &"bc_masked").is_empty():
 				continue
+			if not bone_ears.has(ear):
+				bone_ears.append(ear)
 			var other := "left" if ear == "right" else "right"
 			_close_screen(cam)
 			if oscillator_on != ear:
@@ -686,7 +692,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	# the case's line describes the true chart ("bone sits with the air: no gap"); if the player's
 	# stamps left a different type on a bone ear, it would contradict the screen, so say a neutral line
 	var agrees := true
-	for ear: String in bc_ears:
+	for ear: String in bone_ears:
 		var measured: StringName = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
 		if measured != CaseData.truth_type(patient, ear):
 			agrees = false
@@ -1030,14 +1036,20 @@ func _retest() -> void:
 	clinic.call("focus_camera", &"door", 1.6)
 	_shot("retest_goodbye", 1.6)
 	await clinic.call("walk_out")
-	results = first_results
-	patient = first_patient
-	Game.set_audiometry_results(first_results)   # the score is the first visit's
-	if Game.get_comfort() < first_comfort:   # hearts lost on the victory lap don't count either
-		Game.gain_comfort("retest_unscored", first_comfort - Game.get_comfort())
+	_restore_first_visit(first_results, first_patient, first_comfort)
 	Game.set_visit_flag("retested", true)
 	Game.set_visit_flag("retest_type", String(measured))
 	hud.call("complete_step", &"retest")
+
+
+## Back to the scored visit after the retest: its results, its patient, and any heart lost on the
+## victory lap given back (the summary was already taken, but the HUD and the visit agree with it).
+func _restore_first_visit(first_results: Dictionary, first_patient: PatientProfile, first_comfort: int) -> void:
+	results = first_results
+	patient = first_patient
+	Game.set_audiometry_results(first_results)
+	if Game.get_comfort() < first_comfort:
+		Game.gain_comfort("retest_unscored", first_comfort - Game.get_comfort())
 
 
 ## The chart the retest board shows: a deep copy of the first visit's results with each retested ear
@@ -1105,7 +1117,7 @@ static func paper_for(c: Dictionary, decision_first: String) -> Dictionary:
 
 func _results() -> void:
 	_phase(&"results")
-	var summary := Game.finish_visit()
+	var summary := _summary if not _summary.is_empty() else Game.finish_visit()
 	var paper_data := paper_for(case_data, String(Game.get_visit_flag("decision_first", "")))
 	summary["case_id"] = case_id
 	summary["headlines"] = paper_data["headlines"]
