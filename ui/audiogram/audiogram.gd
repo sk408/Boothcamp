@@ -645,7 +645,9 @@ func _draw_layers(e: String) -> void:
 			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a * fade_l))
 			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]), Color(col, a * fade_l))
 			if bool(p.get("no_plateau", false)) and (age < 0.0 or age >= STAMP_IN_S):
-				_draw_no_plateau_badge(c + Vector2(12.0, -12.0), fade_l)
+				# on the outer side of a bone symbol (away from the frequency line), else up-right
+				var side := -1.0 if UiDraw.symbol_offset(e, test, 17.0).x < 0.0 else 1.0
+				_draw_no_plateau_badge(c + Vector2(12.0 * side, -12.0), fade_l)
 
 
 # ---------------------------------------------------------------- v3 overlays (builder A)
