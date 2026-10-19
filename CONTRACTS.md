@@ -46,6 +46,8 @@ Day 1 is unchanged (no movie, its pause menu shows no movie button). `tests/test
 **Merged with main** (the speech chapter, Day 3, §9, marked **(Speech)**; the patient cases, Days 6-9, §11, marked
 **(cases)**): those days have no movie either and play exactly as on main. The v4 bone rules (`unmasked_bone()`,
 the either-mastoid masked bone start) give the same answers there, since each case measures unmasked bone on one ear only.
+**(cases follow-up)** One-sided cases now rely on that rule, as Day 2 does: unmasked bone on the better ear only, then
+masked bone on the case ear (§11).
 
 ### §1.2 How modules may touch each other
 
@@ -151,7 +153,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `set_visit_flag(key, v)`, `get_visit_flag(key, default)` | Free-form per-visit flags |
 | `record_medal(beat, "gold" / "silver" / "bronze")` | One medal per micro-game |
 | `set_audiometry_results(results §5.1)` | Story calls it after the last `test_finished`. |
-| `finish_visit() -> Dictionary` | Scores the visit, awards coins, saves, and returns the summary (§5.3). Called once, on results. |
+| `finish_visit() -> Dictionary` | Scores the visit, awards coins, saves, and returns the summary (§5.3). Called once, on results (**(cases)** a case with a retest calls it just before the retest, §11). |
 | `add_coins(n)`, `has_upgrade(id)`, `buy_upgrade(id, cost) -> bool` | Shop |
 | `cli: Dictionary`, `cli_flag(name)`, `cli_value(name, default)`, `is_autoplay()` | User args after `--` (§7.1) |
 | `rng: RandomNumberGenerator` | Seeded (`--seed`, default 1234 in autoplay). Use it for anything that should replay the same way. |
@@ -224,7 +226,7 @@ answered by the left cochlea, `cross_heard`).
   - `TESTS`, `TRANSDUCERS`, `BC_FREQS` (250-4k), `BC_REQUIRED` [1000, 2000, 4000, 500], `BC_MAX_DB` (250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65), `VIBROTACTILE_DB` (250: 30, 500: 55).
   - `IA_RULE_DB` (phones 40, inserts 55, bone 0), `MASK_SAFETY_DB` 10, `OCCLUSION_DB` (phones: 250 +15, 500 +15, 750 +10, 1k +10; inserts 0), `OCCLUSION_MAX_GAP_DB` 10, `MASK_STEP_DB` 5, `PLATEAU_STEPS` 3, `MASK_MIN_DB` 0, `MASK_MAX_DB` 100.
   - `ABG_CONDUCTIVE_DB` 10 (gap > 10 = conductive), `ABG_RED_FLAG_DB` 15 at `ABG_RED_FLAG_FREQS` [500, 1000, 2000], `CARHART_FREQ` 2000, `CARHART_MIN_DIP_DB` 10, `HEARING_TYPES`, `HEARING_TYPE_TITLES`, `MASK_STATUSES` (off, needed, under, ok, over, impossible).
-  - Functions: `test_id`, `test_is_bone`, `test_is_masked`, `unmasked_test`, `test_freqs`, `max_db_for(freq, transducer)`, `clamp_db_for`, `clamp_mask_db`, `ia_rule`, `occlusion_effect`, `air_bone_gap`, `is_conductive_gap`, `abg_red_flag`, `hearing_type`, `has_carhart_notch`, `ac_masking_needed` (test AC - IA >= non-test BC), `bc_masking_needed` (gap > 10), `initial_masking` (non-test AC + 10 + occlusion), `overmask_limit` / `is_overmasked` (masker - IA >= test cochlea), `masking_dilemma`, `mask_status`, `next_mask_step` (heard: noise +5; missed: tone +5), `plateau_run`, `sheet_thresholds`, `best_thresholds`, `nontest_bone_estimate`, `masked_freqs_needed`, `response_threshold` (the cross-hearing model: either cochlea answers).
+  - Functions: `test_id`, `test_is_bone`, `test_is_masked`, `unmasked_test`, `test_freqs`, `max_db_for(freq, transducer)`, `clamp_db_for`, `clamp_mask_db`, `ia_rule`, `occlusion_effect`, `air_bone_gap`, `is_conductive_gap`, `abg_red_flag`, `hearing_type`, `has_carhart_notch`, `ac_masking_needed` (test AC - IA >= non-test BC), `bc_masking_needed` (gap >= `BC_MASK_GAP_DB`, 10: clinical review E5; `is_conductive_gap` stays > 10 for naming the loss), `initial_masking` (non-test AC + 10 + occlusion), `overmask_limit` / `is_overmasked` (masker - IA >= test cochlea), `masking_dilemma`, `mask_status`, `next_mask_step` (heard: noise +5; missed: tone +5), `plateau_run`, `sheet_thresholds`, `best_thresholds`, `nontest_bone_estimate`, `masked_freqs_needed`, `response_threshold` (the cross-hearing model: either cochlea answers).
   - **(v4)** `unmasked_bone(results, freq) -> Variant`: the lower of BOTH ears' unmasked bone stamps at `freq`
     (`null` when neither has one). Bone crosses the skull for free, so an unmasked bone answer belongs to the
     better cochlea, wherever the oscillator sat. `masked_freqs_needed(results, ear, &"bc_masked")` now compares the
@@ -1445,7 +1447,8 @@ test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a
 `audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
 `do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first
 stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),
-reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, bone is tested on that ear only.
+reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, unmasked bone goes on the better ear only; the runner then masks bone on each ear
+whose air sits over it (`CaseData.masked_bone_ears`, as on Day 2).
 `CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
 checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
 the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
@@ -1467,8 +1470,9 @@ the option text, so the mouse bot clicks them by their first 18 characters (test
 
 **Visit and medals.** Medals `history` (Chat), `tymp` (Tymp), `evidence` (Pattern), `decision` (Call). Visit flags:
 `case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`, and with a
-retest `retested`, `retest_type`. The retest has no medal and is unscored: the first visit's results are restored
-(`Game.set_audiometry_results`) and any heart lost during it is given back (`Game.gain_comfort`) before `finish_visit`. The summary gains `case_id`, `headlines`, `subheads`,
+retest `retested`, `retest_type`. The retest has no medal and is unscored: a case with a retest calls `finish_visit`
+before it (so quitting during the retest keeps the day), and afterwards the first visit's results are restored
+(`Game.set_audiometry_results`) and any heart lost during it is given back (`Game.gain_comfort`). The summary gains `case_id`, `headlines`, `subheads`,
 `medal_beats` (a wrong first stamp swaps the S to C headlines, `LevelCase.paper_for`).
 
 **Anchors.** `reveal_audiogram` (the board's chart), `case_stamps`, `case_clues`.

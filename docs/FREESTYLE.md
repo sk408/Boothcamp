@@ -142,7 +142,7 @@ measured chart once it exists, so the list never asks for masking the player's o
 | Tympanometer | either ear conductive or mixed, or either tympanogram not type A (or the case's `needs_tymp`) | it tells a stiff, floppy or fluid-filled middle ear apart |
 | Air tones | always | the chart |
 | Bone conduction | any air threshold poorer than 25 dB HL | normal air rules out a conductive part; anything poorer needs bone to type it |
-| Masked bone, per ear | that ear's air sits more than 10 dB above the unmasked bone (`ClinicRules.bc_masking_needed`) | unmasked bone reads the better cochlea, from either side |
+| Masked bone, per ear | that ear's air sits 10 dB or more above the unmasked bone (`ClinicRules.bc_masking_needed`) | unmasked bone reads the better cochlea, from either side |
 | Masked air, per ear | air minus 40 dB (phones; 55 inserts) reaches the other ear's bone (`ClinicRules.ac_masking_needed`) | loud air tones cross the head |
 
 ### 4.1 The question deck (every walk-in answers all ten)
@@ -179,7 +179,7 @@ Each ear's type is graded against the patient's truth (`ClinicRules.hearing_type
 types the ear differently (a few wandering stamps), the type their chart shows also counts, and Hoot says right
 away what the ear really is ("Underneath, the left ear is a mixed loss: a few stamps wandered.").
 
-One exception: a gap the chart asked to mask and nobody masked. When an ear's air sits more than 10 dB above
+One exception: a gap the chart asked to mask and nobody masked. When an ear's air sits 10 dB or more above
 the unmasked bone and that ear has no masked bone, its reading does not count (the gap may be the other cochlea
 answering). Picking it costs a Chart slip, and Hoot explains and names the true type. The workup card also
 flags the missing masked bone.

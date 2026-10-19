@@ -98,8 +98,8 @@
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "montage": true, "intro": "Better ear first. Hoot's montage on the right: fasten your seatbelts!"},
 		{"ear": "left", "test": "ac", "hoot_turn_after": 2, "intro": "Left ear's yours: the underwater side. Start at 1k."},
-		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "intro": "Bone at Hoot speed. Does her inner ear hear fine?",
-			"before": [["Hoot", "Bone buzzer on her left. Bone skips the middle ear. Watch for the Ghost!"]]}
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "montage": true, "intro": "Hoot's montage: bone on her good right ear!",
+			"before": [["Hoot", "Bone mostly skips the middle ear. Better ear first: the buzzer goes on her right."]]}
 	],
 	"after_audiometry": [
 		["Hoot", "Masked bone's in. Let's see where her left ear's marks landed."]

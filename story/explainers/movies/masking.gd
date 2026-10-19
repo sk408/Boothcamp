@@ -21,12 +21,15 @@ const MOVIE: Dictionary = {
 	"seen_at": "plateau",
 	"scenes": [
 		{
-			"id": "meet", "set": "meet", "title": "Meet the cochleas", "duration": 8.0,
-			"captions": ["Hoot's Movie Matinee! Meet Righty and Lefty: two cochleas, one on each side of one head."],
-			"teaches": "Each ear has its own cochlea, and both live in the same skull.",
-			"board": "Curtains swish open on a cinema screen; title card HOOT'S MOVIE MATINEE / THE CROSS-HEARING GHOST (2 s). A big round cartoon head, seen from the front, with a see-through window. Two snail-shell cochleas pop in: red Righty on the screen's LEFT (her right is on your left), blue Lefty on the right, with name tags. They wave.",
-			"params": {},
-			"cues": [{"t": 0.2, "sfx": "fanfare", "vol_db": -14.0}, {"t": 2.6, "sfx": "pop", "pitch": 1.2, "vol_db": -8.0}, {"t": 3.0, "sfx": "pop", "pitch": 0.9, "vol_db": -8.0}],
+			"id": "meet", "set": "meet", "title": "Meet the cochleas", "duration": 14.0,
+			"captions": ["Hoot's Movie Matinee! Today's mystery: how do you test ONE ear when the other can hear?",
+				"The answer is called MASKING. Let's see why we need it, and how it works.",
+				"Meet Righty and Lefty: two cochleas, one on each side of one head."],
+			"caption_at": [0.3, 4.4, 8.4],
+			"teaches": "What the movie is about (testing one ear when the other can hear too: masking), then: each ear has its own cochlea, and both live in the same skull.",
+			"board": "Curtains swish open on a cinema screen; title card HOOT'S MOVIE MATINEE / THE CROSS-HEARING GHOST holds for 8 s while Hoot says what the movie is about, with two question chips under it: 'Why can the OTHER ear answer?' and 'How does masking stop it?'. Then a big round cartoon head, seen from the front, with a see-through window. Two snail-shell cochleas pop in: red Righty on the screen's LEFT (her right is on your left), blue Lefty on the right, with name tags. They wave.",
+			"params": {"card_hold": 8.0, "questions": ["Why can the OTHER ear answer?", "How does masking stop it?"]},
+			"cues": [{"t": 0.2, "sfx": "fanfare", "vol_db": -14.0}, {"t": 2.0, "sfx": "pop", "pitch": 1.0, "vol_db": -10.0}, {"t": 4.6, "sfx": "pop", "pitch": 1.1, "vol_db": -10.0}, {"t": 8.6, "sfx": "pop", "pitch": 1.2, "vol_db": -8.0}, {"t": 9.0, "sfx": "pop", "pitch": 0.9, "vol_db": -8.0}],
 		},
 		{
 			"id": "air", "set": "air", "title": "Air: one ear at a time", "duration": 8.0,

@@ -102,8 +102,8 @@
 	"audiometry": [
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "montage": true, "intro": "Better ear first, like the pros. Hoot's montage: the left in a flash!"},
 		{"ear": "right", "test": "ac", "hoot_turn_after": 2, "intro": "Right ear's yours: the side that went quiet. Start at 1k."},
-		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone at Hoot speed. Is the inner ear behind that plug okay?",
-			"before": [["Hoot", "Bone skips the canal and the middle ear. If the cochlea's fine, bone will say so."]]}
+		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "montage": true, "intro": "Hoot's montage: bone on his good left ear!",
+			"before": [["Hoot", "Bone mostly skips the canal and middle ear. Better ear first: the buzzer goes on his left."]]}
 	],
 	"after_audiometry": [
 		["Hoot", "Masked bone's in, Ghost chased off. Now: bone against air!"]

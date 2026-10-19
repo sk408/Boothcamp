@@ -101,6 +101,8 @@ var _freestyle_opened := false
 var _days_opened := false
 var _days_report: Dictionary = {}
 var _days_problems: PackedStringArray = []
+## (Cases) Problems seen during a case's visit (the retest must start after the scored visit is saved).
+var _case_problems: PackedStringArray = []
 
 
 func _ready() -> void:
@@ -179,6 +181,8 @@ func _on_phase(phase: StringName, info: Dictionary) -> void:
 	_phase = phase
 	_phase_info = info
 	_phase_log.append(phase)
+	if phase == &"retest" and not Game.visit.has("summary"):
+		_case_problems.append("retest: began before the scored visit was saved (quitting would lose the day)")
 	var suffix := ("_" + String(info["ear"])) if info.has("ear") else ""
 	if info.has("test") and String(info["test"]) != "ac":
 		suffix += "_" + String(info["test"])
@@ -1009,6 +1013,7 @@ func _finish() -> void:
 		elif String(_summary.get("chapter_id", "")) != String(_days_report["picked"]):
 			problems.append("days: picked %s but played %s" % [_days_report["picked"], _summary.get("chapter_id", "")])
 		problems.append_array(_days_problems)
+	problems.append_array(_case_problems)
 	if _summary.has("freestyle_case"):
 		report["freestyle"] = {"case": _summary["freestyle_case"], "medals": _summary.get("medals", {}),
 			"visit_score": snappedf(float(_summary.get("visit_score", 0.0)), 0.1)}
@@ -1115,8 +1120,7 @@ func _check_conductive_case(case_id: String, res: Dictionary, report: Dictionary
 	for f: int in [500, 1000, 2000, 4000]:
 		if not (e.get("bc_masked", {}) as Dictionary).has(f):
 			problems.append("%s: %s masked bone missing at %d Hz" % [case_id, ear, f])
-	var wax := String((c.get("otoscopy", {}) as Dictionary).get("view", "clear")) == "wax"
-	var tr := &"inserts" if Game.has_upgrade("insert_earphones") and not wax else &"phones"
+	var tr := CaseData.air_transducer(CaseData.canal_blocked(c))
 	report["air_transducer"] = String(tr)
 	for chk: String in ["right", "left"]:
 		var need := ClinicRules.masked_freqs_needed(res, chk, &"ac_masked", tr)
