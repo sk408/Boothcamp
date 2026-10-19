@@ -34,7 +34,7 @@ thresholds_left = Dictionary[int, int]({
 })
 bc_left = Dictionary[int, int]({
 250: 5,
-500: 0,
+500: 10,
 750: 5,
 1000: 5,
 1500: 5,

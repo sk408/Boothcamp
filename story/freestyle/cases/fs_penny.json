@@ -55,7 +55,7 @@
 	"why": {
 		"prompt": "Why does Penny need no hearing aids?",
 		"options": [
-			["Every tone was 25 dB or better in both ears.", true, "Right! 25 dB or better is the normal range for adults."],
+			["Every tone was 25 dB or better in both ears.", true, "Right! 25 dB or better is a common adult normal. WHO's normal: a better-ear four-tone average under 20."],
 			["She is too young for hearing aids.", false, "Age doesn't decide. Children wear hearing aids too. The chart decides."],
 			["Her tympanograms were both type A.", false, "Type A means the eardrum moves well. It can't tell how well she hears."],
 			["Her husband admitted that he mumbles.", false, "Wishful thinking! It's her chart that clears her: 25 or better everywhere."]

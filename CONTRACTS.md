@@ -1532,10 +1532,13 @@ flags, asymmetry, decisions), `ClinicRules` (types of loss, masking rules, PTA),
 `audiometry` (info `{ear, test}`), `freestyle_chart`, `decision`, `freestyle_debrief`, `results`. `Game.PHASES`
 gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief`.
 
-**Beats.** No new beat kinds: everything is `dialogue`, `choice` and the AudiOtron's own beats. The waiting room's
+**Beats.** No new beat kinds: everything is `dialogue`, `choice`, the AudiOtron's own beats and, for the masking
+recap, `explainer`. The waiting room's
 pick, the tool tray, the question board and every clinic choice (tip, tymp type, ear first, mastoid, masked test,
 chart type, the stamp) are `choice` beats whose `best` is the pro's pick (`FsRules.best_tool`). Buttons start
-with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique).
+with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique). While
+Day 2's masking movie is unseen, the visit's first masked test plays the one-card `masking_recap` first (the
+`explainer` beat, as on Day 2; clinical review A2).
 
 **Visit and medals.** Medals `fs_chat` (Chat), `fs_workup` (Workup), `fs_chart` (Chart), `fs_call` (Call). The
 paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit's own score. Summary keys:
@@ -1559,12 +1562,18 @@ view off and the music back; the next test re-registers it. It is freed when the
 
 **Anchors.** `freestyle_chart` (the chart card).
 
-**Rules.** Freestyle's one departure from the `CaseRules` fit rule (Steve's question 10 rule, 2026-10-19): a clear
-difference between the ears that a known cause explains, with no other red flag, may be fitted, with a yearly recheck
-(the game's default; Buck is a working call until Steve answers question 14; docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
+**Rules.** The calls follow `CaseRules` (red flags, including a clear difference between the ears); Steve,
+2026-10-19: refer for red flags or an asymmetry with no known cause, and a likely cause (Buck's shooting) still
+sees a doctor first (docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
+Masked bone starts from unmasked bone stamped on either mastoid; with none yet the runner sends the player to bone
+first (no unmasked pre-run on the poorer side). Any test begun before the otoscope looked, bone included, is the
+"look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (an ear with a
+middle-ear part whose truth has the notch, shown by the chart's masked bone) and, on every FIT, that a full fitting also checks words in quiet and in noise.
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in
 asks where they have trouble hearing (and a FIT's debrief turns those places into goals), the tymp tip
 matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
-screen, an unmasked gap is never an accepted chart type, and the title's menu ends above the footer.
+screen, an unmasked gap is never an accepted chart type, the title's menu ends above the footer, every masked
+frequency leaves 20 dB between the starting noise and the overmasking line on headphones, no true bone reaches
+55 dB at 500 Hz, and the debrief's extra lines go where they belong.

@@ -1,7 +1,8 @@
 # Booth Camp: Freestyle (the walk-in clinic)
 
 Practice mode outside the story. The player runs their own clinic: a waiting room of walk-in patients, any test
-in any order, then the call. No script and no coaching of the tests: Hoot only gives a one-line hint after a wrong
+in any order, then the call. No script and no coaching during the tones: besides short routine lines and, until
+Day 2's masking movie is seen, the one-card masking recap (4.6), Hoot only gives a one-line hint after a wrong
 tympanogram or chart type, and debriefs at the end.
 Steve checks every clinical call (section 8 is his checklist).
 
@@ -12,7 +13,7 @@ simple rules a beginner can follow.
 
 | | |
 |---|---|
-| Teaches | choosing the workup yourself: which history questions matter, look before you insert, when bone is needed, when masking is needed, reading the chart (type of loss per ear) and the call |
+| Teaches | choosing the workup yourself: which history questions matter, look before any test, when bone is needed, when masking is needed, reading the chart (type of loss per ear) and the call |
 | Opens | the title's **Freestyle** button. Every walk-in is open; play any, any order, as often as you like, or press **Surprise me** |
 | Scenes | `res://story/freestyle/waiting_room.tscn` (the hub), `res://story/freestyle/level_freestyle.tscn` (one runner for every walk-in) |
 | Case data | `story/freestyle/cases/<id>.json` (the source of truth for every line that ships), patient truth in `core/patients/<id>.tres` |
@@ -51,7 +52,8 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
    the case's own line for that stamp, then another go. Then "Why?": pick a reason (some cases have more than
    one right reason).
 6. **Debrief.** The **workup card**: what a pro would have run, in order, ticked or crossed against what the
-   player did, with Hoot's line for each slip (section 4.5, up to four lines). Then Hoot's lines from the case.
+   player did, with Hoot's line for each slip (section 4.5, up to four lines). Then Hoot's lines from the case,
+   then the runner's extra lines (4.6).
 7. **Goodbye** (the case's lines; a FIT puts the hearing aids on) and the **Daily Decibel** with the
    freestyle medals: Chat, Workup, Chart, Call. Its buttons go back to the waiting room (**Waiting room**) or
    play the same patient again.
@@ -128,7 +130,9 @@ word lists anywhere. Otoscope views on main: `clear` only (earwax and fluid view
 Truth tables follow docs/CASES.md section 2 conventions, plus two freestyle limits so every tone is measurable:
 air at least 10 dB under the audiometer's maximum, and bone at the required bone frequencies at least 5 dB under
 the bone oscillator's maximum (`ClinicRules.BC_MAX_DB`: 500 Hz 60, 1k to 2k 70, 4k 65). No masking dilemmas
-(no large conductive loss in both ears).
+(no large conductive loss in both ears): every frequency that needs masking leaves at least 20 dB on headphones
+between the starting noise and the overmasking line, so a 15 dB plateau fits. True bone at 500 Hz stays under
+55 dB HL, where a patient can feel the oscillator buzz instead of hearing it.
 
 ## 4. The workup a pro runs (`FsRules.workup`)
 
@@ -138,11 +142,11 @@ measured chart once it exists, so the list never asks for masking the player's o
 | Step | Needed when | Why |
 |---|---|---|
 | Ask questions | always: the case's `key_questions`, red flags and trouble spots always | history first; red flags decide referrals; trouble spots become the fitting goals |
-| Look in the ears | always, before the tympanometer or any earphone | never put anything in an ear you have not looked in |
+| Look in the ears | always, before any test, bone conduction included (ASHA 2005; BSA 2018, 5.1) | what you see (wax, a hole, discharge) explains the chart, and can stop a test |
 | Tympanometer | either ear conductive or mixed, or either tympanogram not type A (or the case's `needs_tymp`) | it tells a stiff, floppy or fluid-filled middle ear apart |
 | Air tones | always | the chart |
-| Bone conduction | any air threshold poorer than 25 dB HL | normal air rules out a conductive part; anything poorer needs bone to type it |
-| Masked bone, per ear | that ear's air sits 10 dB or more above the unmasked bone (`ClinicRules.bc_masking_needed`) | unmasked bone reads the better cochlea, from either side |
+| Bone conduction | any air threshold poorer than 25 dB HL | with air this good, a gap big enough to matter is very unlikely, so bone is optional; anything poorer needs bone to type it |
+| Masked bone, per ear | that ear's air sits 10 dB or more above the unmasked bone (`ClinicRules.bc_masking_needed`) | unmasked bone reads the better cochlea, from either side; masked bone starts from it, so unmasked bone comes first |
 | Masked air, per ear | air minus 40 dB (phones; 55 inserts) reaches the other ear's bone (`ClinicRules.ac_masking_needed`) | loud air tones cross the head |
 
 ### 4.1 The question deck (every walk-in answers all ten)
@@ -188,21 +192,38 @@ flags the missing masked bone.
 
 | Stamp | Means |
 |---|---|
-| **FIT** | hearing aids, no red flags. One exception, Steve's rule (2026-10-19, question 10): a clear difference between the ears that a known cause explains, with no other red flag, is not referred. The game fits it with a yearly recheck (its default). Buck, a right-handed shooter with a worse left ear, is the example, a working call until Steve answers question 14 |
-| **REFER** | see a doctor before (or instead of) hearing aids: any red flag in `CaseRules.RED_FLAGS` (these include an air-bone gap and a clear difference between the ears), except a difference that a known cause explains (the FIT exception) |
-| **DOCTOR TODAY** | a sudden loss (`CaseRules` sudden definition) within the last 30 days: same-day referral |
+| **FIT** | hearing aids, no red flags. A long-standing loss with no red flag is fitted without a referral first (Steve, 2026-10-19, question 10: Sid) |
+| **REFER** | see a doctor before (or instead of) hearing aids: any red flag in `CaseRules.RED_FLAGS` (these include an air-bone gap and a clear difference between the ears). Steve's rule (question 10): refer for red flags or an asymmetry with no known cause. A likely cause is not a proven one: Buck's shooting explains his worse left ear, and he still sees a doctor first (Steve, question 14) |
+| **DOCTOR TODAY** | a sudden loss (`CaseRules` sudden definition) within the last 30 days, not explained by wax or the middle ear: same-day referral |
 | **NO AIDS NEEDED** | normal hearing in both ears and no red flag: counsel, baseline on file |
 
 ### 4.5 Slips (the workup medal and the debrief)
 
 - a needed step not run (each one);
 - a needed key question not asked (the chat medal; red flags count double);
-- anything in an ear before looking in the ears: the tympanometer's probe, air tones' earphones or a masked
-  test (bone conduction sits on the mastoid, so it does not count);
+- any test before looking in the ears: the tympanometer's probe, air tones' earphones, bone conduction or a
+  masked test ("Look before any test, bone too: what you see explains the chart.");
 - the poorer ear first for air or bone when the ears differ by more than 5 dB.
 
 Extra tests are never slips (tymp on a normal ear is routine, "NOTHING TO MASK!" answers an unneeded masking
 run), but the debrief says when one was not needed and why.
+
+### 4.6 The routine around the tests (ungraded)
+
+From the clinical review (A1, A2, FS-03, FS-13), short lines where the action already happens:
+
+- Otoscope: "A fresh speculum tip, then a quick look in each ear."
+- The first seat in the booth: the patient is told "Press the button as soon as you hear a beep, in either ear,
+  even a very faint one. Let go when it stops." (BSA 2018, 6.1). Once per session Hoot adds the cases' own
+  routine line: "This morning's listening check: every beep clean, the button works. Dials stay out of view."
+- Masking: masked bone starts from unmasked bone on either mastoid. Picking it before any bone gets "Masked bone
+  starts from unmasked bone. Bone tones first!", and nothing runs. While Day 2's masking movie is unseen, the
+  visit's first masked test opens with the 12-second recap card, and Hoot says the full movie is under Hoot's
+  Movies on the title screen (the pause menu will offer it once the engine's E19 lands).
+- Debrief: when an ear with a middle-ear part (conductive or mixed) has a Carhart notch in its truth and the
+  player's masked bone shows it (Hector), Hoot names it as on Day 2.
+  Every FIT ends with "A full fitting also checks words, in quiet and in noise." The real word tests join the
+  tray when the speech screens are on main.
 
 ## 5. Medals and score
 
@@ -240,7 +261,7 @@ Speech tests: the tray has a **Speech tests** tool reserved (`FsRules.SPEECH_SCR
 word scores land (Day 4), so no walk-in needs speech yet. When the speech screens are on main, speech in noise
 joins every walk-in's workup (Steve, 2026-10-19, question 8: "we use speech in noise on every test now"), and
 every FIT needs a word test before the call (question 6). Until then Hoot names the speech-in-noise test in
-Penny's debrief.
+Penny's debrief, and every FIT's debrief says a full fitting also checks words, in quiet and in noise (4.6).
 
 ### 6.1 Commands
 
@@ -254,7 +275,7 @@ Penny's debrief.
 
 Eight walk-ins, from easy to hard. Every call was checked against current guidance by a researcher and then by a
 second, adversarial reviewer (sources under each case). Where published guidance differs, the game teaches Steve's
-practice and the case says so (Buck, 7.5). Truth tables live in `core/patients/fs_*.tres`; what each
+practice and the case says so. Truth tables live in `core/patients/fs_*.tres`; what each
 patient says is in `story/freestyle/cases/fs_*.json`.
 
 | # | Walk-in | Stars | What it teaches | The call |
@@ -263,7 +284,7 @@ patient says is in `story/freestyle/cases/fs_*.json`.
 | 2 | Mabel Shush, 74, retired librarian | ★ | the classic first fitting: slow, matching, sloping loss | **FIT** |
 | 3 | Sid Sprocket, 45, bike mechanic | ★ | a lifelong, stable loss still gets the full workup | **FIT** |
 | 4 | Dame Viola Vibrato, 68, retired soprano | ★★ | a bigger loss is not a red flag; old aids wear out; narrow canals | **FIT** |
-| 5 | Buck Shotwell, 58, duck hunter | ★★ | an asymmetry that shooting explains, with no other red flag, is fitted and rechecked; masked bone on the worse ear | **FIT** |
+| 5 | Buck Shotwell, 58, duck hunter | ★★ | an asymmetry is a red flag even with a good excuse; masked bone on the worse ear | **REFER** |
 | 6 | Melody Belle, 36, music teacher | ★★ | a sudden loss in one ear is urgent with no pain; mask bone and air | **DOCTOR TODAY** |
 | 7 | Skyler Kickflip, 19, skateboarder | ★★★ | a big air-bone gap and a floppy tymp after a knock | **REFER** |
 | 8 | Hector Ticktock, 63, clockmaker | ★★★ | a mixed loss with a stiff tymp: masking shows the two parts | **REFER** |
@@ -306,7 +327,7 @@ Bone = air in both ears (no bone rows in the file).
 - **Trouble spots** ("Where do you have trouble hearing?"): restaurants, grandkids, the telly.
 - **The workup a pro runs:** questions, then look in the ears, then air (either ear first), then bone (either mastoid).
 - **The call:** FIT. Hoot: "Fit! Slow, matching ears, no red flags, and she's missing the consonants. A classic first fitting." Right reason: "A slow, matching loss in both ears, and no red flags."
-- **Hoot's debrief:** "A textbook first fitting: slow, matching, sloping down to the high pitches. No red flags, so fit." "Vowels are low and loud. Consonants like s, f and th are high and soft. She misses those." "Family tips: face her, get her attention first, pick a quiet table, and turn on TV subtitles." "Restaurants, grandchildren, the telly: those are Mabel's goals. We check each one at her follow-up."
+- **Hoot's debrief:** "A textbook first fitting: slow, matching, sloping down to the high pitches. No red flags, so fit." "Vowels are low and loud. Consonants like s, f and th are high and soft. She misses those." "Family tips: face her, get her attention first, pick a quiet table, and turn on TV subtitles." "Restaurants, grandchildren, the telly: those are Mabel's goals. We check each one at her follow-up." "A full fitting also checks words, in quiet and in noise."
 - **Checked against:** [AAO-HNSF Clinical Practice Guideline: Age-Related Hearing Loss (2024), summary guide](https://www.entnet.org/wp-content/uploads/2024/05/CPG_HearingLoss_SummaryGuideFINAL.pdf); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [AAA Guidelines for the Audiologic Management of Adult Hearing Impairment](https://www.audiology.org/wp-content/uploads/2021/05/haguidelines.pdf_53994876e92e42.70908344.pdf); [21 CFR 801.422 (prescription hearing aid labeling, red flags)](https://www.law.cornell.edu/cfr/text/21/801.422); [Federal Register 87 FR 50698 (Aug 17 2022), OTC hearing aid final rule, comment on bilateral tinnitus](https://www.govinfo.gov/content/pkg/FR-2022-08-17/html/2022-17230.htm).
 
 ### 7.3 Sid Sprocket, 45 (★☆☆): **FIT**
@@ -327,7 +348,7 @@ Bone = air in both ears (no bone rows in the file).
 - **The workup a pro runs:** questions, then look in the ears, then air (either ear first), then bone (either mastoid).
 - **The call:** FIT. Hoot: "Fit! Lifelong, steady, matching ears, no red flags. New aids, and his wheels keep turning." Right reason: "The same steady loss in both ears, no gap, no red flags."
 - **Steve's call** (2026-10-19): question 10: no referral. Refer only for red flags or an asymmetry with no known cause; Sid has neither.
-- **Hoot's debrief:** "Years of aids don't mean skipping the checks. Look, ask and test, every visit." "Bone sat right on air, no gap: that's what shows it's sensorineural. Air alone can't tell." "A sudden drop: a doctor today. One ear behind, no known cause: a doctor first. Sid has neither." "Customers, group rides, the shop phone: those are Sid's goals. We check each one at follow-up."
+- **Hoot's debrief:** "Years of aids don't mean skipping the checks. Look, ask and test, every visit." "Bone sat right on air, no gap: that's what shows it's sensorineural. Air alone can't tell." "A sudden drop: a doctor today. One ear behind, no known cause: a doctor first. Sid has neither." "Customers, group rides, the shop phone: those are Sid's goals. We check each one at follow-up." "A full fitting also checks words, in quiet and in noise."
 - **Checked against:** [21 CFR 801.422, prescription hearing aid labeling, red flag conditions for dispensers](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422); [FDA letter to state officials on the OTC hearing aid final rule (Oct 13, 2022): prescription hearing aids do not require a physician's involvement or medical evaluation](https://fda.gov/media/163084/download); [British Academy of Audiology, Onward Referral Guidance for Adult Audiology Service Users (2023 update page; 15 dB AC asymmetry; bilateral-worsening referral criterion removed)](https://baaudiology.org/?p=11189); [Benson EA, Messersmith JJ. Audiologic Assessment. Seminars in Hearing 2022;43(2):58-65 (red flags -> medical referral before amplification)](https://pmc.ncbi.nlm.nih.gov/articles/PMC9325090); [American Academy of Audiology, Guidelines for the Audiologic Management of Adult Hearing Impairment (2006), sec. 2.1: case history, otoscopic inspection, cerumen management, hearing assessment and needs assessment come before fitting](https://www.audiology.org/wp-content/uploads/2021/05/haguidelines.pdf_53994876e92e42.70908344.pdf).
 
 ### 7.4 Dame Viola Vibrato, 68 (★★☆): **FIT**
@@ -337,20 +358,20 @@ Waiting-room card: "Her old aids whistle a top C, and still the world mumbles." 
 | dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Right air | 30 | 50 | 55 | 60 | 60 | 65 | 60 | 60 | 70 | 75 |
-| Left air | 35 | 55 | 55 | 60 | 60 | 60 | 60 | 60 | 75 | 80 |
+| Left air | 35 | 50 | 55 | 60 | 60 | 60 | 60 | 60 | 75 | 80 |
 
 Bone = air in both ears (no bone rows in the file).
 
-- **Chart:** right sensorineural (PTA 58, moderately severe), left sensorineural (PTA 58, moderately severe). Asymmetric: no.
+- **Chart:** right sensorineural (PTA 58, moderately severe), left sensorineural (PTA 57, moderately severe). Asymmetric: no.
 - **Look and tymp:** Narrow canals, clear; eardrums normal; narrow canals (small tip). Tymp right A (-10 daPa, 0.5 mL, canal 0.9 mL), left A (-15 daPa, 0.6 mL, canal 1.0 mL).
 - **Key questions:** red_flags, onset, which_ear, aids, hardest.
 - **Trouble spots** ("Where do you have trouble hearing?"): dinner parties, opera words, phone.
 - **The workup a pro runs:** questions, then look in the ears, then air (either ear first), then bone (either mastoid).
 - **The call:** FIT. Hoot: "Fit! Slow, matching, no red flags. A bigger loss just needs stronger aids, fitted and checked properly." Right reason: "Slow and even in both ears, no gap, no red flags."
-- **Hoot's debrief:** "A bigger loss isn't a red flag. Slow, matching, no gap, no red flags: that's a fit." "Eight-year-old aids wear out, and hearing drifts. New ones get checked in her ear with a tiny mic." "Dinner parties, the opera, the phone: those are Viola's goals. We check each at her tune-up." "Be honest: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check."
+- **Hoot's debrief:** "A bigger loss isn't a red flag. Slow, matching, no gap, no red flags: that's a fit." "Eight-year-old aids wear out, and hearing drifts. New ones get checked in her ear with a tiny mic." "Dinner parties, the opera, the phone: those are Viola's goals. We check each at her tune-up." "Be honest: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check." "A full fitting also checks words, in quiet and in noise."
 - **Checked against:** [WHO grades of hearing loss (2021), German consensus version, PMC11266198](https://pmc.ncbi.nlm.nih.gov/articles/PMC11266198); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [21 CFR 801.422, prescription hearing aid labeling with red-flag conditions for dispensers](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422); [FDA OTC hearing aid final rule, 87 FR 50698 (Aug 2022), comment responses on tinnitus in one ear](https://www.govinfo.gov/content/pkg/FR-2022-08-17/html/2022-17230.htm); [BSA Practice Guidance: Verification of hearing devices using probe microphone measurements (2018)](https://www.baaudiology.org/app/uploads/2020/11/REMS-2018.pdf).
 
-### 7.5 Buck Shotwell, 58 (★★☆): **FIT**
+### 7.5 Buck Shotwell, 58 (★★☆): **REFER**
 
 Waiting-room card: "Forty years of duck hunting. Now the ducks sneak up on him." Case `fs_buck`.
 
@@ -366,11 +387,10 @@ Bone = air in both ears (no bone rows in the file).
 - **Key questions:** red_flags, which_ear, onset, noise, hardest. Red-flag answers: which_ear.
 - **Trouble spots** ("Where do you have trouble hearing?"): wife in the truck, duck wings, lodge.
 - **The workup a pro runs:** questions, then look in the ears, then air (right ear first), then bone (right mastoid), then masked bone left (1k, 2k, 4k).
-- **The call:** FIT. Hoot: "Fit! Shooting explains the left ear, and no other red flags. Aids, plugs, and a yearly recheck." Right reason: "Shooting explains why his left ear is worse."
-- **Working call, by Steve's question 10 rule (question 14 waits on his answer)** (2026-10-19): refer only for red flags or an asymmetry with no known cause. Shooting explains Buck's left ear and nothing else flags, so FIT, with earplugs under electronic earmuffs and a yearly recheck (a doctor if the left keeps slipping). The yearly interval is the game's default, not a guideline's.
-- **Hoot's debrief:** "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left." "One ear worse is a red flag, unless something explains it. Buck's shotgun does; nothing else flags." "The truck and the lodge are goals for the aids. The duck wings? That's the electronic muffs' job." "Recheck him every year. If the left keeps slipping away from the right, then a doctor."
-- **Checked against:** [Meinke et al., Prevention of NIHL from Recreational Firearms, Semin Hear 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5634813); [ASHA, Recreational Firearm Noise Exposure](https://asha.org/public/hearing/Recreational-Firearm-Noise-Exposure).
-- Where guidance differs: [NICE NG98 rec 1.3.2](https://www.nice.org.uk/guidance/NG98/chapter/recommendations) (consider MRI) and the [BAA Onward Referral Guidance (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf) (refer) both send on an asymmetry of 15 dB or more at 2 adjacent frequencies, with no exception for noise, and Buck's chart meets both. The FDA dispenser red flags ([21 CFR 801.422](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422), `CaseRules.RED_FLAGS` `one_sided`) list a clear difference between the ears. [Schiff et al., Laryngoscope 2024](https://einstein.elsevierpure.com/en/publications/practice-patterns-in-asymmetric-sensorineural-hearing-loss-survey/) finds no clear guidelines, and general ENTs often watch an asymmetry with serial audiograms. The game teaches Steve's practice; Hoot's REFER line says many clinics would refer.
+- **The call:** REFER. Hoot: "Refer! The shotgun likely did it, but ears this lopsided need a doctor's all-clear first." Right reason: "His left ear is much worse than his right."
+- **Steve's call** (2026-10-19): question 14: keep REFER (his answer on the decision card). Hoot's reason: shooting is a likely cause of the worse left ear, not a proven one, so a doctor sees him before any fitting.
+- **Hoot's debrief:** "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left." "But a lopsided loss is a red flag until a doctor clears it. Even with a good excuse." "Note his trouble spots, the truck and the lodge: the fitting goals once he's cleared."
+- **Checked against:** [Meinke et al., Prevention of NIHL from Recreational Firearms, Semin Hear 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5634813); [ASHA, Recreational Firearm Noise Exposure](https://asha.org/public/hearing/Recreational-Firearm-Noise-Exposure); [NICE NG98, Hearing loss in adults, recommendation 1.3.2](https://www.nice.org.uk/guidance/NG98/chapter/recommendations); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [21 CFR 801.422, prescription hearing aid labeling (red flags)](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422).
 
 ### 7.6 Melody Belle, 36 (★★☆): **DOCTOR TODAY**
 
@@ -400,7 +420,7 @@ Waiting-room card: "Lost a fight with a handrail. Now one ear wears a beanie." C
 |---|---|---|---|---|---|---|---|---|---|---|
 | Right air | 10 | 5 | 5 | 5 | 10 | 5 | 10 | 10 | 15 | 10 |
 | Left air | 50 | 50 | 50 | 45 | 45 | 50 | 50 | 55 | 55 | 50 |
-| Left bone | 5 | 0 | 5 | 5 | 5 | 10 | 10 | 5 |  |  |
+| Left bone | 5 | 10 | 5 | 5 | 5 | 10 | 10 | 5 |  |  |
 
 Right bone = air.
 
@@ -431,7 +451,7 @@ Right bone = air.
 - **Trouble spots** ("Where do you have trouble hearing?"): quiet home; fine in noisy workshop.
 - **The workup a pro runs:** questions, then look in the ears, then tympanometer, then air (right ear first), then bone (right mastoid), then masked bone left (500, 1k, 2k, 4k), then masked air left (250, 500, 750, 1k, 1.5k, 2k).
 - **The call:** REFER. Hoot: "Refer! A big gap plus a stiff, shallow tymp points to the middle ear. A doctor decides." Right reason: "A big air-bone gap and a stiff, shallow tymp on the left."
-- **Hoot's debrief:** "A mixed loss has two parts: bone shows the inner ear's share, the gap shows the middle ear's." "Unmasked bone heard his good right cochlea. Only masked bone showed the left ear's own part." "Gap plus stiff tymp points to the middle ear. Doctor first; aids can come later, or alongside."
+- **Hoot's debrief:** "A mixed loss has two parts: bone shows the inner ear's share, the gap shows the middle ear's." "Unmasked bone heard his good right cochlea. Only masked bone showed the left ear's own part." "Gap plus stiff tymp points to the middle ear. Doctor first; aids can come later." When the chart shows the dip: "See the bone dip at 2k on the left? A Carhart notch: a stiff middle ear fakes it."
 - **Checked against:** [Merck Manual Professional, Otosclerosis (T. A. Jan, reviewed June 2026)](https://www.merckmanuals.com/professional/ear,-nose,-and-throat-disorders/middle-ear-and-tympanic-membrane-disorders/otosclerosis); [Ahmed S., Otosclerosis, UCLA Head & Neck Surgery chapter 143 (2011)](https://www.uclahealth.org/sites/default/files/documents/2_23_11_Ahmed_Otosclerosis_ch143_0.pdf); [Sargent E. W., Otosclerosis: A Review for Audiologists, AudiologyOnline (2001)](https://audiologyonline.com/articles/otosclerosis-a-review-for-audiologists-1226); [Laurent C., Tympanometry, Open Access Guide to Audiology and Hearing Aids for Otolaryngologists](https://open.umich.edu/sites/default/files/downloads/tympanometry.pdf); [US FDA hearing-aid red flags (former 21 CFR 801.420; now 'red flag' conditions in 801.422 labeling), as listed in 'Hearing Referral Eight Red Flags', Hearing Health Matters (2018)](https://hearinghealthmatters.org/waynesworld/2018/hearing-referral-eight-red-flags/).
 
 ## 8. Steve's checklist
@@ -445,12 +465,14 @@ reminder that freestyle teaches methods and situations and does not replace trai
 - **8:** yes. Speech in noise is part of every test. Hoot names it in Penny's debrief, and speech in noise joins
   every workup when the speech screens are on main.
 - **10:** no referral for Sid. Refer only for red flags or an asymmetry with no known cause.
-- **14** (Claude's reading of 10; Steve to confirm on the decision card): Buck is now **FIT**, with earplugs under
-  electronic earmuffs and a yearly recheck (a doctor if the left ear keeps slipping). NICE, the BAA and the FDA
-  red-flag list would refer him; 7.5 has the details.
-- The rest keep their defaults: 1 keep 25 dB; 3 no; 4 wait for the doctor; 5 keep; 6 yes, once word scores are
-  in freestyle; 7 keep; 9 yes; 11 yes; 12 yes; 13 two weeks; 15 keep "ringing"; 16 yes; 17 yes; 18 no; 19 yes;
-  20 yes; 21 yes; 22 keep; 23 yes; 24 no.
+- **14:** keep REFER (Steve, on the decision card, 2026-10-19). Buck's shooting is a likely cause of his worse
+  left ear, not a proven one, so a doctor sees him before any fitting, as NICE, the BAA and the FDA red-flag list
+  would also have it. Hoot still teaches plugs under electronic muffs.
+- The rest keep their defaults: 1 keep 25 dB; 3 no; 4 wait for the doctor; 5 keep (since the clinical review,
+  Buck's reply also names pulsing, changed or distressing ringing, FS-16); 6 yes, once word scores are in
+  freestyle; 7 keep; 9 yes; 11 yes; 12 yes; 13 two weeks; 15 keep "ringing"; 16 yes; 17 yes (the game's felt
+  line at 500 Hz is 55 dB HL, section 3); 18 no; 19 yes; 20 yes; 21 yes; 22 keep; 23 yes (people speak up, loud
+  enough for his slow ear, FS-11); 24 no.
 
 The questions as first asked:
 
@@ -481,3 +503,33 @@ does now); answer only where you disagree, by number. The first seven change the
 22. Hector: his right ear (normal to 3k; 4k 35, 6k 40, 8k 45) is graded sensorineural. Keep? (yes = keep; no = make it normal)
 23. Hector: Hoot explains "hears better in the noisy workshop" as people speaking up over the clocks, while his wife murmurs on his poorer side. Right for beginners? (yes/no)
 24. Hector: a loss starting at 53 is late for a stiff middle ear. Change his story to "about twenty years slow"? (yes/no; no now)
+
+## 9. The clinical review's freestyle items
+
+`docs/CLINICAL_REVIEW.md` (2026-10-19) lists FS-01 to FS-17 and A1 to A4 for the walk-ins. Done:
+
+- **FS-01:** no unmasked pre-run on the poorer mastoid. Masked bone starts from unmasked bone on either side;
+  with none yet, the player is sent to bone first.
+- **FS-03:** Hoot names Hector's Carhart notch when the chart shows it (4.6).
+- **FS-04:** Hector's debrief no longer says aids can come "alongside" the referral.
+- **FS-05:** Skyler's left bone at 500 Hz is 10 (was 0), so the plateau fits under the overmasking line; a test
+  keeps 20 dB of room at every masked frequency.
+- **FS-08:** bone before the otoscope is the look-first slip too (4.5). Its line gives the reason without
+  claiming wax changes bone: "Look before any test, bone too: what you see explains the chart."
+- **FS-09, FS-15:** the wording in 4 and 4.4.
+- **FS-10:** Penny's reply calls 25 dB "a common adult normal" and gives WHO's: a better-ear four-tone average
+  (500, 1k, 2k, 4k) under 20.
+- **FS-11:** Hoot's answer to Hector's puzzle now says the raised voices are loud enough for his slow ear. The
+  other half of the classic explanation (a stiff ear also turns the background down) fits two stiff ears, and
+  Hector's right ear is normal, so the game leaves it out.
+- **FS-13, A4:** every FIT ends with "A full fitting also checks words, in quiet and in noise".
+- **FS-14:** Viola's left air (and so bone) at 500 Hz is 50 (was 55); a test keeps every walk-in under 55 there.
+- **FS-16:** Buck's ringing reply names NICE NG98's tinnitus flags: one-sided, pulsing, changed or distressing.
+- **A1, A2:** the routine lines and the masking recap (4.6).
+
+Steve's answer on the Buck decision card (2026-10-19, question 14: keep REFER) is in this change too: Buck is a
+REFER again, with his trouble spots kept as the goals for a fitting once a doctor clears him.
+
+Not changed: FS-02 (already right), FS-06 (done with E5), FS-12 (question 24: no), FS-17 (NO AIDS NEEDED stays
+for normal hearing only; a "not yet" stamp is a later choice). FS-07 (the second-ear 1 kHz retest) waits for the
+engine's E2.

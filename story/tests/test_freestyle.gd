@@ -17,7 +17,7 @@ const EXPECTED: Dictionary = {
 	"fs_mabel": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
 	"fs_sid": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
 	"fs_viola": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
-	"fs_buck": [&"fit", &"sensorineural", &"sensorineural", true, true, false],
+	"fs_buck": [&"refer", &"sensorineural", &"sensorineural", true, true, false],
 	"fs_melody": [&"today", &"sensorineural", &"normal", true, true, true],
 	"fs_skyler": [&"refer", &"normal", &"conductive", true, true, true],
 	"fs_hector": [&"refer", &"sensorineural", &"mixed", true, true, true],
@@ -355,8 +355,8 @@ func test_a_wandering_stamp_still_counts() -> void:
 	lv.free()
 
 
-## "Look before you insert" counts what went in an ear before the otoscope, not the tray's order.
-func test_look_first_counts_probes_only() -> void:
+## "Look first" counts any test begun before the otoscope (bone included, FS-08), not the tray's order.
+func test_look_first_counts_any_test() -> void:
 	var lv := _visit("fs_penny")
 	var p := _patient("fs_penny")
 	lv.set("results", {"ears": {"right": _ear(FsRules.truth_air(p, "right"), {}), "left": _ear(FsRules.truth_air(p, "left"), {})}})
@@ -368,9 +368,59 @@ func test_look_first_counts_probes_only() -> void:
 				return String(r["state"])
 		return ""
 	assert_eq(oto.call(), "ok")
-	lv.set("probe_before_look", true)
-	assert_eq(oto.call(), "slip", "a probe or earphone before the look is the slip")
+	lv.set("tested_before_look", true)
+	assert_eq(oto.call(), "slip", "a probe, earphone or bone oscillator before the look is the slip")
+	assert_has((lv.call("workup_report") as Dictionary)["lines"], "Look before any test, bone too: what you see explains the chart.")
 	lv.free()
+
+
+## (FS-05) Every masked frequency on headphones leaves at least 20 dB between the starting noise and
+## the overmasking line, so a 15 dB plateau fits without the warning. Conservative: the occlusion
+## allowance whenever the masked ear's own gap allows it, and for masked air's line the better cochlea
+## at the nearest stamped bone frequency (the AudiOtron's stand-in, AudiometrySession._nearest_freq).
+func test_masking_windows_fit_a_plateau() -> void:
+	for id: String in FsData.CASE_IDS:
+		var p := _patient(id)
+		for ear: String in ClinicRules.EARS:
+			var other := "left" if ear == "right" else "right"
+			for f: int in FsRules.truth_masked_bone(p, ear):
+				var start := ClinicRules.initial_masking(p.get_threshold(other, f), f, &"bc_masked",
+					p.get_threshold(other, f) - p.get_bc_threshold(other, f), &"phones")
+				var limit := ClinicRules.overmask_limit(p.get_bc_threshold(ear, f), &"bc_masked", 0, &"phones")
+				assert_true(limit - start >= 20, "%s %s masked bone %d Hz: noise starts at %d, overmasking at %d" % [id, ear, f, start, limit])
+			for f: int in FsRules.truth_masked_air(p, ear, &"phones"):
+				var bf := 0
+				for b: int in ClinicRules.BC_REQUIRED:
+					if bf == 0 or absf(log(float(b) / f)) < absf(log(float(bf) / f)) - 0.0001:
+						bf = b
+				var start2 := ClinicRules.initial_masking(p.get_threshold(other, f), f, &"ac_masked", 0, &"phones")
+				var limit2 := ClinicRules.overmask_limit(p.get_threshold(ear, f), &"ac_masked",
+					p.get_threshold(ear, f) - FsRules.better_cochlea(p, bf), &"phones")
+				assert_true(limit2 - start2 >= 20, "%s %s masked air %d Hz: noise starts at %d, overmasking at %d" % [id, ear, f, start2, limit2])
+
+
+## (FS-14) No walk-in's true bone reaches the felt-vibration line at 500 Hz (about 55 dB HL), as on the days.
+func test_bone_stays_under_the_felt_line() -> void:
+	for id: String in FsData.CASE_IDS:
+		var p := _patient(id)
+		for ear: String in ClinicRules.EARS:
+			assert_true(p.get_bc_threshold(ear, 500) < 55, "%s %s bone at 500 Hz is %d" % [id, ear, p.get_bc_threshold(ear, 500)])
+
+
+## (FS-03, FS-13) After the case's debrief: the Carhart line only when the truth has the notch and the
+## chart shows it (Hector), and the word-test line on every FIT.
+func test_debrief_extras() -> void:
+	var lv := _visit("fs_hector")
+	assert_true(ClinicRules.has_carhart_notch(FsRules.truth_bone(_patient("fs_hector"), "left")), "Hector's stiff ear has the notch")
+	assert_eq(lv.call("debrief_extras"), [] as Array[String], "no notch on the chart, no line")
+	lv.set("results", {"ears": {"left": {"carhart_notch": true}, "right": {"carhart_notch": true}}})
+	assert_eq(lv.call("debrief_extras"), [LevelFreestyle.CARHART_LINE % "left"], "the left ear only: the right's truth has no notch")
+	lv.free()
+	for id: String in FsData.CASE_IDS:
+		var v := _visit(id)
+		var fit := StringName(String(_case(id)["decision"])) == &"fit"
+		assert_eq((v.call("debrief_extras") as Array).has(LevelFreestyle.WORDS_LINE), fit, "%s: the word-test line on a FIT only" % id)
+		v.free()
 
 
 ## A double-click on a tray card cannot also answer the next row (mouse presses wait out the arming).
@@ -449,7 +499,9 @@ func test_an_air_only_visit_misses_the_rest() -> void:
 ## Every line the runner gives Hoot keeps the house limit, filled with its longest words.
 func test_runner_hoot_lines_fit_the_limit() -> void:
 	var lines: Array[String] = [LevelFreestyle.BRIEFING, LevelFreestyle.TEXTBOOK_LINE,
-		LevelFreestyle.WANDER_LINE % ["right", "a mixed loss"], LevelFreestyle.GAP_LINE % ["right", "a mixed loss"]]
+		LevelFreestyle.WANDER_LINE % ["right", "a mixed loss"], LevelFreestyle.GAP_LINE % ["right", "a mixed loss"],
+		LevelFreestyle.ROUTINE_LINE, LevelFreestyle.MOVIE_HINT, LevelFreestyle.CARHART_LINE % "right",
+		LevelFreestyle.WORDS_LINE]
 	for k: StringName in CaseRules.TYMP_TYPES:
 		lines.append(LevelFreestyle.TYMP_HINT % [k, CaseRules.TYMP_SHAPES[k]])
 	for id: String in FsData.CASE_IDS:
