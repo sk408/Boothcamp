@@ -484,9 +484,9 @@ func _ghost_demo() -> void:
 	var ub: Variant = ClinicRules.unmasked_bone(results, DEMO_FREQ)
 	var ubi := int(ub) if ub != null else lb
 	if ClinicRules.bc_masking_needed(a1, ubi):
-		await _say("Hoot", "Right air %d, unmasked bone %d: a gap over 10 dB. Any gap over 10? Mask the bone!" % [a1, ubi])
+		await _say("Hoot", "Right air %d, unmasked bone %d: a %d dB gap. Gap of 10 or more? Mask the bone!" % [a1, ubi, a1 - ubi])
 	else:
-		await _say("Hoot", "The rule: air more than 10 dB poorer than unmasked bone? Mask the bone!")
+		await _say("Hoot", "The rule: air 10 dB or more poorer than unmasked bone? Mask the bone!")
 	await _say("Hoot", "That's the Ghost's trick. Only masking the left ear can tell us the right cochlea's truth.")
 	hud.call("complete_step", &"bone")
 

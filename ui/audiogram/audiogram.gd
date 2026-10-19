@@ -662,7 +662,7 @@ func _draw_halo(c: Vector2, k: float) -> void:
 
 
 ## "blinking = mask me": the masking assistant's legend, bottom-left inside the plot. (polish) When
-## only bone symbols blink it gives the reason too: the air-bone gap is over 10 dB.
+## only bone symbols blink it gives the reason too: the air-bone gap is 10 dB or more.
 func _draw_attention_legend(r: Rect2) -> void:
 	var txt := "blinking = needs masking"
 	var bone_only := not attention.is_empty()
@@ -670,7 +670,7 @@ func _draw_attention_legend(r: Rect2) -> void:
 		if not ClinicRules.test_is_bone(StringName(t)):
 			bone_only = false
 	if bone_only:
-		txt = "blinking = air-bone gap over 10: mask it"
+		txt = "blinking = air-bone gap of 10+: mask it"
 	var w := AoDraw.text_size(txt, 11, AoDraw.FONT_BOLD).x + 30.0
 	var lr := Rect2(Vector2(r.position.x + 6.0, r.end.y - 26.0), Vector2(w, 20.0))
 	AoDraw.rbox(self, lr, Color(Palette.PAPER, 0.92), 10, 2, Palette.SELECT_ORANGE)
