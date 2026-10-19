@@ -68,6 +68,8 @@ const TIPS: Dictionary[StringName, String] = {
 	&"masking_dilemma": "Masking dilemma! Enough noise crosses back; safe noise is too weak. Inserts help. Else mark it ?",
 	&"plateau_not_reached": "No room left! More noise would cross back to this ear. Store it: plateau not reached.",
 	&"vibrotactile": "Loud low bone tones get FELT, not heard. A tickle is not a threshold!",
+	# clinical review E8: tinnitus confuses steady tones (ASHA 2005; the lesson itself is the cases' C8)
+	&"tinnitus_steady": "Steady beeps hide in {his} ringing! Click TONE on the screen: pulsed or warble stand out.",
 }
 ## Positive kinds and the points they are worth (times the combo multiplier).
 const POINTS: Dictionary[StringName, int] = {&"good_start": 10, &"textbook_step": 10, &"store_ok": 50}
@@ -162,6 +164,9 @@ var goal_test: StringName = &"ac"
 var air_transducer: StringName = &"phones"
 ## The transducer the tone goes through: air_transducer or &"bone".
 var transducer: StringName = &"phones"
+## (E8) The tone is steady, not pulsed or warble (set_steady_tone(); E7: the screen starts pulsed).
+## Near the patient's tinnitus pitch a steady tone is harder to hear (PatientSim.tinnitus_confuses).
+var steady_tone: bool = false
 ## Masking noise (narrow band at the test frequency) in the NON-test ear.
 var mask_on: bool = false
 ## The masker dial (dB EM). Kept while masking is off (it can be preset).
@@ -376,6 +381,9 @@ func tone_down() -> void:
 	else:
 		auto_presentations += 1
 	_apply_condition()
+	if scoring and sim.tinnitus_confuses(freq) and not _once.has("tinnitus_steady"):
+		_once["tinnitus_steady"] = true
+		_observe(&"tinnitus_steady", {"tinnitus_hz": patient.tinnitus_hz})
 	var decision := sim.on_tone_start(ear, freq, db, gap)
 	var rec := {
 		"i": recs.size(), "db": db, "t": time, "duration": 0.0, "responded": false, "closed": false,
@@ -427,6 +435,14 @@ func _apply_condition() -> void:
 	sim.transducer = transducer
 	sim.masker_db = mask_db if mask_on else -1
 	sim.masker_transducer = air_transducer
+	sim.steady_tone = steady_tone
+
+
+## (E8) The screen's tone type: steady (true) or pulsed / warble (false, the E7 default).
+func set_steady_tone(on: bool) -> void:
+	steady_tone = on
+	if sim != null:
+		sim.steady_tone = on
 
 
 func tone_up() -> void:
@@ -472,7 +488,7 @@ func advance(delta: float) -> void:
 		_press(&"anticipated")
 	if not _cur.is_empty() and not bool(_cur["closed"]) and not tone_on and time > window_end_t and _pending_press_t < 0.0:
 		_close_current()
-	if not tone_on and time > window_end_t and sim.false_alarm_tick(delta):
+	if not tone_on and time > window_end_t and sim.false_alarm_tick(delta, freq):
 		_press(&"false_alarm")
 
 

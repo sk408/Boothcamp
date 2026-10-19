@@ -122,7 +122,7 @@ var _coach_tip := -1
 var _coach_key := ""
 var _familiar_note_done := false
 var _tone: ToneGenerator
-var _stim := 0
+var _stim: int = ToneGenerator.Stimulus.PULSED   ## (E7) pulsed beeps by default; the stim key cycles
 var _hold: Dictionary = {}
 var _tone_glow := 0.0
 var _feathers := HINT_FEATHERS
@@ -578,6 +578,7 @@ func _hold_remove(src: String) -> void:
 func _tone_down() -> void:
 	if not _accepting or session == null or session.tone_on:
 		return
+	session.set_steady_tone(_stim == ToneGenerator.Stimulus.PURE)   # (E8) tinnitus confuses steady tones
 	session.tone_down()
 	_demo_idle = 0.0
 	_demo_nudged = false
@@ -778,6 +779,8 @@ func _store(no_response: bool) -> void:
 func _cycle_stimulus() -> void:
 	_stim = (_stim + 1) % ToneGenerator.STIMULUS_NAMES.size()
 	_tone.set_stimulus(_stim)
+	if session != null:
+		session.set_steady_tone(_stim == ToneGenerator.Stimulus.PURE)
 	Sfx.play(&"click", 1.3, -4.0)
 	_refresh()
 

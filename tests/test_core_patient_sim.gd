@@ -159,3 +159,33 @@ func test_cross_hearing_hook() -> void:
 	assert_true(sim.hear_probability("right", 1000, 0) < 0.01)
 	sim.cross_hearing = func(_e: String, _f: int, _d: int) -> float: return 1.0
 	assert_near(sim.hear_probability("right", 1000, 0), 1.0, 0.0001, "the hook can make the other ear answer")
+
+
+## (E8) Near the tinnitus pitch a steady tone is lost in the ring more often and the patient presses
+## for nothing more often; pulsed or warble (steady_tone false) and far pitches are unchanged.
+func test_tinnitus_confuses_steady_tones() -> void:
+	var p := _attentive()
+	p.tinnitus_hz = 4000
+	var sim := PatientSim.new(p, 31)
+	var t := sim.effective_threshold("right", 4000)
+	var pulsed := sim.hear_probability("right", 4000, t)
+	assert_false(sim.tinnitus_confuses(4000), "pulsed or warble: no confusion")
+	sim.steady_tone = true
+	assert_true(sim.tinnitus_confuses(4000))
+	assert_true(sim.tinnitus_confuses(3000), "half an octave below")
+	assert_true(sim.tinnitus_confuses(6000), "half an octave above")
+	assert_false(sim.tinnitus_confuses(2000), "an octave away")
+	assert_false(sim.tinnitus_confuses(8000), "an octave away")
+	assert_near(sim.hear_probability("right", 4000, t), pulsed * (1.0 - PatientSim.TINNITUS_MISS_P), 0.01, "more misses at threshold")
+	assert_near(sim.hear_probability("right", 4000, t + 15), 1.0, 0.01, "a clear tone is still heard")
+	assert_near(sim.hear_probability("right", 1000, sim.effective_threshold("right", 1000)), pulsed, 0.05, "far from the ring: unchanged")
+	var far := 0
+	var near := 0
+	for i in 60 * 60 * 30:  # one simulated hour of silence at 30 fps, each way
+		if sim.false_alarm_tick(1.0 / 30.0, 1000):
+			far += 1
+		if sim.false_alarm_tick(1.0 / 30.0, 4000):
+			near += 1
+	assert_true(near > far * 2, "more presses for nothing near the ring (%d vs %d)" % [near, far])
+	p.tinnitus_hz = 0
+	assert_false(sim.tinnitus_confuses(4000), "no tinnitus, no confusion")

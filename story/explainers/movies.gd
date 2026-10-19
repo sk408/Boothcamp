@@ -92,6 +92,20 @@ static func for_chapter(chapter_id: String, include_short: bool = false) -> Arra
 	return out
 
 
+## (E19) The group a level joins when it can mask (the cases, Freestyle): with no movie of its own,
+## its pause menu offers every replay movie, so Day 2's masking movie is one tap away.
+const MASKING_LEVEL_GROUP := &"masking_level"
+
+
+## The movies a level's pause menu offers: the chapter's own, or (E19) every replay movie when the
+## level can mask and has none of its own.
+static func for_level(chapter_id: String, masks: bool) -> Array[String]:
+	var own := for_chapter(chapter_id)
+	if own.is_empty() and masks:
+		return replay_ids()
+	return own
+
+
 ## Every movie the replay lists show (the pause menu's and the title's "Hoot's Movies"): all but
 ## the recaps, in registry order.
 static func replay_ids() -> Array[String]:

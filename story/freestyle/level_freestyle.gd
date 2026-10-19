@@ -100,6 +100,7 @@ var _instructed := false
 
 
 func _ready() -> void:
+	add_to_group(&"masking_level")  # (E19) the pause menu offers the masking movie (Movies.MASKING_LEVEL_GROUP)
 	case_id = FsData.next_case()
 	case_data = FsData.load_case(case_id)
 	var problems := FsData.validate(case_data) if not case_data.is_empty() else PackedStringArray(["no case file"])

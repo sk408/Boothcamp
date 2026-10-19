@@ -572,3 +572,28 @@ func test_real_patient_textbook_play_lands_near_truth() -> void:
 					off += 1
 	assert_true(off <= 3, "%d of %d thresholds more than 5 dB off" % [off, total])
 	assert_between(float(strokes) / par, 0.8, 1.35, "par is fair for a careful player (strokes %d, par %d)" % [strokes, par])
+
+
+## (E8) A steady tone near the patient's tinnitus pitch: the session tells the simulator, and Hoot's
+## tip about pulsed or warble beeps fires once; pulsed tones (the E7 default) never trigger it.
+func test_tinnitus_tip_on_steady_tones() -> void:
+	var p := Game.load_patient("rocco") as PatientProfile
+	assert_eq(p.tinnitus_hz, 4000, "Rocco rings at 4 kHz")
+	var s := AudiometrySession.new(p, 5)
+	var kinds := []
+	s.technique.connect(func(k: StringName, _d: Dictionary) -> void: kinds.append(k))
+	s.set_freq(4000)
+	s.tone_down()
+	s.tone_up()
+	assert_false(kinds.has(&"tinnitus_steady"), "pulsed by default: no tip")
+	assert_false(s.sim.steady_tone)
+	s.set_steady_tone(true)
+	assert_true(s.sim.steady_tone, "the simulator hears a steady tone")
+	s.advance(2.0)
+	s.tone_down()
+	s.tone_up()
+	assert_eq(kinds.count(&"tinnitus_steady"), 1, "the tip fires")
+	s.advance(2.0)
+	s.tone_down()
+	s.tone_up()
+	assert_eq(kinds.count(&"tinnitus_steady"), 1, "once per visit")

@@ -308,6 +308,19 @@ func test_pause_menu_movie_button() -> void:
 	await wait_frames(1)
 	assert_true(menu.call("movie_button") == null, "Day 1's pause menu does not change")
 	menu.call("close")
+	# (E19) a level that can mask (a case, Freestyle) offers the masking movie too
+	var lvl := Node.new()
+	lvl.add_to_group(Movies.MASKING_LEVEL_GROUP)
+	add_node(lvl)
+	Game.current_chapter_id = "rocco"
+	menu.call("open")
+	await wait_frames(1)
+	var cb: Button = menu.call("movie_button")
+	assert_true(cb != null and cb.visible, "a case day's pause menu offers the masking movie")
+	assert_eq(menu.call("movie_ids_here"), Movies.replay_ids(), "every replay movie, never the recap")
+	menu.call("close")
+	lvl.free()
+	await wait_frames(1)
 	Game.current_chapter_id = "bonnie"
 	menu.call("open")
 	await wait_frames(1)

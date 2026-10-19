@@ -122,7 +122,7 @@ func test_state_has_contract_and_extra_keys() -> void:
 		assert_has(st, k, "state")
 	assert_eq(int(st["freq"]), 1000, "starts at 1 kHz")
 	assert_eq(int(st["db"]), 40, "starts at 40 dB HL")
-	assert_eq(String(st["stimulus"]), "TONE")
+	assert_eq(String(st["stimulus"]), "PULSED", "E7: pulsed by default")
 	assert_eq(st["remaining"], [1000, 2000, 4000, 8000, 500, 250], "textbook order")
 	var labels := []
 	for it: Dictionary in screen._quest.items:
