@@ -13,6 +13,8 @@ const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
 const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
+const Movies := preload("res://story/explainers/movies.gd")
+const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -31,6 +33,8 @@ var _font: Font
 var _starting := false
 var _idle := 0.0
 var _reset_armed := false
+## (v4) "Hoot's Movies": a small mouse shortcut to the cartoon explainers (keyboard: Options).
+var _movies_btn: Button
 # v3: the day picker (polish: a scrolling grid for any number of days)
 var _days_card: PanelContainer
 var _menu_buttons: Array[Button] = []
@@ -91,6 +95,8 @@ func _process(delta: float) -> void:
 			_show_disclaimer()
 	_logo.queue_redraw()
 	queue_redraw()
+	if _movies_btn != null:
+		_movies_btn.visible = _state == &"menu"
 	if _state == &"days":
 		for b: Button in _day_cards:
 			b.queue_redraw()
@@ -387,6 +393,16 @@ func _days_nav(dx: int, dy: int) -> void:
 			_set_hl(back)
 
 
+## (freestyle, docs/FREESTYLE.md) The walk-in clinic: practice outside the story.
+func _on_freestyle() -> void:
+	if _state != &"menu" or _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"click")
+	Events.goto_scene.emit(FREESTYLE_SCENE)
+
+
 func _on_options() -> void:
 	var pm := get_tree().get_first_node_in_group("pause_menu")
 	if pm:
@@ -395,6 +411,26 @@ func _on_options() -> void:
 
 func _on_quit() -> void:
 	Events.quit_requested.emit(0)
+
+
+## (v4) Hoot's Movies: with one movie it plays right away (through the pause menu, so the title
+## waits paused and Esc skips it), then the title is back; with several, the pause menu's movie
+## list opens on its own (day, title, length per row; Back or Esc returns to the title).
+func _on_movies() -> void:
+	if _state != &"menu":
+		return
+	var pm := get_tree().get_first_node_in_group("pause_menu")
+	if pm == null:
+		return
+	_idle = 0.0
+	var ids := Movies.replay_ids()
+	if ids.size() == 1:
+		pm.call("open")
+		await pm.call("play_movie", ids[0])
+		if is_inside_tree():
+			pm.call("close")
+	elif ids.size() > 1:
+		pm.call("open_movie_list", true)
 
 
 func _input(event: InputEvent) -> void:
@@ -426,9 +462,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_days_nav(1 if event.is_action_pressed(&"ui_right") else -1, 0)
 	elif _state == &"days" and (event.is_action_pressed(&"ui_down") or event.is_action_pressed(&"ui_up")):
 		_days_nav(0, 1 if event.is_action_pressed(&"ui_down") else -1)
-	elif event.is_action_pressed(&"ui_down"):
+	elif event.is_action_pressed(&"ui_down") or event.is_action_pressed(&"ui_right"):
 		_set_hl((_hl + 1) % _buttons.size())
-	elif event.is_action_pressed(&"ui_up"):
+	elif event.is_action_pressed(&"ui_up") or event.is_action_pressed(&"ui_left"):
 		_set_hl((_hl - 1 + _buttons.size()) % _buttons.size())
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
 		_buttons[_hl].pressed.emit()
@@ -469,7 +505,7 @@ func _build() -> void:
 	root.add_child(_logo)
 
 	_menu_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
-	_menu_card.position = Vector2(92, 284)  # (polish) five buttons + stats fit above the footer
+	_menu_card.position = Vector2(92, 284)  # (polish) five rows + stats fit above the footer
 	_menu_card.custom_minimum_size = Vector2(380, 0)
 	root.add_child(_menu_card)
 	var v := VBoxContainer.new()
@@ -479,22 +515,49 @@ func _build() -> void:
 	var play_txt := "Play"
 	if _has_progress():
 		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
-	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Options", _on_options]]
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Freestyle", _on_freestyle]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
+	specs.append(["Options", _on_options])
 	specs.append(["Quit", _on_quit])
+	# (freestyle) Options and Quit share the last row, so a returning player's six buttons still
+	# clear the safety footer (Up/Down still walk them in order)
+	var pair := HBoxContainer.new()
+	pair.add_theme_constant_override("separation", 6)
 	for spec: Array in specs:
-		var b := UiKit.button(spec[0], &"", Vector2(340, 48))
+		var paired := String(spec[0]) in ["Options", "Quit"]
+		var b := UiKit.button(spec[0], &"", Vector2(167 if paired else 340, 48))
 		b.set_meta("label", spec[0])
-		b.add_theme_font_size_override("font_size", 24)
+		b.add_theme_font_size_override("font_size", 22 if paired else 24)
 		b.pressed.connect(spec[1])
 		var idx := _buttons.size()
 		b.mouse_entered.connect(func() -> void:
 			if _state == &"menu" and _hl != idx:
 				_set_hl(idx))
-		v.add_child(b)
+		if paired:
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pair.add_child(b)
+		else:
+			v.add_child(b)
 		_buttons.append(b)
+	v.add_child(pair)
 	_menu_buttons = _buttons.duplicate()
+	if not Movies.replay_ids().is_empty():
+		_movies_btn = UiKit.button("Hoot's Movies", &"", Vector2(214, 46))
+		_movies_btn.name = "MoviesButton"
+		_movies_btn.add_theme_font_size_override("font_size", 20)
+		_movies_btn.focus_mode = Control.FOCUS_NONE
+		_movies_btn.tooltip_text = "Replay Hoot's cartoon explainers (also under Options)"
+		_movies_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		_movies_btn.offset_left = -240.0
+		_movies_btn.offset_right = -26.0
+		_movies_btn.offset_top = -FOOTER_H - 62.0
+		_movies_btn.offset_bottom = -FOOTER_H - 16.0
+		_movies_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		_movies_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		_movies_btn.pressed.connect(_on_movies)
+		_movies_btn.visible = false
+		root.add_child(_movies_btn)
 	if UiKit.show_key_hints():
 		var hr := UiKit.hint_row([["Up", "Down"], "+", ["Enter"], "or click"], 15)
 		hr.alignment = BoxContainer.ALIGNMENT_CENTER

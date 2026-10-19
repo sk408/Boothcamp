@@ -1,0 +1,104 @@
+{
+	"id": "fs_skyler",
+	"patient_id": "fs_skyler",
+	"speaker": "Skyler",
+	"stars": 3,
+	"teaser": "Lost a fight with a handrail. Now one ear wears a beanie.",
+	"look": {
+		"face": "gus", "skin": "#8d5a3b", "skin_shade": "#6e4229", "nose": "#7c4c31",
+		"cardigan": "#14b8a6", "pants": "#3d405b", "shirt": "#fefae0", "accent": "#ff4fa3", "shoes": "#ffbe0b",
+		"hair": "#ff4fa3", "hair_style": "none", "mustache": false, "brows": true,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["spiky_hair", "band_tee"],
+		"portrait_bg": "#fff2b8", "name_color": "#0f766e"
+	},
+	"voice": {"f0": 172.0, "wobble": 0.07, "roll": 0.7, "vowels": ["a", "o", "i", "a", "u", "e"]},
+	"hello": [
+		["Skyler", "Yo! Skyler Kickflip. Three months ago I tried to grind a handrail. The handrail won."],
+		["Skyler", "Smacked the left side of my head. Ever since, that ear sounds like it's wearing a beanie."]
+	],
+	"answers": {
+		"which_ear": {"say": "The left, for sure. Right ear's perfect. Left's like listening through a beanie.", "note": "Left ear muffled, right ear fine", "flag": true},
+		"onset": {"say": [
+			"All at once. I hit the ground, and the left ear went dull right then.",
+			"That was three months ago. Hasn't changed since. Not better, not worse."
+		], "note": "All at once, at the fall 3 months ago; steady", "flag": true},
+		"ringing": {"say": "No ringing. It's just quiet on the left. Like someone turned the knob down.", "note": "No ringing"},
+		"red_flags": {"say": [
+			"No pain, no gunk, never dizzy. Not even after the slam.",
+			"It bled the day I fell, though. Loads. Nothing since."
+		], "note": "Bled at the fall; no pain, gunk or dizziness now", "flag": true},
+		"noise": {"say": "Skate park wheels on concrete. Punk shows, but I wear earplugs. My mum's a nurse.", "note": "Punk shows, with earplugs"},
+		"ear_history": {"say": [
+			"Never had an ear infection. Then the handrail.",
+			"Big bump on the left side of my head, blood out of my ear. Very bad day."
+		], "note": "Hit left side of head 3 months ago; ear bled", "flag": true},
+		"family": {"say": "Nope. Whole family hears fine. Especially my little sister. She hears EVERYTHING.", "note": "No hearing loss in the family"},
+		"health": {"say": "Healthy. A doctor checked my head bump that day and said I'd live. Nobody looked at the ear.", "note": "Doctor checked the head bump, not the ear"},
+		"aids": {"say": "Hearing aids? I'm nineteen! ...Wait. Is that a thing at nineteen?", "note": "Never worn hearing aids"},
+		"hardest": {"say": [
+			"Lectures. If the prof's on my left, I'm toast.",
+			"And at the park my mates shout tricks at me. From the left, I miss the lot."
+		], "note": "Misses talk from the left side"}
+	},
+	"key_questions": ["red_flags", "which_ear", "onset", "ear_history"],
+	"otoscopy": {
+		"canal": "average-sized",
+		"right": {"view": "clear", "caption": "Skyler's RIGHT ear: a clean canal and a shiny, pearly eardrum. All good."},
+		"left": {"view": "clear", "caption": "Skyler's LEFT ear: a clean canal and a closed eardrum, all healed up. No hole, no blood."},
+		"note": "Canals clear; left eardrum healed and closed"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.8, "ecv_ml": 1.3},
+		"left": {"type": "Ad", "peak_daPa": -5, "peak_ml": 2.8, "ecv_ml": 1.4},
+		"note": "Tymp: right type A, left type Ad (a very tall peak)"
+	},
+	"decision": "refer",
+	"decision_lines": {
+		"fit": "Not yet! A big gap after a knock needs a doctor first. It might be fixable.",
+		"refer": "Refer! A big gap after a knock points to the hearing chain. A doctor decides; often it's fixable.",
+		"today": "It came on suddenly, but three months ago, with a middle-ear gap. A doctor soon, not today.",
+		"clear": "No aids needed? The left ear sits near 50 dB. That gap needs a doctor."
+	},
+	"why": {
+		"prompt": "Why does Skyler see a doctor before anything else?",
+		"options": [
+			["A big air-bone gap in the left ear since the fall.", true, "Yes! Bone is fine, air isn't. A gap after a knock is the doctor's call, and often fixable."],
+			["Hearing aids can't help a conductive loss.", false, "They can, and nicely! But a gap that might be fixed goes to a doctor first."],
+			["The left eardrum still has a hole in it.", false, "The otoscope showed it healed shut. A hole reads flat on the tymp, with a big canal volume."],
+			["A type Ad tymp always means an operation.", false, "Not always! A thin healed scar can be floppy too. Here it's floppy PLUS a big gap."]
+		]
+	},
+	"debrief": [
+		["Hoot", "Healed eardrum, floppy peak, big gap after a knock: that points to the hearing chain behind it."],
+		["Hoot", "The hearing chain: three tiny bones behind the eardrum. Masked bone was normal, so the inner ear's fine."],
+		["Hoot", "Often fixable, but the doctor decides. Red flags: blood, sudden change, one ear worse, that gap."]
+	],
+	"goodbye": [
+		{"do": "letter"},
+		["Hoot", "A letter for the ear doctor, with your chart. That gap may well be fixable."],
+		["Skyler", "Fixable? Like new bearings for my ear? Sick!"],
+		{"react": "cheer"},
+		["Hoot", "Till then, point your good right ear at the talker. Front row, prof on your right."],
+		{"hoot": "wing_up"},
+		["Hoot", "And a helmet. Every ride. Even the little ones."],
+		["Skyler", "Helmet, every ride. My mum's gonna frame that letter. Later, Hoot!"],
+		{"react": "wave"}
+	],
+	"paper": {
+		"headlines": {
+			"S": "HANDRAIL 1, EAR 0: OWL CALLS FOR A REMATCH",
+			"A": "SKATER'S GAP SPOTTED; HELMET SALES OLLIE UP",
+			"B": "SKATER REFERRED, BUT A FEW STAMPS BAILED",
+			"C": "CLINIC WIPES OUT ON SKATER'S CHART",
+			"Do-over": "HANDRAIL WINS AGAIN; SKYLER BACK FOR A RE-RUN"
+		},
+		"subheads": {
+			"S": "A big air-bone gap after a knock, masked and measured. A doctor checks the hearing chain.",
+			"A": "Bone normal, air down near 50: that gap goes to a doctor, and may be fixable.",
+			"B": "The gap showed up, a few steps slipped. Mask the bone to prove a gap is real.",
+			"C": "After a knock to the head: look, run the tymp, test bone, and count the red flags.",
+			"Do-over": "Skyler will be back. So, sadly, will the handrail."
+		}
+	}
+}

@@ -1,9 +1,10 @@
 extends Node
 ## Dev gallery for the AudiOtron's Day 2 states (developer tool, builder A; never reachable from
 ## the game). Bonnie in the booth; the session is driven by the textbook (recommended_action())
-## straight through its API, then screenshots of each teaching state:
-## bone route, the Cross-Hearing Ghost, the masking deck, the plateau graph, overmasking, masked
-## air and the finished audiogram with every symbol and the gap bridge.
+## straight through its API, then screenshots of each teaching state, in the v4 Day 2 order:
+## left (better-ear) bone with the route lesson, the one-tone Ghost demo on the right mastoid (a
+## locked key, the Ghost flying, BOO), the masking deck with the right bone's "?" range, the plateau
+## graph, overmasking, masked air and the finished audiogram with every symbol and the gap bridge.
 ##   timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 \
 ##     --audio-driver Dummy --fixed-fps 30 -- --scene=res://ui/dev/dev_audiotron_day2.tscn --shots=/abs/dir
 ## Optional: --only=bc,mask,... (shot groups), --day1 (a Day 1 Gus check instead).
@@ -73,42 +74,61 @@ func _day2() -> void:
 	_drive("left", 99)
 	await _wait(3.5)
 	await _shot("d2_air_done")
-	# unmasked bone, coached: the route button beckons
+	# (v4) unmasked bone on the BETTER (left) ear first, coached: the route button beckons
 	if clinic != null:
-		clinic.call("put_on_bone_oscillator", "right")
+		clinic.call("take_off_earphones")
+		clinic.call("put_on_bone_oscillator", "left")
 	Events.phase_changed.emit(&"audiometry", {})  # clears Hoot tips, like the level
-	screen.call("start_test", patient, "right", true, {"test": "bc", "masking_controls": true, "hoot_turn_after": 99,
-		"intro": "Bone time! B = bone. Same dance: down 10, up 5. Start at 1k."})
+	screen.call("start_test", patient, "left", true, {"test": "bc", "masking_controls": true, "hoot_turn_after": 99,
+		"intro": "Bone time, left ear! B = bone. Same dance: down 10, up 5. Start at 1k."})
 	await _wait(1.5)
-	await _shot("d2_bc_route")
-	_s().set_transducer(&"bone")
-	screen.call("_refresh")
-	await _wait(0.4)
-	await _shot("d2_bc_bone_on")
-	# a few beeps at 1 kHz until the Ghost answers
-	var ghost := false
-	for i in 8:
-		var rec := _present()
-		if bool(rec.get("responded", false)):
-			ghost = true
-			break
-		_follow_level()
-	await _wait(0.4)
-	await _shot("d2_bc_ghost_fly" if ghost else "d2_bc_trail")
-	await _wait(0.7)
-	await _shot("d2_bc_ghost_boo" if ghost else "d2_bc_trail2")
-	_drive("right", 2)
+	await _shot("d2_lbc_route")
+	screen.call("_set_transducer", &"bone")
+	await _wait(0.6)
+	await _shot("d2_lbc_bone_on")
+	_drive("left", 1)
+	await _wait(1.2)
+	await _shot("d2_lbc_first_store")
+	_drive("left", 2)
 	await _wait(1.0)
-	await _shot("d2_bc_two_stamps")
-	_drive("right", 99)
+	await _shot("d2_lbc_three")
+	_drive("left", 99)
 	await _wait(3.5)
-	await _shot("d2_bc_done")
-	# masked bone, coached
+	await _shot("d2_lbc_done")
+	# (v4) the Ghost demo: buzzer on her RIGHT mastoid, one unmasked tone just above her left bone
+	if clinic != null:
+		clinic.call("take_off_bone_oscillator")
+		clinic.call("put_on_bone_oscillator", "right")
+	var lb := _s().stored_thresholds("left", &"bc")
+	var demo_db := clampi(int(lb.get(1000, 5)) + 5, 0, 30)
+	var finished := {}
+	screen.connect("test_finished", func(_r: Dictionary) -> void: finished["done"] = true, CONNECT_ONE_SHOT)
+	Events.phase_changed.emit(&"ghost_demo", {"ear": "right"})
+	screen.call("start_test", patient, "right", false, {"test": "bc", "bc_freqs": [1000], "masking_controls": false, "hoot_turn_after": 99,
+		"demo_tone": {"freq": 1000, "db": demo_db, "title": "Bone %d, air 50? BOO!" % demo_db},
+		"intro": "ONE beep, buzzer on her right, %d dB: just above her LEFT bone. Hold Space!" % demo_db})
+	await _wait(1.5)
+	await _shot("d2_demo_ready")
+	Input.parse_input_event(_action(&"louder", true))   # a locked key: "just TONE!"
+	Input.parse_input_event(_action(&"louder", false))
+	await _wait(0.25)
+	await _shot("d2_demo_locked_key")
+	await _wait(0.6)
+	_present()
+	await _wait(0.45)
+	await _shot("d2_demo_ghost_fly")
+	await _wait(0.9)
+	await _shot("d2_demo_boo")
+	var t0 := 0
+	while not finished.has("done") and t0 < 100:
+		t0 += 1
+		await _wait(0.1)
+	# masked bone, coached (the right bone is unknown: "?" from the left bone up to the right air)
 	if clinic != null:
 		clinic.call("put_on_masking_phone", "left")
 	Events.phase_changed.emit(&"audiometry", {})  # clears Hoot tips, like the level
 	screen.call("start_test", patient, "right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 99,
-		"intro": "M = masking on. PgUp / PgDn move the noise. Find the flat line!"})
+		"intro": "Noise in her LEFT ear, bone on her right. Find the flat line!"})
 	await _wait(1.5)
 	await _shot("d2_mask_needed")
 	_s().toggle_mask()
@@ -154,6 +174,13 @@ func _day2() -> void:
 	_drive("right", 99)
 	await _wait(3.8)
 	await _shot("d2_all_done")
+
+
+static func _action(a: StringName, pressed: bool) -> InputEventAction:
+	var ev := InputEventAction.new()
+	ev.action = a
+	ev.pressed = pressed
+	return ev
 
 
 ## Present one beep through the session (timing like a careful clinician). Returns its record.

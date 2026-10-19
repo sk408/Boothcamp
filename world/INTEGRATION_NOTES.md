@@ -98,16 +98,17 @@ Tests: `test_day3_mike_extras` in `world/tests/test_clinic.gd`.
 - Tests: `world/tests/test_clinic.gd` (API, every reaction, walk/sit/ear projection with right ear on
   the screen's left, muffle amount with no bus-effect changes, story extras, every SHOTS entry).
 
-## Cases (Days 6 to 9, cases branch; CONTRACTS.md §11)
+## Cases (Days 6 to 11, cases branch; CONTRACTS.md §11)
 
 **Additive hook in `clinic.gd`: `var patient_spec: Dictionary`.** Set it before `add_child`. When it is not
 empty the patient bean is built from it (instead of `patient_id`'s built-in look) and
 `CaseExtras.attach(patient, patient_spec)` adds the costume bits. Empty = unchanged behaviour for Days 1 and 2.
 
 **`world/characters/case_extras.gd` (new, cases-owned).** Extras listed in the spec's `"extras"`:
-`headband`, `drumsticks`, `captain_cap`, `cap`, `pizza_box`, `spiky_hair`, `puppet`. Hats (and the spiky
-crest) hide while the earphones, bone oscillator or masking phone are on, by watching for those child nodes
-on the head. The `puppet` (a cookie on the left mitten) flaps its mouth on `Events.dialogue_line` when the
+`headband`, `drumsticks`, `captain_cap`, `cap`, `pizza_box`, `spiky_hair`, `puppet`, and for batch 2
+`beekeeper_hat` and `bee` (Barnaby's bee Gerald, orbiting his head), `pillbox_hat` and `neck_scarf` (Skye).
+Hats (and the spiky crest, and Gerald, who "waits outside") hide while the earphones, bone oscillator or
+masking phone are on, by watching for those child nodes on the head. The `puppet` (a cookie on the left mitten) flaps its mouth on `Events.dialogue_line` when the
 speaker equals the spec's `puppet_voice`; the bean's own lip-sync already follows `patient_name()` only, so
 the patient's lips stay still while the puppet talks.
 
@@ -115,5 +116,9 @@ Requests (nice to have, nothing breaks without them):
 - **Idle gags during Hoot's turns.** While Hoot runs the audiometer at speed, the patient just sits. A
   `play_patient_idle(kind)` hook (drum the knees, steer a wheel, check a phone) would give each case
   something to do. The case JSON could name the kind.
+- **An `EMOTES` constant on the owl** (`world/characters/owl.gd`, the kinds `emote()` handles: hop, cheer,
+  wing_up, facepalm, nod, gasp). `CaseData.HOOT_EMOTES` mirrors that list by hand so a case file's `{"hoot": ...}`
+  is checked; with a constant, a test could assert the two match (story code must not load world scripts at
+  runtime, but tests can).
 - **More face styles.** `FaceRig` has `gus`, `doris`, `bonnie`. The cases reuse them with new colours;
   a couple more faces (younger, rounder) would help tell patients apart.

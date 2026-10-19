@@ -1,0 +1,103 @@
+{
+	"id": "fs_hector",
+	"patient_id": "fs_hector",
+	"speaker": "Hector",
+	"stars": 3,
+	"teaser": "His left ear runs slow. Odder still, noise seems to help.",
+	"look": {
+		"face": "gus", "skin": "#eab894", "skin_shade": "#c99572", "nose": "#d99f7b",
+		"cardigan": "#3f4e8c", "pants": "#2e2a24", "shirt": "#f5f0e1", "accent": "#c9a227", "shoes": "#1e1a16",
+		"hair": "#e2e2e2", "hair_style": "tufts", "mustache": true, "brows": true,
+		"glasses": "perched", "glasses_color": "#b08d2e", "walker": false, "prop": "",
+		"extras": [],
+		"portrait_bg": "#e6e9f7", "name_color": "#3f4e8c"
+	},
+	"voice": {"f0": 118.0, "wobble": 0.05, "roll": 0.6, "vowels": ["o", "a", "e", "o", "u", "i"]},
+	"hello": [
+		["Hector", "Good morning. Hector Ticktock, clockmaker. My left ear has been running slow for years."],
+		["Hector", "And a puzzle for you: I hear better in my noisy workshop than in my quiet parlour."]
+	],
+	"answers": {
+		"which_ear": {"say": "The left, no question. It runs about ten years slow. The right still keeps perfect time.", "note": "Left ear worse for years; right ear fine", "flag": true},
+		"onset": {"say": [
+			"Slowly. Like a clock losing a minute a week.",
+			"Ten years, give or take. Nothing sudden. I'd have noticed: I notice everything."
+		], "note": "Slowly worse over about 10 years, nothing sudden"},
+		"ringing": {"say": "Yes, in the left. A thin ring, like a chime that never quite finishes. The right is quiet.", "note": "Ringing in the LEFT ear only", "flag": true},
+		"red_flags": {"say": "No pain, no leaks, no spinning. Unless I stare at a pendulum too long.", "note": "No pain, drainage or dizziness"},
+		"noise": {"say": "Eighty clocks ticking, and chimes on the hour. Lively, never loud. No guns, no bands, no power tools.", "note": "Ticking clocks all day; no loud noise"},
+		"ear_history": {"say": "Never an infection, never an operation. Never even dropped a screw in there.", "note": "No infections, surgery or injuries"},
+		"family": {"say": [
+			"My mother had an operation on her ear. Back in the seventies.",
+			"Afterwards she said the birds had come back. She cried in the garden."
+		], "note": "Mother had an ear operation decades ago"},
+		"health": {"say": "One little pill for blood pressure. Otherwise sound as a bell. A well-tuned bell.", "note": "Blood pressure pill; otherwise well"},
+		"aids": {"say": "Never. I like to know how a thing ticks before it goes in my ear.", "note": "Never worn hearing aids"},
+		"hardest": {"say": [
+			"At home, in the quiet. My wife sits on my left and murmurs. Gone.",
+			"In the workshop everyone shouts over the clocks, and I catch every word! Odd, isn't it?"
+		], "note": "Hears better in his noisy workshop than quiet"}
+	},
+	"key_questions": ["red_flags", "which_ear", "onset", "family"],
+	"otoscopy": {
+		"canal": "average-sized",
+		"right": {"view": "clear", "caption": "Hector's RIGHT ear: a clean canal and a shiny, pearly eardrum."},
+		"left": {"view": "clear", "caption": "Hector's LEFT ear: just as clean, a normal-looking eardrum. Whatever it is, it's deeper."},
+		"note": "Canals clear, eardrums look normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.7, "ecv_ml": 1.4},
+		"left": {"type": "As", "peak_daPa": -5, "peak_ml": 0.2, "ecv_ml": 1.4},
+		"note": "Tymp: right type A, left type As (shallow peak)"
+	},
+	"decision": "refer",
+	"decision_lines": {
+		"fit": "Not yet! A gap with a stiff, shallow tymp goes to an ear doctor first. Aids can follow.",
+		"refer": "Refer! A big gap plus a stiff, shallow tymp points to the middle ear. A doctor decides.",
+		"today": "Nothing sudden: ten slow years, no pain, no dizziness. A doctor soon, not today.",
+		"clear": "No aids needed? His left ear sits near 60 dB, with a gap. That needs a doctor."
+	},
+	"why": {
+		"prompt": "Why does Hector see an ear doctor first?",
+		"options": [
+			["A big air-bone gap and a stiff, shallow tymp on the left.", true, "Yes! A 20 to 35 dB gap plus a stiff tymp points to the middle ear."],
+			["Hearing aids can't help a mixed loss.", false, "They can, and often well! But a gap that might be treatable sees a doctor first."],
+			["A type As tymp means fluid behind the eardrum.", false, "Fluid reads flat, type B. Shallow but peaked, As, points to a stiff middle ear."],
+			["His mother needed an operation, so he does too.", false, "Family history is a clue, not a verdict. The gap and the tymp send him."]
+		]
+	},
+	"debrief": [
+		["Hoot", "A mixed loss has two parts: bone shows the inner ear's share, the gap shows the middle ear's."],
+		["Hoot", "Unmasked bone heard his good right cochlea. Only masked bone showed the left ear's own part."],
+		["Hoot", "Gap plus stiff tymp points to the middle ear. Doctor first; aids can come later, or alongside."]
+	],
+	"goodbye": [
+		{"do": "letter"},
+		["Hoot", "A letter for the ear doctor, with your chart. The middle-ear part is often treatable."],
+		["Hector", "Same as Mother, then? Her operation gave her the birdsong back."],
+		{"hoot": "wing_up"},
+		["Hoot", "Maybe, maybe not. The doctor decides that, not an owl."],
+		{"react": "nod"},
+		["Hector", "And my puzzle? Why do I hear better among the clocks?"],
+		["Hoot", "Over the ticking, people speak up. At home, your wife murmurs on your slow side."],
+		["Hoot", "So sit her on your right, and ask people to face you."],
+		["Hector", "Right side, face to face. I'll be back on the dot, Hoot."],
+		{"react": "wave"}
+	],
+	"paper": {
+		"headlines": {
+			"S": "CLOCKMAKER'S EAR WOUND TOO TIGHT; OWL REFERS",
+			"A": "TICKTOCK'S GAP SPOTTED; DOCTOR ON THE CLOCK",
+			"B": "HECTOR REFERRED, BUT A FEW STAMPS RAN SLOW",
+			"C": "CLINIC LOSES TIME ON CLOCKMAKER'S CHART",
+			"Do-over": "HECTOR RETURNS; CLINIC TURNS BACK THE CLOCK"
+		},
+		"subheads": {
+			"S": "A mixed loss, masked and measured, with a stiff tymp and a gap: an ear doctor gets the case.",
+			"A": "Bone shows the inner-ear part, the gap shows the middle-ear part: refer, and aids can follow.",
+			"B": "The gap showed up, but a few steps slipped: mask the bone to prove what is really there.",
+			"C": "With a gap on the chart, run the tymp, mask the bone, and send him to a doctor.",
+			"Do-over": "Hector will be back, punctual as ever, to the second."
+		}
+	}
+}

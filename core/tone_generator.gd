@@ -71,6 +71,20 @@ var _m_y1 := 0.0
 var _m_y2 := 0.0
 var _m_rng := RandomNumberGenerator.new()
 
+## The streams of freed generators stay alive a little longer (core/INTEGRATION_NOTES.md, "the
+## headless exit hang"): an AudioStreamGeneratorPlayback points at its stream without holding it,
+## and a player freed while playing is mixed once more (its fade-out) after the stream is gone; that
+## read of freed memory could spin the audio thread forever. Same fix as SpeechVoice.
+const RETIRED_KEEP := 16
+static var _retired: Array[AudioStream] = []
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _player != null and _player.stream != null:
+		_retired.append(_player.stream)
+		while _retired.size() > RETIRED_KEEP:
+			_retired.pop_front()
+
 
 func _ready() -> void:
 	_player = AudioStreamPlayer.new()

@@ -1,0 +1,260 @@
+{
+	"id": "wax",
+	"patient_id": "barnaby",
+	"speaker": "Barnaby",
+	"case_title": "BARNABY BUMBLE'S CASE",
+	"look": {
+		"face": "gus", "skin": "#f0c8a8", "skin_shade": "#d4a684", "nose": "#e3a98a",
+		"cardigan": "#f4f1e6", "pants": "#f4f1e6", "shirt": "#ffd23f", "accent": "#2b2b2b", "shoes": "#6b4f2a",
+		"hair": "#d9d4c7", "hair_style": "tufts", "mustache": true, "brows": true,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["beekeeper_hat", "bee"],
+		"portrait_bg": "#e6f4c4", "name_color": "#8a6d1f", "beekeeper_hat": "#efe9d2"
+	},
+	"voice": {"f0": 118.0, "wobble": 0.06, "roll": 0.72, "vowels": ["u", "a", "o", "u", "e", "a"]},
+	"intro": [
+		["Barnaby", "Bzzz-good morning! Barnaby Bumble, beekeeper. Forty thousand bees, and every one of them is called Gerald."],
+		{"hoot": "wing_up"},
+		["Hoot", "Forty thousand Geralds! Welcome, Barnaby. What brings you in?"],
+		{"react": "confused"},
+		["Barnaby", "My bees have gone quiet, and everyone mumbles. I'm sixty-one: hearing aid time! I've brought my wallet."],
+		{"hoot": "gasp"},
+		["Hoot", "Wallet away for now! Age isn't a diagnosis. Clues first."]
+	],
+	"always_clues": [
+		{"tag": "wants_aids", "text": "Sure he needs hearing aids: brought his wallet"},
+		{"tag": "bees_quiet", "text": "His bees sound quiet; people mumble"}
+	],
+	"history": [
+		{
+			"prompt": "Ask Barnaby a question:",
+			"options": [
+				["Which ear is worse, and since when?", 2, "The right. Muffly for months, then last week in the shower... FWUMP. Like a cork went in.", "Right: muffly for months, then FWUMP in the shower", "right_blocked", "One ear, and water made it worse. Interesting! Let's keep digging."],
+				["Do you clean your ears?", 1, "Every morning, with a cotton bud. Right in, deep as it goes. Squeaky clean!", "Cotton buds, deep, every morning", "cotton_buds", "Cotton buds push wax deeper. Nothing smaller than your elbow goes in your ear!"],
+				["Do your bees have names?", 0, "All forty thousand. Gerald, Gerald, Gerald... Gerald. Big family.", "", ""]
+			]
+		},
+		{
+			"prompt": "Next question:",
+			"options": [
+				["Any pain, drainage, dizziness, or sudden change?", 2, "No pain, no drips, no spins. But the right went all at once, in the shower. Is that sudden?", "No pain, drainage or dizziness", "red_flag_check"],
+				["Have you tried anything to fix it?", 1, "A hairpin. And an ear candle I made from my own beeswax!", "Tried a hairpin and an ear candle", "home_fixes", "Hairpins scratch. Ear candles don't clean anything, and they can burn. Never again, please!"],
+				["Can I try some honey?", 0, "Here: a jar of Bumble's Best, straight from my pocket. Careful, Gerald's guarding it.", "", ""]
+			]
+		}
+	],
+	"joke_line": "Sweet, but not a clue. Ask about his ears!",
+	"red_flags": {
+		"tag": "red_flag_check",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
+		"answer": "No pain, no drips, no spins. But the right went all at once, in the shower. Is that sudden?",
+		"clue": "No pain, drainage or dizziness",
+		"card": "Sudden change, one ear: YES. Pain, drainage, dizziness: none.\nSee a doctor. How soon? You decide.",
+		"card_kind": "flag",
+		"clue_kind": "clue",
+		"extra_clues": [
+			{"tag": "sudden_block", "text": "Right ear blocked all at once, in the shower", "kind": "flag"}
+		]
+	},
+	"after_history": [
+		["Hoot", "Sudden and one-sided: that can be urgent. Or it can be simpler. Let's look!"],
+		["Barnaby", "Look all you like. You'll see a man who needs hearing aids!"]
+	],
+	"otoscopy": {
+		"ear": "right",
+		"view": "wax",
+		"kind": "flag",
+		"caption": "Barnaby's RIGHT ear: a roomy canal... packed solid with wax.",
+		"lines": [
+			["Hoot", "That's a wall of wax! I can't even see the eardrum."],
+			{"react": "startle"},
+			["Barnaby", "Wax? Is it... beeswax?"],
+			["Hoot", "Very much your own. Cotton buds pack it in like a cork."],
+			["Hoot", "Usually wax comes out before testing. Today we'll measure first, to see its toll."]
+		],
+		"clue": "Right canal packed with wax: no eardrum in view",
+		"tag": "wax_plug"
+	},
+	"tymp": {
+		"tip": "large",
+		"canal": "roomy",
+		"right": {"type": "B", "peak_daPa": 0, "peak_ml": 0.05, "ecv_ml": 0.4},
+		"left": {"type": "A", "peak_daPa": -10, "peak_ml": 0.8, "ecv_ml": 1.5},
+		"quiz": {
+			"prompt": "His right is flat. What does the canal volume say?",
+			"options": [
+				["Blocked: the probe is pressed against wax.", true, ""],
+				["Fluid behind the eardrum.", false, "Fluid gives a flat line with a NORMAL canal volume. His is tiny: 0.4 mL."],
+				["A hole in the eardrum.", false, "A hole makes the canal volume BIG. His is tiny: the probe met wax."]
+			]
+		},
+		"clue": "Tymp right: flat, tiny canal volume",
+		"tag": "tymp_blocked",
+		"after": [
+			["Hoot", "The probe is talking to a wall of wax, not an eardrum. Left side: normal."]
+		]
+	},
+	"instructions": [
+		["Hoot", "Headphones today, not foam inserts: they go deep, and could push the wax further."],
+		["Hoot", "Tell him: press for every beep, even faint ones. Gerald waits outside."],
+		["Barnaby", "Hear that, Gerald? Out. Shoo. Sorry, he's clingy."]
+	],
+	"audiometry": [
+		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "montage": true, "intro": "Better ear first, like the pros. Hoot's montage: the left in a flash!"},
+		{"ear": "right", "test": "ac", "hoot_turn_after": 2, "intro": "Right ear's yours: the side that went quiet. Start at 1k."},
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone at Hoot speed. Is the inner ear behind that plug okay?",
+			"before": [["Hoot", "Bone skips the canal and the middle ear. If the cochlea's fine, bone will say so."]]}
+	],
+	"after_audiometry": [
+		["Hoot", "Masked bone's in, Ghost chased off. Now: bone against air!"]
+	],
+	"reveal": {
+		"pattern": "gap",
+		"plug": "wax",
+		"ear": "right",
+		"title": "BONE FINE, AIR BLOCKED",
+		"ask": [
+			["Hoot", "Here's Barnaby's chart. Look at the right ear's bone, then its air."]
+		],
+		"lines": [
+			["Hoot", "Bone near normal, air about 25 dB worse: an air-bone gap. Sound is stuck at the door."],
+			["Barnaby", "Stuck? Like a bee in a jam jar?"],
+			["Hoot", "Just like that. And the cochlea behind the plug is fine, waiting for sound."]
+		]
+	},
+	"evidence": {
+		"prompt": "What type of loss is Barnaby's right ear?",
+		"options": ["Sensorineural: bone is down with the air.", "Conductive: bone fine, air blocked.", "Mixed: bone down AND a gap."],
+		"answer": 1,
+		"answer_from_type": "right",
+		"wrong": ["Look at the bone: near normal. Only the air is down.", "", "Mixed needs bone down too. His bone is near normal."],
+		"right": "Conductive: something stops sound before it reaches a healthy inner ear."
+	},
+	"findings": [
+		{"tag": "gap", "text": "Right: bone normal, air down: a gap", "when": "conductive"},
+		{"tag": "right_only", "text": "Right ear only: a clear difference", "when": "asymmetric", "kind": "flag"},
+		{"tag": "abg_flag", "text": "Gap of 15+ dB at 500, 1k and 2k", "when": "abg_flag", "kind": "flag"}
+	],
+	"decision": {
+		"prompt": "Make the call for Barnaby:",
+		"answer": "refer",
+		"lines": {
+			"refer": "Right! A lot of wax is a red flag: wax out by a doctor, then we retest.",
+			"fit": "Hold the honey! No hearing aid works through a plug. Wax out first, then retest.",
+			"today": "The wax explains the sudden block, and his bone is normal. Soon, not today."
+		}
+	},
+	"clue_pick": {
+		"prompt": "Present the evidence: what proves the wax must come out first?",
+		"answers": ["wax_plug", "tymp_blocked", "gap", "abg_flag"],
+		"decoys": ["wants_aids", "cotton_buds"],
+		"wrong_line": "True, but that doesn't prove a plug is in the way. Look again!",
+		"wrong_lines": {
+			"wants_aids": "That's why he WANTS aids. What proves something's in the way first?",
+			"cotton_buds": "That's how it got packed in. What proves it's still in there?",
+			"bees_quiet": "That's what he notices. What proves the sound is blocked?",
+			"sudden_block": "Sudden, yes, and the wax explains it. What proves the plug is there?",
+			"right_only": "One ear sends him to a doctor. But what proves a plug is blocking it?",
+			"right_blocked": "That's the story. Which look or test proves the plug?",
+			"home_fixes": "Never again, please! But what proves the plug is there?",
+			"red_flag_check": "Good news, but no proof of a plug. Look again!"
+		},
+		"right_lines": {
+			"wax_plug": "Yes! A lot of wax is a red flag. A plug can hide more: we'll retest.",
+			"tymp_blocked": "Yes! Flat with a tiny canal volume: the probe hit the plug. Wax out first.",
+			"gap": "Yes! Bone is fine, air is blocked: the plug costs him that gap.",
+			"abg_flag": "Yes! His gap tops 15 dB at 500, 1k and 2k: a red flag. Wax out first."
+		},
+		"right_line": "Exactly! Something's blocking the sound: wax out by a doctor, then we retest."
+	},
+	"payoff": [
+		{"do": "letter"},
+		["Hoot", "A note for your doctor: wax plug, right ear, bone normal. They'll clear it safely."],
+		["Hoot", "They may suggest softening drops for a few days, then a gentle rinse or suction."],
+		["Barnaby", "But my wallet's all warmed up!"],
+		["Hoot", "Keep it in your pocket. You might not need hearing aids at all."],
+		["Hoot", "Until then: no cotton buds, no hairpins. Beeswax candles go on the table only!"],
+		["Hoot", "Pain, drips or dizziness before then? See a doctor that day."],
+		{"react": "nod"},
+		["Barnaby", "Promise. Gerald's my witness."]
+	],
+	"retest": {
+		"patient_id": "barnaby_after",
+		"card": "TWO DAYS LATER",
+		"intro": [
+			["Barnaby", "Bzzz-back again! And look what the doctor's nurse got out!"],
+			{"do": "wax_jar"},
+			{"hoot": "gasp"},
+			["Hoot", "That's... a LOT of wax. And definitely not beeswax."],
+			["Barnaby", "It came out with a THWOP. It's going on the mantelpiece."]
+		],
+		"otoscopy": {
+			"ear": "right",
+			"view": "clear",
+			"caption": "Barnaby's RIGHT ear, wax-free: a roomy canal, a shiny eardrum.",
+			"lines": [
+				["Hoot", "Hello, eardrum! Pearly grey, cone of light, all present."]
+			]
+		},
+		"tymp": {
+			"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.7, "ecv_ml": 1.6},
+			"left": {"type": "A", "peak_daPa": -10, "peak_ml": 0.8, "ecv_ml": 1.5},
+			"after": [
+				["Hoot", "A normal mountain now, and the canal volume jumped from 0.4 to 1.6. The plug's gone!"]
+			]
+		},
+		"before": [
+			{"choose": {
+				"prompt": "Wax out. Where will his right-ear air land now?",
+				"options": [
+					["Up near his bone line, about 10.", 2, "Yes! Normal bone said so: take away the plug and air climbs to bone."],
+					["Right where it was, about 35.", 0, "The plug made that gap. No plug, no gap. Try again!"],
+					["Even lower than before.", 0, "Removing a plug shouldn't hurt hearing. Think about his bone!"]
+				]
+			}}
+		],
+		"instructions": [
+			["Hoot", "Same deal: press for every beep. Let's see what the wax was hiding."]
+		],
+		"audiometry": [
+			{"ear": "right", "test": "ac", "hoot_turn_after": 1, "intro": "Right ear again! You take 1k. Where will it land this time?"}
+		],
+		"reveal": {
+			"ear": "right",
+			"label": "WITH WAX",
+			"title": "UNPLUGGED!",
+			"lines": [
+				{"react": "cheer"},
+				["Barnaby", "The BEES! I can hear the bees again! Gerald, you're LOUD!"],
+				["Hoot", "Air came up to meet the bone: about 25 dB better. Normal hearing, right ear!"]
+			]
+		},
+		"payoff": [
+			["Barnaby", "No hearing aids? I got my bees back for free?"],
+			["Hoot", "Free! If it hadn't come back with the wax out, the doctor would look deeper."],
+			["Hoot", "Some ears just make lots of wax. Your doctor can check it now and then."],
+			{"react": "cheer"},
+			["Barnaby", "Bzzz-rilliant! No more cotton buds. Come on, Gerald: let's go and listen to the hive."]
+		]
+	},
+	"paper": {
+		"headlines": {
+			"S": "WAX PLUG EVICTED; BEEKEEPER HEARS HIVE AGAIN, WALLET UNOPENED",
+			"A": "BARNABY UNPLUGGED! FORTY THOUSAND GERALDS REJOICE",
+			"B": "WAX OUT, BEES BACK, OWL SMUG",
+			"C": "SOME BEEPS GOT STUCK IN THE WAX, CONFIRMS OWL",
+			"Do-over": "BARNABY BACK WITH HIS JAR; TRAINEE BACK IN THE BOOTH"
+		},
+		"subheads": {
+			"S": "A plug in view, a flat tymp with a tiny canal volume, normal bone, and a retest that proved it.",
+			"A": "Bone normal, air blocked: wax out, hearing back, no hearing aids.",
+			"B": "The gap showed up; a few stamps wandered.",
+			"C": "Check the bone before blaming the inner ear.",
+			"Do-over": "Flat tymp plus a tiny canal volume: look for a blockage."
+		},
+		"wrong_first": {
+			"fit": {"headline": "TRAINEE TRIES TO FIT HEARING AID INTO WAX PLUG; OWL FAINTS", "subhead": "No aid works through a plug: wax out first, then test again."},
+			"today": {"headline": "WAX PLUG RUSHED TO THE DOCTOR SAME DAY; DOCTOR POLITELY PUZZLED", "subhead": "The wax explained the sudden block and his bone was normal: soon, not today."}
+		}
+	}
+}

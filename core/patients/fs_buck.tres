@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = "fs_buck"
+display_name = "Buck Shotwell"
+age = 58
+complaint = "Forty years of duck hunting, and now the ducks sneak up on me."
+thresholds_right = Dictionary[int, int]({
+250: 15,
+500: 15,
+750: 15,
+1000: 15,
+1500: 20,
+2000: 20,
+3000: 30,
+4000: 35,
+6000: 40,
+8000: 30
+})
+thresholds_left = Dictionary[int, int]({
+250: 15,
+500: 20,
+750: 20,
+1000: 25,
+1500: 30,
+2000: 45,
+3000: 55,
+4000: 60,
+6000: 65,
+8000: 55
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.7
+reaction_time_min_s = 0.4
+reaction_time_max_s = 0.9
+psychometric_slope_db = 2.0
+attention = 0.9
+fatigue_per_tone = 0.0006
+min_tone_s = 0.5
+rhythm_sensitivity = 0.5
+tags = PackedStringArray("freestyle", "sensorineural", "asymmetric", "noise")
+pronoun = "he"
+nickname = "Buck"

@@ -20,6 +20,8 @@ Engine: Godot 4.7.2, statically typed GDScript, Compatibility (OpenGL) renderer,
 | `world/**` | builder B | 3D clinic, Gus, Hoot body, cameras, reactions, shaders |
 | `story/**` | builder B | title, level director, dialogue, micro-games, Hoot bubble view, pause menu, results paper |
 | `autoload/**`, `main.tscn`, `main.gd`, `tests/**`, `tools/**`, `project.godot`, `export_presets.cfg`, `assets/**`, `CONTRACTS.md` | foundation, then integrator | shared services, harness, contracts |
+| **(Speech)** `core/speech/**`, `ui/speech/**`, `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | Day 3: the SPEECH screen and its logic (§9) |
+| **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-9: the case files and their runner (§11) |
 
 The foundation stubs in `core/`, `ui/`, `world/` and `story/` have been replaced by the builders' real modules
 (integrated 2026-10-17). Owners may keep changing their internals, but must keep the public API in this file.
@@ -29,6 +31,21 @@ Contract changes from that integration are marked **(v2)**.
 chapters (every day open, polish), bone and masked tests, the masker, and the Day 2 level. Every v3 change is marked
 **(v3)**. Day 1 behaves exactly as before: every v3 parameter has a default that reproduces v2.
 Additions from the Chapter 2 builders, merged at integration, are marked **(v3, builders)**.
+
+**(v4) Day 2 feedback** (Steve's review; design in `docs/CHAPTER2.md` §3, §16) changes only Day 2 and adds one
+shared feature. Every v4 change is marked **(v4)**:
+- **Bone on the better ear first.** Unmasked bone is tested on Bonnie's LEFT mastoid (`>` marks), then a
+  one-tone **Ghost demo** on the right mastoid (plan key `demo_tone`, nothing stored), then masked right bone and
+  masked right air as before. Placement game: `bc_placement` names its target (`mastoid_target_left` / `_right`).
+- **Hoot's movies** (`story/explainers/`, §3.4): short, skippable, replayable in-engine cartoons. Day 2 opens with
+  "Hoot's masking movie"; the pause menu replays it. New phase `explainer`, beat `explainer`, three `Events`
+  signals, `Game.progress.movies_seen`.
+
+Day 1 is unchanged (no movie, its pause menu shows no movie button). `tests/test_contracts_v4.gd` checks the v4 API.
+
+**Merged with main** (the speech chapter, Day 3, §9, marked **(Speech)**; the patient cases, Days 6-9, §11, marked
+**(cases)**): those days have no movie either and play exactly as on main. The v4 bone rules (`unmasked_bone()`,
+the either-mastoid masked bone start) give the same answers there, since each case measures unmasked bone on one ear only.
 
 ### §1.2 How modules may touch each other
 
@@ -111,6 +128,8 @@ The global signal bus. Each signal's emitter and payload is documented in the fi
 | world | `patient_reaction(kind §6.2, data)`, `screen_shake(strength, duration_s)` |
 | **(v3)** chapters | `chapter_completed(chapter_id, newly_unlocked: Array)` (Game, from `finish_visit`; **(polish)** `newly_unlocked` is always `[]`: every day is open) |
 | **(v3)** masking | `masker_changed(ear, freq, db, on)` (ear = the MASKED ear), `transducer_changed(transducer, ear)` (AudiOtron) |
+| **(Speech)** speech | `speech_started(patient_id, ear, test, coached)`, `speech_presented(ear, test, db, item)`, `speech_response(ear, test, db, answer)`, `speech_scored(ear, test, db, correct, right)`, `speech_stored(ear, test, sheet §9.5)`, `speech_state_changed(state §9.4)`, `speech_finished(results §9.5)`; all from the SPEECH screen (§9.7) |
+| **(v4)** movies | `explainer_started(movie_id, source)` (source `"day_start"`, `"pause"`, `"title"`, `"dev"`, `"test"`), `explainer_scene(movie_id, index, scene_id)` (every scene), `explainer_finished(movie_id, skipped)`; all from the explainer player (§3.4) |
 
 Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 `tests/test_contracts.gd` checks that every signal exists.
@@ -123,7 +142,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `set_setting(key, value)` | apply, save, emit `settings_changed` (and `key_style_changed`) |
 | `set_key_style(style)`, `get_key_style()` | Swaps the events of `louder` and `softer` (§4.7) |
 | `key_label(action) -> String`, `key_labels(action)` | Current key names for on-screen hints. Always use these; never hard-code "Up". |
-| `progress: Dictionary` | `coins`, `upgrades: Array`, `patients: {id: {best_score, best_grade, last_grade, plays}}`, `seen_disclaimer`, `hoot_mastery`, `plays`, **(v3)** `chapters_done: Array` (chapter ids finished at least once), `last_chapter` |
+| `progress: Dictionary` | `coins`, `upgrades: Array`, `patients: {id: {best_score, best_grade, last_grade, plays}}`, `seen_disclaimer`, `hoot_mastery`, `plays`, **(v3)** `chapters_done: Array` (chapter ids finished at least once), `last_chapter`, **(v4)** `movies_seen: Array` (movie ids watched at least up to their `seen_at` scene, §3.4; **(polish)** an early skip does not count; an old save without it loads fine) |
 | `save_game()`, `load_game()`, `reset_save()` | JSON at `user://save.json` (`user://save_autoplay.json` under `--autoplay`, `user://save_scene.json` under `--scene=`). A corrupt file is copied to `.bak`. **(v3)** An old save where Gus was played counts as Day 1 done. |
 | `load_patient(id) -> Resource` | `res://core/patients/<id>.tres` (a `PatientProfile`) |
 | `current_patient_id`, `visit` | §2.3 |
@@ -137,8 +156,9 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `cli: Dictionary`, `cli_flag(name)`, `cli_value(name, default)`, `is_autoplay()` | User args after `--` (§7.1) |
 | `rng: RandomNumberGenerator` | Seeded (`--seed`, default 1234 in autoplay). Use it for anything that should replay the same way. |
 | `clock: float` | Game seconds. Pauses with the tree and follows `Engine.time_scale`. |
-| `PHASES` | Phase ids (§3.1) |
-| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
+| `PHASES` | Phase ids (§3.1). **(v4)** adds `explainer` and `ghost_demo`; **(Speech)** `familiarize`, `speech` (§9.8); **(cases)** `tymp`, `decision` (§11) |
+| **(v4)** `is_movie_seen(id) -> bool`, `mark_movie_seen(id)` | `progress.movies_seen`; `mark_movie_seen` adds the id once and saves. The explainer player calls it when a movie ends after reaching its `seen_at` scene (§3.4) |
+| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`); **(Speech)** `mike` (Day 3, `res://story/level_mike.tscn`, §9.8); **(cases)** `rocco`, `marina`, `dash`, `ginger` (Days 6-9, `res://story/level_case.tscn` with the extra key `case`, §11). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
 | **(v3)** `chapters()`, `chapter(id)`, `chapter_for_patient(id)`, `chapter_for_day(day)`, `chapter_scene(id)` | Registry lookups (`{}` / `""` when unknown) |
 | **(v3)** `is_chapter_done(id)`, `is_chapter_unlocked(id)`, `unlocked_chapter_ids()` | **(polish)** Every chapter is open from the start, in any order (Steve's rule): `is_chapter_unlocked()` is always true and `unlocked_chapter_ids()` lists every chapter. Kept so callers need not change |
 | **(polish)** `suggested_chapter_id()`, `static suggested_from(list, done)` | The suggested day (the title's "UP NEXT" badge): the first chapter in day order not done whose `requires` is done, empty or unknown; else the first not done; `""` when every day is done |
@@ -164,6 +184,9 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 Comfort reasons used so far: `too_loud`, `marathon`, `no_instructions`.
 **(v3)** Day 2 medals: `history`, `otoscopy`, `earphones`, `bc_placement`, `masking`, `evidence`, `referral`.
 Day 2 flags: `bc_placement_slips` / `bc_placement_mistakes` (int), `asked_red_flags`, `instructed_first_try`.
+**(v4)** `bc_placement_mistakes` and the `bc_placement` medal now count the slips of BOTH placements (left, then the
+quick right one); `movie_watched` (the day-start movie played to the end), `ghost_demo_seen` (the demo tone was
+answered by the left cochlea, `cross_heard`).
 
 ### §2.4 Hoot, Stage, Sfx
 
@@ -179,6 +202,11 @@ Day 2 flags: `bc_placement_slips` / `bc_placement_mistakes` (int), `asked_red_fl
   - `play_note(hz, vol_db)`.
   - `Sfx.audiogram_note_hz(freq)`: 250 Hz maps to C4 and 8 kHz to C6, for the "audiogram melody".
   - `stop_all()` **(v2)**: stops every voice and drops the cache. `main.gd` calls it on quit.
+  - Music: `music_start()`, `music_stop()`, `is_music_playing()`, and **(polish)** `music_duck(on, owner := "")`:
+    reference-counted by owner key (the AudiOtron uses `"audiotron:<instance id>"`, a movie `"explainer:<instance id>"`, **(Speech)** the SPEECH screen `"speech:<instance id>"`);
+    the music stays ducked to silence while ANY owner holds it, so one owner ending never brings the marimba back
+    under another's beeps. `is_music_ducked()`, `music_duck_owners()` (tests). Every owner undoes its duck in
+    `_exit_tree()`.
 
 ### §2.5 Shared static classes
 
@@ -197,6 +225,11 @@ Day 2 flags: `bc_placement_slips` / `bc_placement_mistakes` (int), `asked_red_fl
   - `IA_RULE_DB` (phones 40, inserts 55, bone 0), `MASK_SAFETY_DB` 10, `OCCLUSION_DB` (phones: 250 +15, 500 +15, 750 +10, 1k +10; inserts 0), `OCCLUSION_MAX_GAP_DB` 10, `MASK_STEP_DB` 5, `PLATEAU_STEPS` 3, `MASK_MIN_DB` 0, `MASK_MAX_DB` 100.
   - `ABG_CONDUCTIVE_DB` 10 (gap > 10 = conductive), `ABG_RED_FLAG_DB` 15 at `ABG_RED_FLAG_FREQS` [500, 1000, 2000], `CARHART_FREQ` 2000, `CARHART_MIN_DIP_DB` 10, `HEARING_TYPES`, `HEARING_TYPE_TITLES`, `MASK_STATUSES` (off, needed, under, ok, over, impossible).
   - Functions: `test_id`, `test_is_bone`, `test_is_masked`, `unmasked_test`, `test_freqs`, `max_db_for(freq, transducer)`, `clamp_db_for`, `clamp_mask_db`, `ia_rule`, `occlusion_effect`, `air_bone_gap`, `is_conductive_gap`, `abg_red_flag`, `hearing_type`, `has_carhart_notch`, `ac_masking_needed` (test AC - IA >= non-test BC), `bc_masking_needed` (gap > 10), `initial_masking` (non-test AC + 10 + occlusion), `overmask_limit` / `is_overmasked` (masker - IA >= test cochlea), `masking_dilemma`, `mask_status`, `next_mask_step` (heard: noise +5; missed: tone +5), `plateau_run`, `sheet_thresholds`, `best_thresholds`, `nontest_bone_estimate`, `masked_freqs_needed`, `response_threshold` (the cross-hearing model: either cochlea answers).
+  - **(v4)** `unmasked_bone(results, freq) -> Variant`: the lower of BOTH ears' unmasked bone stamps at `freq`
+    (`null` when neither has one). Bone crosses the skull for free, so an unmasked bone answer belongs to the
+    better cochlea, wherever the oscillator sat. `masked_freqs_needed(results, ear, &"bc_masked")` now compares the
+    test ear's air with `unmasked_bone()` (Day 2 measures unmasked bone on the LEFT mastoid only), and the session
+    starts a masked bone measurement there too (`mask_start` check, par, recommended start).
 
   The numbers are teaching defaults that the clinical reviewer (Steve) checks. Change them here, not in a copy.
 - **`AudioSafety`**: `hl_to_dbfs`, `hl_to_peak`, `peak_ceiling`, `clamp_sample`, and the bus names `Tones`, `Sfx`, `Music`, `Voice` (§1.3).
@@ -231,6 +264,7 @@ Story emits `Events.phase_changed(phase, info)` at each beat, in this order. Ids
 | phase | where | info |
 |---|---|---|
 | `disclaimer` | title screen: "This is a game, not a hearing test." | {} |
+| `explainer` **(v4)** | a chapter's day-start movie (Day 2: before `intro`), or Hoot's offer to replay it | {movie, source: "day_start", seen: bool} |
 | `title` | title menu (Play / Days / Options / Quit) | {} |
 | `chapter_select` **(v3)** | the title's day picker ("Days") | {unlocked: [every chapter id], suggested: chapter id} |
 | `intro` | Gus bursts in | {} |
@@ -251,6 +285,23 @@ oscillator mini-game), {right, bc}, `masking` (which ear gets the noise), {right
 then `reveal`, `evidence` (type of loss), `referral` (ENT stamp), `results`. Every `audiometry` phase info
 now carries `"test"` (Day 1 sends `{"ear": ...}` only, which means `"ac"`).
 
+**(v4) Day 2 order** (bone on the better ear first; `docs/CHAPTER2.md` §3):
+
+| # | phase | info | beats |
+|---|---|---|---|
+| 0 | `explainer` | {movie: "masking", source: "day_start", seen} | first visit: `explainer` (the movie); seen before: a `choice` "Roll the film!" / "Skip it" (best = skip) |
+| 1-5 | `intro`, `history`, `otoscopy`, `instructions`, `earphones` | as v3 | as v3 |
+| 6 | `audiometry` | {ear: "right", test: "ac"}, then {ear: "left", test: "ac"} | AudiOtron |
+| 7 | `bc_placement` | {ear: "left"} | `bc_placement` (target `mastoid_target_left`) |
+| 8 | `audiometry` | {ear: "left", test: "bc"} (coached; then the optional 250 Hz bonus hole, {left, bc} again) | AudiOtron, `choice` |
+| 9 | `ghost_demo` | {ear: "right"} | `bc_placement` (quick: `mastoid_target_right`), then `audiometry` {ear: "right", test: "bc"} with plan `demo_tone` (§4.2) |
+| 10 | `masking` | {} | `choice`, then `audiometry` {right, bc_masked} and {right, ac_masked} (none with inserts) |
+| 11-14 | `reveal`, `evidence`, `referral`, `results` | as v3 | as v3 |
+
+No unmasked RIGHT bone is ever stored on Day 2 (the demo stores nothing): the reveal shows left `>` and right `[`.
+
+**(Speech)** Day 3's order (`familiarize`, `speech`): §9.8. **(cases)** Days 6-9 (`tymp`, `decision`): §11.
+
 Every `phase_changed` clears all Hoot tips (§8).
 
 Canvas layers:
@@ -258,10 +309,11 @@ Canvas layers:
 | Layer | Used by |
 |---|---|
 | 10 | story HUD and micro-games |
-| 20 | AudiOtron screen |
+| 20 | AudiOtron screen; **(Speech)** SPEECH screen (§9.7; a level shows one of the two at a time) |
 | 30 | DialogueBox |
 | 40 | results paper |
 | 80 | Hoot bubble |
+| 85 | **(v4)** explainer player (Hoot's movies) |
 | 90 | pause menu |
 | 120 | main fade |
 
@@ -284,8 +336,11 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `fitting_switch_on` | level | {} |
 | `results_continue` | results paper | {summary} |
 | `chapter_select` **(v3)** | title screen (Days card) | {chapters: every chapter id, next: chapter id, suggested: chapter id}; solver starts `next` |
-| `bc_placement` **(v3)** | level_bonnie (oscillator game) | {targets: ["mastoid_target_right"], mistakes}; solver places it on the mastoid |
-| `referral_stamp` **(v3)** | level_bonnie (Day 2 board) | {targets: ["referral_stamp"]}; solver stamps |
+| `bc_placement` **(v3)** | level_bonnie (oscillator game) | {targets: ["mastoid_target_right"], mistakes}; solver places it on the mastoid. **(v4)** {targets: ["mastoid_target_<ear>"], ear, quick, mistakes}: Day 2 plays it twice, `left` first, then `right` with `quick` true |
+| `explainer` **(v4)** | explainer player (§3.4) | {movie, title, scenes (count), source}; solver = `skip_all()` (the movie ends at once, skipped) |
+| `referral_stamp` **(v3)** | level_bonnie (Day 2 board) | {targets: ["referral_stamp"]}; solver stamps. **(Speech)** level_mike reuses it |
+| `speech` **(Speech)** | SPEECH screen (§9.7) | {ear, test, action, mouse: {click: anchor}}; solver sends the recommended action |
+| `familiarize_cards`, `objection_present` **(Speech)** | level_mike (§9.8) | {mouse}; {targets, mouse: {drag: [clue, target]}} |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -308,6 +363,78 @@ New beats are fine if they follow the same rule. Add them to this table through 
   which keep the highlighted card in view: Left / Right step through every button, Up / Down move a row, past the
   last row to Back). Esc = Back. `chapters_override` (dev scenes and tests only) shows another chapter list.
 - Pause menu: group `pause_menu`, with `open()` / `close()` / `is_open()` and the key-style toggle. The `pause` action toggles it.
+  **(v4)** `movie_ids_here() -> Array[String]` (the movies its "Watch ..." buttons offer now) and `await play_movie(id)`
+  (the replay, §3.4).
+- **(v4)** Bone placement game: `setup(ear := "right", quick := false)` before `add_child` (ear `"left"` draws her left
+  profile, facing left; `quick` = the short "Swap sides!" caption), `glasses_on` (false once she found her glasses:
+  no glasses on the card, "top" is a plain slip), then `await run()`; `mistakes`, `wrong_spots`, `placed`.
+- **(v4)** Day 2 board legend lists "Left bone" (`>`) when the left ear has a `bc` sheet; the paper's golf card has an
+  `L  >` row (`GOLF_EXTRA_ROWS`) before `R  [` and `R  O+`.
+
+### §3.4 Hoot's movies (v4): `story/explainers/`
+
+Short in-engine cartoons that explain one idea before a day (about 60-100 s), skippable and replayable. Day 2
+plays "Hoot's masking movie" (storyboard in `docs/CHAPTER2.md` §16) and, when the masking phase opens, its one-card
+recap "The short version". How to add one: `docs/ADDING_A_CHAPTER.md`, "Hoot's movies".
+
+| Part | File | What it is |
+|---|---|---|
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies), `replay_ids()` (every movie but the recaps), `is_short(id)`, `day_label(id)` ("Day 2"), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
+| Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list) and `stage` (the movie's own sets script, below) |
+| Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
+| Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | Fully animated: `SETS` (the built-in set ids: the ten masking sets of `docs/CHAPTER2.md` §16 and `card`), `use_movie(movie)` (the player calls it: loads `MOVIE.stage`), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes, a screenshot repeats and a skipped scene leaves nothing behind. `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. **Fallback:** a `set` nobody knows (neither the stage nor the movie's sets script) draws a card with the scene's title (never an error, never a blank screen) |
+| **(polish) Sets hook** | `story/explainers/explainer_sets.gd` (RefCounted base) | A movie may bring its OWN sets, so a later chapter never edits the stage: `MOVIE.stage = "res://<your folder>/<id>_sets.gd"`, a script that `extends "res://story/explainers/explainer_sets.gd"`, declares `const SETS: Array[StringName]` and one `func _set_<id>() -> void` per set. The stage draws its built-in sets itself and hands any other set to that script (`draw_set(stage, id)`), so it draws in the stage's `_draw()` with the same inputs, refreshed per frame: `t`, `duration`, `params`, `scene_id`, `scene_title`; `s` is the stage (every helper: `s._snail()`, `s._chip()`, `s._text()`, `s._cloud()`, `s._head_open()`, `s.draw_*()`...), `Stage2D.<COLOR>` its palette, and `_k()`, `_pop()`, `_ring()` are on the base. Same rules: a pure function of `t`, sounds only in the cues. `Movies.validate(id, Stage2D.SETS)` accepts a set from either list and reports a missing script, one that is not an explainer_sets.gd with SETS, or a SETS id without its `_set_<id>()`. Working example: `tests/fixtures/fake_movie.gd` + `fake_movie_sets.gd` (test `test_movie_sets_hook`) |
+| Player | `res://story/explainers/explainer_player.tscn` (CanvasLayer 85) | see below |
+| Dev scene | `res://story/explainers/dev_explainer.tscn` | plays `--movie=<id>` (default masking) and shoots every scene (`explainer_<id>_<NN>_<scene>`); `--at=a,b` (shares of each scene), `--times=s,s` (seconds), `--from=<id or number>`, `--only`, `--menu`, `--title`, `--card-demo`, `--reduced-motion`, **(polish)** `--extra-movie=res://...gd` (register more movie files, e.g. the hook fixture), `--list` (the "Hoot's Movies" list with five made-up movies) (`tools/README.md`) |
+
+Player API (load by path, call by name):
+```
+signal finished(result: Dictionary)
+func play(id: String, source := "menu") -> Dictionary   # coroutine; {movie, skipped, scenes_seen, source, watched}
+func advance() -> void          # (polish) Space / Enter / a click / "Next": finish the caption, else the next caption, else the next scene
+func skip_scene() -> void       # next scene now (dev tools and tests)
+func skip_all() -> void         # end the movie now (Esc / "Skip movie" / the beat's solver)
+func is_playing() -> bool
+var movie_id, movie, scene_index, skipped
+var start_scene := 0            # dev scenes only (dev_explainer --from=): the first scene to play
+```
+- **Beat and events.** `play()` emits `explainer_started`, then `awaiting_input(&"explainer", {movie, title, scenes,
+  source}, skip_all)`, `explainer_scene` per scene, and at the end `explainer_finished(id, skipped)` and
+  `input_resolved(&"explainer")`. **(polish) Seen:** `Game.mark_movie_seen(id)` only when the movie reached its
+  `seen_at` scene (`watched` in the result), so an early Esc plays it again on the next visit. While it plays it is in
+  group `explainer_player`; freed mid-play (P, then Quit to title) it undoes its music duck and leaves the group.
+- **Captions.** Hoot's lines type out at 42 characters/s x `text_speed` (each emits `dialogue_line`) with Hoot's
+  gibberish voice (`story/voice.gd` syllables on its own players, its own RNG, never `Game.rng`). A scene lasts
+  `max(duration, last caption start + typing time + 1.6 s)`.
+- **Keys** (in `_input`, so they win over the pause menu's Esc), after a 0.3 s grace: **(polish)** Space / Enter
+  (`advance_dialogue`, `ui_accept`) and a click on the screen advance like the dialogue box: finish the typing, else
+  jump to the scene's next caption (the drawing jumps with it to that caption's time; the cues in between are
+  skipped, never played in a burst), else the next scene. Esc (`ui_cancel`) = skip the movie. P pauses (a level's
+  movie freezes with the game). Buttons (`FOCUS_NONE`): "Next" (the last scene: "Start the day" at day start,
+  "Done" for replays), "Skip movie", and "II" (opens the pause menu; hidden while the game is already paused). Hint
+  row: Space "or click: next", Esc "skip the movie", P "pause".
+- **Music.** Ducked while it plays through `Sfx.music_duck(on, owner)`, reference-counted by owner (§2.4): a replay
+  over the AudiOtron never brings the marimba back.
+- **Sounds** (§1.3): only `Sfx.play` cues, capped at -6 dB on top of the Sfx -18 dBFS normalisation, plus the
+  quiet voice. "Too loud", masking noise and overmasking are drawn, never played.
+- **Process mode.** INHERIT: under a level it pauses with the game; under the pause menu (ALWAYS) it plays while the
+  game stays paused.
+- **Entry points.** (1) A chapter's level plays its movie at day start (`level_bonnie._movie()`: phase `explainer`;
+  until it is seen it just plays; once `Game.is_movie_seen(id)`, Hoot offers it with a choice, best = skip). **(polish)**
+  After a day-start skip Hoot says where it lives: "Skipped! Rewatch it any time: pause menu, "Watch <title>"."
+  (2) A level may play a `short` recap mid-day (`level_bonnie._recap()`, source `"recap"`, the same beat; Day 2: the
+  masking card right before the masked bone test). (3) The pause menu offers the movies "here": the current
+  chapter's in a level (none on Day 1, nor on Days 3 and 6-9), every movie on the title's Options, never the recaps
+  (`movie_ids_here()`). One movie: a "Watch <title>" button; two or more: **(polish)** a "Hoot's Movies..." button
+  that opens a small vertical list (`open_movie_list(standalone := false)`, `is_movie_list_open()`,
+  `close_movie_list()`, `movie_list_rows()`): one row per movie (the day chip, title and subtitle, the length, "Watch"),
+  Up / Down + Enter or the mouse, it scrolls past about five rows, Esc / P / Back return to the menu.
+  `movie_button()` returns the visible one of the two buttons. The menu (or the list) hides, plays the movie (source
+  `"pause"` / `"title"`) and comes back. No `phase_changed` is emitted for replays. The buttons hide while a movie is
+  already playing. (4) The title menu's small **"Hoot's Movies"** button (node `MoviesButton`, bottom right,
+  `FOCUS_NONE`, shown only in the menu state; a mouse shortcut, keyboard players use Options): with one movie it
+  opens the pause menu and runs its `play_movie(id)` (source `"title"`, the title waits paused, Esc skips) and closes
+  the menu after; with several it opens the list on its own (`open_movie_list(true)`: Back closes it to the title).
 
 ---------------------------------------------------------------------------------------------
 
@@ -415,6 +542,7 @@ How the screen behaves:
 | `air_transducer` | `"phones"` (default) or `"inserts"` |
 | `mask_on`, `mask_db` | start with the masker on / at this level (default off: the player presses M) |
 | `masking_controls` | show the MASKING (noise down, NOISE on/off, noise up) and ROUTE (AIR \| BONE) buttons; default true for any test but `ac` |
+| `masking_deck` **(polish)** | default true; with `masking_controls`, false keeps only the ROUTE (AIR \| BONE) buttons: no MASKING group on the deck, no noise LCD, and M / PgUp / PgDn do nothing (an unmasked bone sheet before masking is taught: Day 2's left bone and the bonus hole). `get_state().masking_deck` |
 | `hoot_turn_after` | stamps before Hoot takes over at x8 (default 3); 0 = Hoot runs the whole test (quick visit) |
 | `intro`, `hoot_turn_text`, `done_title` | Hoot's opening tip, his take-over line, the quest panel's done title |
 | `intro_full` **(polish)** | the opening tip used instead of `intro` when quick visit is off (no "I'll run the rest") |
@@ -422,6 +550,21 @@ How the screen behaves:
 | `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it |
 | `nothing_title` **(polish)** | the done title when the goal sheet needs nothing (default "NOTHING TO MASK!") |
 | `start_db` **(polish)** | the first level of a non-air plan instead of the textbook start (Day 2's optional 250 Hz bone "bonus hole" starts at 40, so the vibrotactile tickle lands) |
+| `demo_tone` **(v4)** | `{freq, db, title, max_tones := 3, idle_s := 6.0}`: the one-tone **Ghost demo**. The screen sits at `freq` / `db` with the masking deck hidden, scoring off and every control but TONE locked (keys and buttons); a sticky Hoot tip (`intro`) points at TONE. A heard tone (or the last try) ends it; a miss raises the tone 5 dB and asks again. **(polish)** The wait clock starts once Hoot's tip has typed out (plus 1 s); after `idle_s` TONE wiggles with a "Hold Space!" chip, after twice that Hoot presses TONE himself. A cross-heard answer flies the Ghost with `title` ("Bone 5, air 50? BOO!"); **(polish)** when she answered higher than `db` (a missed first beep), the shout names the level she really answered at and her air there ("Bone 10, air 50? BOO!"). Nothing is stored, no `ear_completed`; its open measurement is dropped (`AudiometrySession.discard_open(ear, freq)`, core-internal) so it never starts a bone search; after 2.4 s it emits `audiometry_finished` and `test_finished`. **(v4, builders) The look:** a lavender "GHOST DEMO: ONE BEEP" banner; TONE beckons, every other deck button and Ask Hoot is dimmed, and a locked key or click wiggles it with a quiet error blip and a "just TONE!" chip; the test ear's card says "GHOST TEST" with no pips; the quest panel shows one token, no bar, and a note ("ONE beep, buzzer on her RIGHT. Nothing gets stored.", then "Heard at N dB... but by WHICH cochlea?"); no par, dance card, combo flame or booth punch-in (integrator: the punch-in hid the Ghost's callout); Hoot's own press shows a "Hoot's wing!" chip, a too-short press "A blip! Hold ..."; the Ghost flies onto the better ear's `>` mark and lingers 3 s. The locks and labels come back when it ends |
+
+**(v4)** Masked BONE measurements start at `ClinicRules.unmasked_bone()` (either mastoid), not only the test ear's
+own unmasked bone sheet. A `bc_masked` plan opens on the unmasked bone sheet (noise off, the player presses M); when
+that ear has no unmasked bone stamps of its own, its opening level is that same `unmasked_bone()` value too.
+**(v4, builders)** The masking light (`masking_needed_here`) compares with that same either-mastoid bone, so it is on
+for her right ear once only her left bone is measured, and off on the left. The coach names the start: "First masked
+beep at %d dB, the unmasked bone. Noise %d. Hold [key]." / "Start at the unmasked bone, %d dB: the better cochlea's.
+Tap [key] N." While the poorer ear's bone is unknown (the demo, and its `bc` / `bc_masked` plans with the deck), its
+chart shows dashed amber **"?" ranges** from the unmasked bone up to that ear's air (`Audiogram.bone_range`) wherever
+masked bone is needed and not yet stamped, with the legend "? = bone hiding here: mask to find it". The coached
+LEFT bone sheet (the route lesson, B) never mentions noise or masking and shows no blinking or "?".
+UI internals added for this (builder A, `ui/audiometer/`): `AoButton.denied` (signal: a locked button was clicked,
+after its wiggle and error blip), `AoEarCard.badge` ("TESTING" / "GHOST TEST"; no pips when `progress_total <= 0`),
+`AoQuestPanel.note` (multi-line; no bar when `total_count == 0`), `FxLayer.ghost(..., life := 2.0)`.
 
 The required measurements are those of the goal sheet: `ac` as below; `bc` = `bc_freqs`; masked sheets =
 `ClinicRules.masked_freqs_needed()` from what is stored so far (bone: gap > 10; air: AC - 40 >= the other
@@ -488,12 +631,16 @@ After a store, the screen moves to the next remaining frequency (the rule is in 
   "goal_test": &"bc_masked",                           # the plan's test
   "transducer": &"bone", "air_transducer": &"phones",
   "masking_controls": true,                            # the MASKING / ROUTE buttons are shown
+  "masking_deck": true,                                # (polish) the MASKING group is on the deck (plan masking_deck)
   "mask_on": true, "mask_db": 25, "mask_ear": "left",  # masker dial (dB EM) and the ear it plays in
   "mask_status": &"ok",                                # ClinicRules.MASK_STATUSES (the NOISE box light)
   "initial_mask_db": 25,                               # the helper's starting level here (0 without masking UI)
   "overmask_limit_db": 50,                             # noise at or above this overmasks (bone: tone + 40; air: test-ear bone + 40)
   "plateau": {"db": 10, "steps": 2, "needed": 3, "found": false, "start_mask": 25, "initial": 25, "points": [...]},  # masked sheets only, else {}
-  "stored_tests": {"ac": {"right": {...}, "left": {...}}, "bc": {...}, "bc_masked": {...}, "ac_masked": {...}}
+  "stored_tests": {"ac": {"right": {...}, "left": {...}}, "bc": {...}, "bc_masked": {...}, "ac_masked": {...}},
+  # v4
+  "demo": false                                        # the one-tone Ghost demo is on (plan demo_tone): only TONE works;
+                                                       #   "par" is 0 while it is on
 }
 ```
 
@@ -618,6 +765,8 @@ var attention: Dictionary                     # test -> ear -> freq -> true: the
 var show_gap: bool                            # the air-bone gap bridge (dashed "45?" posts on unmasked bone, solid on masked)
 var masker_view: Dictionary                   # the masker on this chart: {freq, db, ...} draws the noise curtain
 var dim: Dictionary                           # (polish) ear -> alpha (1 = normal): fades one ear's symbols, lines and layers
+var bone_range: Dictionary                    # (v4, builder A) ear -> freq -> [lo_db, hi_db]: a dashed amber "?" capsule
+                                              #   beside the air mark (unknown bone) + the legend "? = bone hiding here: mask to find it"
 ```
 
 What it draws:
@@ -675,7 +824,9 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
 - **(v3)** `AudiometrySession`: `configure(plan)`, `test`, `goal_test`, `transducer`, `air_transducer`, `mask_on`,
   `mask_db`, `set_transducer`, `set_mask`, `toggle_mask`, `step_mask`, `set_mask_level`, `masker_ear`, `test_for`,
   `initial_mask_db`, `overmask_limit_db` (bone: tone + IA; air: the test ear's best bone, or the nearest measured
-  bone frequency's, + IA), `masking_needed_here`, `mask_status`, `plateau_info`, `store_candidate` (the plateau
+  bone frequency's, + IA), `masking_needed_here` (**(v4)** bone: the ear's air vs `ClinicRules.unmasked_bone()`, else
+  `nontest_bone_estimate`), **(v4)** `discard_open(e, f)` (drops the open measurement, closes its tone record and
+  cancels any patient press or anticipation still on its way: the Ghost demo), `mask_status`, `plateau_info`, `store_candidate` (the plateau
   level, or the held level once `window_full(e, f)`), `window_full`, `results_view`; per-test sheets; `MASK_PAR_SLACK` 2 (masked par = textbook dance + 2).
 - **(polish)** `AudiometrySession`: `MASKED_GRACE_DB` 0 (a masked stamp is scored like any other: the simulator is
   calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); `instant_measure(ear, freq)
@@ -888,7 +1039,15 @@ The bot (`tools/autoplay_bot.gd`) plays the whole level **only through public co
      `transducer_air`, `toggle_mask`), runs the same search on bone (max output from `max_db`), and on masked
      sheets the plateau dance with `mask_louder` / `mask_softer`: noise to `initial_mask_db`, tone to its own
      unmasked stamp, heard -> noise +5, missed -> tone +5, store after 3 held raises (or before
-     `overmask_limit_db`).
+     `overmask_limit_db`). **(v4)** For masked bone the start is its own unmasked bone stamp at that frequency
+     from EITHER mastoid (the lower), else the level the screen suggests (`db`).
+   - **(v4)** When `get_state().demo` is true it only holds TONE (up to 3 tones, stopping at the first heard) and
+     waits; it treats `Events.audiometry_finished` as the end of any test (the demo emits no `ear_completed`).
+   - **(v4)** The `explainer` beat with keys: **(polish)** `advance_dialogue` (it advances like dialogue) until
+     scene 2 shows (at most 4 taps), a shot (`explainer_scene_2`; a recap: `explainer_<id>`), then `ui_cancel`
+     (skip); the solver only if the movie still plays. With `--mouse`: real clicks on "Next" the same way, then
+     "Skip movie". The masking recap card is the same beat: a one-scene movie gets no tap (it would end it), and
+     its shot waits until all four lines are in.
 3. **Ending.** On `Events.level_finished` it records the summary. On `results_continue` it prints
    `AUTOPLAY_RESULT {json}` and emits `Events.quit_requested(code)`.
 
@@ -899,13 +1058,14 @@ The bot (`tools/autoplay_bot.gd`) plays the whole level **only through public co
 | 0 | ok |
 | 2 | stalled for 120 game seconds |
 | 3 | overall timeout |
-| 4 | results sanity check failed: an ear is incomplete, a threshold is off by more than 10 dB (any sheet, v3), or there was no `level_finished`; **(v3)** on Day 2 also: Bonnie's right ear not conductive, no red flag, masked bone missing at 500-4k, or no masked air |
+| 4 | results sanity check failed: an ear is incomplete, a threshold is off by more than 10 dB (any sheet, v3), or there was no `level_finished`; **(v3)** on Day 2 also: Bonnie's right ear not conductive, no red flag, masked bone missing at 500-4k, or no masked air; **(v4)** left unmasked bone missing at 500-4k, any unmasked RIGHT bone stamp, no `explainer` or `ghost_demo` phase, no movie on a fresh save, or no demo tone. The Day 2 result adds `movies` and `ghost_demo_tones` |
 | 5 | script errors were logged |
 | 6 | (`--mouse`) a mouse target could not be found on screen |
 
 **Mouse-only mode (v2, `--mouse`).** Beats are solved by clicking or dragging what a player sees: the Hoot anchors
 (`otoscope_seed`, `earphone_red` -> `ear_target_right`, `evidence_slope` -> `evidence_target`, **(v3)** `oscillator` ->
-`mastoid_target_right`, `referral_stamp`, the day card by its title, the AudiOtron buttons incl. the masking deck;
+`mastoid_target_right` (**v4**: the beat's `targets[0]`, so `mastoid_target_left` first), `referral_stamp`, **(v4)** the movie's
+"Next" / "Skip movie" buttons, **(Speech)** any beat whose info carries `mouse` (§9.9), the day card by its title, the AudiOtron buttons incl. the masking deck;
 TONE is a held left button), visible buttons and choice rows by their text, and the dialogue box. On the results
 paper it clicks "Back to the title" and checks that the title scene returns. Mouse events are sent in window
 coordinates (`get_viewport().get_final_transform()`), because the headless window is only 64x64.
@@ -926,6 +1086,13 @@ The bot saves:
 - **(v3)** `audiometry_<ear>_<test>_first_store`, `audiometry_<ear>_<test>_hoot_turn`, `audiometry_<ear>_plateau`;
 - **(v3)** the story's own: `day2_bone_placement`, `day2_reveal`, `day2_bridge`, `day2_type`, `day2_carhart`, `day2_stamp`,
   `day2_croissant`, `day2_goodbye`;
+- **(v4)** `explainer` (phase), `explainer_scene_2` (the bot's peek), `explainer_masking_recap` (the recap card), `bc_placement_left`, `ghost_demo_right`,
+  `audiometry_right_ghost_demo` (the demo's first tone), `day2_bone_placement_right` (the quick placement); the dev
+  scenes add `explainer_<id>_<NN>_<scene>` (`dev_explainer.tscn`; **(v4, builders)** extra moments of a scene
+  `explainer_<id>_<NN>_<scene>_t<seconds>`, `--menu`: `explainer_pause_menu`, `explainer_pause_replay`,
+  `explainer_pause_back`; `--title`: `explainer_title_*`; `--card-demo`: `explainer_card_*`) and `dev_day2_placement_left`,
+  `dev_day2_slip_left_*`, `dev_day2_placed_left`, `dev_day2_oscillator_3d_left`, `dev_day2_placement_right_quick`
+  (`dev_day2.tscn --part=placement`);
 - `audiometry_<ear>_first_tone`, `audiometry_<ear>_first_store`, `audiometry_<ear>_complete`;
 - `results_final`.
 
@@ -943,9 +1110,23 @@ The bot saves:
 - Any script or engine error logged during a test fails it.
 - `tests/test_contracts.gd` checks this file's APIs. Update it together with this file. **(v3)** `tests/test_contracts_v3.gd`
   checks the v3 additions (signals, plan and state keys, masking / route actions incl. Shift+Up, audiogram layers,
-  clinic oscillator, the `bc_placement` / `referral_stamp` beats, `Hud.set_steps`).
+  clinic oscillator, the `bc_placement` / `referral_stamp` beats, `Hud.set_steps`). **(v4)** `tests/test_contracts_v4.gd`
+  checks the v4 additions: the movie signals, `PHASES`, `movies_seen`, the movie registry and data (`validate`, the
+  storyboard ids, 60-100 s, the IA / plateau / overmasking facts, quiet cues), the player's beat, solver, keys and
+  buttons, the pause-menu replay, both placements, `unmasked_bone`, the `demo_tone` plan, the Day 2 order and the
+  golf-card `L  >` row. **(polish)** Also: Space advances like dialogue (the second caption is never thrown away),
+  `seen_at` and the last button ("Start the day" / "Done"), the music duck owners (a replay over the AudiOtron, a
+  movie freed mid-play), `masking_deck: false`, the movie list with six movies (one column, fits 720p, scrolls, keys),
+  the sets hook (`tests/fixtures/fake_movie.gd` + `fake_movie_sets.gd`: own sets drawn with the same `t` / `duration`
+  / `params`, validate, the card fallback) and the masking recap. Test fixtures live in `tests/fixtures/` (no
+  `test_` prefix, never run as tests; `tests/*` is never exported).
+- **(Speech)** `tests/test_contracts_speech.gd` checks §9; **(cases)** `story/tests/test_cases.gd` checks §11.
 - **(v3)** Stress test: `tools/monkey.tscn` mashes Day 1, or with `--day=2` Bonnie's five tests and the masking /
-  route keys (invariants: noise dial 0-100, no masker while MASK is off or after a test).
+  route keys (invariants: noise dial 0-100, no masker while MASK is off or after a test). **(v4)** Day 2 runs six:
+  right and left air, LEFT bone, the right Ghost demo (`demo_tone`), masked right bone, masked right air.
+  **(v4, integrator)** Before them it mashes Hoot's masking movie three ways (level-style without Esc: one scene at a
+  time to the end, frozen under the pause menu; with Esc / Skip: an accepted Esc ends it at once; the pause menu's
+  "Watch" replay: the menu comes back) and reports `movie_runs`.
 - Runner: `godot --headless --path . -s res://tests/run_tests.gd [-- --filter=word --verbose]`.
   Exit codes: 0 = green, 1 = failures, 2 = no tests.
 
@@ -989,7 +1170,7 @@ camera). Related calls: `unregister_anchor`, `has_anchor`, `anchor_screen_rect(i
 | AudiOtron | `tone_button`, `louder_button`, `softer_button`, `freq_up_button`, `freq_down_button`, `store_button`, `no_response_button`, `ear_right_button`, `ear_left_button`, `audiogram_right`, `audiogram_left` |
 | story | `otoscope_seed`, `ear_target_right`, `ear_target_left`, `earphone_red`, `earphone_blue`, `reveal_audiogram`, `evidence_target`, `evidence_slope` |
 | AudiOtron **(v3)** | `mask_softer_button`, `mask_toggle_button`, `mask_louder_button`, `transducer_air_button`, `transducer_bone_button` **(polish: the old single `transducer_button` became the two-segment AIR \| BONE switch)** (hidden unless the plan shows the masking deck) |
-| story **(v3)** | `oscillator`, `mastoid_target_right`, `abg_bridge`, `referral_stamp` |
+| story **(v3)** | `oscillator`, `mastoid_target_right`, `abg_bridge`, `referral_stamp`; **(v4)** `mastoid_target_left` (the placement game registers `mastoid_target_<ear>` for its ear only) |
 
 **Bubble placement.**
 - A screen can reserve a spot with `Hoot.set_bubble_hint(rect)` in viewport coordinates, and `clear_bubble_hint()` on exit.
@@ -1237,11 +1418,12 @@ Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from th
 | What | Where | Owner |
 |---|---|---|
 | Case data, one per case | `story/cases/<case_id>.json` (the source of truth for every line) | cases |
-| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural: no bone data, bone = air) | cases |
+| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural cases: no bone data, bone = air; conductive cases carry `bc_right` / `bc_left`). A retest profile `<id>_after.tres` (the ear after treatment) is loaded by the runner and never registered as a chapter | cases |
 | Runner (one for every case) | `story/level_case.gd` + `.tscn` | cases |
 | Loader and checks | `story/case_data.gd` (`CaseData`, preload by path) | cases |
 | Rules | `core/cases/case_rules.gd` (`class_name CaseRules`): decisions, red flags (2022 labeling), asymmetry, the sudden-loss definition, tympanogram types and curve | cases |
 | Case board, tymp gadget, hours clock, payoff props | `story/games/case_board.gd`, `case_tymp.gd`, `case_clock.gd`, `case_props.gd` | cases |
+| The look in the ear (healthy drum, wax plug, fluid) | `story/games/case_otoscopy.gd` (extends builder B's `otoscopy.gd`, overrides `_draw_canal`) | cases |
 | Portraits from a case's look | `story/case_portraits.gd` | cases |
 | 3D costume bits | `world/characters/case_extras.gd` (`CaseExtras.attach(bean, spec)`) | cases |
 
@@ -1251,7 +1433,22 @@ the suggested ("UP NEXT") day; every day is open. `LevelCase.pick_case_id()`: th
 else the first registered case.
 
 **Phases** (`Events.phase_changed`): `intro`, `history`, `otoscopy`, `tymp`, `instructions`, `audiometry` (one per
-test, info `{ear, test}`), `reveal`, `evidence`, `decision`, `results`. `Game.PHASES` gained `tymp` and `decision`.
+test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a case with a retest block, and
+`results`. Inside the retest, `otoscopy`, `tymp`, `instructions`, `audiometry` and `reveal` repeat with
+`info.retest = true` (the bot suffixes those phase shots `_retest`). `Game.PHASES` gained `tymp`, `decision` and
+`retest`.
+
+**Optional case keys (batch 2; all default to the Days 6-9 behaviour).** `otoscopy.view` `clear` / `wax` / `fluid`
+(a wax view keeps the first visit's air on headphones); `otoscopy.kind` and `findings[].kind` `clue` / `flag`;
+`tymp.<ear>.ecv_ml` (required: a B ear sits outside 0.6-0.9 mL, any other type inside 0.9-2.0); `findings[].when`
+`symmetric` / `asymmetric` / `conductive` / `abg_flag`; `reveal.pattern` `gap` with `reveal.plug` `wax` / `fluid`;
+`audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
+`do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first
+stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),
+reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, bone is tested on that ear only.
+`CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
+checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
+the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
 
 **Beats.** No new beat kinds. Everything is `dialogue`, `choice` (history, tip, tymp question, shape, earplugs,
 the stamp tray, the clue cards), the AudiOtron's own beats, and `results_continue`. The stamp tray
@@ -1269,15 +1466,81 @@ the option text, so the mouse bot clicks them by their first 18 characters (test
   per-chapter tables.
 
 **Visit and medals.** Medals `history` (Chat), `tymp` (Tymp), `evidence` (Pattern), `decision` (Call). Visit flags:
-`case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`. The
-summary gains `case_id`, `headlines`, `subheads`, `medal_beats`.
+`case_id`, `asked_red_flags`, `tymp_tip_tries`, `decision_first`, `decision`, `decision_tries`, `clue_tries`, and with a
+retest `retested`, `retest_type`. The retest has no medal and is unscored: the first visit's results are restored
+(`Game.set_audiometry_results`) and any heart lost during it is given back (`Game.gain_comfort`) before `finish_visit`. The summary gains `case_id`, `headlines`, `subheads`,
+`medal_beats` (a wrong first stamp swaps the S to C headlines, `LevelCase.paper_for`).
 
 **Anchors.** `reveal_audiogram` (the board's chart), `case_stamps`, `case_clues`.
 
 **Screenshots** (with `--shots`): `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`,
-`_pattern`, `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat`, `_goodbye`.
+`_pattern`, `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`,
+`_goodbye`; a retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
 
 **Tests.** `story/tests/test_cases.gd`: every registered case validates (`CaseData.validate`), Hoot lines are 18 words
 or fewer, choice prefixes are unique, each truth table shows its shape even with any single 5 dB wobble, asymmetry
 and the call match, Dash meets the sudden definition, the charts on file, tymp curve widths, the red-flag list,
-picker teasers give nothing away.
+picker teasers give nothing away; batch 2: the 0.6 mL blocked floor and canal-volume bands, the conductive truths
+survive a wobble and mask bone but not air, no shipped case gains a masked test, script names (reactions, emotes,
+props, speakers), patients match their chapters and validate, flat tymps read their canal volume, every new
+validate rule and broken file is reported, the retest profile, finding conditions, wrong-first headlines,
+`merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw. `tools/run_tests.sh` also
+fails when `docs/CASE_SCRIPTS.md` is stale.
+
+---------------------------------------------------------------------------------------------
+
+## §12 Freestyle (the walk-in clinic)
+
+Design and Steve's checklist: `docs/FREESTYLE.md`. Practice outside the story: the title's **Freestyle** button opens a
+waiting room of walk-in patients; the player picks the tools in any order, then charts and makes the call.
+
+**Files.** Everything lives in `story/freestyle/` (owner: freestyle): `fs_rules.gd` (`FsRules`, preload by path: the
+question deck, the workup a pro runs, masking needs, medals), `fs_data.gd` (`FsData`: loader and validator,
+`CASE_IDS` in waiting-room order), `waiting_room.gd/.tscn` (the hub), `level_freestyle.gd/.tscn` (one runner for
+every walk-in), `fs_tray.gd`, `fs_questions.gd`, `fs_clipboard.gd`, `fs_chart.gd`, `fs_debrief.gd`, and
+`cases/<id>.json`. Truth tables: `core/patients/fs_<id>.tres` (same conventions as §11). Ids start with `fs_`.
+
+**Not chapters.** Walk-ins are never in `Game.CHAPTERS`, never on the Days grid and never in `chapters_done`.
+The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>` wins.
+The best result per walk-in is stored inside the save's patient record: `progress.patients[<id>].fs_best_grade`
+and `fs_best_score`.
+
+**Reused, not copied.** The AudiOtron (`start_test` plans, never coached), the clinic, `CaseRules` (tymp types, red
+flags, asymmetry, decisions), `ClinicRules` (types of loss, masking rules, PTA), the story tympanometer gadget
+`story/games/case_tymp.gd` (the tray hides the Tympanometer when that file is missing) and the Daily Decibel.
+
+**Phases** (`Events.phase_changed`): `freestyle_room`, `intro`, `freestyle_tray`, `history`, `otoscopy`, `tymp`,
+`audiometry` (info `{ear, test}`), `freestyle_chart`, `decision`, `freestyle_debrief`, `results`. `Game.PHASES`
+gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief`.
+
+**Beats.** No new beat kinds: everything is `dialogue`, `choice` and the AudiOtron's own beats. The waiting room's
+pick, the tool tray, the question board and every clinic choice (tip, tymp type, ear first, mastoid, masked test,
+chart type, the stamp) are `choice` beats whose `best` is the pro's pick (`FsRules.best_tool`). Buttons start
+with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique).
+
+**Visit and medals.** Medals `fs_chat` (Chat), `fs_workup` (Workup), `fs_chart` (Chart), `fs_call` (Call). The
+paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit's own score. Summary keys:
+`freestyle_case`, `visit_score`, `headlines`, `subheads`, `medal_beats`, `continue_text` ("Waiting room"),
+`continue_scene` (the waiting room), `next_chapter_id` "" and `first_clear` false. Visit flags:
+`freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`, `freestyle_types`, `freestyle_tymp_misreads`,
+`freestyle_slips`, `decision_first`, `decision`, `decision_tries`.
+
+**The AudiOtron between tests.** One screen per visit. Between tests it stays in the tree (its Hoot anchors are
+registered once) but is hidden and `PROCESS_MODE_DISABLED`, unregistered from `Stage.audiometer`, with the booth
+view off and the music back; the next test re-registers it. It is freed when the patient walks to the desk.
+
+**Hooks in other modules (all additive).**
+- `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`) after Days; Options and Quit share the last
+  row (Up/Down and Left/Right walk the buttons in order) so six buttons still clear the safety footer.
+- `story/case_portraits.gd`: `CasePortraits.register(who, look)` (walk-ins aren't chapters, so they register).
+- `story/daily_decibel.gd`: the summary's optional `continue_text` labels the main button (default "Back to the title";
+  keep it short, the paper must fit 1280 px).
+- `tools/autoplay_bot.gd`: `--mouse` clicks `continue_text` and counts `continue_scene` as being back;
+  `--via-freestyle` presses the title's Freestyle button; the report gains `freestyle` {case, medals, visit_score}.
+
+**Anchors.** `freestyle_chart` (the chart card).
+
+**Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
+agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, the tymp tip
+matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
+screen, an unmasked gap is never an accepted chart type, and the title's menu ends above the footer.

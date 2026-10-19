@@ -121,7 +121,35 @@ func _world() -> void:
 
 
 func _placement() -> void:
+	# (v4) Day 2 places the buzzer on her LEFT (better) mastoid first, then swaps to the right
+	clinic.call("focus_camera", &"ear_left", 0.0)
+	var gl := BonePlacement.new()
+	gl.setup("left")
+	hud.call("add_game", gl)
+	gl.call_deferred("run")
+	await _wait(1.0)
+	await _shot("dev_day2_placement_left")
+	for spot: String in ["forehead", "pinna"]:
+		gl.call("_place", spot)
+		await _wait(0.45)
+		await _shot("dev_day2_slip_left_" + spot)
+		await _wait(1.6)
+	gl.call("_place", "mastoid")
+	await _wait(0.6)
+	await _shot("dev_day2_placed_left")
+	gl.queue_free()
+	clinic.call("put_on_bone_oscillator", "left")
+	await _wait(0.6)
+	await _shot("dev_day2_oscillator_3d_left")
 	clinic.call("focus_camera", &"ear_right", 0.0)
+	var gq := BonePlacement.new()
+	gq.setup("right", true)
+	hud.call("add_game", gq)
+	gq.call_deferred("run")
+	await _wait(1.0)
+	await _shot("dev_day2_placement_right_quick")
+	gq.queue_free()
+	await _wait(0.2)
 	var g := BonePlacement.new()
 	hud.call("add_game", g)
 	g.call_deferred("run")
@@ -257,11 +285,9 @@ func _results() -> Dictionary:
 	var ac := [250, 500, 1000, 2000, 4000, 8000]
 	var right := {"freqs": _sheet(p, "right", ac, false), "ac_masked": _sheet(p, "right", [250, 500, 1000, 2000], false),
 		"bc": {}, "bc_masked": _sheet(p, "right", [500, 1000, 2000, 4000], true)}
-	var unm := {}
-	for f: int in [500, 1000, 2000, 4000]:
-		unm[f] = {"stored_db": p.get_bc_threshold("left", f), "true_db": p.get_bc_threshold("left", f), "no_response": false}
-	right["bc"] = unm
-	var res := {"patient_id": "bonnie", "ears": {"right": right, "left": {"freqs": _sheet(p, "left", ac, false)}}}
+	# (v4) Unmasked bone is measured on the LEFT (better) mastoid ('>'); the right ear has masked bone only.
+	var left := {"freqs": _sheet(p, "left", ac, false), "bc": _sheet(p, "left", [500, 1000, 2000, 4000], true)}
+	var res := {"patient_id": "bonnie", "ears": {"right": right, "left": left}}
 	var thr := ClinicRules.best_thresholds(res, "right", false)
 	var bone := ClinicRules.best_thresholds(res, "right", true)
 	right["hearing_type"] = ClinicRules.hearing_type(thr, bone)

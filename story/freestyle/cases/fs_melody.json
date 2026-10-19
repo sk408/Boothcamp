@@ -1,0 +1,107 @@
+{
+	"id": "fs_melody",
+	"patient_id": "fs_melody",
+	"speaker": "Melody",
+	"stars": 2,
+	"teaser": "Her right ear woke up muffled. She's waiting for it to pop.",
+	"look": {
+		"face": "bonnie", "skin": "#c68a5e", "skin_shade": "#a56c44", "nose": "#b97a50",
+		"cardigan": "#14808a", "pants": "#2a3550", "shirt": "#fff4d6", "accent": "#f2545b", "shoes": "#7a2e3a",
+		"hair": "#2b1a12", "hair_style": "beehive", "mustache": false, "brows": false,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["headband"], "headband": "#f2545b",
+		"portrait_bg": "#d8f3f0", "name_color": "#0f6e75"
+	},
+	"voice": {"f0": 215.0, "wobble": 0.07, "roll": 0.66, "vowels": ["a", "e", "o", "i", "a", "o"]},
+	"hello": [
+		["Melody", "Hi! Melody Belle. I teach music at the primary school, and I run the kids' choir."],
+		["Melody", "Two days ago I woke up and my right ear felt stuffed with cotton wool. And it's ringing."],
+		["Melody", "It'll pop on its own, won't it? Our spring concert is on Friday."]
+	],
+	"answers": {
+		"which_ear": {"say": "The right, no question. Like someone stuffed a sock in it. The left is perfect.", "note": "Right ear muffled, left ear fine", "flag": true},
+		"onset": {"say": [
+			"All of a sudden! Two days ago I went to bed fine and woke up like this.",
+			"Like a door slammed shut overnight. It hasn't budged since."
+		], "note": "Sudden: woke up with it 2 days ago", "flag": true},
+		"ringing": {"say": "Yes, a high ringing, right ear only. It started the same morning. Like a triangle nobody will put down.", "note": "New ringing, right ear only", "flag": true},
+		"red_flags": {"say": [
+			"No pain, nothing leaking, no spinning. Not even a wobble.",
+			"It just feels full, like when a plane lands. But I haven't been on a plane."
+		], "note": "No pain, drainage or dizziness; ear feels full"},
+		"noise": {"say": [
+			"Thirty kids with recorders, every single day. Does that count?",
+			"But nothing new. No concert, no bang. Just a normal week of Hot Cross Buns."
+		], "note": "Noisy classroom; no loud bang lately"},
+		"ear_history": {"say": "Never! No infections, no operations, no knocks. And it's never done this before.", "note": "No ear trouble ever; never happened before"},
+		"family": {"say": "Not that I know of. My gran sang in the church choir till she was ninety.", "note": "No hearing loss in the family"},
+		"health": {"say": "Healthy! No medicines, no cold, not even a sniffle. Just honey lozenges for my singing voice.", "note": "Healthy, no medicines, no cold"},
+		"aids": {"say": "Never. Until two days ago I had perfect ears. Nearly perfect pitch, too.", "note": "Never worn hearing aids"},
+		"hardest": {"say": [
+			"Choir practice. I can't tell where the altos are any more.",
+			"And the piano sounds a bit sour on my right side. For a music teacher, that's a nightmare."
+		], "note": "Can't place voices; piano sounds off on right"}
+	},
+	"key_questions": ["red_flags", "onset", "which_ear", "ringing"],
+	"otoscopy": {
+		"canal": "narrow",
+		"right": {"view": "clear", "caption": "Melody's RIGHT ear: a narrow, clean canal and a shiny, healthy eardrum. No wax, no fluid in sight."},
+		"left": {"view": "clear", "caption": "Melody's LEFT ear: narrow and clean too, with a pearly eardrum. A perfect match."},
+		"note": "Canals clear, eardrums normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -5, "peak_ml": 0.7, "ecv_ml": 1.0},
+		"left": {"type": "A", "peak_daPa": 0, "peak_ml": 0.8, "ecv_ml": 1.0},
+		"note": "Tymp: type A both ears, no fluid"
+	},
+	"needs_tymp": true,
+	"decision": "today",
+	"decision_lines": {
+		"fit": "Hold the hearing aids! A loss that arrived overnight needs a doctor first, and today.",
+		"refer": "Right idea, wrong speed. A normal referral takes days or weeks. A sudden loss can't wait.",
+		"today": "Doctor TODAY! A sudden loss in one ear is urgent, pain or no pain. Early treatment works best.",
+		"clear": "No aids needed? Her right ear needs 45 to 65 dB. And it changed overnight: doctor today!"
+	},
+	"why": {
+		"prompt": "Why does Melody see a doctor TODAY?",
+		"options": [
+			["It came on overnight, and her bone is down too.", true, "Right! Sudden, one ear, and deeper than wax or fluid: a doctor the same day."],
+			["Her right ear is much worse than her left.", false, "True, and that alone means refer. What makes it TODAY is how fast it came."],
+			["Her full ear means fluid behind the eardrum.", false, "Her tymp was type A: no fluid. A full feeling often comes with a sudden loss."],
+			["Ringing in one ear is an emergency.", false, "One-sided ringing is a red flag, but alone it means refer. The sudden loss makes it today."]
+		]
+	},
+	"debrief": [
+		["Hoot", "A sudden loss in one ear is an emergency, even with no pain. Treatment works best early."],
+		["Hoot", "A full, blocked feeling is often the first sign. Her normal tymp said it wasn't fluid."],
+		["Hoot", "One ear much worse? Mask its bone and air: the good ear may be answering for it."]
+	],
+	"goodbye": [
+		{"do": "phone"},
+		["Hoot", "Hoot at Booth Camp. Sudden loss in her right ear, two days ago. Can you see her today?"],
+		["Hoot", "Four o'clock? Wonderful. Her chart is on its way to you now."],
+		["Hoot", "Melody, the ear doctor sees you at four. Go straight there. Rehearsal can wait."],
+		{"react": "nod"},
+		["Melody", "Straight there. But what if it doesn't come back?"],
+		["Hoot", "Many sudden losses get better, some all the way. Either way, come back afterwards: we retest and help."],
+		["Hoot", "And if your face goes numb or droopy, or your speech slurs: emergency department, straight away."],
+		{"react": "wave"},
+		["Melody", "Doctor at four. And on Friday, the altos stand on my left!"]
+	],
+	"paper": {
+		"headlines": {
+			"S": "MELODY'S EAR HITS A SOUR NOTE; DOCTOR TODAY",
+			"A": "NO TIME FOR A REST: TEACHER SEES DOCTOR TODAY",
+			"B": "MELODY SENT IN TEMPO; A FEW STAMPS OFF-KEY",
+			"C": "SUDDEN EAR CAUGHT, BUT THE CHART SANG FLAT",
+			"Do-over": "OWL CALLS REHEARSAL; MELODY ALREADY AT DOCTOR"
+		},
+		"subheads": {
+			"S": "Overnight, one ear, bone down with the air: a doctor the same day, concert or not.",
+			"A": "A sudden loss in one ear is urgent even without pain, and early treatment works best.",
+			"B": "The right call at the right speed, though a few stamps drifted off the stave.",
+			"C": "When one ear is much worse, mask its bone and air before you trust the chart.",
+			"Do-over": "A full ear that arrives overnight means a doctor today; the choir will wait."
+		}
+	}
+}

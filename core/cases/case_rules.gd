@@ -73,8 +73,12 @@ const TYMP_SHAPES: Dictionary[StringName, String] = {
 ## Normal box: peak pressure (daPa) and peak compensated admittance (mL).
 const TYMP_NORMAL_PRESSURE := Vector2i(-100, 50)
 const TYMP_NORMAL_PEAK := Vector2(0.3, 1.7)
-## Typical adult ear canal volume (mL). Smaller with a wax plug, bigger with a hole in the eardrum.
+## Typical adult ear canal volume (mL): the printed normal band, and the "hole" ceiling. Smaller with
+## a wax plug, bigger with a hole in the eardrum.
 const TYMP_ADULT_ECV := Vector2(0.9, 2.0)
+## Below this a flat tymp reads "blocked" (wax, or the probe against the wall). 0.6-0.9 stays a grey
+## zone ("low": look again): CaseData.validate keeps every flat case tymp out of it.
+const TYMP_BLOCKED_ECV := 0.6
 ## The pressure sweep, positive to negative (daPa).
 const TYMP_SWEEP_FROM := 200
 const TYMP_SWEEP_TO := -400
@@ -126,14 +130,28 @@ static func tymp_normal(tymp: Dictionary) -> bool:
 
 
 ## What a flat (type B) tympanogram means, read with the canal volume (mL): normal volume = fluid
-## behind the eardrum (&"fluid"); small = wax or the probe against the canal wall (&"blocked"); large
-## = a hole in the eardrum or an open ear tube (&"hole"). Compare with the other ear.
+## behind the eardrum (&"fluid"); tiny (under TYMP_BLOCKED_ECV) = wax or the probe against the canal
+## wall (&"blocked"); large = a hole in the eardrum or an open ear tube (&"hole"). Compare with the
+## other ear. The 0.6-0.9 grey zone reads &"fluid" here, while ecv_band (the gadget's chip) says LOW:
+## no case uses it (CaseData.validate).
 static func tymp_b_reading(ecv_ml: float) -> StringName:
-	if ecv_ml < TYMP_ADULT_ECV.x:
+	if ecv_ml < TYMP_BLOCKED_ECV:
 		return &"blocked"
 	if ecv_ml > TYMP_ADULT_ECV.y:
 		return &"hole"
 	return &"fluid"
+
+
+## Where a canal volume (mL) sits: &"tiny" (under TYMP_BLOCKED_ECV), &"low" (the grey zone up to the
+## adult band), &"normal" (inside TYMP_ADULT_ECV) or &"large" (above it).
+static func ecv_band(ecv_ml: float) -> StringName:
+	if ecv_ml < TYMP_BLOCKED_ECV:
+		return &"tiny"
+	if ecv_ml < TYMP_ADULT_ECV.x:
+		return &"low"
+	if ecv_ml > TYMP_ADULT_ECV.y:
+		return &"large"
+	return &"normal"
 
 
 # ---------------------------------------------------------------- audiogram findings
@@ -161,6 +179,15 @@ static func is_asymmetric(right: Dictionary, left: Dictionary) -> bool:
 		else:
 			run = 0
 	return false
+
+
+## Air minus bone at the frequencies both have, 500-4000 Hz (freq -> dB): the air-bone gap.
+static func air_bone_gaps(air: Dictionary, bone: Dictionary) -> Dictionary:
+	var out := {}
+	for f: int in [500, 1000, 2000, 4000]:
+		if air.has(f) and bone.has(f):
+			out[f] = int(air[f]) - int(bone[f])
+	return out
 
 
 ## The poorer ear by PTA ("right", "left", or "" when within 5 dB).

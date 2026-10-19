@@ -530,20 +530,35 @@ static func nontest_bone_estimate(results: Dictionary, test_ear: String, freq: i
 	return cands.min()
 
 
+## (v4) Unmasked bone at freq, wherever the oscillator sat: bone crosses the skull for free
+## (IA about 0 dB), so an unmasked bone answer is the BETTER cochlea's, whichever mastoid the
+## oscillator was on. The lower of both ears' unmasked bone stamps (Steve: test bone on the better
+## ear first; the poorer ear then compares its air with that). null when neither ear has one.
+static func unmasked_bone(results: Dictionary, freq: int) -> Variant:
+	var cands: Array[int] = []
+	for e: String in EARS:
+		var t := sheet_thresholds(results, e, &"bc")
+		if t.has(freq):
+			cands.append(int(t[freq]))
+	return null if cands.is_empty() else cands.min()
+
+
 ## Frequencies that need a masked measurement for one ear, from the stored results (§5.1), in the
 ## recommended order. test = &"bc_masked": wherever the ear's air-bone gap (best AC - unmasked BC)
-## is > 10 dB. test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate.
+## is > 10 dB; (v4) the unmasked BC may come from either mastoid (unmasked_bone()), so testing
+## unmasked bone on the better ear only is enough to see the poorer ear's gap.
+## test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate.
 static func masked_freqs_needed(results: Dictionary, ear: String, test: StringName, phones: StringName = &"phones") -> Array[int]:
 	var out: Array[int] = []
 	if test == &"bc_masked":
 		var ac := best_thresholds(results, ear, false)
-		var bc := sheet_thresholds(results, ear, &"bc")
 		var order: Array[int] = BC_REQUIRED.duplicate()
 		for f: int in BC_FREQS:
 			if not order.has(f):
 				order.append(f)
 		for f: int in order:
-			if bc.has(f) and ac.has(f) and bc_masking_needed(int(ac[f]), int(bc[f])):
+			var ub: Variant = unmasked_bone(results, f)
+			if ub != null and ac.has(f) and bc_masking_needed(int(ac[f]), int(ub)):
 				out.append(f)
 	elif test == &"ac_masked":
 		var ac2 := sheet_thresholds(results, ear, &"ac")

@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_case"]
+
+[resource]
+script = ExtResource("1_case")
+id = "skye"
+display_name = "Skye Tailwind"
+age = 33
+complaint = "My left ear has been underwater since a cold, and I fly long-haul on Friday."
+thresholds_right = Dictionary[int, int]({
+250: 10,
+500: 5,
+750: 5,
+1000: 5,
+1500: 5,
+2000: 5,
+3000: 10,
+4000: 10,
+6000: 15,
+8000: 15
+})
+thresholds_left = Dictionary[int, int]({
+250: 40,
+500: 35,
+750: 35,
+1000: 35,
+1500: 30,
+2000: 35,
+3000: 30,
+4000: 35,
+6000: 35,
+8000: 35
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.4
+reaction_time_min_s = 0.3
+reaction_time_max_s = 0.7
+psychometric_slope_db = 1.8
+attention = 0.95
+fatigue_per_tone = 0.0005
+min_tone_s = 0.45
+rhythm_sensitivity = 0.5
+tinnitus_hz = 0
+tags = PackedStringArray("middle_ear", "conductive", "unilateral", "case")
+pronoun = "she"
+nickname = "Skye"
+bc_left = Dictionary[int, int]({
+250: 10,
+500: 10,
+750: 10,
+1000: 10,
+1500: 10,
+2000: 10,
+3000: 10,
+4000: 10
+})

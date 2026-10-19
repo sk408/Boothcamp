@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = "fs_mabel"
+display_name = "Mabel Shush"
+age = 74
+complaint = "Forty years of shushing, and now the whole world whispers back."
+thresholds_right = Dictionary[int, int]({
+250: 25,
+500: 30,
+750: 30,
+1000: 35,
+1500: 40,
+2000: 45,
+3000: 50,
+4000: 55,
+6000: 60,
+8000: 65
+})
+thresholds_left = Dictionary[int, int]({
+250: 25,
+500: 30,
+750: 35,
+1000: 35,
+1500: 40,
+2000: 45,
+3000: 55,
+4000: 55,
+6000: 65,
+8000: 70
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.4
+reaction_time_min_s = 0.5
+reaction_time_max_s = 1.1
+psychometric_slope_db = 2.0
+attention = 0.92
+fatigue_per_tone = 0.0008
+min_tone_s = 0.6
+rhythm_sensitivity = 0.4
+tags = PackedStringArray("freestyle", "sloping", "sensorineural")
+pronoun = "she"
+nickname = "Mabel"
