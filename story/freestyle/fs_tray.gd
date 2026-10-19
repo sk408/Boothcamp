@@ -198,7 +198,8 @@ func _layout() -> void:
 		c.position = Vector2(x, y)
 		x += c.size.x + GAP
 	_prompt.reset_size()
-	_prompt.position = Vector2(maxf(SIDE, x0), y - _prompt.get_combined_minimum_size().y - 12.0)
+	var pw := _prompt.get_combined_minimum_size().x
+	_prompt.position = Vector2(clampf(x0, SIDE, maxf(SIDE, vp.x - SIDE - pw)), y - _prompt.get_combined_minimum_size().y - 12.0)
 
 
 func _set_hl(i: int, sound: bool = true) -> void:

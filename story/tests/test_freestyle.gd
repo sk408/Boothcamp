@@ -8,6 +8,7 @@ const FsData := preload("res://story/freestyle/fs_data.gd")
 const FsRules := preload("res://story/freestyle/fs_rules.gd")
 const CaseData := preload("res://story/case_data.gd")
 const FsTray := preload("res://story/freestyle/fs_tray.gd")
+const FsClipboard := preload("res://story/freestyle/fs_clipboard.gd")
 const LevelFreestyle := preload("res://story/freestyle/level_freestyle.gd")
 
 ## case id -> [the call, right ear type, left ear type, asymmetric?, needs bone?, needs tymp?]
@@ -228,3 +229,41 @@ func test_tray_rows_fit_the_screen() -> void:
 		(tray as Object).call("_choose", 0)
 		await wait_seconds(0.2)
 		assert_true(got[0], "row %d answered" % k)
+
+
+## Each waiting-room card's teaser wraps inside the card (no line runs under the next card).
+func test_waiting_room_teasers_wrap_inside_their_cards() -> void:
+	var room: Control = (load("res://story/freestyle/waiting_room.tscn") as PackedScene).instantiate()
+	add_node(room)
+	await wait_seconds(0.4)
+	var cards := 0
+	for b: Variant in room.get("_cards"):
+		var card := b as Button
+		cards += 1
+		for c: Node in card.get_children():
+			var l := c as Label
+			if l == null or not l.text.begins_with("\""):
+				continue
+			assert_true(l.position.x >= 0.0 and l.position.x + l.size.x <= card.size.x,
+				"%s: the teaser fits the card's width (%d + %d of %d)" % [card.get_meta("label", "?"), int(l.position.x), int(l.size.x), int(card.size.x)])
+			assert_true(l.get_combined_minimum_size().y <= l.size.y + 1.0, "%s: the teaser fits the card's height" % card.get_meta("label", "?"))
+	assert_eq(cards, FsData.CASE_IDS.size(), "one card per walk-in")
+
+
+## A long visit's clipboard (nine two-line notes and the chart) stays above the tray's prompt.
+func test_clipboard_stays_above_the_tray() -> void:
+	var cb := FsClipboard.new()
+	add_node(cb)
+	cb.setup("HECTOR TICKTOCK, 63")
+	for i in 11:
+		cb.add_note("Note %d: slowly worse over about ten years, nothing sudden" % i, "flag" if i == 2 else "note")
+	var tests: Array[String] = ["Right air: PTA 15 dB (normal)", "Left air: PTA 63 dB (moderately severe)",
+		"Bone: right and left mastoids", "Masked: left bone, left air"]
+	cb.set_tests(tests)
+	await wait_seconds(0.3)
+	var panel := cb.get("_panel") as Control
+	assert_true(panel.size.y <= FsClipboard.MAX_H + 6.0, "the board is %d px tall (max %d)" % [int(panel.size.y), int(FsClipboard.MAX_H)])
+	var text := ""
+	for l: Node in panel.find_children("*", "Label", true, false):
+		text += (l as Label).text + "\n"
+	assert_true(text.contains("Note 2:"), "red flags are never dropped")

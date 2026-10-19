@@ -12,6 +12,10 @@ const UiKit := preload("res://story/ui_kit.gd")
 const POS := Vector2(14, 92)
 const WIDTH := 272.0
 const MAX_NOTES := 9
+## The board stops above the tray's prompt and the dialogue box: a long visit shrinks the writing,
+## then drops the oldest plain notes (red flags stay).
+const MAX_H := 420.0
+const FONT_SIZES: Array[int] = [15, 14, 13]
 
 var _panel: PanelContainer
 var _title: Label
@@ -73,6 +77,7 @@ func add_note(text: String, kind: String = "note") -> void:
 		_notes.remove_child(old)
 		old.queue_free()
 	var row := _add_line(_notes, text, Palette.RIGHT_RED.darkened(0.1) if kind == "flag" else Palette.INK, kind)
+	_fit()
 	Juice.pop(row, 1.15, 0.25)
 	Sfx.play(&"pen", 1.0, -8.0)
 
@@ -84,6 +89,50 @@ func set_tests(lines: Array[String]) -> void:
 	_tests_head.visible = not lines.is_empty()
 	for l: String in lines:
 		_add_line(_tests, l, Palette.INK, "test")
+	_fit()
+
+
+## Keep the board under MAX_H: smaller writing first, then the oldest plain notes go.
+func _fit() -> void:
+	for fs: int in FONT_SIZES:
+		if _estimate(fs) <= MAX_H:
+			_apply_font(fs)
+			return
+	_apply_font(FONT_SIZES[-1])
+	while _estimate(FONT_SIZES[-1]) > MAX_H:
+		var drop: Node = null
+		for c in _notes.get_children():
+			if not c.is_queued_for_deletion() and String(c.get_meta("kind", "")) == "note":
+				drop = c
+				break
+		if drop == null:
+			return
+		_notes.remove_child(drop)
+		drop.queue_free()
+
+
+## The board's height with the writing at font size fs (wrapped lines measured with the real font).
+func _estimate(fs: int) -> float:
+	var h := 26.0 + 12.0 + 8.0   # top (under the clip) and bottom margins, borders
+	h += _title.get_combined_minimum_size().y + 2.0 + 2.0 * 5.0
+	var rows := 0
+	for box: VBoxContainer in [_notes, _tests]:
+		for row in box.get_children():
+			if row.is_queued_for_deletion():
+				continue
+			var l := row.get_child(1) as Label
+			var bold: bool = row.get_meta("kind", "") == "flag"
+			h += UiKit.font(700 if bold else 500).get_multiline_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, WIDTH - 44, fs).y * 1.08 + 3.0
+			rows += 1
+	if _tests_head.visible:
+		h += 13.0 * 1.4 + 5.0
+	return h
+
+
+func _apply_font(fs: int) -> void:
+	for box: VBoxContainer in [_notes, _tests]:
+		for row in box.get_children():
+			(row.get_child(1) as Label).add_theme_font_size_override("font_size", fs)
 
 
 func _add_line(box: VBoxContainer, text: String, color: Color, kind: String) -> Control:
@@ -92,6 +141,7 @@ func _add_line(box: VBoxContainer, text: String, color: Color, kind: String) -> 
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if kind == "empty":
 		h.set_meta("empty", true)
+	h.set_meta("kind", kind)
 	var dot := Control.new()
 	dot.custom_minimum_size = Vector2(10, 18)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE

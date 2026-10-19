@@ -150,10 +150,10 @@ func _card(c: Dictionary, i: int) -> Button:
 	teaser.position = Vector2(16, 142)
 	teaser.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	teaser.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# a fixed width, or the label grows to the whole line and spills off the card
 	teaser.custom_minimum_size = Vector2(CARD_SIZE.x - 32, 0)
-	teaser.size = Vector2(CARD_SIZE.x - 32, 56)
 	b.add_child(teaser)
+	# sized once it is in the tree (sized before, it keeps the unwrapped line's width and spills off the card)
+	teaser.set_deferred("size", Vector2(CARD_SIZE.x - 32, 56))
 	return b
 
 

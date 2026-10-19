@@ -566,13 +566,20 @@ func _refresh_clipboard() -> void:
 			var p := ClinicRules.pta(air)
 			if not is_nan(p):
 				lines.append("%s air: PTA %d dB (%s)" % [ear.capitalize(), int(round(p)), ClinicRules.degree_name(p)])
+	# one line for bone and one for masking, so a long visit still fits the board
+	var bone: Array[String] = []
 	for ear: String in ClinicRules.EARS:
 		if FsRules.has_sheet(results, ear, &"bc"):
-			lines.append("Bone on the %s mastoid" % ear)
+			bone.append(ear)
+	if not bone.is_empty():
+		lines.append("Bone: %s mastoid%s" % [" and ".join(bone), "s" if bone.size() > 1 else ""])
+	var masked: Array[String] = []
 	for ear: String in ClinicRules.EARS:
 		for test: StringName in FsRules.MASK_SHEETS:
 			if FsRules.has_sheet(results, ear, test):
-				lines.append("%s masked %s: done" % [ear.capitalize(), "bone" if test == &"bc_masked" else "air"])
+				masked.append("%s %s" % [ear, "bone" if test == &"bc_masked" else "air"])
+	if not masked.is_empty():
+		lines.append("Masked: %s" % ", ".join(masked))
 	clipboard.call("set_tests", lines)
 
 
