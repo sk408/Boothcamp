@@ -166,14 +166,15 @@ func test_cross_hearing_hook() -> void:
 func test_tinnitus_confuses_steady_tones() -> void:
 	var p := _attentive()
 	p.tinnitus_hz = 4000
+	p.false_alarms_per_minute = 3.0   # enough presses in an hour for a steady ratio
 	var sim := PatientSim.new(p, 31)
 	var t := sim.effective_threshold("right", 4000)
 	var pulsed := sim.hear_probability("right", 4000, t)
 	assert_false(sim.tinnitus_confuses(4000), "pulsed or warble: no confusion")
 	sim.steady_tone = true
 	assert_true(sim.tinnitus_confuses(4000))
-	assert_true(sim.tinnitus_confuses(3000), "half an octave below")
-	assert_true(sim.tinnitus_confuses(6000), "half an octave above")
+	assert_true(sim.tinnitus_confuses(3000), "the half-octave pitch below")
+	assert_true(sim.tinnitus_confuses(6000), "the half-octave pitch above")
 	assert_false(sim.tinnitus_confuses(2000), "an octave away")
 	assert_false(sim.tinnitus_confuses(8000), "an octave away")
 	assert_near(sim.hear_probability("right", 4000, t), pulsed * (1.0 - PatientSim.TINNITUS_MISS_P), 0.01, "more misses at threshold")
@@ -182,9 +183,11 @@ func test_tinnitus_confuses_steady_tones() -> void:
 	var far := 0
 	var near := 0
 	for i in 60 * 60 * 30:  # one simulated hour of silence at 30 fps, each way
-		if sim.false_alarm_tick(1.0 / 30.0, 1000):
+		sim.dialled_freq = 1000
+		if sim.false_alarm_tick(1.0 / 30.0):
 			far += 1
-		if sim.false_alarm_tick(1.0 / 30.0, 4000):
+		sim.dialled_freq = 4000
+		if sim.false_alarm_tick(1.0 / 30.0):
 			near += 1
 	assert_true(near > far * 2, "more presses for nothing near the ring (%d vs %d)" % [near, far])
 	p.tinnitus_hz = 0

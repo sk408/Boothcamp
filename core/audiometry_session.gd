@@ -488,7 +488,8 @@ func advance(delta: float) -> void:
 		_press(&"anticipated")
 	if not _cur.is_empty() and not bool(_cur["closed"]) and not tone_on and time > window_end_t and _pending_press_t < 0.0:
 		_close_current()
-	if not tone_on and time > window_end_t and sim.false_alarm_tick(delta, freq):
+	sim.dialled_freq = freq   # (E8) a steady tone near the tinnitus pitch: more presses for nothing
+	if not tone_on and time > window_end_t and sim.false_alarm_tick(delta):
 		_press(&"false_alarm")
 
 

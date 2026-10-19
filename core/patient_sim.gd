@@ -60,10 +60,11 @@ const NOT_INSTRUCTED_FA_FACTOR := 6.0
 const NEAR_THRESHOLD_EXTRA_S := 0.25
 ## Temporal integration: a tone this much shorter than min_tone_s loses up to this many dB.
 const SHORT_TONE_PENALTY_DB := 12.0
-## (E8) A steady tone within this many octaves of profile.tinnitus_hz is confused with the ringing
+## (E8) A steady tone within this many octaves of profile.tinnitus_hz is confused with the ringing:
+## about half an octave, so the half-octave test pitches either side count (3 and 6 kHz around 4 kHz)
 ## (ASHA 2005: "Use a pulsed signal or a warble tone to help distinguish the test signal from the
 ## tinnitus"; Lentz et al. 2017: steady tones rated harder than warble and pulsed).
-const TINNITUS_OCTAVES := 0.5
+const TINNITUS_OCTAVES := 0.6
 ## Near threshold this share of those steady tones is lost in the ring (none well above threshold).
 const TINNITUS_MISS_P := 0.35
 ## And presses for nothing come this many times as often while that pitch is dialled in.
@@ -91,6 +92,8 @@ var masker_transducer: StringName = &"phones"
 ## (E8) The tone is steady (not pulsed or warble); the session sets it. Off by default (E7: the
 ## AudiOtron starts on pulsed).
 var steady_tone: bool = false
+## (E8) The pitch dialled in while the booth is quiet (the session sets it before false_alarm_tick).
+var dialled_freq: int = 0
 ## Which cochlea heard the last tone (on_tone_start): &"test", &"cross" (the Cross-Hearing
 ## Ghost) or &"" when it was not heard. Truth: for reactions only, never for the player or bot.
 var last_heard_by: StringName = &""
@@ -204,12 +207,12 @@ func reaction_time(ear: String = "", freq: int = 0, db: int = 0) -> float:
 
 
 ## Call every frame of silence (outside any response window). True = a press for nothing.
-## freq: the pitch dialled in (E8: a steady tone near the tinnitus pitch makes the ring sound like a beep).
-func false_alarm_tick(delta: float, freq: int = 0) -> bool:
+## (E8) With a steady tone dialled in near the tinnitus pitch (dialled_freq), the ring sounds like a beep.
+func false_alarm_tick(delta: float) -> bool:
 	var rate := profile.false_alarms_per_minute / 60.0 * (1.0 + 3.0 * groove)
 	if not instructed:
 		rate *= NOT_INSTRUCTED_FA_FACTOR
-	if tinnitus_confuses(freq):
+	if tinnitus_confuses(dialled_freq):
 		rate *= TINNITUS_FA_FACTOR
 	return rng.randf() < rate * delta
 

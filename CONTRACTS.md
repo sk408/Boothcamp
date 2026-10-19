@@ -859,8 +859,8 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
 - **(v3)** `PatientSim`: `transducer`, `masker_db`, `masker_transducer`, `condition()`, `condition_for(ear, freq, tr,
   mask, mask_tr)` (via `ClinicRules.response_threshold`), `last_heard_by` (&"test" / &"cross", reactions only).
 - **(E8)** `PatientSim.steady_tone` (false = pulsed or warble, the E7 default) and `tinnitus_confuses(freq)`: within
-  `TINNITUS_OCTAVES` (0.5) of `profile.tinnitus_hz` a steady tone near threshold is missed `TINNITUS_MISS_P` (35 %) more
-  often, and `false_alarm_tick(delta, freq := 0)` presses `TINNITUS_FA_FACTOR` (3) times as often at that pitch. The
+  `TINNITUS_OCTAVES` (0.6: the half-octave pitches either side) of `profile.tinnitus_hz` a steady tone near threshold is missed `TINNITUS_MISS_P` (35 %) more
+  often, and `false_alarm_tick(delta)` presses `TINNITUS_FA_FACTOR` (3) times as often while `dialled_freq` is in range. The
   session sets it (`set_steady_tone(on)`, `steady_tone`); the AudiOtron passes its stimulus before every tone.
 - `ToneGenerator` (Node): `AudioStreamGenerator` at 44.1 kHz on the Tones bus.
   - **(v3)** masker: `start_masker(ear, freq, db_em)`, `set_masker(freq, db_em)`, `stop_masker()`, through `AudioSafety` (§1.3).
