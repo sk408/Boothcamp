@@ -225,12 +225,201 @@ word scores land (Day 4), so no walk-in needs speech yet.
 
 ## 7. The walk-ins
 
-| # | Case id | Patient | Stars | Condition (never named as a diagnosis in play) | The call |
-|---|---|---|---|---|---|
-| 1 | `fs_penny` | Penny Natter, 41, podcaster | 1 | normal hearing both ears; "never listens" | **NO AIDS NEEDED** |
+Eight walk-ins, from easy to hard. Every call was checked against current guidance by a researcher and then by a
+second, adversarial reviewer (sources under each case). Truth tables live in `core/patients/fs_*.tres`; what each
+patient says is in `story/freestyle/cases/fs_*.json`.
 
-(Filled in as each case lands; truth tables are in each `core/patients/fs_*.tres`.)
+| # | Walk-in | Stars | What it teaches | The call |
+|---|---|---|---|---|
+| 1 | Penny Natter, 41, podcaster | ★ | normal hearing: "never listens" is not always the ears; no bone needed | **NO AIDS NEEDED** |
+| 2 | Mabel Shush, 74, retired librarian | ★ | the classic first fitting: slow, matching, sloping loss | **FIT** |
+| 3 | Sid Sprocket, 45, bike mechanic | ★ | a lifelong, stable loss still gets the full workup | **FIT** |
+| 4 | Dame Viola Vibrato, 68, retired soprano | ★★ | a bigger loss is not a red flag; old aids wear out; narrow canals | **FIT** |
+| 5 | Buck Shotwell, 58, duck hunter | ★★ | an asymmetry is a red flag even with a good excuse; masked bone on the worse ear | **REFER** |
+| 6 | Melody Belle, 36, music teacher | ★★ | a sudden loss in one ear is urgent with no pain; mask bone and air | **DOCTOR TODAY** |
+| 7 | Skyler Kickflip, 19, skateboarder | ★★★ | a big air-bone gap and a floppy tymp after a knock | **REFER** |
+| 8 | Hector Ticktock, 63, clockmaker | ★★★ | a mixed loss with a stiff tymp: masking shows the two parts | **REFER** |
+
+### 7.1 Penny Natter, 41 (★☆☆): **NO AIDS NEEDED**
+
+Waiting-room card: "Her husband says she never listens. She says he mumbles." Case `fs_penny`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 10 | 10 | 5 | 5 | 5 | 10 | 10 | 15 | 15 | 10 |
+| Left air | 10 | 5 | 5 | 10 | 10 | 5 | 10 | 10 | 20 | 15 |
+
+Bone = air in both ears (no bone rows in the file).
+
+- **Chart:** right normal (PTA 8, normal), left normal (PTA 7, normal). Asymmetric: no.
+- **Look and tymp:** Canals clear, eardrums normal; average-sized canals (medium tip). Tymp right A (-10 daPa, 0.8 mL, canal 1.3 mL), left A (-5 daPa, 0.9 mL, canal 1.3 mL).
+- **Key questions:** red_flags, onset, noise, hardest.
+- **The workup a pro runs:** questions, then look in the ears, then air (either ear first).
+- **The call:** NO AIDS NEEDED. Hoot: "Normal hearing in both ears! No aids needed. Her trouble is distance, not her ears." Right reason: "Every tone was 25 dB or better in both ears."
+- **Hoot's debrief:** "Normal hearing is good news, not a wasted visit. Now there's a baseline for later." "Talking from another room fails for everyone. Face each other, get attention first." "And those loud earbuds: keep them at half volume, with breaks. Damaged hearing doesn't grow back."
+- **Checked against:** [WHO grades of hearing loss (2021)](https://pmc.ncbi.nlm.nih.gov/articles/PMC11266198); [21 CFR 801.422, prescription hearing aid labeling (red flags)](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422).
+
+### 7.2 Mabel Shush, 74 (★☆☆): **FIT**
+
+Waiting-room card: "Forty years of shushing. Now the whole world whispers back." Case `fs_mabel`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 25 | 30 | 30 | 35 | 40 | 45 | 50 | 55 | 60 | 65 |
+| Left air | 25 | 30 | 35 | 35 | 40 | 45 | 55 | 55 | 65 | 70 |
+
+Bone = air in both ears (no bone rows in the file).
+
+- **Chart:** right sensorineural (PTA 37, mild), left sensorineural (PTA 37, mild). Asymmetric: no.
+- **Look and tymp:** Canals clear, eardrums normal; average-sized canals (medium tip). Tymp right A (-15 daPa, 0.6 mL, canal 1.4 mL), left A (-10 daPa, 0.7 mL, canal 1.3 mL).
+- **Key questions:** red_flags, onset, which_ear, hardest.
+- **The workup a pro runs:** questions, then look in the ears, then air (either ear first), then bone (either mastoid).
+- **The call:** FIT. Hoot: "Fit! Slow, matching ears, no red flags, and she's missing the consonants. A classic first fitting." Right reason: "A slow, matching loss in both ears, and no red flags."
+- **Hoot's debrief:** "A textbook first fitting: slow, matching, sloping down to the high pitches. No red flags, so fit." "Vowels are low and loud. Consonants like s, f and th are high and soft. She misses those." "Family tips: face her, get her attention first, pick a quiet table, and turn on TV subtitles."
+- **Checked against:** [AAO-HNSF Clinical Practice Guideline: Age-Related Hearing Loss (2024), summary guide](https://www.entnet.org/wp-content/uploads/2024/05/CPG_HearingLoss_SummaryGuideFINAL.pdf); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [AAA Guidelines for the Audiologic Management of Adult Hearing Impairment](https://www.audiology.org/wp-content/uploads/2021/05/haguidelines.pdf_53994876e92e42.70908344.pdf); [21 CFR 801.422 (prescription hearing aid labeling, red flags)](https://www.law.cornell.edu/cfr/text/21/801.422); [Federal Register 87 FR 50698 (Aug 17 2022), OTC hearing aid final rule, comment on bilateral tinnitus](https://www.govinfo.gov/content/pkg/FR-2022-08-17/html/2022-17230.htm).
+
+### 7.3 Sid Sprocket, 45 (★☆☆): **FIT**
+
+Waiting-room card: "His hearing aid just died. He's worn them since he was six." Case `fs_sid`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 40 | 45 | 45 | 50 | 50 | 55 | 55 | 55 | 60 | 60 |
+| Left air | 45 | 45 | 50 | 50 | 55 | 55 | 55 | 55 | 60 | 65 |
+
+Bone = air in both ears (no bone rows in the file).
+
+- **Chart:** right sensorineural (PTA 50, moderate), left sensorineural (PTA 50, moderate). Asymmetric: no.
+- **Look and tymp:** Roomy canals clear, eardrums normal; roomy canals (large tip). Tymp right A (-5 daPa, 0.9 mL, canal 1.7 mL), left A (-15 daPa, 1.0 mL, canal 1.8 mL).
+- **Key questions:** red_flags, onset, which_ear, aids.
+- **The workup a pro runs:** questions, then look in the ears, then air (either ear first), then bone (either mastoid).
+- **The call:** FIT. Hoot: "Fit! Lifelong, steady, matching ears, no red flags. New aids, and his wheels keep turning." Right reason: "The same steady loss in both ears, no gap, no red flags."
+- **Hoot's debrief:** "Years of aids don't mean skipping the checks. Look, ask and test, every visit." "Bone sat right on air, no gap: that's what shows it's sensorineural. Air alone can't tell." "A new sudden drop: a doctor today. One ear slipping behind: a doctor first. Sid has neither."
+- **Checked against:** [21 CFR 801.422, prescription hearing aid labeling, red flag conditions for dispensers](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422); [FDA letter to state officials on the OTC hearing aid final rule (Oct 13, 2022): prescription hearing aids do not require a physician's involvement or medical evaluation](https://fda.gov/media/163084/download); [British Academy of Audiology, Onward Referral Guidance for Adult Audiology Service Users (2023 update page; 15 dB AC asymmetry; bilateral-worsening referral criterion removed)](https://baaudiology.org/?p=11189); [Benson EA, Messersmith JJ. Audiologic Assessment. Seminars in Hearing 2022;43(2):58-65 (red flags -> medical referral before amplification)](https://pmc.ncbi.nlm.nih.gov/articles/PMC9325090); [American Academy of Audiology, Guidelines for the Audiologic Management of Adult Hearing Impairment (2006), sec. 2.1: case history, otoscopic inspection, cerumen management, hearing assessment and needs assessment come before fitting](https://www.audiology.org/wp-content/uploads/2021/05/haguidelines.pdf_53994876e92e42.70908344.pdf).
+
+### 7.4 Dame Viola Vibrato, 68 (★★☆): **FIT**
+
+Waiting-room card: "Her old aids whistle a top C, and still the world mumbles." Case `fs_viola`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 30 | 50 | 55 | 60 | 60 | 65 | 60 | 60 | 70 | 75 |
+| Left air | 35 | 55 | 55 | 60 | 60 | 60 | 60 | 60 | 75 | 80 |
+
+Bone = air in both ears (no bone rows in the file).
+
+- **Chart:** right sensorineural (PTA 58, moderately severe), left sensorineural (PTA 58, moderately severe). Asymmetric: no.
+- **Look and tymp:** Narrow canals, clear; eardrums normal; narrow canals (small tip). Tymp right A (-10 daPa, 0.5 mL, canal 0.9 mL), left A (-15 daPa, 0.6 mL, canal 1.0 mL).
+- **Key questions:** red_flags, onset, which_ear, aids.
+- **The workup a pro runs:** questions, then look in the ears, then air (either ear first), then bone (either mastoid).
+- **The call:** FIT. Hoot: "Fit! Slow, matching, no red flags. A bigger loss just needs stronger aids, fitted and checked properly." Right reason: "Slow and even in both ears, no gap, no red flags."
+- **Hoot's debrief:** "A bigger loss isn't a red flag. Slow, matching, no gap, no red flags: that's a fit." "Eight-year-old aids wear out, and hearing drifts. New ones get checked in her ear with a tiny mic." "Honest goals: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check."
+- **Checked against:** [WHO grades of hearing loss (2021), German consensus version, PMC11266198](https://pmc.ncbi.nlm.nih.gov/articles/PMC11266198); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [21 CFR 801.422, prescription hearing aid labeling with red-flag conditions for dispensers](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422); [FDA OTC hearing aid final rule, 87 FR 50698 (Aug 2022), comment responses on tinnitus in one ear](https://www.govinfo.gov/content/pkg/FR-2022-08-17/html/2022-17230.htm); [BSA Practice Guidance: Verification of hearing devices using probe microphone measurements (2018)](https://www.baaudiology.org/app/uploads/2020/11/REMS-2018.pdf).
+
+### 7.5 Buck Shotwell, 58 (★★☆): **REFER**
+
+Waiting-room card: "Forty years of duck hunting. Now the ducks sneak up on him." Case `fs_buck`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 15 | 15 | 15 | 15 | 20 | 20 | 30 | 35 | 40 | 30 |
+| Left air | 15 | 20 | 20 | 25 | 30 | 45 | 55 | 60 | 65 | 55 |
+
+Bone = air in both ears (no bone rows in the file).
+
+- **Chart:** right sensorineural (PTA 17: the loss is in the high pitches), left sensorineural (PTA 30, mild). Asymmetric: yes.
+- **Look and tymp:** Canals clear, eardrums normal; average-sized canals (medium tip). Tymp right A (-10 daPa, 0.7 mL, canal 1.4 mL), left A (-5 daPa, 0.8 mL, canal 1.5 mL).
+- **Key questions:** red_flags, which_ear, onset, noise. Red-flag answers: which_ear.
+- **The workup a pro runs:** questions, then look in the ears, then air (right ear first), then bone (right mastoid), then masked bone left (2k, 4k).
+- **The call:** REFER. Hoot: "Refer! The shotgun likely did it, but ears this lopsided need a doctor's all-clear first." Right reason: "His left ear is much worse than his right."
+- **Hoot's debrief:** "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left." "But a lopsided loss is a red flag until a doctor clears it. Even with a good excuse." "Earplugs AND earmuffs, every shot from now on. The damage so far stays; more is preventable."
+- **Checked against:** [NICE NG98 Hearing loss in adults, rec 1.3.2](https://www.nice.org.uk/guidance/NG98/chapter/recommendations); [BAA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [Schiff et al., Practice Patterns in Asymmetric SNHL: Survey Data, Laryngoscope 2024](https://einstein.elsevierpure.com/en/publications/practice-patterns-in-asymmetric-sensorineural-hearing-loss-survey/); [ENTtoday TRIO Best Practice, What defines asymmetric SNHL? (2019)](https://www.enttoday.org/article/what-defines-asymmetric-sensorineural-hearing-loss/); [Ahsan et al., Clinical Predictors of Abnormal MRI Findings in ASNHL, JAMA Otolaryngol 2015](https://jamanetwork.com/journals/jamaotolaryngology/fullarticle/2167110).
+
+### 7.6 Melody Belle, 36 (★★☆): **DOCTOR TODAY**
+
+Waiting-room card: "Her right ear woke up muffled. She's waiting for it to pop." Case `fs_melody`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 45 | 45 | 55 | 60 | 60 | 60 | 60 | 60 | 65 | 65 |
+| Left air | 10 | 10 | 5 | 5 | 10 | 10 | 10 | 15 | 15 | 10 |
+
+Bone = air in both ears (no bone rows in the file).
+
+- **Chart:** right sensorineural (PTA 55, moderate), left normal (PTA 8, normal). Asymmetric: yes.
+- **Look and tymp:** Canals clear, eardrums normal; narrow canals (small tip). Tymp right A (-5 daPa, 0.7 mL, canal 1.0 mL), left A (0 daPa, 0.8 mL, canal 1.0 mL).
+- **Key questions:** red_flags, onset, which_ear, ringing. Red-flag answers: which_ear, onset, ringing.
+- **The workup a pro runs:** questions, then look in the ears, then tympanometer, then air (left ear first), then bone (left mastoid), then masked bone right (500, 1k, 2k, 4k), then masked air right (750, 1k, 1.5k, 2k, 3k, 4k, 6k, 8k).
+- **The call:** DOCTOR TODAY. Hoot: "Doctor TODAY! A sudden loss in one ear is urgent, pain or no pain. Early treatment works best." Right reason: "It came on overnight, and her bone is down too."
+- **Hoot's debrief:** "A sudden loss in one ear is an emergency, even with no pain. Treatment works best early." "A full, blocked feeling is often the first sign. Her normal tymp said it wasn't fluid." "One ear much worse? Mask its bone and air: the good ear may be answering for it."
+- **Checked against:** [Chandrasekhar SS et al. Clinical Practice Guideline: Sudden Hearing Loss (Update). Otolaryngol Head Neck Surg 2019;161(1S):S1-S45.](https://pubmed.ncbi.nlm.nih.gov/31369359/); [AAO-HNSF, Sudden Hearing Loss guideline talking points for physicians](https://www.entnet.org/sites/default/files/SHL-talking-points-physicians.pdf); [NICE QS185 Quality statement 2: Sudden onset of hearing loss](https://www.nice.org.uk/guidance/qs185/chapter/Quality-statement-2-Sudden-onset-of-hearing-loss); [BAA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [21 CFR 801.422 prescription hearing aid labeling (red-flag conditions addressed to dispensers)](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422).
+
+### 7.7 Skyler Kickflip, 19 (★★★): **REFER**
+
+Waiting-room card: "Lost a fight with a handrail. Now one ear wears a beanie." Case `fs_skyler`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 10 | 5 | 5 | 5 | 10 | 5 | 10 | 10 | 15 | 10 |
+| Left air | 50 | 50 | 50 | 45 | 45 | 50 | 50 | 55 | 55 | 50 |
+| Left bone | 5 | 0 | 5 | 5 | 5 | 10 | 10 | 5 |  |  |
+
+Right bone = air.
+
+- **Chart:** right normal (PTA 5, normal), left conductive (PTA 48, moderate). Asymmetric: yes.
+- **Look and tymp:** Canals clear; left eardrum healed and closed; average-sized canals (medium tip). Tymp right A (-10 daPa, 0.8 mL, canal 1.3 mL), left Ad (-5 daPa, 2.8 mL, canal 1.4 mL).
+- **Key questions:** red_flags, which_ear, onset, ear_history. Red-flag answers: which_ear, onset, red_flags, ear_history.
+- **The workup a pro runs:** questions, then look in the ears, then tympanometer, then air (right ear first), then bone (right mastoid), then masked bone left (500, 1k, 2k, 4k), then masked air left (250, 500, 750, 1k, 2k, 3k, 4k, 6k, 8k).
+- **The call:** REFER. Hoot: "Refer! A big gap after a knock points to the hearing chain. A doctor decides; often it's fixable." Right reason: "A big air-bone gap in the left ear since the fall."
+- **Hoot's debrief:** "Healed eardrum, floppy peak, big gap after a knock: that points to the hearing chain behind it." "The hearing chain: three tiny bones behind the eardrum. Masked bone was normal, so the inner ear's fine." "Often fixable, but the doctor decides. Red flags: blood, sudden change, one ear worse, that gap."
+- **Checked against:** [21 CFR 801.422 (eCFR; the list itself appears there only as an image)](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422); [BAA, Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [NICE NG98 Hearing loss in adults, recommendations 1.1.2 and 1.1.6](https://www.nice.org.uk/guidance/NG98/chapter/recommendations); [StatPearls, Ossicular-Chain Dislocation](https://www.statpearls.com/point-of-care/26366); [FPnotebook, Tympanometry (type Ad causes)](https://fpnotebook.com/ENT/Exam/Tympnmtry.htm).
+
+### 7.8 Hector Ticktock, 63 (★★★): **REFER**
+
+Waiting-room card: "His left ear runs slow. Odder still, noise seems to help." Case `fs_hector`.
+
+| dB HL | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air | 10 | 10 | 10 | 15 | 15 | 20 | 25 | 35 | 40 | 45 |
+| Left air | 65 | 65 | 60 | 60 | 55 | 60 | 60 | 60 | 65 | 65 |
+| Left bone | 30 | 30 | 30 | 30 | 35 | 40 | 35 | 35 |  |  |
+
+Right bone = air.
+
+- **Chart:** right sensorineural (PTA 15: the loss is in the high pitches), left mixed (PTA 62, moderately severe). Asymmetric: yes.
+- **Look and tymp:** Canals clear, eardrums look normal; average-sized canals (medium tip). Tymp right A (-10 daPa, 0.7 mL, canal 1.4 mL), left As (-5 daPa, 0.2 mL, canal 1.4 mL).
+- **Key questions:** red_flags, which_ear, onset, family. Red-flag answers: which_ear, ringing.
+- **The workup a pro runs:** questions, then look in the ears, then tympanometer, then air (right ear first), then bone (right mastoid), then masked bone left (500, 1k, 2k, 4k), then masked air left (250, 500, 750, 1k, 1.5k, 2k).
+- **The call:** REFER. Hoot: "Refer! A big gap plus a stiff, shallow tymp points to the middle ear. A doctor decides." Right reason: "A big air-bone gap and a stiff, shallow tymp on the left."
+- **Hoot's debrief:** "A mixed loss has two parts: bone shows the inner ear's share, the gap shows the middle ear's." "Unmasked bone heard his good right cochlea. Only masked bone showed the left ear's own part." "Gap plus stiff tymp points to the middle ear. Doctor first; aids can come later, or alongside."
+- **Checked against:** [Merck Manual Professional, Otosclerosis (T. A. Jan, reviewed June 2026)](https://www.merckmanuals.com/professional/ear,-nose,-and-throat-disorders/middle-ear-and-tympanic-membrane-disorders/otosclerosis); [Ahmed S., Otosclerosis, UCLA Head & Neck Surgery chapter 143 (2011)](https://www.uclahealth.org/sites/default/files/documents/2_23_11_Ahmed_Otosclerosis_ch143_0.pdf); [Sargent E. W., Otosclerosis: A Review for Audiologists, AudiologyOnline (2001)](https://audiologyonline.com/articles/otosclerosis-a-review-for-audiologists-1226); [Laurent C., Tympanometry, Open Access Guide to Audiology and Hearing Aids for Otolaryngologists](https://open.umich.edu/sites/default/files/downloads/tympanometry.pdf); [US FDA hearing-aid red flags (former 21 CFR 801.420; now 'red flag' conditions in 801.422 labeling), as listed in 'Hearing Referral Eight Red Flags', Hearing Health Matters (2018)](https://hearinghealthmatters.org/waynesworld/2018/hearing-referral-eight-red-flags/).
 
 ## 8. Steve's checklist
 
-(Filled in once all eight cases are written.)
+Steve, every call above is how the game grades the player today. Each question below has a default (what the game
+does now); answer only where you disagree, by number. The first seven change the rules for every walk-in.
+
+1. Teach 25 dB HL as the adult normal cut-off, as the rest of the game does? (yes = keep 25; no = use 20, as WHO 2021 does)
+2. Five questions per visit ("the waiting room is full"), so the player has to choose. Right number? (a number; 5 now)
+3. The tympanometer is required only when there is an air-bone gap, an odd tymp or a full feeling (Melody); running it otherwise is fine but not required. Make it required before every FIT? (yes/no; no now)
+4. REFER for an asymmetry or a gap means the aids wait for the doctor's all-clear (FDA red-flag wording). Or would you fit while the referral is pending, as BAA 2023 allows? (yes = wait, as now; no = fit while pending; affects Buck and Hector)
+5. Ringing in both ears is not a red flag; only ringing in one ear is. Buck's both-ear ringing that is louder on the left counts as not a flag. Keep? (yes/no)
+6. When word scores join freestyle (after Day 4), should every FIT walk-in need a word test before the call (AAO-HNSF sends poor word recognition to a doctor)? (yes/no)
+7. Bone conduction is required whenever any air tone is poorer than 25 dB, even for a long-known loss like Sid's. Keep? (yes/no)
+8. Penny: for a "never listens" complaint with a normal chart, should Hoot suggest a speech-in-noise test if the trouble continues? (yes/no; no now)
+9. Mabel: leave "ringing" as an optional question for her faint hiss in both ears? (yes/no; yes now)
+10. Sid: an adult with a lifelong loss who has never seen an ear doctor, refer once before fitting? Sid was checked as a child, so his call stays FIT either way. (yes/no)
+11. Sid: is his own word that his hearing is stable enough, or should the case put an old audiogram on file? (yes = his word is enough, as now)
+12. Viola: keep Hoot's hedge "If good aids fall short, ask about an implant check" for a PTA 58 loss? (yes/no; yes now)
+13. Viola: how many weeks after the fitting should Hoot book her tune-up? (a number; 2 now)
+14. Buck: keep REFER for a shooter-shaped asymmetry (left 25 dB worse from 2k to 8k, right-handed shooter, no other flags)? (yes = keep; no = FIT and monitor)
+15. Melody: her 4th key question is "ringing" (one-sided, a red flag). Swap it for "ear infections, surgery or injuries" ("has this happened before")? (yes = swap; no = keep)
+16. Melody: keep her free of dizziness, so "sudden" alone carries the call? (yes/no; yes now)
+17. Melody: her right 500 Hz is 45 dB so masked bone there stays clear of the vibrotactile zone (about 50 to 60 dB HL). OK? (yes/no)
+18. Melody is close to Dash (Day 8): right ear, overnight, DOCTOR TODAY. Move her loss to the left ear so the two feel different? (yes/no; no now)
+19. Skyler: REFER (a doctor within about 2 weeks) rather than DOCTOR TODAY, for a loss that began with a knock 3 months ago and has been steady since, with no dizziness or facial weakness? (yes/no; yes now)
+20. Skyler: is a left type Ad peak of 2.8 mL (at -5 daPa, canal 1.4 mL) believable? (yes, or the peak in mL you would use)
+21. Skyler: keep the left bone flat and normal (0 to 10 dB), with no small inner-ear dip at 4k from the knock? (yes/no; yes now)
+22. Hector: his right ear (normal to 3k; 4k 35, 6k 40, 8k 45) is graded sensorineural. Keep? (yes = keep; no = make it normal)
+23. Hector: Hoot explains "hears better in the noisy workshop" as people speaking up over the clocks, while his wife murmurs on his poorer side. Right for beginners? (yes/no)
+24. Hector: a loss starting at 53 is late for a stiff middle ear. Change his story to "about twenty years slow"? (yes/no; no now)
