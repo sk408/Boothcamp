@@ -321,3 +321,55 @@ func test_chapter_markers() -> void:
 	if at.has("marco_marker"):
 		assert_eq(int(at["marco"]), int(at["sep"]) + 1, "the Day 5 marker sits right below the separator")
 		assert_true(Game.chapter("marco").is_empty(), "no marco chapter while its marker stands")
+
+
+# ---------------------------------------------------------------- Day 3 goldens (S0b: written before the seams)
+
+const Golden := preload("res://core/tests/speech_day3_golden.gd")
+
+
+## The golden `name` matches `text` (with BC_WRITE_GOLDEN=1 it is rewritten instead).
+func _check_golden(name: String, text: String) -> void:
+	if Golden.writing():
+		Golden.write_golden(name, text)
+		return
+	var want := Golden.golden(name)
+	assert_true(want != "", "the golden %s exists" % name)
+	if text == want:
+		return
+	# the first difference, with a little context, so a leak is easy to find
+	var i := 0
+	while i < mini(text.length(), want.length()) and text[i] == want[i]:
+		i += 1
+	fail("%s differs at %d: golden ...%s... got ...%s..." % [name, i, want.substr(maxi(0, i - 80), 200), text.substr(maxi(0, i - 80), 200)])
+
+
+func test_day3_session_golden() -> void:
+	_check_golden("day3_session", Golden.session_snapshot())
+
+
+func test_day3_screen_golden() -> void:
+	var saved_scale := Engine.time_scale
+	var saved_state := Game.rng.state
+	var saved_quick := bool(Game.settings.get("quick_visit", true))
+	Game.begin_visit("mike")
+	Game.rng.seed = 1234
+	Engine.time_scale = 8.0
+	var text: String = await Golden.screen_snapshot(self)
+	for n: Node in tree.get_nodes_in_group("speech_screen"):
+		if n.get_parent() != null:
+			n.get_parent().remove_child(n)
+			n.queue_free()
+	Engine.time_scale = saved_scale
+	Game.rng.state = saved_state
+	Game.set_setting("quick_visit", saved_quick)
+	Hoot.clear()
+	_check_golden("day3_screen", text)
+
+
+func test_day3_paper_golden() -> void:
+	var mike := _mike()
+	var tones := SpeechSession.tone_results_from(mike)
+	var merged: Dictionary = str_to_var(Golden.session_snapshot())["merged"]
+	_check_golden("day3_paper", Golden.paper_snapshot(self, merged))
+	_check_golden("day1_paper", Golden.paper_snapshot(self, tones, "gus"))
