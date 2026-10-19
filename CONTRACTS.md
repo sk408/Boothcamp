@@ -46,6 +46,8 @@ Day 1 is unchanged (no movie, its pause menu shows no movie button). `tests/test
 **Merged with main** (the speech chapter, Day 3, §9, marked **(Speech)**; the patient cases, Days 6-9, §11, marked
 **(cases)**): those days have no movie either and play exactly as on main. The v4 bone rules (`unmasked_bone()`,
 the either-mastoid masked bone start) give the same answers there, since each case measures unmasked bone on one ear only.
+**(cases follow-up)** One-sided cases now rely on that rule, as Day 2 does: unmasked bone on the better ear only, then
+masked bone on the case ear (§11).
 
 ### §1.2 How modules may touch each other
 
@@ -151,7 +153,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `set_visit_flag(key, v)`, `get_visit_flag(key, default)` | Free-form per-visit flags |
 | `record_medal(beat, "gold" / "silver" / "bronze")` | One medal per micro-game |
 | `set_audiometry_results(results §5.1)` | Story calls it after the last `test_finished`. |
-| `finish_visit() -> Dictionary` | Scores the visit, awards coins, saves, and returns the summary (§5.3). Called once, on results. |
+| `finish_visit() -> Dictionary` | Scores the visit, awards coins, saves, and returns the summary (§5.3). Called once, on results (**(cases)** a case with a retest calls it just before the retest, §11). |
 | `add_coins(n)`, `has_upgrade(id)`, `buy_upgrade(id, cost) -> bool` | Shop |
 | `cli: Dictionary`, `cli_flag(name)`, `cli_value(name, default)`, `is_autoplay()` | User args after `--` (§7.1) |
 | `rng: RandomNumberGenerator` | Seeded (`--seed`, default 1234 in autoplay). Use it for anything that should replay the same way. |

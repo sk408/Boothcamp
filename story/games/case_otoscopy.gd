@@ -5,7 +5,8 @@ extends "res://story/games/otoscopy.gd"
 ## Story-internal:
 ##   var g := CaseOtoscopy.new(); hud.add_game(g)
 ##   await g.show_view("right", "wax", caption)    # the light sweeps, the caption names it
-## Reads otoscopy.gd's view_center, ear and _canal; the drum numbers below mirror its _draw_canal.
+## Reads otoscopy.gd's view_center, ear, _canal and _t (its game-time clock, for the bubbles); the drum
+## numbers below mirror its _draw_canal.
 
 ## The look's numbers live in an inner class, so a constant otoscopy.gd adds later can never clash
 ## with one here (a subclass redeclaring a base constant is a parse error).

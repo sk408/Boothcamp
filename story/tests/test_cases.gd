@@ -627,10 +627,11 @@ func test_retest_restores_the_first_visit() -> void:
 	assert_eq(Game.visit["audiometry"], first, "so are the visit's (the paper reads them)")
 	assert_eq(lc.get("patient"), first_patient, "and the first visit's patient")
 	assert_eq(Game.get_comfort(), comfort, "hearts lost on the retest come back")
+	Game.lose_comfort("retest_test", 2)
+	var low := Game.get_comfort()
 	Game.gain_comfort("retest_test", 1)
-	var more := Game.get_comfort()
-	lc.call("_restore_first_visit", first, first_patient, comfort)
-	assert_eq(Game.get_comfort(), more, "a heart gained is never taken away")
+	lc.call("_restore_first_visit", first, first_patient, low)
+	assert_eq(Game.get_comfort(), low + 1, "a heart gained on the retest is never taken away")
 	lc.free()
 	Game.visit = saved_visit
 	Game.current_patient_id = saved_pid

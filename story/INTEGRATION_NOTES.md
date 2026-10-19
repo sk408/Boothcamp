@@ -144,7 +144,8 @@ Requests for the integrator and the title owner:
   calls `show_clear`. It also copies your drum's geometry from `_draw_canal` (centre offset (-6, 6), radii 112 x 98,
   tilt -0.25, colour #c9c6cf, cone of light (8, 8) / (56, 74) / (26, 84)). Please keep those names, and tell us if
   the drum changes (or expose those numbers as constants and the cases will read them). The copies live in an inner
-  class (`CaseLook`), so a constant you add to `otoscopy.gd` can never clash with them.
+  class (`CaseLook`), so a constant you add to `otoscopy.gd` can never clash with them. The fluid bubbles also read
+  your `_t` (the game-time clock `_process` keeps), so please keep that name too.
 - **Retest and `Game.finish_visit`.** A case with a retest (Barnaby) calls `finish_visit` before the retest, so a
   player who quits during it keeps the day; `_results` reuses that summary (`tools/autoplay_bot.gd` checks it).
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
@@ -159,8 +160,9 @@ Requests for the integrator and the title owner:
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
   Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (32 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
-  --check` after the suite, so a stale `docs/CASE_SCRIPTS.md` fails the run.
+- **Tests:** `story/tests/test_cases.gd` (35 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+  --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
+  a warning without python3).
 
 ## Merge: main (Days 3, 6-9) into the Day 2 feedback (v4)
 
@@ -168,7 +170,8 @@ Requests for the integrator and the title owner:
   (Day 2's unmasked bone on the better, left ear), then `R  [`, `R  O+`, and the cases' `L  ]`, `L  □`. A row only
   shows when that sheet has stamps, so Day 1 and Day 3 show none, Day 2 shows `L  >`, `R  [`, `R  O+` as on the
   feedback branch, and Rocco, Dash and Ginger as on main. Marina (her bone is tested on her left ear) shows only
-  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet. (cases, PR #3) The rows
+  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet. (cases follow-up: her
+  unmasked bone is now on the right, the new `R  <` row; see the golf rows note in the Cases section.) (cases, PR #3) The rows
   are now `[sheet key, ear]`; `_row_tag` draws the symbol.
 - **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
 - **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button

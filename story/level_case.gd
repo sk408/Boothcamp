@@ -608,8 +608,9 @@ func _plan_from(pd: Dictionary) -> Dictionary:
 	return plan
 
 
-## The case's test plan, then whatever masking the stamps ask for: masked bone on each bone-tested
-## ear, then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
+## The case's test plan, then whatever masking the stamps ask for: masked bone on each ear the rules
+## ask (CaseData.masked_bone_ears: one-sided cases test unmasked bone on the better ear, so the case
+## ear's masked bone needs no bone test of its own), then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
 ## no case lines, no step pill).
 func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	var cam := _open_screen()
