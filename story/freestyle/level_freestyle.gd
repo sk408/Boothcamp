@@ -3,8 +3,8 @@ extends Node
 ## (FsData.next_case(), or --freestyle=<id>): the patient walks in and says why they came, then the
 ## player picks tools from the tray in any order (questions, otoscope, tympanometer, air, bone,
 ## masking), names the type of hearing in each ear and makes the call: FIT / REFER / DOCTOR TODAY /
-## NO AIDS NEEDED, and why. Hoot stays quiet until the debrief, which compares the visit with the
-## workup a pro would run (FsRules.workup). Every choice is shuffled or ordered with Game.rng only
+## NO AIDS NEEDED, and why. Hoot never coaches the tests (a wrong tympanogram or chart type gets a
+## one-line hint); the debrief compares the visit with the workup a pro would run (FsRules.workup). Every choice is shuffled or ordered with Game.rng only
 ## where the story's runners do; every blocking beat emits Events.awaiting_input with a solver.
 ##   world:  res://world/clinic.tscn with patient_id + patient_spec (the case's look)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn start_test(patient, ear, false, plan), one
@@ -38,7 +38,12 @@ const MEDAL_VALUES: Dictionary = {"gold": 1.0, "silver": 0.7, "bronze": 0.4}
 const MEDAL_WEIGHT := 0.6
 ## Quick visit: the player stamps this many air tones per ear, then Hoot finishes at x8.
 const AIR_SOLO := 3
-const BRIEFING := "Your clinic, your call! Any tool, any order. I'll keep my beak shut until the end."
+const BRIEFING := "Your clinic, your call! Any tool, any order. I'll save my notes for the end."
+## Hoot's runner lines (18 words at most once filled in; tests check the longest fill).
+const TYMP_HINT := "Type %s would be %s. Look where the peak sits, and how tall."
+const WANDER_LINE := "That's what your chart shows. Underneath, the %s ear is %s: a few stamps wandered."
+const GAP_LINE := "The %s ear's bone was never masked: the other cochlea may have answered. Underneath, it's %s."
+const TEXTBOOK_LINE := "A textbook workup: every step a pro would take, in the right order."
 const TIP_OPTIONS: Array[String] = ["Small tip", "Medium tip", "Large tip"]
 const EAR_OPTIONS: Array[String] = ["Right ear first", "Left ear first"]
 const MASTOID_OPTIONS: Array[String] = ["Right mastoid", "Left mastoid"]
@@ -393,7 +398,7 @@ func _tymp() -> void:
 			if types[pick] == truth:
 				break
 			tymp_misreads += 1
-			await _say("Hoot", "Type %s would be %s. Look where the peak sits, and how tall." % [types[pick], CaseRules.TYMP_SHAPES[types[pick]]])
+			await _say("Hoot", TYMP_HINT % [types[pick], CaseRules.TYMP_SHAPES[types[pick]]])
 			types.remove_at(pick)
 		g.call("reveal_type", ear)
 	Game.set_visit_flag("freestyle_tymp_misreads", tymp_misreads)
@@ -667,11 +672,11 @@ func _chart_question() -> void:
 				Sfx.play(&"ding", 1.2, -6.0)
 				if k2 != truth:
 					# the chart's own reading counts; Hoot still says what the ear really is
-					await _say("Hoot", "That's what your chart shows. Underneath, the %s ear is %s: a few stamps wandered." % [ear, _type_word(truth)])
+					await _say("Hoot", WANDER_LINE % [ear, _type_word(truth)])
 				break
 			chart_slips += 1
 			if k2 == measured_type(ear) and unmasked_gap(ear):
-				await _say("Hoot", "Your chart shows that gap, but the %s ear's bone was never masked. The other cochlea may have answered. Masked bone shows it's %s." % [ear, _type_word(truth)])
+				await _say("Hoot", GAP_LINE % [ear, _type_word(truth)])
 			else:
 				await _say("Hoot", _type_hint(k2, ear))
 			kinds.remove_at(pick)
@@ -874,13 +879,7 @@ func _any_bone() -> bool:
 func _debrief() -> void:
 	_phase(&"freestyle_debrief")
 	var rep := workup_report()
-	var keys_missed: Array = rep["keys_missed"]
-	var chat_medal := "gold"
-	if keys_missed.has(FsRules.RED_FLAG_QUESTION) or keys_missed.size() >= 2:
-		chat_medal = "bronze"
-	elif keys_missed.size() == 1:
-		chat_medal = "silver"
-	Game.record_medal("fs_chat", chat_medal)
+	Game.record_medal("fs_chat", FsRules.chat_medal(rep["keys_missed"]))
 	Game.record_medal("fs_workup", FsRules.medal_for_slips(int(rep["slips"])))
 	Game.set_visit_flag("freestyle_slips", int(rep["slips"]))
 	var rows: Array[Dictionary] = []
@@ -890,7 +889,7 @@ func _debrief() -> void:
 	clinic.call("hoot_emote", &"nod")
 	var lines: Array = rep["lines"]
 	if lines.is_empty():
-		await _say("Hoot", "A textbook workup: every step a pro would take, in the right order.")
+		await _say("Hoot", TEXTBOOK_LINE)
 	else:
 		for l: Variant in lines.slice(0, 4):
 			await _say("Hoot", String(l))

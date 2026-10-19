@@ -393,3 +393,55 @@ func test_title_menu_clears_the_footer() -> void:
 	var foot := title.get_viewport_rect().size.y - float(title.get("FOOTER_H"))
 	assert_true(card.get_global_rect().end.y <= foot, "the card ends at %d, the footer starts at %d" % [int(card.get_global_rect().end.y), int(foot)])
 	Game.reset_save()
+
+
+## The medal rules and the paper's blend (FREESTYLE.md §5).
+func test_medals_and_the_paper_score() -> void:
+	assert_eq(FsRules.chat_medal([]), "gold")
+	assert_eq(FsRules.chat_medal(["onset"]), "silver", "one key question missed")
+	assert_eq(FsRules.chat_medal(["red_flags"]), "bronze", "the red flags count double")
+	assert_eq(FsRules.chat_medal(["onset", "noise"]), "bronze")
+	assert_eq([FsRules.medal_for_slips(0), FsRules.medal_for_slips(1), FsRules.medal_for_slips(2)], ["gold", "silver", "bronze"])
+	var golds := {"fs_chat": "gold", "fs_workup": "gold", "fs_chart": "gold", "fs_call": "gold"}
+	assert_near(LevelFreestyle.freestyle_score(80.0, golds), 92.0, 0.01, "60 % medals, 40 % the visit")
+	var mixed := {"fs_chat": "gold", "fs_workup": "silver", "fs_chart": "bronze", "fs_call": "gold"}
+	assert_near(LevelFreestyle.freestyle_score(80.0, mixed), 78.5, 0.01, "silver 70, bronze 40")
+
+
+## A visit that only ran air tones misses every other step a pro runs, each with its own slip.
+func test_an_air_only_visit_misses_the_rest() -> void:
+	var lv := _visit("fs_hector")
+	var p := _patient("fs_hector")
+	lv.set("results", {"ears": {"right": _ear(FsRules.truth_air(p, "right"), {}), "left": _ear(FsRules.truth_air(p, "left"), {})}})
+	lv.set("done", {&"air": true})
+	var rep: Dictionary = lv.call("workup_report")
+	var states := {}
+	var misses := 0
+	for r: Dictionary in rep["rows"]:
+		states[String(r["tool"])] = String(r["state"])
+		if String(r["state"]) == "miss" and String(r["tool"]) != "chat":
+			misses += 1
+	for tool: String in ["otoscopy", "tymp", "bone", "masking"]:
+		assert_eq(states.get(tool, ""), "miss", "%s is missed" % tool)
+	assert_eq(int(rep["slips"]), misses, "one slip per missed step (questions go to the Chat medal)")
+	assert_eq(FsRules.chat_medal(rep["keys_missed"]), "bronze")
+	lv.free()
+
+
+## Every line the runner gives Hoot keeps the house limit, filled with its longest words.
+func test_runner_hoot_lines_fit_the_limit() -> void:
+	var lines: Array[String] = [LevelFreestyle.BRIEFING, LevelFreestyle.TEXTBOOK_LINE,
+		LevelFreestyle.WANDER_LINE % ["right", "a mixed loss"], LevelFreestyle.GAP_LINE % ["right", "a mixed loss"]]
+	for k: StringName in CaseRules.TYMP_TYPES:
+		lines.append(LevelFreestyle.TYMP_HINT % [k, CaseRules.TYMP_SHAPES[k]])
+	for id: String in FsData.CASE_IDS:
+		var lv := _visit(id)
+		for k: StringName in FsRules.TYPE_CHOICES:
+			lines.append(String(lv.call("_type_hint", k, "right")))
+		var rep: Dictionary = lv.call("workup_report")   # nothing run: every slip line at once
+		for l: Variant in rep["lines"]:
+			lines.append(String(l))
+		lv.free()
+	for l: String in lines:
+		var words := l.split(" ", false).size()
+		assert_true(words <= CaseData.HOOT_MAX_WORDS, "%d words: %s" % [words, l])

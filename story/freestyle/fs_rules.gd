@@ -274,5 +274,12 @@ static func best_tool(c: Dictionary, p: PatientProfile, results: Dictionary, don
 # ---------------------------------------------------------------- medals
 
 ## "gold" with no slips, "silver" with one, "bronze" with more.
+## The Chat medal from the key questions not asked: gold none, silver one, bronze more or the red flags.
+static func chat_medal(keys_missed: Array) -> String:
+	if keys_missed.has(RED_FLAG_QUESTION) or keys_missed.size() >= 2:
+		return "bronze"
+	return "silver" if keys_missed.size() == 1 else "gold"
+
+
 static func medal_for_slips(slips: int) -> String:
 	return "gold" if slips <= 0 else ("silver" if slips == 1 else "bronze")

@@ -1,7 +1,8 @@
 # Booth Camp: Freestyle (the walk-in clinic)
 
 Practice mode outside the story. The player runs their own clinic: a waiting room of walk-in patients, any test
-in any order, then the call. No script and no coaching during the visit; Hoot only debriefs at the end.
+in any order, then the call. No script and no coaching of the tests: Hoot only gives a one-line hint after a wrong
+tympanogram or chart type, and debriefs at the end.
 Steve checks every clinical call (section 8 is his checklist).
 
 | | |
@@ -51,7 +52,8 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
    play the same patient again.
 
 Audiometry uses the normal AudiOtron, never coached. With **Quick visit** on (the default) the player stamps the
-first three tones of each air ear and Hoot finishes at x8; bone and masked tests run as Hoot's montage. With
+first three tones of each air ear and Hoot finishes at x8; bone runs as Hoot's montage and masked tests as Hoot's
+x8 turn. With
 Quick visit off the player runs everything.
 
 ## 2. Files
