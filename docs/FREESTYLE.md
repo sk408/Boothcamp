@@ -214,9 +214,8 @@ From the clinical review (A1, A2, FS-03, FS-13), short lines where the action al
 
 - Otoscope: "A fresh speculum tip, then a quick look in each ear."
 - The first seat in the booth: the patient is told "Press the button as soon as you hear a beep, in either ear,
-  even a very faint one. Let go when it stops." (BSA 2018, 6.1). Once per session Hoot adds the daily listening
-  check ("both earphones, the bone oscillator and the button all work") and keeps the dials out of the patient's
-  sight.
+  even a very faint one. Let go when it stops." (BSA 2018, 6.1). Once per session Hoot adds the cases' own
+  routine line: "This morning's listening check: every beep clean, the button works. Dials stay out of view."
 - Masking: masked bone starts from unmasked bone on either mastoid. Picking it before any bone gets "Masked bone
   starts from unmasked bone. Bone tones first!", and nothing runs. While Day 2's masking movie is unseen, the
   visit's first masked test opens with the 12-second recap card, and Hoot says the full movie is under Hoot's

@@ -500,7 +500,7 @@ func test_an_air_only_visit_misses_the_rest() -> void:
 func test_runner_hoot_lines_fit_the_limit() -> void:
 	var lines: Array[String] = [LevelFreestyle.BRIEFING, LevelFreestyle.TEXTBOOK_LINE,
 		LevelFreestyle.WANDER_LINE % ["right", "a mixed loss"], LevelFreestyle.GAP_LINE % ["right", "a mixed loss"],
-		LevelFreestyle.CHECK_LINE, LevelFreestyle.DIALS_LINE, LevelFreestyle.MOVIE_HINT, LevelFreestyle.CARHART_LINE % "right",
+		LevelFreestyle.ROUTINE_LINE, LevelFreestyle.MOVIE_HINT, LevelFreestyle.CARHART_LINE % "right",
 		LevelFreestyle.WORDS_LINE]
 	for k: StringName in CaseRules.TYMP_TYPES:
 		lines.append(LevelFreestyle.TYMP_HINT % [k, CaseRules.TYMP_SHAPES[k]])

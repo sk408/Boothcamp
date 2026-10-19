@@ -46,12 +46,12 @@ const WANDER_LINE := "That's what your chart shows. Underneath, the %s ear is %s
 const GAP_LINE := "The %s ear's bone was never masked: the other cochlea may have answered. Underneath, it's %s."
 const TEXTBOOK_LINE := "A textbook workup: every step a pro would take, in the right order."
 ## (Clinical review A1) The routine around the tests, ungraded: a clean speculum tip every visit,
-## the patient told how to answer (BSA 2018, 6.1), and once per session Hoot's daily check and the
-## dials kept out of the patient's view (BSA 2018, 4.1 and 11.1; ASHA 2005).
+## the patient told how to answer (BSA 2018, 6.1), and once per session Hoot's daily listening check
+## and the dials kept out of the patient's view (BSA 2018, 4.1 and 11.1; ASHA 2005), in the cases'
+## own words (story/level_case.gd ROUTINE_LINE).
 const SPECULUM_LINE := "A fresh speculum tip, then a quick look in each ear."
 const INSTRUCT_LINE := "Press the button as soon as you hear a beep, in either ear, even a very faint one. Let go when it stops."
-const CHECK_LINE := "Daily check done before opening: both earphones, the bone oscillator and the button all work."
-const DIALS_LINE := "Keep your hands and the dials out of their sight. No peeking at beeps!"
+const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
 ## (FS-01) Masked bone starts from unmasked bone (either mastoid): nothing to start from yet.
 const BONE_FIRST_LINE := "Masked bone starts from unmasked bone. Bone tones first!"
 ## (A2) Before the visit's first masked test, when Day 2's masking movie is still unseen: the
@@ -119,7 +119,7 @@ var _cam: Camera3D
 var _seated := false
 var _instructed := false
 var _recapped := false
-## (A1) Hoot's once-per-session routine lines (the daily check, the dials) have been said.
+## (A1) Hoot's once-per-session routine line (the listening check, the dials) has been said.
 static var _routine_said := false
 
 
@@ -489,8 +489,7 @@ func _to_booth() -> void:
 	await clinic.call("focus_camera", &"face", 0.6)
 	if not _routine_said:
 		_routine_said = true
-		await _say("Hoot", CHECK_LINE)
-		await _say("Hoot", DIALS_LINE)
+		await _say("Hoot", ROUTINE_LINE)
 	if not _instructed:
 		_instructed = true
 		await _say("You", INSTRUCT_LINE)
