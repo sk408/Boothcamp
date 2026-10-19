@@ -78,7 +78,9 @@
 		{"hoot": "wing_up"},
 		["Hoot", "Maybe, maybe not. The doctor decides that, not an owl."],
 		{"react": "nod"},
-		["Hoot", "Meanwhile, sit your wife on your right, and ask people to face you."],
+		["Hector", "And my puzzle? Why do I hear better among the clocks?"],
+		["Hoot", "Over the ticking, people speak up. At home, your wife murmurs on your slow side."],
+		["Hoot", "So sit her on your right, and ask people to face you."],
 		["Hector", "Right side, face to face. I'll be back on the dot, Hoot."],
 		{"react": "wave"}
 	],

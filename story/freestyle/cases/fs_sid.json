@@ -44,7 +44,7 @@
 	"decision": "fit",
 	"decision_lines": {
 		"fit": "Fit! Lifelong, steady, matching ears, no red flags. New aids, and his wheels keep turning.",
-		"refer": "Refer for what? No red flags, no gap, no change, ears that match. He needs new aids.",
+		"refer": "Refer for what? A doctor checked him as a kid. Nothing's changed, ears match, no red flags.",
 		"today": "Nothing sudden here. His hearing hasn't changed in years. Only his hearing aid died.",
 		"clear": "No aids needed? A moderate loss in both ears says otherwise. And his old ones just died!"
 	},
@@ -58,9 +58,9 @@
 		]
 	},
 	"debrief": [
-		["Hoot", "Aids before doesn't mean skip the checks. Look, ask and test, every visit, every time."],
+		["Hoot", "Years of aids don't mean skipping the checks. Look, ask and test, every visit."],
 		["Hoot", "Bone sat right on air, no gap: that's what shows it's sensorineural. Air alone can't tell."],
-		["Hoot", "A sudden or fast drop, or one ear slipping behind, means a doctor first. Not today."]
+		["Hoot", "A new sudden drop: a doctor today. One ear slipping behind: a doctor first. Sid has neither."]
 	],
 	"goodbye": [
 		{"do": "hearing_aids"},
@@ -82,7 +82,7 @@
 			"S": "Lifelong, steady and matching, no red flags: a clean fit after a full check.",
 			"A": "Old aids are no shortcut. Look, ask, test, then fit.",
 			"B": "The fit was right; a few stamps wandered. Bone on air still proves the type.",
-			"C": "Bone conduction tells sensorineural from conductive. Run it every time.",
+			"C": "Bone tells sensorineural from conductive. Run it whenever air is poorer than 25 dB.",
 			"Do-over": "Sid will be back. Bring the otoscope, the questions and the bone buzzer."
 		}
 	}

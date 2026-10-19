@@ -13,6 +13,13 @@ const LevelFreestyle := preload("res://story/freestyle/level_freestyle.gd")
 ## case id -> [the call, right ear type, left ear type, asymmetric?, needs bone?, needs tymp?]
 const EXPECTED: Dictionary = {
 	"fs_penny": [&"clear", &"normal", &"normal", false, false, false],
+	"fs_mabel": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
+	"fs_sid": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
+	"fs_viola": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
+	"fs_buck": [&"refer", &"sensorineural", &"sensorineural", true, true, false],
+	"fs_melody": [&"today", &"sensorineural", &"normal", true, true, true],
+	"fs_skyler": [&"refer", &"normal", &"conductive", true, true, true],
+	"fs_hector": [&"refer", &"sensorineural", &"mixed", true, true, true],
 }
 const BOT_PREFIX := 18
 
@@ -46,6 +53,26 @@ func test_expected_cases_exist() -> void:
 	for id: String in EXPECTED:
 		assert_false(_case(id).is_empty(), "case file " + id)
 		assert_true(_patient(id) != null, "patient for " + id)
+	for id: String in FsData.CASE_IDS:
+		assert_true(EXPECTED.has(id), "%s has an EXPECTED row (its call and truth are pinned)" % id)
+
+
+## Every DOCTOR TODAY walk-in meets the game's sudden-loss definition (CaseRules, like Dash).
+func test_doctor_today_means_a_sudden_loss() -> void:
+	for id: String in FsData.CASE_IDS:
+		var c := _case(id)
+		if c.is_empty() or String(c["decision"]) != "today":
+			continue
+		var p := _patient(id)
+		var r := FsRules.truth_air(p, "right")
+		var l := FsRules.truth_air(p, "left")
+		var best := 0
+		for pair: Array in [[r, l], [l, r]]:
+			var run := 0
+			for f: int in ClinicRules.AC_FREQS:
+				run = run + 1 if int(pair[0][f]) - int(pair[1][f]) >= CaseRules.SUDDEN_MIN_DB else 0
+				best = maxi(best, run)
+		assert_true(best >= CaseRules.SUDDEN_MIN_FREQS, "%s: 30 dB or more at 3+ neighbouring frequencies" % id)
 
 
 func test_the_call_and_the_truth_agree() -> void:

@@ -15,10 +15,10 @@
 	"voice": {"f0": 104.0, "wobble": 0.05, "roll": 0.72, "vowels": ["a", "u", "o", "a", "e", "u"]},
 	"hello": [
 		["Buck", "Buck Shotwell. Forty years in a duck blind, every frosty dawn I could get."],
-		["Buck", "Lately the ducks sneak up on me. And the wife says my left ear's gone on strike."]
+		["Buck", "Nowadays the ducks sneak up on me. And the wife says my left ear's gone on strike."]
 	],
 	"answers": {
-		"which_ear": {"say": "The left, no contest. The phone lives on my right ear these days.", "note": "Worse on the left; phone lives on the right"},
+		"which_ear": {"say": "The left, no contest. The phone lives on my right ear these days.", "note": "Worse on the left; phone lives on the right", "flag": true},
 		"onset": {"say": "Slow. Crept up over the years, like fog on the marsh. Nothing sudden.", "note": "Slow over years, nothing sudden"},
 		"ringing": {"say": "A high whine in both ears. Louder on the left. Like a mosquito that never lands.", "note": "Whine in both ears, louder on the left"},
 		"red_flags": {"say": "No pain, no leaking, no spinning. Steady as a wooden decoy.", "note": "No pain, drainage or dizziness"},
@@ -59,12 +59,12 @@
 		"options": [
 			["His left ear is much worse than his right.", true, "Right! A clear difference between ears is a red flag, even when gunfire likely explains it."],
 			["Unmasked bone showed a gap in his left ear.", false, "That 'gap' was his right cochlea answering. Masked bone sat on the air: no gap."],
-			["Ringing in both ears is a red flag.", false, "Ringing in both ears is common with noise. Ringing in ONE ear only is the flag."],
+			["Ringing in both ears is a red flag.", false, "Both-ear ringing is common with noise. The flags are ONE-sided ringing, or a lopsided chart like his."],
 			["Hearing loss from shooting always needs a doctor.", false, "Not always. Matching noise loss in both ears can be fitted. Here it's the mismatch that flags."]
 		]
 	},
 	"debrief": [
-		["Hoot", "Shooter's ear is real: the ear nearer the muzzle takes the blast. For right-handers, that's the left."],
+		["Hoot", "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left."],
 		["Hoot", "But a lopsided loss is a red flag until a doctor clears it. Even with a good excuse."],
 		["Hoot", "Earplugs AND earmuffs, every shot from now on. The damage so far stays; more is preventable."]
 	],

@@ -18,21 +18,21 @@
 		["Skyler", "Smacked the left side of my head. Ever since, that ear sounds like it's wearing a beanie."]
 	],
 	"answers": {
-		"which_ear": {"say": "The left, for sure. Right ear's perfect. Left's like listening through a beanie.", "note": "Left ear muffled, right ear fine"},
+		"which_ear": {"say": "The left, for sure. Right ear's perfect. Left's like listening through a beanie.", "note": "Left ear muffled, right ear fine", "flag": true},
 		"onset": {"say": [
 			"All at once. I hit the ground, and the left ear went dull right then.",
 			"That was three months ago. Hasn't changed since. Not better, not worse."
-		], "note": "All at once, at the fall 3 months ago; steady"},
+		], "note": "All at once, at the fall 3 months ago; steady", "flag": true},
 		"ringing": {"say": "No ringing. It's just quiet on the left. Like someone turned the knob down.", "note": "No ringing"},
 		"red_flags": {"say": [
 			"No pain, no gunk, never dizzy. Not even after the slam.",
 			"It bled the day I fell, though. Loads. Nothing since."
-		], "note": "Bled at the fall; no pain, gunk or dizziness now"},
+		], "note": "Bled at the fall; no pain, gunk or dizziness now", "flag": true},
 		"noise": {"say": "Skate park wheels on concrete. Punk shows, but I wear earplugs. My mum's a nurse.", "note": "Punk shows, with earplugs"},
 		"ear_history": {"say": [
 			"Never had an ear infection. Then the handrail.",
 			"Big bump on the left side of my head, blood out of my ear. Very bad day."
-		], "note": "Hit left side of head 3 months ago; ear bled"},
+		], "note": "Hit left side of head 3 months ago; ear bled", "flag": true},
 		"family": {"say": "Nope. Whole family hears fine. Especially my little sister. She hears EVERYTHING.", "note": "No hearing loss in the family"},
 		"health": {"say": "Healthy. A doctor checked my head bump that day and said I'd live. Nobody looked at the ear.", "note": "Doctor checked the head bump, not the ear"},
 		"aids": {"say": "Hearing aids? I'm nineteen! ...Wait. Is that a thing at nineteen?", "note": "Never worn hearing aids"},
