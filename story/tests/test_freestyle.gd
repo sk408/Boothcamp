@@ -10,6 +10,8 @@ const CaseData := preload("res://story/case_data.gd")
 const FsTray := preload("res://story/freestyle/fs_tray.gd")
 const FsClipboard := preload("res://story/freestyle/fs_clipboard.gd")
 const LevelFreestyle := preload("res://story/freestyle/level_freestyle.gd")
+const Movies := preload("res://story/explainers/movies.gd")
+const PAUSE_MENU := "res://story/pause_menu.tscn"
 
 ## case id -> [the call, right ear type, left ear type, asymmetric?, needs bone?, needs tymp?]
 const EXPECTED: Dictionary = {
@@ -421,6 +423,36 @@ func test_debrief_extras() -> void:
 		var fit := StringName(String(_case(id)["decision"])) == &"fit"
 		assert_eq((v.call("debrief_extras") as Array).has(LevelFreestyle.WORDS_LINE), fit, "%s: the word-test line on a FIT only" % id)
 		v.free()
+
+
+## (E19) After a day with its own movie, freestyle's pause menu still offers the masking movie that
+## Hoot's MOVIE_HINT points to: the waiting room leaves the days behind (FsData.NOT_A_DAY).
+func test_a_visit_pauses_to_the_masking_movie() -> void:
+	var m := Movies.movie("masking")
+	m["id"] = "fake_day_movie"
+	m["chapter"] = "rocco"
+	m.erase("seen_at")
+	Movies.extra["fake_day_movie"] = m
+	Game.current_chapter_id = "rocco"   # the day played last, with a movie of its own
+	assert_false(Movies.for_level(Game.current_chapter_id, true).has("masking"), "a day's own movie would win")
+	var room: Control = (load("res://story/freestyle/waiting_room.tscn") as PackedScene).instantiate()
+	add_node(room)
+	await wait_frames(1)
+	assert_eq(Game.current_chapter_id, FsData.NOT_A_DAY, "the waiting room leaves the days behind")
+	var visit := Node.new()   # stands in for the runner, which joins the same group
+	visit.add_to_group(Movies.MASKING_LEVEL_GROUP)
+	add_node(visit)
+	var menu: CanvasLayer = (load(PAUSE_MENU) as PackedScene).instantiate()
+	add_node(menu)
+	await wait_frames(1)
+	menu.call("open")
+	await wait_frames(1)
+	var here: Array = menu.call("movie_ids_here")
+	assert_true(here.has("masking"), "the pause menu offers the masking movie (%s)" % [here])
+	assert_false(here.has("masking_recap"), "never the recap")
+	assert_true(LevelFreestyle.MOVIE_HINT.contains("pause menu"), "Hoot's hint names the pause menu")
+	menu.call("close")
+	Movies.extra.clear()
 
 
 ## A double-click on a tray card cannot also answer the next row (mouse presses wait out the arming).

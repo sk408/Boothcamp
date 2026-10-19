@@ -219,7 +219,8 @@ From the clinical review (A1, A2, FS-03, FS-13), short lines where the action al
 - Masking: masked bone starts from unmasked bone on either mastoid. Picking it before any bone gets "Masked bone
   starts from unmasked bone. Bone tones first!", and nothing runs. While Day 2's masking movie is unseen, the
   visit's first masked test opens with the 12-second recap card, and Hoot says the full movie is under Hoot's
-  Movies on the title screen (the pause menu will offer it once the engine's E19 lands).
+  Movies, in the pause menu or on the title screen. The waiting room and every visit set the chapter id to
+  `FsData.NOT_A_DAY`, so the pause menu (E19) never offers a day's own movie in place of the masking movie.
 - Debrief: when an ear with a middle-ear part (conductive or mixed) has a Carhart notch in its truth and the
   player's masked bone shows it (Hector), Hoot names it as on Day 2.
   Every FIT ends with "A full fitting also checks words, in quiet and in noise." The real word tests join the
@@ -252,7 +253,8 @@ walk-in is kept in the save (`progress.patients[<id>].fs_best_grade`) for the wa
 - The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>`
   wins (and is the bot's pick in the waiting room).
 
-Not used: `Game.CHAPTERS`, the Days grid, `chapters_done`. The visit summary has `freestyle_case`,
+Not used: `Game.CHAPTERS`, the Days grid, `chapters_done`. `Game.current_chapter_id` is set to `FsData.NOT_A_DAY`
+in the waiting room and every visit (4.6), so the pause menu never offers a leftover day's own movie. The visit summary has `freestyle_case`,
 `visit_score` (the audiometry score before the medal blend), `headlines`, `subheads`, `medal_beats`,
 `continue_text`, `continue_scene`; visit flags `freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`,
 `freestyle_types`, `freestyle_tymp_misreads`, `freestyle_slips`, `decision_first`, `decision`, `decision_tries`.

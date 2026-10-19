@@ -59,7 +59,7 @@ const BONE_FIRST_LINE := "Masked bone starts from unmasked bone. Bone tones firs
 const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const MOVIE_ID := "masking"
 const RECAP_ID := "masking_recap"
-const MOVIE_HINT := "The full masking movie is under Hoot's Movies, on the title screen."
+const MOVIE_HINT := "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen."
 ## (FS-03) A Carhart notch the truth has and the chart shows: named, as on Day 2.
 const CARHART_LINE := "See the bone dip at 2k on the %s? A Carhart notch: a stiff middle ear fakes it."
 ## (FS-13, with the cases' C13) Every FIT: word tests come with a full fitting.
@@ -125,6 +125,7 @@ static var _routine_said := false
 
 func _ready() -> void:
 	add_to_group(&"masking_level")  # (E19) the pause menu offers the masking movie (Movies.MASKING_LEVEL_GROUP)
+	Game.current_chapter_id = FsData.NOT_A_DAY
 	case_id = FsData.next_case()
 	case_data = FsData.load_case(case_id)
 	var problems := FsData.validate(case_data) if not case_data.is_empty() else PackedStringArray(["no case file"])
