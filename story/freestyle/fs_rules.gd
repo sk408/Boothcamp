@@ -7,7 +7,10 @@ extends RefCounted
 ##   const FsRules := preload("res://story/freestyle/fs_rules.gd")
 
 ## The calls, in the stamp tray's order. CaseRules.DECISIONS plus "clear": normal hearing in both
-## ears, no red flag: no hearing aids needed (counsel, retest if anything changes).
+## ears, no red flag: no hearing aids needed (counsel, retest if anything changes). One departure from
+## CaseRules' fit (Steve's question 10 rule, 2026-10-19): a difference between the ears that a known
+## cause explains, with no other red flag, is a FIT. The yearly recheck is the game's default; Buck
+## waits on Steve's question 14.
 const DECISIONS: Array[StringName] = [&"fit", &"refer", &"today", &"clear"]
 ## What each rubber stamp says (the stamp buttons' text starts with this).
 const DECISION_STAMPS: Dictionary[StringName, String] = {
@@ -33,12 +36,16 @@ const QUESTIONS: Array[Dictionary] = [
 	{"id": "family", "text": "Does hearing loss run in your family?"},
 	{"id": "health", "text": "Any medicines or health problems?"},
 	{"id": "aids", "text": "Have you worn hearing aids before?"},
-	{"id": "hardest", "text": "Where is hearing hardest for you?"},
+	{"id": "hardest", "text": "Where do you have trouble hearing?"},
 ]
 ## The red-flag question every workup needs (pain, drainage, dizziness).
 const RED_FLAG_QUESTION := "red_flags"
-## Questions per visit: the waiting room is full, so ask what matters.
-const CHAT_BUDGET := 5
+## Every workup also asks where the patient has trouble: the places in their daily life become the
+## fitting goals (Steve, 2026-10-19).
+const TROUBLE_QUESTION := "hardest"
+## Questions per visit: the waiting room is full, so ask what matters. A case has at most one key
+## question fewer, so the player always has a free pick.
+const CHAT_BUDGET := 6
 const DONE_ASKING := "Done asking"
 
 ## The tools on the tray, in tray order. Speech joins once the speech screen is on main.

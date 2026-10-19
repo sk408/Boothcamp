@@ -31,11 +31,12 @@
 		"health": {"say": "Fit as a fiddle. One little pill for cholesterol. That's the lot.", "note": "Cholesterol tablet, otherwise healthy"},
 		"aids": {"say": "Never. The wife's been on at me for years. My retriever doesn't nag.", "note": "Never worn hearing aids"},
 		"hardest": {"say": [
-			"The wife, when she sits on my left in the truck.",
-			"And at dawn I can't hear the wings whistle any more. The ducks are on me before I see 'em."
-		], "note": "Wife on his left side; can't hear duck wings"}
+			"In the truck, the wife's on my left. Half of what she says blows out the window.",
+			"At dawn I can't hear the wings whistle any more. The ducks are on me before I see 'em.",
+			"And the lodge meetings. Whoever sits on my left might as well be miming."
+		], "note": "Trouble: wife in the truck, duck wings, lodge"}
 	},
-	"key_questions": ["red_flags", "which_ear", "onset", "noise"],
+	"key_questions": ["red_flags", "which_ear", "onset", "noise", "hardest"],
 	"otoscopy": {
 		"canal": "average-sized",
 		"right": {"view": "clear", "caption": "Buck's RIGHT ear: a clean canal and a pearly, healthy eardrum. Not a feather in sight."},
@@ -47,51 +48,55 @@
 		"left": {"type": "A", "peak_daPa": -5, "peak_ml": 0.8, "ecv_ml": 1.5},
 		"note": "Tymp: type A both ears"
 	},
-	"decision": "refer",
+	"decision": "fit",
 	"decision_lines": {
-		"fit": "Not yet! A left ear this much worse is a red flag. Doctor first, then fit.",
-		"refer": "Refer! The shotgun likely did it, but ears this lopsided need a doctor's all-clear first.",
-		"today": "Nothing sudden: it crept in over forty seasons. A doctor soon, not today.",
-		"clear": "No aids? His left ear sits near 60 dB up high. He needs help, after the doctor."
+		"fit": "Fit! Shooting explains the left ear, and no other red flags. Aids, plugs, and a yearly recheck.",
+		"refer": "Many clinics would refer this. Here, shooting likely explains it, nothing else flags: fit, recheck yearly.",
+		"today": "Nothing sudden: it crept in over forty seasons. No emergency, and no other red flags.",
+		"clear": "No aids? His left ear sits near 60 dB up high. The right is slipping too."
 	},
 	"why": {
-		"prompt": "Why does Buck see a doctor before hearing aids?",
+		"prompt": "Why can Buck be fitted without seeing a doctor first?",
 		"options": [
-			["His left ear is much worse than his right.", true, "Right! A clear difference between ears is a red flag, even when gunfire likely explains it."],
-			["Unmasked bone showed a gap in his left ear.", false, "That 'gap' was his right cochlea answering. Masked bone sat on the air: no gap."],
-			["Ringing in both ears is a red flag.", false, "Both-ear ringing is common with noise. The flags are ONE-sided ringing, or a lopsided chart like his."],
-			["Hearing loss from shooting always needs a doctor.", false, "Not always. Matching noise loss in both ears can be fitted. Here it's the mismatch that flags."]
+			["Shooting explains why his left ear is worse.", true, "Right! A right-hander's left ear sits nearer the muzzle. A likely cause, and no other red flags."],
+			["A lopsided loss never needs a doctor.", false, "It does when nothing explains it, or it came on fast. Buck's shooting explains his."],
+			["Ringing in both ears rules out a problem.", false, "Ringing rules nothing out. Both-ear ringing is common with noise; one-sided ringing is a flag."],
+			["His tympanograms were both type A.", false, "Type A says the eardrums move well. It can't explain why one ear is worse."]
 		]
 	},
 	"debrief": [
 		["Hoot", "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left."],
-		["Hoot", "But a lopsided loss is a red flag until a doctor clears it. Even with a good excuse."],
-		["Hoot", "Earplugs AND earmuffs, every shot from now on. The damage so far stays; more is preventable."]
+		["Hoot", "One ear worse is a red flag, unless something explains it. Buck's shotgun does; nothing else flags."],
+		["Hoot", "The truck and the lodge are goals for the aids. The duck wings? That's the electronic muffs' job."],
+		["Hoot", "Recheck him every year. If the left keeps slipping away from the right, then a doctor."]
 	],
 	"goodbye": [
-		{"do": "letter"},
-		["Hoot", "Here's a letter for the ear doctor, with your chart. Once you're cleared, come back and we fit."],
-		["Buck", "A doctor for my ears? Fine. Long as nobody tells me to quit hunting."],
+		{"do": "hearing_aids"},
+		{"react": "cheer"},
+		["Buck", "Hold on. Is that a sparrow outside? Haven't heard one of those in years."],
+		["Hoot", "The damage so far stays, but more is preventable. Earplugs AND earmuffs, every shot."],
+		["Buck", "Plugs? Then how do I hear the ducks coming?"],
 		{"hoot": "wing_up"},
-		["Hoot", "Keep hunting! Just plug AND muff. Electronic muffs even let you hear the ducks coming."],
+		["Hoot", "Plugs under electronic muffs. The muffs turn soft sounds up and shut out the bang."],
 		{"react": "nod"},
-		["Buck", "Muffs that let the ducks through? Sold. See you after the doctor, owl."],
+		["Hoot", "Back in two weeks to check the truck and the lodge. Then a hearing test every year."],
+		["Buck", "Plugs under muffs, two weeks, every year. Sold. See you then, owl."],
 		{"react": "wave"}
 	],
 	"paper": {
 		"headlines": {
-			"S": "BUCK STOPS HERE: LOPSIDED EARS SEE DOCTOR",
-			"A": "DUCK HUNTER REFERRED; EARMUFFS IN SEASON",
-			"B": "BUCK REFERRED; A FEW STAMPS FLEW THE NEST",
+			"S": "BUCK FITTED; DUCKS CAN'T SNEAK UP ANY MORE",
+			"A": "DUCK HUNTER FITTED; EARMUFFS IN SEASON",
+			"B": "BUCK FITTED; A FEW STAMPS FLEW THE NEST",
 			"C": "CHART WINGED, NOT BAGGED, SAYS OWL",
 			"Do-over": "SITTING DUCK: BUCK'S WORKUP NEEDS A RESHOOT"
 		},
 		"subheads": {
-			"S": "Left far worse than right, masked bone on the left, and a doctor before any fitting.",
-			"A": "Shooter's ear is real, but a lopsided loss still sees a doctor first.",
+			"S": "Left ear nearer the muzzle, masked bone, no other flags: fitted, plugs and muffs, recheck set.",
+			"A": "A lopsided loss with a likely cause and no other red flags can be fitted. Recheck it yearly.",
 			"B": "The right call, though a few stamps strayed: mask the bone when one ear is much worse.",
 			"C": "Unmasked bone hears the better cochlea, so mask it to type the poorer ear.",
-			"Do-over": "A lopsided loss means a doctor first, gunfire or not; Buck will be back at dawn."
+			"Do-over": "One ear worse? Find out why before the call. Buck will be back at dawn."
 		}
 	}
 }

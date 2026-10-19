@@ -36,9 +36,9 @@
 		"hardest": {"say": [
 			"At home, in the quiet. My wife sits on my left and murmurs. Gone.",
 			"In the workshop everyone shouts over the clocks, and I catch every word! Odd, isn't it?"
-		], "note": "Hears better in his noisy workshop than quiet"}
+		], "note": "Trouble: quiet home; fine in noisy workshop"}
 	},
-	"key_questions": ["red_flags", "which_ear", "onset", "family"],
+	"key_questions": ["red_flags", "which_ear", "onset", "family", "hardest"],
 	"otoscopy": {
 		"canal": "average-sized",
 		"right": {"view": "clear", "caption": "Hector's RIGHT ear: a clean canal and a shiny, pearly eardrum."},
