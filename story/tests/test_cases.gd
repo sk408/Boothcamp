@@ -169,10 +169,10 @@ func test_tymp_curves_are_compensated_and_normal_width() -> void:
 	assert_eq(CaseRules.tymp_b_reading(1.2), &"fluid")
 	assert_eq(CaseRules.tymp_b_reading(0.4), &"blocked")
 	assert_eq(CaseRules.tymp_b_reading(0.5), &"blocked")
-	assert_eq(CaseRules.tymp_b_reading(0.7), &"fluid", "the blocked floor is 0.6 mL, not the adult band's 0.9")
+	assert_eq(CaseRules.tymp_b_reading(0.7), &"fluid", "the blocked floor is the adult band's 0.6 mL")
 	assert_eq(CaseRules.tymp_b_reading(3.0), &"hole")
 	assert_eq(CaseRules.ecv_band(0.4), &"tiny")
-	assert_eq(CaseRules.ecv_band(0.7), &"low")
+	assert_eq(CaseRules.ecv_band(0.7), &"normal", "a small adult canal (many women's) is normal")
 	assert_eq(CaseRules.ecv_band(1.1), &"normal")
 	assert_eq(CaseRules.ecv_band(2.5), &"large")
 
@@ -448,7 +448,6 @@ func test_flat_tymps_read_their_canal_volume() -> void:
 			assert_true(t.has("ecv_ml"), "%s %s has a canal volume" % [id, ear])
 			if String(t["type"]) == "B":
 				assert_true(float(t["peak_ml"]) < CaseRules.TYMP_FLAT_ML, "%s %s flat" % [id, ear])
-				assert_ne(CaseRules.ecv_band(float(t["ecv_ml"])), &"low", "%s %s outside the grey zone" % [id, ear])
 	assert_eq(CaseRules.tymp_b_reading(float((_case("wax")["tymp"] as Dictionary)["right"]["ecv_ml"])), &"blocked", "wax reads blocked")
 	assert_eq(CaseRules.tymp_b_reading(float((_case("fluid")["tymp"] as Dictionary)["left"]["ecv_ml"])), &"fluid", "fluid reads fluid")
 
@@ -465,7 +464,7 @@ func test_tymp_and_plug_rules_are_checked() -> void:
 	var cases: Array = [
 		["a flat tymp with a peak", func(c: Dictionary) -> void: c["tymp"]["right"]["peak_ml"] = 0.5, "no peak"],
 		["no canal volume", func(c: Dictionary) -> void: (c["tymp"]["left"] as Dictionary).erase("ecv_ml"), "ecv_ml must be a number"],
-		["a flat tymp in the grey zone", func(c: Dictionary) -> void: c["tymp"]["right"]["ecv_ml"] = 0.75, "grey zone"],
+		["a type A with a tiny canal", func(c: Dictionary) -> void: c["tymp"]["left"]["ecv_ml"] = 0.5, "outside the adult band"],
 		["a type A with a huge canal", func(c: Dictionary) -> void: c["tymp"]["left"]["ecv_ml"] = 2.5, "outside the adult band"],
 		["a bad view", func(c: Dictionary) -> void: c["otoscopy"]["view"] = "foggy", "view must be"],
 		["a bad kind", func(c: Dictionary) -> void: c["otoscopy"]["kind"] = "purple", "kind must be"],
@@ -485,7 +484,7 @@ func test_tymp_and_plug_rules_are_checked() -> void:
 		["a retest with bone", func(c: Dictionary) -> void: c["retest"]["audiometry"][0]["test"] = "bc", "air (ac) only"],
 		["a retest reveal with no air test", func(c: Dictionary) -> void: c["retest"]["reveal"]["ear"] = "left", "has no air test"],
 		["a retest look with a bad view", func(c: Dictionary) -> void: c["retest"]["otoscopy"]["view"] = "foggy", "retest otoscopy: view"],
-		["a retest tymp in the grey zone", func(c: Dictionary) -> void: c["retest"]["tymp"]["right"] = {"type": "B", "peak_daPa": 0, "peak_ml": 0.05, "ecv_ml": 0.8}, "grey zone"],
+		["a retest tymp with a huge canal", func(c: Dictionary) -> void: c["retest"]["tymp"]["right"]["ecv_ml"] = 2.4, "outside the adult band"],
 		["a bad retest script", func(c: Dictionary) -> void: (c["retest"]["payoff"] as Array).append({"do": "confetti"}), "unknown do"],
 		["a bad red-flag card kind", func(c: Dictionary) -> void: c["red_flags"]["card_kind"] = "purple", "red_flags.card_kind"],
 		["more proof cards than the board holds", func(c: Dictionary) -> void: c["clue_pick"]["decoys"] = ["a", "b", "c", "d", "e", "f"], "fit on the board"],
@@ -584,6 +583,25 @@ func test_every_conductive_ear_gets_masked_bone() -> void:
 			if kind == &"conductive" or kind == &"mixed":
 				assert_true(CaseData.masked_bone_ears(c["audiometry"]).has(ear), "%s: the %s ear is checked for masked bone" % [id, ear])
 				assert_false(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty(), "%s: the %s ear gets masked bone" % [id, ear])
+
+
+func test_borrowed_bone_needs_no_real_gap() -> void:
+	# (C6) the other ear's unmasked bone types an ear within 10 dB everywhere, the line that names a
+	# conductive gap (a 10 dB gap asks for masked bone first, but reads as no real gap)
+	assert_eq(LevelCase.BORROW_BONE_DB, ClinicRules.ABG_CONDUCTIVE_DB)
+	var bone := {500: 10, 1000: 15, 2000: 40, 4000: 50}
+	assert_eq(LevelCase.borrowed_type({500: 15, 1000: 15, 2000: 45, 4000: 55}, bone), &"sensorineural")
+	assert_eq(LevelCase.borrowed_type({500: 10, 1000: 15, 2000: 20, 4000: 20}, {500: 10, 1000: 10, 2000: 15, 4000: 15}), &"normal")
+	assert_eq(LevelCase.borrowed_type({500: 15, 1000: 15, 2000: 45, 4000: 60}, bone), &"sensorineural", "a 10 dB gap is no real gap")
+	assert_eq(LevelCase.borrowed_type({500: 15, 1000: 15, 2000: 45, 4000: 65}, bone), &"unknown", "a 15 dB gap at 4k")
+	assert_eq(LevelCase.borrowed_type({500: 40, 1000: 45, 2000: 70, 4000: 80}, bone), &"unknown", "a real gap")
+	# the shipped symmetric cases still borrow on the truth (Rocco's and Ginger's left ears)
+	for id: String in ["noise_notch", "cookie_bite"]:
+		var p := _patient(id)
+		var right_bone := {}
+		for f: int in [500, 1000, 2000, 4000]:
+			right_bone[f] = p.get_bc_threshold("right", f)
+		assert_eq(LevelCase.borrowed_type(CaseData.truth(p, "left"), right_bone), &"sensorineural", id)
 
 
 func test_wrong_first_headlines() -> void:
@@ -692,7 +710,7 @@ func test_new_gadgets_draw_every_view() -> void:
 		g.queue_free()
 	var props: Control = add_node(CaseProps.new())
 	await wait_frames(1)
-	await props.call("play", "later", "TWO DAYS LATER")
+	await props.call("play", "later", "A WEEK LATER")
 	await props.call("play", "wax_jar")
 	await props.call("play", "plane")
 	await wait_frames(1)

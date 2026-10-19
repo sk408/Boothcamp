@@ -478,8 +478,8 @@ static func _check_otoscopy(oto: Dictionary, where: String) -> PackedStringArray
 
 
 ## Both ears' tympanograms: a known type whose numbers agree, and a canal volume that reads right.
-## A flat (B) tymp has no peak (under TYMP_FLAT_ML) and a volume outside the 0.6-0.9 grey zone; every
-## other type sits inside the adult band.
+## A flat (B) tymp has no peak (under TYMP_FLAT_ML), read with its volume (CaseRules.tymp_b_reading);
+## every other type sits inside the adult band.
 static func _check_tymp(ty: Dictionary, where: String) -> PackedStringArray:
 	var out := PackedStringArray()
 	if not CaseRules.TIP_SIZES.has(StringName(String(ty.get("tip", "")))):
@@ -504,8 +504,6 @@ static func _check_tymp(ty: Dictionary, where: String) -> PackedStringArray:
 		if kind == &"B":
 			if float(t["peak_ml"]) >= CaseRules.TYMP_FLAT_ML:
 				out.append("%s %s: a flat tymp has no peak (peak_ml under %s)" % [where, ear, CaseRules.TYMP_FLAT_ML])
-			if ecv >= CaseRules.TYMP_BLOCKED_ECV and ecv < CaseRules.TYMP_ADULT_ECV.x:
-				out.append("%s %s: a flat tymp's canal volume %s sits in the 0.6-0.9 grey zone" % [where, ear, ecv])
 		else:
 			if CaseRules.tymp_type_of(t) != kind:
 				out.append("%s %s: numbers say %s, not %s" % [where, ear, CaseRules.tymp_type_of(t), kind])

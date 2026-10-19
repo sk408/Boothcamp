@@ -83,7 +83,7 @@
 		"quiz": {
 			"prompt": "His right is flat. What does the canal volume say?",
 			"options": [
-				["Blocked: the probe is pressed against wax.", true, ""],
+				["Blocked: the probe faces a wall of wax.", true, ""],
 				["Fluid behind the eardrum.", false, "Fluid gives a flat line with a NORMAL canal volume. His is tiny: 0.4 mL."],
 				["A hole in the eardrum.", false, "A hole makes the canal volume BIG. His is tiny: the probe met wax."]
 			]
@@ -91,7 +91,8 @@
 		"clue": "Tymp right: flat, tiny canal volume",
 		"tag": "tymp_blocked",
 		"after": [
-			["Hoot", "The probe is talking to a wall of wax, not an eardrum. Left side: normal."]
+			["Hoot", "The probe is talking to a wall of wax, not an eardrum. Left side: normal."],
+			["Hoot", "A gentle seal at the entrance, never a push. Many clinics skip the probe on a packed canal."]
 		]
 	},
 	"instructions": [
@@ -139,33 +140,33 @@
 		"prompt": "Make the call for Barnaby:",
 		"answer": "refer",
 		"lines": {
-			"refer": "Right! A lot of wax is a red flag: wax out by a doctor, then we retest.",
+			"refer": "Right! Lots of wax is a red flag: out by a doctor or trained clinician, then we retest.",
 			"fit": "Hold the honey! No hearing aid works through a plug. Wax out first, then retest.",
 			"today": "The wax explains the sudden block, and his bone is normal. Soon, not today."
 		}
 	},
 	"clue_pick": {
-		"prompt": "Present the evidence: what proves the wax must come out first?",
+		"prompt": "Present the evidence: what shows something is blocking the sound?",
 		"answers": ["wax_plug", "tymp_blocked", "gap", "abg_flag"],
 		"decoys": ["wants_aids", "cotton_buds"],
-		"wrong_line": "True, but that doesn't prove a plug is in the way. Look again!",
+		"wrong_line": "True, but that doesn't show the sound is blocked. Look again!",
 		"wrong_lines": {
-			"wants_aids": "That's why he WANTS aids. What proves something's in the way first?",
-			"cotton_buds": "That's how it got packed in. What proves it's still in there?",
-			"bees_quiet": "That's what he notices. What proves the sound is blocked?",
-			"sudden_block": "Sudden, yes, and the wax explains it. What proves the plug is there?",
-			"right_only": "One ear sends him to a doctor. But what proves a plug is blocking it?",
-			"right_blocked": "That's the story. Which look or test proves the plug?",
-			"home_fixes": "Never again, please! But what proves the plug is there?",
-			"red_flag_check": "Good news, but no proof of a plug. Look again!"
+			"wants_aids": "That's why he WANTS aids. What shows something's in the way first?",
+			"cotton_buds": "That's how it got packed in. What shows the sound is blocked?",
+			"bees_quiet": "That's what he notices. What shows the sound is blocked?",
+			"sudden_block": "Sudden, yes, and the wax explains it. What shows the sound is blocked?",
+			"right_only": "One ear sends him to a doctor. But what shows the sound is blocked?",
+			"right_blocked": "That's the story. Which look or test shows the sound is blocked?",
+			"home_fixes": "Never again, please! But what shows the sound is blocked?",
+			"red_flag_check": "Good news, but it doesn't show the sound is blocked. Look again!"
 		},
 		"right_lines": {
 			"wax_plug": "Yes! A lot of wax is a red flag. A plug can hide more: we'll retest.",
-			"tymp_blocked": "Yes! Flat with a tiny canal volume: the probe hit the plug. Wax out first.",
+			"tymp_blocked": "Yes! Flat with a tiny canal volume: the probe tone met the plug. Wax out first.",
 			"gap": "Yes! Bone is fine, air is blocked: the plug costs him that gap.",
 			"abg_flag": "Yes! His gap tops 15 dB at 500, 1k and 2k: a red flag. Wax out first."
 		},
-		"right_line": "Exactly! Something's blocking the sound: wax out by a doctor, then we retest."
+		"right_line": "Exactly! Something's blocking the sound: wax out by a doctor or trained clinician, then we retest."
 	},
 	"payoff": [
 		{"do": "letter"},
@@ -180,7 +181,7 @@
 	],
 	"retest": {
 		"patient_id": "barnaby_after",
-		"card": "TWO DAYS LATER",
+		"card": "A WEEK LATER",
 		"intro": [
 			["Barnaby", "Bzzz-back again! And look what the doctor's nurse got out!"],
 			{"do": "wax_jar"},
