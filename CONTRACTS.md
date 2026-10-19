@@ -1540,9 +1540,9 @@ view off and the music back; the next test re-registers it. It is freed when the
 
 **Anchors.** `freestyle_chart` (the chart card).
 
-**Rules.** Freestyle's one departure from the `CaseRules` fit rule (Steve, 2026-10-19): a clear difference between
-the ears that a known cause explains, with no other red flag, may be fitted with a yearly recheck (Buck;
-docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
+**Rules.** Freestyle's one departure from the `CaseRules` fit rule (Steve's question 10 rule, 2026-10-19): a clear
+difference between the ears that a known cause explains, with no other red flag, may be fitted, with a yearly recheck
+(the game's default; Buck is a working call until Steve answers question 14; docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in

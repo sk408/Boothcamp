@@ -188,7 +188,7 @@ flags the missing masked bone.
 
 | Stamp | Means |
 |---|---|
-| **FIT** | hearing aids, no red flags. One exception (Steve, 2026-10-19): a clear difference between the ears that a known cause explains, with no other red flag, is fitted with a yearly recheck (Buck, a right-handed shooter with a worse left ear) |
+| **FIT** | hearing aids, no red flags. One exception, Steve's rule (2026-10-19, question 10): a clear difference between the ears that a known cause explains, with no other red flag, is not referred. The game fits it with a yearly recheck (its default). Buck, a right-handed shooter with a worse left ear, is the example, a working call until Steve answers question 14 |
 | **REFER** | see a doctor before (or instead of) hearing aids: any red flag in `CaseRules.RED_FLAGS` (these include an air-bone gap and a clear difference between the ears), except a difference that a known cause explains (the FIT exception) |
 | **DOCTOR TODAY** | a sudden loss (`CaseRules` sudden definition) within the last 30 days: same-day referral |
 | **NO AIDS NEEDED** | normal hearing in both ears and no red flag: counsel, baseline on file |
