@@ -36,6 +36,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("freestyle_waiting_room")
+	Game.current_chapter_id = FsData.NOT_A_DAY
 	FsData.register_speakers()
 	if ResourceLoader.exists(CLINIC_SCENE):
 		var clinic := (load(CLINIC_SCENE) as PackedScene).instantiate()

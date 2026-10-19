@@ -34,6 +34,9 @@ const WHY_MIN_OPTIONS := 3
 ## The bot clicks a choice by its first characters (tools/autoplay_bot.gd).
 const PREFIX := 18
 const META_KEY := &"freestyle_next_case"
+## Game.current_chapter_id in the waiting room and every visit: no day's id, so the pause menu (E19)
+## never offers a leftover day's own movie in place of the masking movie.
+const NOT_A_DAY := "freestyle"
 
 static var _cache: Dictionary = {}
 

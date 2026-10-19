@@ -1527,6 +1527,8 @@ every walk-in), `fs_tray.gd`, `fs_questions.gd`, `fs_clipboard.gd`, `fs_chart.gd
 `cases/<id>.json`. Truth tables: `core/patients/fs_<id>.tres` (same conventions as §11). Ids start with `fs_`.
 
 **Not chapters.** Walk-ins are never in `Game.CHAPTERS`, never on the Days grid and never in `chapters_done`.
+The waiting room and the runner set `Game.current_chapter_id` to `FsData.NOT_A_DAY` (`"freestyle"`), so the pause
+menu (E19, `Movies.for_level`) offers the replay movies, the masking movie among them, never a leftover day's own.
 The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>` wins.
 The best result per walk-in is stored inside the save's patient record: `progress.patients[<id>].fs_best_grade`
 and `fs_best_score`.
