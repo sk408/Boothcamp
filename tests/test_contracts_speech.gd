@@ -80,3 +80,23 @@ func test_speech_screen_api() -> void:
 		assert_true((beats[beats.size() - 1][1] as Callable).is_valid())
 	Events.awaiting_input.disconnect(cb)
 	Events.audiometry_started.disconnect(cb2)
+
+
+## (Days 4-5, CONTRACTS.md §9.13.3) A word-list session's state: the S0b keys plus the WRS view.
+const WRS_STATE_KEYS := ["list_id", "list_title", "list_n", "word_n", "words", "scored", "right_so_far", "pct_so_far",
+	"level_locked", "noise_locked", "comfy_db", "window", "louder_than", "louder_target", "predicted_min", "best_final",
+	"lens_on", "masking_needed", "nontest_best_bone", "mask_level", "ghost_alpha", "lists_done", "confirm_needed",
+	"call_it_pending"]
+
+
+func test_wrs_session_state() -> void:
+	var mike := Game.load_patient("mike") as PatientProfile
+	var s := SpeechSession.new(mike, 3)
+	s.configure({"test": "wrs", "tones": SpeechSession.tone_results_from(mike), "list": "words_1"})
+	s.begin("right", true)
+	var st := s.get_state()
+	for k: String in ["slot", "mode", "wrs", "words_left", "recommended_start"]:
+		assert_has(st, k)
+	assert_eq(st["mode"], "wrs")
+	for k: String in WRS_STATE_KEYS:
+		assert_has(st["wrs"], k)

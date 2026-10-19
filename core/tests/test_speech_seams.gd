@@ -771,8 +771,9 @@ func test_both_ears_and_the_best_bone() -> void:
 
 
 ## C20 with fake sheets: an SRT sheet weighs 1, a sheet with units weighs them, Hoot's weighs 0.
+## (W3) The mode scripts are patched to nowhere for the no-summary check: Day 4's WrsTest exists now.
 func test_build_results_units() -> void:
-	_probes("", "")
+	_probes(NO_MODE, NO_MODE)
 	var s := _session({"test": "srt"})
 	s.sheets[&"srt"]["right"] = {"accuracy": 1.0, "strokes": 10, "par": 8, "by_hoot": false}
 	s.sheets[&"wrs"]["left"] = {"accuracy": 0.5, "units": 2, "strokes": 25, "par": 25, "by_hoot": false}
@@ -786,6 +787,12 @@ func test_build_results_units() -> void:
 	assert_false(res.has("wrs_summary") or res.has("sin_summary"), "no summary without a mode script")
 	var merged := SpeechSession.merge_results(_tones(), res)
 	assert_eq(int((merged["speech"] as Dictionary)["scored_sheets"]), 3, "merge_results weighs the units")
+	# with the game's own paths each test that has a mode script adds its summary, even on fake sheets
+	_probes("", "")
+	var real := s.build_results()
+	assert_eq(real.has("wrs_summary"), ResourceLoader.exists(SpeechTestMode.PATHS[&"wrs"]), "the word lists' summary")
+	assert_eq(real.has("sin_summary"), ResourceLoader.exists(SpeechTestMode.PATHS[&"sin"]), "the party test's summary")
+	assert_eq(real["scored_sheets"], 3, "a summary changes no number")
 
 
 ## Freeing a session frees its mode (the mode holds it only weakly).
