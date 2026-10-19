@@ -58,7 +58,7 @@ tone audiogram.
 | Scoring | only the whole word counts: "Rain...?", "Train toe?" and silence are all wrong | `SpeechSession.score` |
 | Agreement with PTA | difference 6 dB or less = **good** (a reliable SRT), 7-12 = **fair**, 13 or more = **poor** | `AGREE_GOOD_DB` 6, `AGREE_FAIR_DB` 12, `agreement` |
 | Direction | SRT - PTA. An SRT much **better** than the PTA points to a non-organic loss: re-instruct and recheck. A **worse** one points to the instructions, language, word recognition or a sloping loss. Hoot's line after a store depends on both | `srt_pta_diff`, `SpeechSession.agreement_tip(agreement, diff)` (`AGREEMENT_TIPS` keys `good`, `fair_better`, `fair_worse`, `poor_better`, `poor_worse`) |
-| Speech masking | needed when the level minus 40 (phones) reaches the other ear's best bone (or air, see below) | `speech_masking_needed` |
+| Speech masking | needed when the level minus 40 (phones) reaches the other ear's lowest bone, masked or unmasked (or air, see below) | `speech_masking_needed` |
 | Speech masking level | presentation level minus 20, plus the other ear's largest air-bone gap at 500-4000 Hz (0 when no bone was measured) | `SPEECH_MASK_BELOW_DB` 20, `speech_mask_level(level, nontest_abg)`, `nontest_largest_abg` |
 | Par | the words a textbook dance takes from the first word's level on a perfectly steady patient, plus 1 (from 85 to an SRT of 30: 11 + 1) | `srt_textbook_words`, `SRT_PAR_SLACK` 1, `srt_par` |
 
@@ -69,7 +69,10 @@ same level is how a level is confirmed (ASHA presents a second word at a level t
 to `SRT_MAX_WORDS_PER_LEVEL` words there before it calls the step wrong.
 
 **Speech masking without bone.** Both masking rules read the other ear's bone from the tone results the
-session already has (masked bone where measured). Without bone results the rules use air only: the other
+session already has, but not the same way. The need rule (`nontest_best_threshold`) takes the other ear's
+lowest bone at 500-4000 Hz, masked or unmasked: a safe lower bound, like `ClinicRules.nontest_bone_estimate`.
+The noise level (`nontest_largest_abg`) reads `best_thresholds`, so masked bone replaces unmasked bone where
+measured when it works out the air-bone gap. Without bone results both rules use air only: the other
 ear's best air stands in for its bone, and no air-bone gap is added to the speech noise. That is a temporary
 stand-in (Hoot runs air only on Day 3, and Mike has no gap, so his numbers are the same either way); tone
 results with bone sheets bring the gap in with no code change.

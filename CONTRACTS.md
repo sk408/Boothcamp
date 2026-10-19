@@ -1087,10 +1087,11 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
   `agreement_tip(agreement, diff) -> String` (Hoot's line after a store: `AGREEMENT_TIPS` keys `good`, `fair_better`,
   `fair_worse`, `poor_better`, `poor_worse`; `diff` = SRT - PTA, below zero = the SRT is better).
 - Speech masking (`masking_needed_here()`, `mask_level()`): needed when the level minus the speech IA (40 phones,
-  55 inserts) reaches the other ear's best bone over 500-4000 Hz; the noise is `SpeechRules.speech_mask_level(level,
-  nontest_abg)` = level - 20 + the other ear's largest air-bone gap at 500-4000 Hz (`nontest_largest_abg(tones, ear)`;
-  `speech_mask_level(level)` alone still means no gap). Without bone results both rules use air only (best air for
-  the bone, no gap): a temporary stand-in. Day 3 has no bone, so its numbers are unchanged.
+  55 inserts) reaches the other ear's lowest bone over 500-4000 Hz, masked or unmasked; the noise is
+  `SpeechRules.speech_mask_level(level, nontest_abg)` = level - 20 + the other ear's largest air-bone gap at
+  500-4000 Hz (`nontest_largest_abg(tones, ear)`, masked bone where measured; `speech_mask_level(level)` alone still
+  means no gap). Without bone results both rules use air only (best air for the bone, no gap): a temporary stand-in.
+  Day 3 has no bone, so its numbers are unchanged.
 - The step rule (`SpeechRules.srt_step_verdict(db, correct, next_db, words_here)`): down 10 (5 tolerated) after a
   correct word, up 5 after a miss, and another word at the same level is `&"tolerated"` (after a hit or a miss)
   while fewer than `SpeechRules.SRT_MAX_WORDS_PER_LEVEL` (4) words were given at that level in this ear; the 5th is
