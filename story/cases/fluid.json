@@ -140,24 +140,24 @@
 		}
 	},
 	"clue_pick": {
-		"prompt": "Present the evidence: why this week, and not TODAY?",
+		"prompt": "Present the evidence: what shows the trouble is in the middle ear?",
 		"answers": ["tymp_fluid", "amber_drum", "gap"],
 		"decoys": ["flies_friday", "after_cold"],
 		"wrong_line": "True, but that doesn't show where the trouble is. Look again!",
 		"wrong_lines": {
 			"flies_friday": "That's HER deadline, not a medical emergency. What shows it's the middle ear?",
-			"after_cold": "Careful: a cold can come before an inner-ear loss too. What proves it's the middle ear?",
-			"abg_flag": "That gap sends her to a doctor. Mixed losses have gaps too. What shows the inner ear's fine?",
-			"left_only": "One ear sends her to a doctor. What says it can wait a few days?",
+			"after_cold": "Careful: a cold can come before an inner-ear loss too. What shows it's the middle ear?",
+			"abg_flag": "That gap sends her to a doctor. Mixed losses have gaps too. What points at the middle ear?",
+			"left_only": "One ear sends her to a doctor. What shows it's the middle ear?",
 			"red_flag_check": "Good news, but not the proof. What shows where the trouble is?",
 			"left_underwater": "That's what she feels. What shows where it's coming from?",
 			"crackle": "A hint, not proof. Which test shows it's the middle ear?",
 			"tubes_as_kid": "Worth telling the doctor. Which test shows it's the middle ear today?"
 		},
 		"right_lines": {
-			"tymp_fluid": "Yes! Flat with a normal volume: fluid behind the drum. Middle ear: soon, not today.",
-			"amber_drum": "Yes! You can almost see the fluid. Middle ear: a doctor this week, not today.",
-			"gap": "Yes! Bone is normal, so the inner ear's fine. Not a sudden inner-ear loss."
+			"tymp_fluid": "Yes! Flat with a normal volume: fluid behind the drum. With normal bone: soon, not today.",
+			"amber_drum": "Yes! You can almost see the fluid. With normal bone: a doctor this week, not today.",
+			"gap": "Yes! Bone normal, air down, and a clear canal: it's stuck behind the drum. Soon, not today."
 		},
 		"right_line": "Exactly! It's the middle ear: a doctor this week, before she flies. Not today."
 	},

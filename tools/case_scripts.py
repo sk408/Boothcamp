@@ -133,6 +133,9 @@ def render(c):
     oto = c["otoscopy"]
     out.append("")
     out.append("### Otoscopy")
+    other = "LEFT" if oto.get("ear", "right") == "right" else "RIGHT"
+    out.append(f"First caption: *{runner_line('OTHER_EAR_CAPTION') % (c['speaker'], other)}*")
+    out.append("")
     otoscopy(oto, out)
     ty = c["tymp"]
     out.append("")
