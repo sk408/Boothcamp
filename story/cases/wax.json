@@ -151,18 +151,18 @@
 		"decoys": ["wants_aids", "cotton_buds"],
 		"wrong_line": "True, but that doesn't show the sound is blocked. Look again!",
 		"wrong_lines": {
-			"wants_aids": "That's why he WANTS aids. What proves something's in the way first?",
-			"cotton_buds": "That's how it got packed in. What proves it's still in there?",
-			"bees_quiet": "That's what he notices. What proves the sound is blocked?",
-			"sudden_block": "Sudden, yes, and the wax explains it. What proves the plug is there?",
+			"wants_aids": "That's why he WANTS aids. What shows something's in the way first?",
+			"cotton_buds": "That's how it got packed in. What shows the sound is blocked?",
+			"bees_quiet": "That's what he notices. What shows the sound is blocked?",
+			"sudden_block": "Sudden, yes, and the wax explains it. What shows the sound is blocked?",
 			"right_only": "One ear sends him to a doctor. But what shows the sound is blocked?",
-			"right_blocked": "That's the story. Which look or test proves the plug?",
-			"home_fixes": "Never again, please! But what proves the plug is there?",
-			"red_flag_check": "Good news, but no proof of a plug. Look again!"
+			"right_blocked": "That's the story. Which look or test shows the sound is blocked?",
+			"home_fixes": "Never again, please! But what shows the sound is blocked?",
+			"red_flag_check": "Good news, but it doesn't show the sound is blocked. Look again!"
 		},
 		"right_lines": {
 			"wax_plug": "Yes! A lot of wax is a red flag. A plug can hide more: we'll retest.",
-			"tymp_blocked": "Yes! Flat with a tiny canal volume: the probe hit the plug. Wax out first.",
+			"tymp_blocked": "Yes! Flat with a tiny canal volume: the probe tone met the plug. Wax out first.",
 			"gap": "Yes! Bone is fine, air is blocked: the plug costs him that gap.",
 			"abg_flag": "Yes! His gap tops 15 dB at 500, 1k and 2k: a red flag. Wax out first."
 		},

@@ -100,15 +100,17 @@ func play(kind: String, text: String = "") -> void:
 			_kind = ""
 		"later":
 			Sfx.play(&"pop", 0.8, -8.0)
+			# each sound waits for the prop's own clock, so the timers' frame overruns can't add up:
+			# a pen stroke as each page's X starts, the whoosh and the stamp at 0.95 s and 1.07 s
+			# (the times _draw_later draws them)
 			for i in LATER_PAGES:
-				await get_tree().create_timer(0.25 if i == 0 else LATER_STEP, false).timeout
+				await _until(0.25 + LATER_STEP * i)
 				Sfx.play(&"pen", 1.0 + 0.06 * i, -8.0)
-			# the whoosh and the stamp land at 0.95 s and 1.07 s, the times _draw_later draws them
-			await get_tree().create_timer(0.95 - 0.25 - LATER_STEP * (LATER_PAGES - 1), false).timeout
+			await _until(0.95)
 			Sfx.play(&"whoosh", 1.5, -10.0)
-			await get_tree().create_timer(0.12, false).timeout
+			await _until(1.07)
 			Sfx.play(&"stamp", 1.0, -2.0)
-			await get_tree().create_timer(0.53, false).timeout
+			await _until(1.6)
 			# it slides away and _process clears it; the runner moves on (and takes its shot of the
 			# stamped card) while it goes
 			_out_t = 0.0
@@ -119,6 +121,11 @@ func play(kind: String, text: String = "") -> void:
 				Sfx.play(&"chirp", 1.4, -6.0)
 				await get_tree().create_timer(0.35, false).timeout
 			Sfx.play(&"click", 0.8, -4.0)
+
+
+## Waits until the prop's clock (_t, which play() resets) reaches `at` seconds.
+func _until(at: float) -> void:
+	await get_tree().create_timer(maxf(0.0, at - _t), false).timeout
 
 
 ## The phone slides away.

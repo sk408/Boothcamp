@@ -156,8 +156,8 @@
 		"wrong_lines": {
 			"family": "That's family history, not a red flag. What shows it's safe?",
 			"ear_clear": "True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?",
-			"tymp_a": "True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?",
-			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?",
+			"tymp_a": "True: no fluid, no blockage. Which clue clears past drips, pain, dizziness and sudden change?",
+			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears past drips, pain, dizziness and sudden change?",
 			"voices_drop": "That's what's wrong, not why it's safe. Look for the red-flag check!",
 			"cookie": "That's what's wrong, not why it's safe. Look for the red-flag check!"
 		},

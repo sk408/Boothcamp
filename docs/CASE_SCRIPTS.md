@@ -98,8 +98,8 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
   - noise_trouble: That's why he WANTS hearing aids. What shows it's safe to fit them?
   - notch: That's the pattern, not the safety check. Find the red-flag check!
   - ear_clear: True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?
-  - tymp_a: True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?
-  - snhl: True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?
+  - tymp_a: True: no fluid, no blockage. Which clue clears past drips, pain, dizziness and sudden change?
+  - snhl: True: no air-bone gap, one red flag cleared. Which clue clears past drips, pain, dizziness and sudden change?
 
 ### Payoff
 - **Hoot:** Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too.
@@ -352,7 +352,7 @@ Cards from the chart: *Right ear down, bone too: inner ear or nerve*; *Left ear 
 - **Hoot:** Three o'clock? Perfect. His audiogram is on its way to you now.
 - **Hoot:** Dash, the ear doctor sees you at three. Go straight there, pizzas or not.
 - **Hoot:** No ear doctor free today? Then the emergency department. Same day, either way.
-- **Hoot:** Sudden means it came on over three days or less. Started in the last month? Doctor today.
+- **Hoot:** Sudden means over three days or less. Within a month, no wax or fluid to blame? Doctor today.
 - *(patient: cheer)*
 - **Dash:** Same day? Faster than my pizzas! Thanks, owl!
 
@@ -463,8 +463,8 @@ Present the evidence: **Her dad and grandma have it too. Why is it still safe to
 - Wrong card (default): True, but it doesn't show she's safe to fit. Look for the red-flag check!
   - family: That's family history, not a red flag. What shows it's safe?
   - ear_clear: True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?
-  - tymp_a: True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?
-  - snhl: True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?
+  - tymp_a: True: no fluid, no blockage. Which clue clears past drips, pain, dizziness and sudden change?
+  - snhl: True: no air-bone gap, one red flag cleared. Which clue clears past drips, pain, dizziness and sudden change?
   - voices_drop: That's what's wrong, not why it's safe. Look for the red-flag check!
   - cookie: That's what's wrong, not why it's safe. Look for the red-flag check!
 
@@ -587,18 +587,18 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 **Present the evidence: what shows something is blocking the sound?**
 - Proof cards (tags): wax_plug, tymp_blocked, gap, abg_flag. Right: Exactly! Something's blocking the sound: wax out by a doctor or trained clinician, then we retest.
   - wax_plug: Yes! A lot of wax is a red flag. A plug can hide more: we'll retest.
-  - tymp_blocked: Yes! Flat with a tiny canal volume: the probe hit the plug. Wax out first.
+  - tymp_blocked: Yes! Flat with a tiny canal volume: the probe tone met the plug. Wax out first.
   - gap: Yes! Bone is fine, air is blocked: the plug costs him that gap.
   - abg_flag: Yes! His gap tops 15 dB at 500, 1k and 2k: a red flag. Wax out first.
 - Wrong card (default): True, but that doesn't show the sound is blocked. Look again!
-  - wants_aids: That's why he WANTS aids. What proves something's in the way first?
-  - cotton_buds: That's how it got packed in. What proves it's still in there?
-  - bees_quiet: That's what he notices. What proves the sound is blocked?
-  - sudden_block: Sudden, yes, and the wax explains it. What proves the plug is there?
+  - wants_aids: That's why he WANTS aids. What shows something's in the way first?
+  - cotton_buds: That's how it got packed in. What shows the sound is blocked?
+  - bees_quiet: That's what he notices. What shows the sound is blocked?
+  - sudden_block: Sudden, yes, and the wax explains it. What shows the sound is blocked?
   - right_only: One ear sends him to a doctor. But what shows the sound is blocked?
-  - right_blocked: That's the story. Which look or test proves the plug?
-  - home_fixes: Never again, please! But what proves the plug is there?
-  - red_flag_check: Good news, but no proof of a plug. Look again!
+  - right_blocked: That's the story. Which look or test shows the sound is blocked?
+  - home_fixes: Never again, please! But what shows the sound is blocked?
+  - red_flag_check: Good news, but it doesn't show the sound is blocked. Look again!
 
 ### Payoff
 - *(letter)*
@@ -754,10 +754,10 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - Proof cards (tags): tymp_fluid, amber_drum, gap. Right: Exactly! It's the middle ear: a doctor this week, before she flies. Not today.
   - tymp_fluid: Yes! Flat with a normal volume: fluid behind the drum. With normal bone: soon, not today.
   - amber_drum: Yes! You can almost see the fluid. With normal bone: a doctor this week, not today.
-  - gap: Yes! Bone is normal, so the inner ear's fine. Not a sudden inner-ear loss.
+  - gap: Yes! Bone normal, air down, and a clear canal: it's stuck behind the drum. Soon, not today.
 - Wrong card (default): True, but that doesn't show where the trouble is. Look again!
   - flies_friday: That's HER deadline, not a medical emergency. What shows it's the middle ear?
-  - after_cold: Careful: a cold can come before an inner-ear loss too. What proves it's the middle ear?
+  - after_cold: Careful: a cold can come before an inner-ear loss too. What shows it's the middle ear?
   - abg_flag: That gap sends her to a doctor. Mixed losses have gaps too. What points at the middle ear?
   - left_only: One ear sends her to a doctor. What shows it's the middle ear?
   - red_flag_check: Good news, but not the proof. What shows where the trouble is?

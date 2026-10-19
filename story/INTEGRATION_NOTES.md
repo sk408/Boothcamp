@@ -150,8 +150,8 @@ Requests for the integrator and the title owner:
   player who quits during it keeps the day; `_results` reuses that summary (`tools/autoplay_bot.gd` checks it).
 - **Tympanometer (shared with freestyle).** `story/games/case_tymp.gd` now prints "226 Hz probe tone" by its name
   and the adult canal band 0.6-2.0 mL (`CaseRules.TYMP_ADULT_ECV`, was 0.9-2.0); `CaseRules.ecv_band` no longer
-  returns `&"low"` (the old 0.6-0.9 grey zone). Every freestyle canal volume is 1.0 mL or more, so no freestyle
-  reading changes.
+  returns `&"low"` (the old 0.6-0.9 grey zone). Every freestyle canal volume is 0.9 mL or more (Viola's right ear is
+  0.9, already NORMAL under the old `< 0.9` check), so no freestyle reading changes.
 - **Otoscopy on both ears.** A case's first look shows the other ear first (`OTHER_EAR_CAPTION`), then the
   case's ear, so both ears are looked at before any probe or insert goes in (about two seconds longer).
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button

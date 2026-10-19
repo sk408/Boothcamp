@@ -585,6 +585,25 @@ func test_every_conductive_ear_gets_masked_bone() -> void:
 				assert_false(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty(), "%s: the %s ear gets masked bone" % [id, ear])
 
 
+func test_borrowed_bone_needs_no_real_gap() -> void:
+	# (C6) the other ear's unmasked bone types an ear within 10 dB everywhere, the line that names a
+	# conductive gap (a 10 dB gap asks for masked bone first, but reads as no real gap)
+	assert_eq(LevelCase.BORROW_BONE_DB, ClinicRules.ABG_CONDUCTIVE_DB)
+	var bone := {500: 10, 1000: 15, 2000: 40, 4000: 50}
+	assert_eq(LevelCase.borrowed_type({500: 15, 1000: 15, 2000: 45, 4000: 55}, bone), &"sensorineural")
+	assert_eq(LevelCase.borrowed_type({500: 10, 1000: 15, 2000: 20, 4000: 20}, {500: 10, 1000: 10, 2000: 15, 4000: 15}), &"normal")
+	assert_eq(LevelCase.borrowed_type({500: 15, 1000: 15, 2000: 45, 4000: 60}, bone), &"sensorineural", "a 10 dB gap is no real gap")
+	assert_eq(LevelCase.borrowed_type({500: 15, 1000: 15, 2000: 45, 4000: 65}, bone), &"unknown", "a 15 dB gap at 4k")
+	assert_eq(LevelCase.borrowed_type({500: 40, 1000: 45, 2000: 70, 4000: 80}, bone), &"unknown", "a real gap")
+	# the shipped symmetric cases still borrow on the truth (Rocco's and Ginger's left ears)
+	for id: String in ["noise_notch", "cookie_bite"]:
+		var p := _patient(id)
+		var right_bone := {}
+		for f: int in [500, 1000, 2000, 4000]:
+			right_bone[f] = p.get_bc_threshold("right", f)
+		assert_eq(LevelCase.borrowed_type(CaseData.truth(p, "left"), right_bone), &"sensorineural", id)
+
+
 func test_wrong_first_headlines() -> void:
 	for id: String in CaseData.chapter_case_ids():
 		var c := _case(id)

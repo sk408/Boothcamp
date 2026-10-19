@@ -82,7 +82,8 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
   side, might be worse; no line claims the chart shows it.
 - Bone: Hoot, right mastoid, unmasked (= right air; the right is the better cochlea, so no Ghost). Unmasked bone
   is the better cochlea, so it stands for both ears: left air minus it is 0-5 dB, so no gap is possible on either
-  side and no masking is needed. The runner types the left ear from this reading too (`_borrow_bone`).
+  side and no masking is needed. The runner types the left ear from this reading too (`_borrow_bone`, within 10 dB everywhere, the
+  no-real-gap line; a 10 dB gap gets masked bone first, clinical review E5 and C6).
 - PTA (500/1k/2k): right 26.7, left 30. 2k/3k/4k average: right 53.3, left 58.3. Tinnitus: both ears, high, constant.
 - Tympanograms: A both (tip large, a roomy canal). Last loud gig four days ago (no temporary shift).
 
@@ -99,8 +100,9 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
   bad days (in her opening lines, always heard) is what makes it fluctuating. The spring test was not itself
   asymmetric: 250, 1k and 8k each differ from her right ear by 15, but never two neighbouring frequencies.
 - Unmasked bone on her better (right) ear reads her right cochlea (about 10 / 5 / 10 / 15 at 500 / 1k / 2k / 4k).
-  Against her left air that is a gap at 500 and 1k (and 2k when its stamp lands at 10), so masked bone runs on the
-  left there and lands on the air values (no real gap).
+  Against her left air that is a gap at 500, 1k and 2k, and at 4k (25 against 15: exactly the 10 dB bone-masking
+  gap of clinical review E5, so a 5 dB wobble can drop it), so masked bone runs on the left there and lands on the
+  air values (no real gap).
 - Masked air: the rule (left air - 40 >= the right cochlea's bone estimate) asks for it at 250 and 1k, each exactly
   on the line, so a 5 dB wobble can drop one; the runner follows the stamped values. It confirms 50 / 45.
 - Last spell ten days ago, good days since, and no new drop: her hearing dips with spells and comes back, and today's
@@ -192,7 +194,7 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 |---|---|---|---|
 | 1 | `intro` | First case ever: Hoot's briefing ("Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."). The patient's entrance gag and complaint (joke + real clue), Hoot's personal opener. The "always" clues go on the notes. | dialogue |
 | 2 | `history` | Two rounds of three questions (2 / 1 / 0 points). The red-flag sweep always happens: if the player skipped it, Hoot asks it. Red-flag card, plus any extra cards the sweep reveals. Medal `history` (4 points gold, 2 silver). | choice |
-| 3 | `otoscopy` | A quick look at the other ear ("<name>'s LEFT ear first: a clear canal, a healthy eardrum.": both ears are looked at before any probe or insert goes in), then the case's ear (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); its caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
+| 3 | `otoscopy` | A quick look at the other ear ("<name>'s <OTHER EAR> ear first: a clear canal, a healthy eardrum.": both ears are looked at before any probe or insert goes in), then the case's ear (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); its caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
 | 5 | `instructions` | One line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. | dialogue |
 | 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. | the AudiOtron's tone beats |
@@ -224,7 +226,8 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
 3. Unmasked bone (Hoot). One-sided cases: on the better ear only (Steve's convention, as on Day 2; x8 for Marina
    and Dash, a montage for Barnaby and Skye), since it answers for the better cochlea wherever it sits;
    `CaseData.validate` checks it. Symmetric cases (Rocco, Ginger): the right ear only; their
-   unmasked bone sits within 10 dB of the air in both ears (no air-bone gap), so no bone masking is needed.
+   unmasked bone sits within 5 dB of the air in both ears (under the 10 dB bone-masking gap), so no bone masking is
+   needed.
 4. Masked bone on each ear (`CaseData.masked_bone_ears`: the plan's bone ears, then the other air-tested ears)
    where `ClinicRules.masked_freqs_needed(results, ear, &"bc_masked")` is not empty: the ear's air against the best
    unmasked bone from either mastoid (Hoot; the oscillator moves to that ear). Only the poorer ear of a one-sided
@@ -311,7 +314,7 @@ an urgent refer.
 | Marina: why a doctor first? | Room-spinning spells; Left ear only; Hearing comes and goes; Low pitches 25 dB worse than spring; her full roaring left ear; the roar | "Last spell 10 days ago; good days since" (that's why it's not TODAY), the normal exam cards, no cold |
 | Dash: why TODAY? | Right ear went overnight; Pop, then whooshing 30 hours ago; First time ever; Right ear down, bone too; Wobbly yesterday (its own line: dizzy with a sudden loss is another red flag) | no wax, type A (they rule out a plug, not the rush), the cotton bud, no pain, his good left ear |
 | Ginger: her dad and grandma have it too; why is it still safe to fit? | No pain, drainage, dizziness or sudden change; Both ears match; Both ears, about the same; Found at school, the same ever since; Right ear matches nine years ago | the family card ("That's family history, not a red flag"), the exam and chart cards (credited, as for Rocco), the complaint and the shape |
-| Barnaby: what shows something is blocking the sound? | the wax plug; flat tymp, tiny canal volume; the gap card ("bone normal, air down"); the gap of 15+ at 500, 1k and 2k | his wallet (why he WANTS aids), the cotton buds (how it got packed in), "sudden" (the wax explains it), "one ear only" (a reason for a doctor, not proof of a plug) |
+| Barnaby: what shows something is blocking the sound? | the wax plug; flat tymp, tiny canal volume; the gap card ("bone normal, air down"); the gap of 15+ at 500, 1k and 2k | his wallet (why he WANTS aids), the cotton buds (how it got packed in), "sudden" (the wax explains it), "one ear only" (a reason for a doctor, not what shows the sound is blocked) |
 | Skye: what shows the trouble is in the middle ear? (her normal bone is why it's this week, not today, and Hoot's lines say so) | flat tymp, normal canal volume; the dull amber drum; the gap card ("bone normal") | her Friday flight (her deadline, not an emergency), "after a cold" (a cold can come before an inner-ear loss too), the 15+ gap card (mixed losses have gaps too), one ear only |
 
 Counselling that ships: every FIT, "A full fitting also checks words in each ear" (word scores per case can follow
@@ -339,7 +342,7 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
 | Decisions | see section 7; refer = soon, days to about two weeks; today = the same day |
 | Red flags (US FDA prescription hearing aid labeling, 21 CFR 801.422, since October 2022: advise a doctor, preferably an ear specialist, before fitting) | a visible deformity of the ear, from birth or injury; fluid, pus or blood from the ear in the last 6 months; ear pain or discomfort; a lot of wax, or something in the canal; dizziness, recent or long-standing; sudden, quickly worsening or fluctuating hearing loss in the last 6 months; hearing loss or ringing in only one ear, or a clear difference between the ears; an air-bone gap of 15 dB or more at 500, 1000 and 2000 Hz. The 2022 OTC rule removed the old requirement that adults get a medical evaluation or sign a waiver before buying; the red flags remain dispenser guidance and good practice. Under-18s still see a doctor first, and some states still require referral. |
 | Asymmetry (the measurable "difference between the ears") | 15 dB or more between the ears at two or more neighbouring test frequencies (`is_asymmetric`) |
-| Sudden loss | 30 dB or more at 3+ neighbouring frequencies, coming on over 72 hours or less (`SUDDEN_ONSET_MAX_H`: the definition, not a deadline). Same-day referral: an ENT, or the emergency department if no ENT can see them today, with the audiogram. Treatment works best when it starts early, but doctors still treat for weeks, so a late patient still goes TODAY. Hoot says the definition on Dash's day: "Sudden means it came on over three days or less. Started in the last month? Doctor today." (NICE NG98, 1.1.2). |
+| Sudden loss | 30 dB or more at 3+ neighbouring frequencies, coming on over 72 hours or less (`SUDDEN_ONSET_MAX_H`: the definition, not a deadline). Same-day referral: an ENT, or the emergency department if no ENT can see them today, with the audiogram. Treatment works best when it starts early, but doctors still treat for weeks, so a late patient still goes TODAY. Hoot says the definition on Dash's day: "Sudden means over three days or less. Within a month, no wax or fluid to blame? Doctor today." (NICE NG98, 1.1.2: a sudden loss not explained by an outer or middle ear cause). |
 | The hours clock | "SINCE IT STARTED 30 h 05 min", counting up in real (unscaled, unpaused) minutes, captioned "Sooner is better". No 72 h mark, no bar, no "too late". |
 | Tympanogram normal box | peak pressure -100 to +50 daPa, compensated peak 0.3 to 1.7 mL; adult canal volume about 0.6 to 2.0 mL (BSA's lower edge) |
 | Canal volume with a flat tymp | under 0.6 mL reads "blocked" (`TYMP_BLOCKED_ECV`); 0.6-2.0 "fluid"; over 2.0 "a hole". Every other type sits inside the adult band (`CaseData.validate`) |
@@ -382,9 +385,10 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
 8. A type B with a 0.4 mL canal volume on an occluded canal: the right teaching picture? Many clinicians skip the
    probe with a complete impaction.
 9. Phones, not inserts, while wax is in the canal ("they go deep, and could push the wax further"): agree?
-10. Who removes wax: "the doctor's office clears it", with "softening drops for a few days, then a gentle rinse or
-    suction". Scope varies by state and some dispensers and audiologists remove wax. Is REFER the right single answer
-    under the FDA "a lot of wax" flag, and should Hoot mention scope?
+10. Who removes wax: "out by a doctor or trained clinician" (the clinical review's default), with "softening drops
+    for a few days, then a gentle rinse or suction". Scope varies by state and some dispensers and audiologists remove
+    wax. Is REFER the right single answer under the FDA "a lot of wax" flag, and is "or trained clinician" enough said
+    about scope?
 11. Sudden plus wax: muffly for months, then all at once in the shower; a visible plug; normal masked bone. Is "The wax
     explains the sudden block, and his bone is normal. Soon, not today." safe wording?
 12. The retest: "a week later" (drops for a few days first, per the clinical review) and a full return to normal at 61 (air within 5 dB of bone), or should

@@ -42,14 +42,17 @@ const TYMP_QUIZ: Array[StringName] = [&"A", &"B", &"C"]
 const TYPE_ANSWERS: Dictionary = {&"sensorineural": 0, &"conductive": 1, &"mixed": 2}
 ## Unmasked bone reads the better cochlea, so it can stand in for an ear with no bone test of its own
 ## when it sits within this many dB of that ear's air at every bone frequency (no gap is possible).
+## (Clinical review C6) 10, the naming rule's no-gap line (ClinicRules.ABG_CONDUCTIVE_DB), not E5's
+## masking gap: a 10 dB gap gets masked bone first (masked_bone_ears), so an ear only borrows when
+## its masked bone was never needed.
 const BORROW_BONE_DB := 10
 ## Hoot's one-time briefing, the first time a player opens any case.
 const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
 ## The runner's own lines (case_scripts.py prints them too: keep the two in step).
-## After masked bone, when no ear needed masked air (built from the stamps).
 ## The first look in every case: the other ear, before the case's own (both ears get a look before
 ## any probe or insert goes in). %s: the speaker, then the ear in capitals.
 const OTHER_EAR_CAPTION := "%s's %s ear first: a clear canal, a healthy eardrum."
+## After masked bone, when no ear needed masked air (built from the stamps).
 const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bone needed masking today!"
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
 const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
@@ -720,7 +723,7 @@ func _quick() -> bool:
 ## An ear with air but no bone test of its own: the other ear's UNMASKED bone reads the better cochlea,
 ## so this ear's bone can be no better than it. When that bone sits within BORROW_BONE_DB of this
 ## ear's air at every bone frequency, no gap is possible and the ear is typed from it (Rocco's and
-## Ginger's left ears). Otherwise the ear stays "unknown" (it would need its own bone test).
+## Ginger's left ears; borrowed_type). Otherwise the ear stays "unknown" (it would need its own bone test).
 func _borrow_bone() -> void:
 	var ears: Dictionary = results.get("ears", {})
 	for ear: String in ["right", "left"]:
@@ -732,15 +735,22 @@ func _borrow_bone() -> void:
 		var air := ClinicRules.best_thresholds(results, ear, false)
 		if bone.is_empty() or air.is_empty():
 			continue
-		var close := true
-		for f: int in bone:
-			if air.has(f) and int(air[f]) - int(bone[f]) > BORROW_BONE_DB:
-				close = false
-		var kind := ClinicRules.hearing_type(air, bone)
-		if close and (kind == &"sensorineural" or kind == &"normal"):
+		var kind := borrowed_type(air, bone)
+		if kind != &"unknown":
 			e["hearing_type"] = kind
 			e["bone_from"] = other
 	Game.set_audiometry_results(results)
+
+
+## The type of loss an ear with no bone of its own reads from the other ear's unmasked bone:
+## &"sensorineural" or &"normal" when that bone sits within BORROW_BONE_DB of this ear's air at every
+## bone frequency, else &"unknown".
+static func borrowed_type(air: Dictionary, bone: Dictionary) -> StringName:
+	for f: int in bone:
+		if air.has(f) and int(air[f]) - int(bone[f]) > BORROW_BONE_DB:
+			return &"unknown"
+	var kind := ClinicRules.hearing_type(air, bone)
+	return kind if kind == &"sensorineural" or kind == &"normal" else &"unknown"
 
 
 # ---------------------------------------------------------------- 7. reveal: the chart
