@@ -2,7 +2,8 @@ extends TestCase
 ## (Days 4-5) The S0 seams that Day 4 (word scores) and Day 5 (the Party Noise Test) build on
 ## (CONTRACTS.md §9.10, §9.24). S0a: SpeechSim's helpers and model facades, SpeechMaterial.tokens()
 ## and the new validate checks, the "lists" rules, the new keys, the Events block, the counselling
-## phase, the CHAPTERS markers and the two stub movies (valid, and hidden until their day). S0b: the test modes, with probe word (wrs) and party (sin) modes
+## phase, the CHAPTERS markers and the two stub movies (valid, hidden until their day, and the card
+## hold of their scene-1 sets once they have them: probe_movie_stage.gd, probe_card_hold_sets.gd). S0b: the test modes, with probe word (wrs) and party (sin) modes
 ## from this folder (probe_test_mode.gd, probe_sp_mode.gd) on every session seam (C1-C23) and screen
 ## seam (H1-H28), a missing mode script, run_by_textbook / run_hidden, the Hoot-turn gate, key
 ## placeholders, and the Daily Decibel hook. Day 3 must not notice any of it: its goldens (written
@@ -354,8 +355,10 @@ const Stage2D := preload("res://story/explainers/explainer_stage.gd")
 const DAYS45_MOVIES: Dictionary = {"letter_choir": "nora", "party_noise": "marco"}
 
 
-## Both are registered after main's movies, in order, and valid for the shared player: the stage's
-## sets, 45-110 s, captions of 18 words or fewer, card params on every scene, quiet Sfx cues.
+## Both are registered after main's movies, in order, and valid for the shared player: 45-110 s,
+## captions of 18 words or fewer, card params on every scene, quiet Sfx cues. The sets are checked
+## only once a movie has its sets script (its "stage" line, W5b / P5b): before that (the stub, then
+## W5a / P5a's cards-only data) every scene plays as its card, so it validates with no known sets.
 func test_days45_movies_registered() -> void:
 	var ids := Movies.ids()
 	var last := ids.find("masking_recap")
@@ -364,9 +367,16 @@ func test_days45_movies_registered() -> void:
 		assert_true(Movies.has(id), "%s is registered" % id)
 		assert_true(ids.find(id) > last, "%s after the movies before it" % id)
 		last = ids.find(id)
-		var bad := Movies.validate(id, Stage2D.SETS)
-		assert_true(bad.is_empty(), "validate %s: %s" % [id, ", ".join(bad)])
 		var m := Movies.movie(id)
+		var known: Array = []
+		if m.has("stage"):
+			known = Stage2D.SETS   # the full check: the stage's sets plus the movie's own (own_sets)
+			var own := Movies.own_sets(id)
+			assert_false(own.is_empty(), "%s: its sets script declares its sets" % id)
+			for set_id: StringName in own:
+				assert_false(Stage2D.SETS.has(set_id), "%s: its own set %s is not a stage set" % [id, set_id])
+		var bad := Movies.validate(id, known)
+		assert_true(bad.is_empty(), "validate %s: %s" % [id, ", ".join(bad)])
 		assert_eq(String(m.get("chapter", "")), String(DAYS45_MOVIES[id]), "%s's day" % id)
 		assert_between(Movies.total_s(id), Movies.MIN_TOTAL_S, Movies.MAX_TOTAL_S, "%s's length" % id)
 		for sc: Dictionary in m["scenes"]:
@@ -398,6 +408,70 @@ func test_days45_movie_stubs() -> void:
 			assert_eq(String(sc["set"]), "card", "%s/%s: a card" % [id, sc["id"]])
 			assert_near(float(sc["duration"]), 16.0, 0.001, "%s/%s: 16 s" % [id, sc["id"]])
 		assert_near(Movies.total_s(id), 48.0, 0.001, "%s: 48 s" % id)
+
+
+const ProbeStage := preload("res://core/tests/probe_movie_stage.gd")
+const HOLD_SETS := "res://core/tests/probe_card_hold_sets.gd"
+
+
+## Draws scene `sc` of movie `m` on a probe stage half a second before its card hold ends, and says
+## what is wrong with the hold (Steve's rule, the shape of main's _set_meet): the old content must
+## read the STAGE's t shifted by card_hold - 2 s (that is the clock _k / _pop / _ring and every s._*
+## helper read), and the stage's t must be back before the stage's _iris() and _scene_chip().
+func _card_hold_problems(m: Dictionary, sc: Dictionary) -> PackedStringArray:
+	var bad := PackedStringArray()
+	var hold := float((sc.get("params", {}) as Dictionary).get("card_hold", 0.0))
+	var st: Control = ProbeStage.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	st.call("use_movie", m)
+	st.call("show_scene", sc)
+	var real_t := hold - 0.5
+	st.set("t", real_t)
+	(st.get("seen_t") as Array).clear()
+	st.queue_redraw()
+	await wait_frames(2)
+	var seen: Array = st.get("seen_t")
+	var shifted := real_t - (hold - 2.0)
+	var reads_shifted := false
+	for v: Variant in seen:
+		if absf(float(v) - shifted) < 0.001:
+			reads_shifted = true
+	if seen.is_empty():
+		bad.append("scene 1 was not drawn")
+	elif not reads_shifted:
+		bad.append("the old content does not read the stage's t shifted by card_hold - 2 s")
+	if absf(float(st.get("t")) - real_t) > 0.001:
+		bad.append("the stage's t is %.2f after the set, not %.2f" % [float(st.get("t")), real_t])
+	st.queue_free()
+	return bad
+
+
+## Steve's card hold in a movie's OWN scene-1 set (choir, quiet) shifts the STAGE's clock for the
+## old content and puts it back, the way main's _set_meet does. Proved on main's masking movie and
+## on a right and a wrong probe set; each Days 4-5 movie is checked once it has its sets script
+## (its "stage" line, W5b / P5b) and passes with nothing to draw before then.
+func test_days45_movie_card_hold_draw() -> void:
+	var masking := Movies.movie("masking")
+	var meet: Dictionary = (masking["scenes"] as Array)[0]
+	assert_eq(await _card_hold_problems(masking, meet), PackedStringArray(), "main's meet: the shape to copy")
+	var probe := {"id": "s0_hold", "stage": HOLD_SETS}
+	var right := {"id": "one", "set": "hold_right", "duration": 14.0, "params": {"card_hold": 8.0}}
+	var wrong := {"id": "one", "set": "hold_wrong", "duration": 14.0, "params": {"card_hold": 8.0}}
+	assert_eq(await _card_hold_problems(probe, right), PackedStringArray(), "s.t shifted and put back")
+	var caught := await _card_hold_problems(probe, wrong)
+	assert_has(caught, "the old content does not read the stage's t shifted by card_hold - 2 s",
+		"a set that shifts only its own copy of t is caught")
+	for id: String in DAYS45_MOVIES:
+		var m := Movies.movie(id)
+		if not m.has("stage"):
+			continue   # the stub or the cards-only data: scene 1 plays as its card, no hold to draw
+		var sc: Dictionary = (m["scenes"] as Array)[0]
+		var p: Dictionary = sc.get("params", {})
+		assert_true(float(p.get("card_hold", 0.0)) >= 6.0, "%s: scene 1 holds its card" % id)
+		assert_has(Movies.own_sets(id), StringName(String(sc["set"])), "%s: scene 1 is its own set" % id)
+		var bad := await _card_hold_problems(m, sc)
+		assert_true(bad.is_empty(), "%s/%s card hold: %s" % [id, sc["id"], ", ".join(bad)])
 
 
 ## A registered movie whose day is not in Game.CHAPTERS yet is in no replay list (the title's
