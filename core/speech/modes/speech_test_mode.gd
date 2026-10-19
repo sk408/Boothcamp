@@ -24,6 +24,8 @@ const PATHS: Dictionary[StringName, String] = {
 static var path_override: Dictionary = {}
 
 var _session: WeakRef
+## The test this mode was made for (make() sets it; test_id() reads it).
+var _made_for: StringName = &""
 
 
 ## A new mode of test `t` for session `s`: null for the SRT, or while the script is missing (the
@@ -37,7 +39,10 @@ static func make(s: SpeechSession, t: StringName) -> SpeechTestMode:
 	var script := load(path) as GDScript
 	if script == null or not script.can_instantiate():
 		return null
-	return script.new(s) as SpeechTestMode
+	var m := script.new(s) as SpeechTestMode
+	if m != null:
+		m._made_for = t
+	return m
 
 
 ## Where test `t`'s mode script is ("" = none).
@@ -59,8 +64,10 @@ func session() -> SpeechSession:
 
 # ---------------------------------------------------------------- identity and lifecycle
 
-## &"wrs" / &"sin" (the base: the session's test).
+## &"wrs" / &"sin": the test make() made this mode for (else the session's test).
 func test_id() -> StringName:
+	if _made_for != &"":
+		return _made_for
 	var s := session()
 	return s.test if s != null else &""
 
@@ -170,7 +177,9 @@ func candidate() -> int:
 
 # ---------------------------------------------------------------- controls
 
-## Present the next item. Returns the trial ({} = refused). Put "slot" and "list_id" in it.
+## Present the next item. Returns the trial ({} = refused). Put "slot" and "list_id" in it, and set
+## the session's `current` (the trial; its "delay_s" times the answer) and `awaiting_score`, as the
+## SRT does: the screen reads both.
 func present() -> Dictionary:
 	return {}
 

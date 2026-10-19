@@ -12,6 +12,10 @@ extends CanvasLayer
 ## meter (the "lie detector") then swings to |SRT - PTA| and clunks into place: with Mike it slams
 ## into the red.
 ## Keys and mouse both work everywhere: every control is a clickable AoButton with its key chip.
+##
+## (Days 4-5) Word lists (plan test "wrs") and the Party Noise Test ("sin") draw through a test mode
+## (SpMode, ui/speech/modes/sp_mode.gd), loaded by path and asked first at every seam (H1-H28,
+## CONTRACTS.md §9.10.6). The SRT has no mode: with _mode == null every line below runs as on Day 3.
 
 ## Emitted after the ear-complete fanfare. results: §9.5, merged with the tone results.
 signal test_finished(results: Dictionary)
@@ -53,6 +57,8 @@ const GOLF_COLORS: Dictionary[StringName, Color] = {
 	&"bogey": Color("#fffbf2"), &"double_bogey": Color("#fffbf2"), &"triple_bogey": Color("#fffbf2"),
 }
 const AGREEMENT_COLORS: Dictionary[StringName, Color] = {&"good": Color("#5bc8a3"), &"fair": Color("#ffb627"), &"poor": Color("#ff6f59")}
+## (Days 4-5) The button properties a mode may change on a base button; the SRT puts them back.
+const BASE_LOOK_KEYS: Array[String] = ["text", "sub_text", "icon", "glyph", "face_color", "text_color", "font_size", "icon_size", "action", "tooltip_text"]
 
 var session: SpeechSession
 ## Plan "fresh_session" (Hoot's recheck) parks the player's session here; it comes back on the
@@ -111,6 +117,22 @@ var _hoot_steps := 0
 var _hoot_done_ears: Dictionary = {}
 ## start_test() with hoot_turn_after 0: his turn starts on the next idle frame; no player beat before.
 var _hoot_pending := false
+# (Days 4-5) the test modes (H1). null for the SRT.
+var _mode: SpMode = null
+var _mode_test: StringName = &"srt"
+var _modes: Dictionary = {}                ## test -> SpMode: made on first use, kept for the visit
+var _mode_buttons: Dictionary = {}         ## test -> {action: SpButton} (SpMode.make_buttons())
+## A mode's state that survives start_test for one visit (the lens, the widgets revealed so far).
+## Cleared when the screen exits.
+var memory: Dictionary = {}
+var _hidden_base: Array[StringName] = []   ## base widgets the active mode hides
+var _hidden_run := false                   ## run_hidden(): no beats, no Hoot turn, no coach, no tips
+var _hoot_first_wait := false              ## plan level_first: hoot_first starts at the first PRESENT
+var _hoot_speed_now := 0.0                 ## hoot_turn(speed): this turn's speed (0 = the plan's)
+var _last_device: StringName = &"key"
+## The base deck buttons' looks as built (id -> {property: value}): a mode may relabel them, and the
+## SRT gets them back (_restore_base()).
+var _base_looks: Dictionary = {}
 
 var _voice: SpeechVoice
 var _root: Control
@@ -130,6 +152,29 @@ var _ff_banner: Control
 var _fx: AoFx
 var _buttons: Dictionary[String, AoButton] = {}
 var _group_labels: Array = []   ## [text, Rect2] drawn on the deck
+
+## (Days 4-5) Read-only parts of the screen, for the modes (H27).
+var fx: AoFx:
+	get:
+		return _fx
+var voice: SpeechVoice:
+	get:
+		return _voice
+var booth: AoBoothWindow:
+	get:
+		return _booth
+var lcd: SpLcd:
+	get:
+		return _lcd
+var card: SpWordCard:
+	get:
+		return _card
+var bubble: SpBubble:
+	get:
+		return _bubble
+var dance: SpDance:
+	get:
+		return _dance
 
 
 func _enter_tree() -> void:
@@ -153,6 +198,11 @@ func _exit_tree() -> void:
 	Stage.set_booth_view_active(false)
 	for id: String in ANCHORS:
 		Hoot.unregister_anchor(id)
+	# (Days 4-5) the mode stops its sounds and its anchors go; the visit's memory is cleared
+	if _mode != null:
+		_mode.exit()
+		_unregister_mode_anchors()
+	memory.clear()
 	if _music_ducked:
 		Sfx.music_duck(false)
 		_music_ducked = false
@@ -184,7 +234,8 @@ func _ready() -> void:
 
 ## Standalone boot (--scene=res://ui/speech/speech_screen.tscn): Mike, his tones from his profile,
 ## a coached right-ear SRT. Extras: --demo-play (answers its own beats), --demo-ear=left,
-## --demo-uncoached, --demo-hoot=N (plan hoot_turn_after).
+## --demo-uncoached, --demo-hoot=N (plan hoot_turn_after), --demo-test=wrs|sin (a mode's list; the
+## ear defaults to "both" for sin).
 func demo_start() -> void:
 	Game.begin_visit("mike")
 	var clinic_path := "res://world/clinic.tscn"
@@ -202,16 +253,17 @@ func demo_start() -> void:
 		if clinic.has_method("sit"):
 			clinic.call("sit")
 	var mike := Game.load_patient("mike") as PatientProfile
-	var plan := {"test": "srt", "tones": SpeechSession.tone_results_from(mike)}
+	var demo_test := Game.cli_value("demo-test", "srt")
+	var plan := {"test": demo_test, "tones": SpeechSession.tone_results_from(mike)}
 	if Game.cli_value("demo-hoot", "") != "":
 		plan["hoot_turn_after"] = int(Game.cli_value("demo-hoot", "0"))
 	if Game.cli_flag("demo-play"):
 		Events.awaiting_input.connect(_on_demo_beat)
-	start_test(mike, Game.cli_value("demo-ear", "right"), not Game.cli_flag("demo-uncoached"), plan)
+	start_test(mike, Game.cli_value("demo-ear", "both" if demo_test == "sin" else "right"), not Game.cli_flag("demo-uncoached"), plan)
 
 
 func _on_demo_beat(beat: StringName, _info: Dictionary, solver: Callable) -> void:
-	if beat == &"speech" and is_inside_tree():
+	if (beat == &"speech" or _mode != null) and is_inside_tree():
 		get_tree().create_timer(0.45, false).timeout.connect(_call_solver.bind(solver))
 
 
@@ -228,6 +280,8 @@ func _call_solver(solver: Callable) -> void:
 ## hoot_turn_text, show_agreement (default true), done_title,
 ## low_start_ok (SpeechSession), fresh_session (this ear on a new session: Hoot's recheck; the
 ## player's session comes back on the next start_test without it).
+## (Days 4-5) test "wrs" / "sin" (a mode), hoot_only (Hoot's list whatever quick visit says, D24),
+## hoot_first (Hoot's turn first; at the first PRESENT with level_first), hoot_speed (default 8).
 func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dictionary = {}) -> void:
 	if patient == null:
 		push_error("SpeechScreen.start_test: no patient")
@@ -235,33 +289,22 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	if _auto_running:
 		_end_hoot_turn()
 	var fresh := bool(plan.get("fresh_session", false))
-	if fresh:
-		if not _fresh_active:
-			_kept_session = session
-			_fresh_active = true
-		session = null
-	elif _fresh_active:
-		session = _kept_session   # null when there was none: a new one below
-		_kept_session = null
-		_fresh_active = false
-	if session == null or session.patient.id != patient.id:
-		session = SpeechSession.new(patient, Game.rng.randi())
-		session.technique.connect(_on_technique)
-		session.combo_changed.connect(_on_combo)
-		session.reaction.connect(_on_reaction)
-		session.stored.connect(_on_stored)
-		if not fresh:
-			_hoot_done_ears.clear()
-			_tip_last.clear()
+	_ensure_session(patient, fresh)
 	_voice.stop()
 	_plan = plan.duplicate(true)
 	session.configure(_plan)
+	if session.mode_missing:
+		_set_mode(&"srt")
+		_end_missing(ear, coached)
+		return
 	session.begin(ear, coached)
+	_set_mode(session.test)
 	_ear = ear
 	_coached = coached
 	_show_agreement = bool(_plan.get("show_agreement", true)) and session.test == &"srt"
 	_hoot_after = int(_plan["hoot_turn_after"]) if _plan.has("hoot_turn_after") else -1
 	_hoot_after_up = bool(_plan.get("hoot_turn_after_up", false))
+	_hoot_speed_now = 0.0
 	_player_words = 0
 	_talking = false
 	_listening = false
@@ -295,10 +338,13 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	Events.speech_started.emit(patient.id, ear, session.test, coached)
 	_coach_key = ""
 	_coach_tip = -1
-	var hoot_now := quick_visit and _hoot_after == 0 and not session.is_done()
+	# the Hoot-turn gate (H16, D24): hoot_only or quick visit; hoot_first through the same gate
+	var hoot_first := int(_plan.get("hoot_first", 0)) > 0 and _hoot_gate() and not session.is_done()
+	_hoot_first_wait = hoot_first and bool(_plan.get("level_first", false))
+	var hoot_now := (_hoot_gate() and _hoot_after == 0 and not session.is_done()) or (hoot_first and not _hoot_first_wait)
 	_hoot_pending = hoot_now
 	_coach_active = coached and not hoot_now and not session.is_done()
-	var intro := String(_plan.get("intro", ""))
+	var intro := _fill_keys(String(_plan.get("intro", "")))
 	if hoot_now:
 		if intro != "":
 			Hoot.say(intro, Hoot.NORMAL, "", "", 2.0)
@@ -307,13 +353,50 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 		Hoot.say(intro if intro != "" else _say("Speech time! {He} repeats each word. You score what {he} SAID."), Hoot.NORMAL, "", "", 3.0)
 	elif intro != "":
 		Hoot.say(intro, Hoot.NORMAL)
-	elif quick_visit and _hoot_after > 0:
+	elif _hoot_gate() and _hoot_after > 0:
 		Hoot.say("%s ear, all yours for %d word%s! Then I'll take a turn." % [ear.capitalize(), _hoot_after, "" if _hoot_after == 1 else "s"], Hoot.NORMAL)
 	else:
 		Hoot.say("%s ear, all on your own! I'll only chime in if something goes wrong." % ear.capitalize(), Hoot.NORMAL)
 	_refresh()
 	if session.is_done():
 		_complete_ear.call_deferred()
+
+
+## The session for `patient` (made on the first call and kept between ears; plan fresh_session parks
+## the player's session for Hoot's recheck).
+func _ensure_session(patient: PatientProfile, fresh: bool) -> void:
+	if fresh:
+		if not _fresh_active:
+			_kept_session = session
+			_fresh_active = true
+		session = null
+	elif _fresh_active:
+		session = _kept_session   # null when there was none: a new one below
+		_kept_session = null
+		_fresh_active = false
+	if session == null or session.patient.id != patient.id:
+		session = SpeechSession.new(patient, Game.rng.randi())
+		session.technique.connect(_on_technique)
+		session.combo_changed.connect(_on_combo)
+		session.reaction.connect(_on_reaction)
+		session.stored.connect(_on_stored)
+		if not fresh:
+			_hoot_done_ears.clear()
+			_tip_last.clear()
+
+
+## (Days 4-5) The plan's test has no mode script (§9.10.2): the test ends at once, with no sheet
+## for it (test_finished on the next frame, so the caller's await catches it).
+func _end_missing(ear: String, coached: bool) -> void:
+	push_warning("speech mode %s missing" % String(session.test))
+	_ear = ear
+	_coached = coached
+	_accepting = false
+	_finishing = true
+	_hoot_pending = false
+	_coach_active = false
+	_ear_serial += 1
+	_finish_ear.call_deferred(_ear_serial)
 
 
 ## Snapshot for UI, bot and tests: SpeechSession.get_state() (§9.4) plus the screen's keys.
@@ -326,7 +409,8 @@ func get_state() -> Dictionary:
 			"list_title": "", "next_word": "", "words_left": 0, "pta": NAN, "pta_right": NAN, "pta_left": NAN, "recommended_start": 40,
 			"candidate_db": SpeechRules.NO_SRT, "trail": [], "strokes": 0, "awaiting_score": false, "current": {}, "mask_on": false,
 			"mask_db": -1, "mask_ear": "left", "masking_needed": false, "transducer": &"phones", "done": false, "stored_db": -1,
-			"agreement": &"", "diff": 0, "combo": 0, "multiplier": 1, "points": 0, "presentations": 0, "scoring": true}
+			"agreement": &"", "diff": 0, "combo": 0, "multiplier": 1, "points": 0, "presentations": 0, "scoring": true,
+			"slot": _ear, "mode": ""}
 	st["accepting_input"] = _player_ok()
 	st["talking"] = _talking
 	st["listening"] = _listening
@@ -337,6 +421,11 @@ func get_state() -> Dictionary:
 	st["quick_visit"] = quick_visit
 	st["finishing"] = _finishing
 	st["hoot_turn_after"] = _hoot_after
+	# (Days 4-5) the mode's keys (false on Day 3)
+	var extra := _mode.extra_state() if _mode != null else {}
+	for k: String in ["lens_on", "confirm_pending", "practice"]:
+		st[k] = bool(extra.get(k, false))
+	st.merge(extra, false)
 	return st
 
 
@@ -349,7 +438,20 @@ func get_results() -> Dictionary:
 
 # ---------------------------------------------------------------- input
 
+## (Days 4-5) last_device(): keys or mouse, whichever the player used last (read by the modes only).
+func _input(event: InputEvent) -> void:
+	if _mode == null:
+		return
+	if event is InputEventMouseButton:
+		_last_device = &"mouse"
+	elif event is InputEventKey or event is InputEventJoypadButton:
+		_last_device = &"key"
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if _mode != null and _mode.handle_input(event):
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(TOGGLE_HINTS_ACTION):
 		_toggle_hints()
 		get_viewport().set_input_as_handled()
@@ -377,7 +479,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Player input is live: after start_test, before the ear is done, not in Hoot's turn.
 func _player_ok() -> bool:
-	return _accepting and session != null and not _auto_running and not _finishing and not _hoot_pending
+	return _accepting and session != null and not _auto_running and not _finishing and not _hoot_pending and not _hidden_run
 
 
 ## Waiting for the player (a beat): input live and no word playing or being answered.
@@ -386,14 +488,27 @@ func _idle() -> bool:
 
 
 ## A control from the keyboard or Hoot: flash its button, then do it.
-func _do(action: StringName) -> void:
-	var b: AoButton = _buttons.get(ACTION_BUTTONS.get(action, ""))
+func _do(action: StringName, args: Dictionary = {}) -> void:
+	var b: AoButton = button(action) if _mode != null else _buttons.get(ACTION_BUTTONS.get(action, ""))
 	if b != null:
 		b.flash_press()
-	_act(action)
+	_act(action, args)
 
 
-func _act(action: StringName) -> void:
+## (Days 4-5) A mode handles the action first (H4); the SRT handlers never run a MUST_CLAIM action
+## on a mode's list.
+func _act(action: StringName, args: Dictionary = {}) -> void:
+	if _hoot_first_wait and action == &"present" and not _auto_running:
+		# plan level_first: the player has set the level; Hoot's hoot_first turn starts with the first item
+		_hoot_first_wait = false
+		_start_hoot_turn()
+		return
+	if _mode != null:
+		if _mode.act(action, args):
+			return
+		if action in SpMode.MUST_CLAIM:
+			push_error("SpeechScreen: the %s mode left %s unclaimed" % [String(_mode_test), String(action)])
+			return
 	match action:
 		&"present":
 			_present()
@@ -442,18 +557,27 @@ func _present() -> void:
 	_talking = true
 	_answer_shown = false
 	_store_warn_t = -100.0
+	# (Days 4-5) H5: a mode shows the item and owns its sound and its length (< 0 = the SRT card and voice)
+	var wait := _mode.on_present(trial) if _mode != null else -1.0
 	var dur := 0.0
-	if _auto_running:
+	if wait >= 0.0:
+		dur = wait
+	elif _auto_running:
 		# Hoot's x8 turn is silent (the murmur would be cut to an eighth); the TALK lamp still lights
 		var syl := SpeechVoice.syllables_for(it)
 		dur = syl * SpeechVoice.SYLLABLE_S + maxi(0, syl - 1) * SpeechVoice.SYLLABLE_GAP_S
 	else:
 		dur = _voice.play_item(session.ear, session.list_id, it, float(int(trial["db"])))
-	dur = maxf(MIN_TALK_S, dur)
+	if wait < 0.0:
+		dur = maxf(MIN_TALK_S, dur)
 	_bubble.clear()
-	_card.state = &"talking"
-	_card.set_word(String(trial["word"]), it.get("parts", []), int(trial["n"]), int(session.get_state()["words_left"]))
-	Events.speech_presented.emit(session.ear, session.test, int(trial["db"]), it)
+	if wait < 0.0:
+		_card.state = &"talking"
+		_card.set_word(String(trial["word"]), it.get("parts", []), int(trial["n"]), int(session.get_state()["words_left"]))
+	if _mode != null:
+		it["slot"] = String(trial.get("slot", session.slot))
+		it["list_id"] = String(trial.get("list_id", session.list_id))
+	Events.speech_presented.emit(session.ear, session.test, int(trial.get("db", session.db)), it)
 	_after(dur, _on_word_end.bind(_word_serial))
 	_refresh()
 
@@ -479,11 +603,12 @@ func _on_answer(serial: int) -> void:
 	var said := String(cur.get("said", ""))
 	var kind := StringName(String(cur.get("kind", "")))
 	var db := int(cur.get("db", session.db))
-	_bubble.show_answer(said)
-	Juice.pop(_bubble, 1.06, 0.25)
-	_card.state = &"score"
-	_mic = 1.0
-	Sfx.play(&"pop", 1.15, -8.0 if not _auto_running else -16.0)
+	if _mode == null or not _mode.on_answer(cur):
+		_bubble.show_answer(said)
+		Juice.pop(_bubble, 1.06, 0.25)
+		_card.state = &"score"
+		_mic = 1.0
+		Sfx.play(&"pop", 1.15, -8.0 if not _auto_running else -16.0)
 	Events.speech_response.emit(session.ear, session.test, db, {"said": said, "kind": kind})
 	if _is_spoken(said):
 		Events.dialogue_line.emit(session.patient.short_name(), said)
@@ -536,7 +661,7 @@ func _score(correct: bool) -> void:
 	var tr := session.score(correct)
 	if tr.is_empty():
 		return
-	var db := int(tr["db"])
+	var db := int(tr.get("db", session.db))
 	_last_scored = correct
 	_bubble.mark(correct)
 	_card.state = &"idle"
@@ -544,12 +669,42 @@ func _score(correct: bool) -> void:
 	Sfx.play(&"ding" if correct else &"click", 1.1 if correct else 0.8, -8.0 if not _auto_running else -16.0)
 	var at := _bubble.badge_global()
 	_fx.burst(at, Palette.MINT if correct else Palette.CORAL, 8 if not _auto_running else 4, 180.0)
-	if not _auto_running and correct and correct == truth:
+	if _mode != null:
+		_mode.on_scored(tr)
+	elif not _auto_running and correct and correct == truth:
 		_maybe_tell(db)
 	_refresh()
-	if not _auto_running and quick_visit and _hoot_after > 0 and (_player_words >= _hoot_after or (_hoot_after_up and _stepped_up())) \
-			and not session.is_done() and not _hoot_done_ears.has(_ear):
+	_check_hoot_after()
+
+
+## Plan hoot_turn_after (through the gate, H16): the player has had this list's share, so Hoot takes
+## over (H7). Keyed by the measurement (H17), so a second list on one ear gets its own turn.
+func _check_hoot_after() -> void:
+	if not _auto_running and _hoot_gate() and _hoot_after > 0 and (_player_units() >= _hoot_after or (_hoot_after_up and _mode == null and _stepped_up())) \
+			and not session.is_done() and not _hoot_done_ears.has(_hoot_key()):
 		_start_hoot_turn()
+
+
+## The player's share of this list so far: the words presented (SRT); with a mode, its trials the
+## player scored (a word) or locked (a sentence).
+func _player_units() -> int:
+	if _mode == null:
+		return _player_words
+	var n := 0
+	for tr: Dictionary in session.trials_for():
+		if not bool(tr.get("by_hoot", false)) and (tr.get("scored") != null or bool(tr.get("locked", false))):
+			n += 1
+	return n
+
+
+## (Days 4-5) H16, D24: Hoot may take a turn on a quick visit, or on a hoot_only list whatever it says.
+func _hoot_gate() -> bool:
+	return bool(_plan.get("hoot_only", false)) or quick_visit
+
+
+## (Days 4-5) H17: the Hoot-done key is the measurement's (SpeechSession.measure_key()).
+func _hoot_key() -> String:
+	return session.measure_key() if session != null else _ear
 
 
 ## The last two scored words: a miss, then a word above it (by the player's own scores): the
@@ -694,6 +849,8 @@ func _ensure_hint_action() -> void:
 # ---------------------------------------------------------------- session callbacks
 
 func _on_reaction(kind: StringName, data: Dictionary) -> void:
+	if _hidden_run:
+		return
 	if _busy():
 		_pending_reactions.append([kind, data])   # a ghost before the answer would give it away
 	else:
@@ -708,40 +865,27 @@ func _show_reaction(kind: StringName, data: Dictionary) -> void:
 
 func _on_technique(kind: StringName, data: Dictionary) -> void:
 	Events.technique_event.emit(kind, data)
-	if kind in HOLD_KINDS and _busy():
+	if _hidden_run:
+		return   # run_hidden(): Hoot's off-screen list says nothing
+	if _is_hold(kind) and _busy():
 		_pending.append([kind, data])
 		return
 	_handle_technique(kind, data)
 
 
+## (Days 4-5) H9: a mode may claim the kind; its kind_class() sorts the rest; {key:...} in the
+## message is filled with _k().
 func _handle_technique(kind: StringName, data: Dictionary) -> void:
+	if _mode != null and _mode.on_technique(kind, data):
+		return
+	if String(data.get("message", "")).contains("{key:"):
+		data = data.duplicate()
+		data["message"] = _fill_keys(String(data["message"]))
 	var auto := bool(data.get("auto", false)) or _auto_running
+	if _is_clean(kind):
+		_show_clean(kind, data, auto)
+		return
 	match kind:
-		&"speech_textbook", &"srt_good_start", &"srt_store_ok", &"srt_low_start":
-			var n := int(data.get("combo", 0))
-			Sfx.play_note(523.25 * pow(2.0, minf(n, 24) / 12.0), -14.0 if not auto else -22.0)
-			if auto:
-				return
-			_clean_steps += 1
-			Hoot.note_clean_use(&"srt_step")
-			var at := _ladder.last_dot_global() + Vector2(34, -30)
-			if int(data.get("points", 0)) > 0:
-				_fx.callout("+%d" % int(data["points"]), at, Palette.MINT, 22, "", 0.0, 0.7)
-			# no combo callout on a clean store whose sheet still ends in "Oops!" (earlier slips on this ear)
-			var store_oops := kind == &"srt_store_ok" and not session.slips().is_empty()
-			if n >= 3 and (n == 3 or n == 6 or n == 10 or n % 5 == 0) and not store_oops:
-				var word := TEXTBOOK_CALLOUTS[(n / 3) % TEXTBOOK_CALLOUTS.size()]
-				var c := _ladder.get_global_rect().get_center() + Vector2(0, -60)
-				_fx.callout(word, c, Palette.MINT, 36, "", randf_range(-6.0, 6.0))
-				_fx.stars(c, 8, Palette.SUNNY)
-				Sfx.play(&"ding", 1.0 + 0.04 * minf(n, 20), -8.0)
-			# a clean move can carry Hoot's praise (srt_low_start: starting low once answers look exaggerated)
-			var praise := String(data.get("message", ""))
-			if praise != "":
-				if _coach_active:
-					_interrupt_coach(kind, praise, _target_for(kind, data), false)
-				else:
-					_tip(kind, praise, _target_for(kind, data))
 		&"srt_stored", &"birdie", &"eagle", &"albatross":
 			pass   # celebrated in _on_stored
 		&"srt_agreement":
@@ -761,7 +905,7 @@ func _handle_technique(kind: StringName, data: Dictionary) -> void:
 			var msg := String(data.get("message", ""))
 			if msg == "" and session != null:
 				msg = session.tip_text(kind)
-			var error := kind in ERROR_KINDS
+			var error := _is_error(kind)
 			if error and not _coached:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
 			if msg == "":
@@ -772,10 +916,67 @@ func _handle_technique(kind: StringName, data: Dictionary) -> void:
 				_tip(kind, msg, _target_for(kind, data))
 
 
+## A clean move (H9, H12, H13): the note, the points and the combo callouts; Hoot's praise when the
+## kind carries a line.
+func _show_clean(kind: StringName, data: Dictionary, auto: bool) -> void:
+	var n := int(data.get("combo", 0))
+	Sfx.play_note(523.25 * pow(2.0, minf(n, 24) / 12.0), -14.0 if not auto else -22.0)
+	if auto:
+		return
+	_clean_steps += 1
+	var skill := _mode.mastery_skill(kind) if _mode != null else &""
+	Hoot.note_clean_use(skill if skill != &"" else &"srt_step")
+	var spot := _mode.callout_point() if _mode != null else Vector2.ZERO
+	var at := _ladder.last_dot_global() + Vector2(34, -30) if spot == Vector2.ZERO else spot
+	if int(data.get("points", 0)) > 0:
+		_fx.callout("+%d" % int(data["points"]), at, Palette.MINT, 22, "", 0.0, 0.7)
+	# no combo callout on a clean store whose sheet still ends in "Oops!" (earlier slips on this ear)
+	var store_oops := kind == &"srt_store_ok" and not session.slips().is_empty()
+	if n >= 3 and (n == 3 or n == 6 or n == 10 or n % 5 == 0) and not store_oops:
+		var word := TEXTBOOK_CALLOUTS[(n / 3) % TEXTBOOK_CALLOUTS.size()]
+		var c := _ladder.get_global_rect().get_center() + Vector2(0, -60) if spot == Vector2.ZERO else spot + Vector2(0, -40)
+		_fx.callout(word, c, Palette.MINT, 36, "", randf_range(-6.0, 6.0))
+		_fx.stars(c, 8, Palette.SUNNY)
+		Sfx.play(&"ding", 1.0 + 0.04 * minf(n, 20), -8.0)
+	# a clean move can carry Hoot's praise (srt_low_start: starting low once answers look exaggerated)
+	var praise := String(data.get("message", ""))
+	if praise != "":
+		if _coach_active:
+			_interrupt_coach(kind, praise, _target_for(kind, data), false)
+		else:
+			_tip(kind, praise, _target_for(kind, data))
+
+
+## (Days 4-5) How a kind is shown: the mode's kind_class() first, else the SRT lists.
+func _kind_class(kind: StringName) -> StringName:
+	return _mode.kind_class(kind) if _mode != null else &""
+
+
+func _is_error(kind: StringName) -> bool:
+	var c := _kind_class(kind)
+	return (c == &"error" or c == &"repeat") if c != &"" else kind in ERROR_KINDS
+
+
+func _is_repeat(kind: StringName) -> bool:
+	var c := _kind_class(kind)
+	return c == &"repeat" if c != &"" else kind in REPEAT_TIPS
+
+
+func _is_hold(kind: StringName) -> bool:
+	var c := _kind_class(kind)
+	return c == &"hold" if c != &"" else kind in HOLD_KINDS
+
+
+func _is_clean(kind: StringName) -> bool:
+	var c := _kind_class(kind)
+	return c == &"clean" if c != &"" else kind in [&"speech_textbook", &"srt_good_start", &"srt_store_ok", &"srt_low_start"]
+
+
 ## While coaching: the tip takes the coach's place for a moment, then the coach's line comes back
 ## (the sticky coach tip is dismissed so the tip shows now; the new coach tip queues behind it).
-func _interrupt_coach(kind: StringName, msg: String, target: String, error: bool) -> void:
-	var key := "" if error or kind in REPEAT_TIPS else "tip_" + String(kind)
+func _interrupt_coach(kind: StringName, raw: String, target: String, error: bool) -> void:
+	var msg := _fill_keys(raw)
+	var key := "" if error or _is_repeat(kind) else "tip_" + String(kind)
 	if Hoot.say(msg, Hoot.HIGH, target, key, 4.0) < 0:
 		return   # a once-per-visit tip already shown
 	if _coach_tip >= 0:
@@ -786,19 +987,24 @@ func _interrupt_coach(kind: StringName, msg: String, target: String, error: bool
 
 
 ## A technique tip: everyday slips repeat with a cooldown, everything else fires once per visit.
-func _tip(kind: StringName, msg: String, target: String) -> void:
-	if msg == "":
+func _tip(kind: StringName, raw: String, target: String) -> void:
+	if raw == "":
 		return
-	if kind in REPEAT_TIPS:
+	var msg := _fill_keys(raw)
+	if _is_repeat(kind):
 		if _clock - float(_tip_last.get(kind, -1000.0)) < TIP_COOLDOWN_S:
 			return
 		_tip_last[kind] = _clock
 		Hoot.say(msg, Hoot.HIGH, target)
 	else:
-		Hoot.say_once("tip_" + String(kind), msg, Hoot.HIGH if kind in ERROR_KINDS else Hoot.NORMAL, target)
+		Hoot.say_once("tip_" + String(kind), msg, Hoot.HIGH if _is_error(kind) else Hoot.NORMAL, target)
 
 
 func _target_for(kind: StringName, data: Dictionary) -> String:
+	if _mode != null:
+		var t := _mode.target_for(kind, data)
+		if t != "":
+			return t
 	match kind:
 		&"srt_start":
 			var exp := int(data.get("expected", 0))
@@ -833,6 +1039,8 @@ func _on_combo(n: int, mult: int) -> void:
 
 
 func _on_stored(ear: String, test: StringName, sheet: Dictionary) -> void:
+	if _hidden_run:
+		return   # run_hidden() shows its own sheet
 	_finishing = true
 	_accepting = false
 	var by_hoot := bool(sheet.get("by_hoot", false))
@@ -842,6 +1050,9 @@ func _on_stored(ear: String, test: StringName, sheet: Dictionary) -> void:
 		if _coach_tip >= 0:
 			Hoot.dismiss(_coach_tip)
 		_coach_tip = -1
+	# (Days 4-5) H8: a mode's own end-of-list show, which then calls complete_list(sheet)
+	if _mode != null and _mode.on_stored(sheet):
+		return
 	_ladder.stamp(db)
 	Sfx.play(&"stamp", randf_range(0.95, 1.05), -2.0 if not by_hoot else -8.0)
 	_after(0.18, _stamp_jolt.bind(_ear_serial))
@@ -891,6 +1102,8 @@ func _golf_callout(sheet: Dictionary) -> void:
 	var col: Color = GOLF_COLORS.get(golf, Palette.PAPER) if text[0] != "Oops!" else Palette.PAPER
 	var big := golf in [&"birdie", &"eagle", &"albatross"] and text[0] != "Oops!"
 	var at := _ladder.row_global(int(sheet.get("stored_db", 0))) + Vector2(0, -70)
+	if _mode != null and _mode.callout_point() != Vector2.ZERO:
+		at = _mode.callout_point()
 	_fx.callout(text[0], at, col, 46 if big else 36, text[1], randf_range(-7.0, 3.0), 1.6)
 	if big:
 		_fx.confetti(at, 18)
@@ -967,7 +1180,9 @@ func _celebrate(serial: int) -> void:
 	if serial != _ear_serial or not is_inside_tree() or session == null:
 		return
 	var st := get_state()
-	var sheet: Dictionary = (session.sheets[session.test] as Dictionary).get(_ear, {})
+	var sheet: Dictionary = (session.sheets[session.test] as Dictionary).get(session.slot if _mode != null else _ear, {})
+	if _mode != null and _mode.celebrate(sheet):
+		return
 	var r := _ladder.get_global_rect()
 	var c := Vector2(r.get_center().x, r.position.y + r.size.y * 0.42)
 	# no fanfare for an SRT stored off its bracket
@@ -978,7 +1193,7 @@ func _celebrate(serial: int) -> void:
 	var pta := float(st["pta"])
 	if not is_nan(pta) and StringName(String(st.get("agreement", ""))) != &"":
 		sub = "PTA %d vs SRT %d: %s agreement" % [roundi(pta), int(st["stored_db"]), String(st["agreement"])]
-	var title := String(_plan.get("done_title", "%s EAR SRT: %d dB" % [_ear.to_upper(), int(st["stored_db"])]))
+	var title := String(_plan.get("done_title", "%s EAR SRT: %d dB" % [String(sheet.get("slot", _ear)).to_upper(), int(st["stored_db"])]))
 	_fx.callout(title, c, Palette.SUNNY, 40, sub, -3.0, 2.6)
 
 
@@ -994,7 +1209,7 @@ func _finish_ear(serial: int) -> void:
 
 func _start_hoot_turn() -> void:
 	_hoot_pending = false
-	if _auto_running or _finishing or session == null or session.is_done() or not is_inside_tree():
+	if _auto_running or _finishing or _hidden_run or session == null or session.is_done() or not is_inside_tree():
 		return
 	_auto_running = true
 	_ff_on = false
@@ -1011,7 +1226,8 @@ func _start_hoot_turn() -> void:
 		b.beckon = false
 	var turn_text := "Nice work! My turn: I'll finish this ear at 8x. Watch the ladder!" if _player_words > 0 \
 		else "My turn! I'll run this ear at 8x. Watch the ladder!"
-	Hoot.say(String(_plan.get("hoot_turn_text", turn_text)), Hoot.HIGH, "", "", 2.4)
+	var mode_text := _mode.hoot_turn_text() if _mode != null else ""
+	Hoot.say(_fill_keys(mode_text if mode_text != "" else String(_plan.get("hoot_turn_text", turn_text))), Hoot.HIGH, "", "", 2.4)
 	_ff_banner.visible = true
 	_hoot_spot.queue_redraw()
 	_refresh()
@@ -1023,8 +1239,15 @@ func _hoot_go(serial: int) -> void:
 		return
 	_ff_on = true
 	if not get_tree().paused:
-		Engine.time_scale = _base_time_scale * HOOT_SPEED
+		Engine.time_scale = _base_time_scale * _hoot_speed()
 	_hoot_step(serial)
+
+
+## Hoot's turn speed (H14): hoot_turn(speed), else the plan's hoot_speed, else HOOT_SPEED (x8).
+func _hoot_speed() -> float:
+	if _hoot_speed_now > 0.0:
+		return _hoot_speed_now
+	return float(_plan.get("hoot_speed", HOOT_SPEED))
 
 
 ## One move of Hoot's turn: the textbook action, through the screen's own controls.
@@ -1038,8 +1261,17 @@ func _hoot_step(serial: int) -> void:
 	if _busy():
 		_after(0.2, _hoot_step.bind(serial))
 		return
+	# (Days 4-5) H15: -1 = the step below, -2 = hand the list back to the player, >= 0 = the mode acted
+	if _mode != null:
+		var w := _mode.hoot_step()
+		if w <= -2.0:
+			_hand_back()
+			return
+		if w >= 0.0:
+			_after(w, _hoot_step.bind(serial))
+			return
 	var a := session.recommended_action()
-	var act: StringName = a["action"]
+	var act := StringName(String(a.get("action", "none")))
 	var wait := 0.3
 	match act:
 		&"score_correct", &"score_missed":
@@ -1057,24 +1289,40 @@ func _hoot_step(serial: int) -> void:
 			return
 		&"present":
 			wait = 0.3
-		_:
+		&"none":
 			_end_hoot_turn()
 			_refresh()
 			return
-	_do(act)
+		_:
+			if _mode == null:
+				_end_hoot_turn()
+				_refresh()
+				return
+	_do(act, a)
 	_after(wait, _hoot_step.bind(serial))
 
 
-func _end_hoot_turn() -> void:
+## (Days 4-5) A mode ends Hoot's turn mid-list (-2 from hoot_step(): after the practice, or after
+## sentence hoot_first): the player takes over; this list keeps its own Hoot turn for later.
+func _hand_back() -> void:
+	_end_hoot_turn(false)
+	_coach_active = _coached and not _finishing and session != null and not session.is_done()
+	_coach_key = ""
+	_refresh()
+
+
+func _end_hoot_turn(mark_done: bool = true) -> void:
 	if not _auto_running:
 		return
 	_auto_running = false
 	_ff_on = false
 	_hoot_serial += 1
 	Engine.time_scale = _base_time_scale
+	_hoot_speed_now = 0.0
 	if session != null:
 		session.scoring = true
-	_hoot_done_ears[_ear] = true
+	if mark_done:
+		_hoot_done_ears[_hoot_key()] = true
 	if _ff_banner != null:
 		_ff_banner.visible = false
 	if _hoot_spot != null:
@@ -1085,7 +1333,7 @@ func _end_hoot_turn() -> void:
 func _on_pause_toggled(paused: bool) -> void:
 	if not _auto_running or not _ff_on:
 		return
-	Engine.time_scale = _base_time_scale if paused else _base_time_scale * HOOT_SPEED
+	Engine.time_scale = _base_time_scale if paused else _base_time_scale * _hoot_speed()
 
 
 # ---------------------------------------------------------------- blocking beat (§3.2)
@@ -1103,25 +1351,54 @@ func _emit_beat() -> void:
 	if not is_inside_tree() or not _idle():
 		return
 	var a := _beat_action()
-	var act: StringName = a["action"]
+	var act := StringName(String(a.get("action", "none")))
 	if act == &"none":
 		return
-	var key := "%d|%s|%d|%s|%d|%s|%d" % [_ear_serial, session.ear, session.trials_for().size(), session.awaiting_score, session.db, session.mask_on, _store_warns]
+	var key := ""
+	if _mode != null:
+		# H19: the mode's dedupe key, else the screen's plus the measurement and the move
+		key = _mode.beat_key(a)
+		if key == "":
+			key = "%d|%s|%d|%s|%d|%s|%d|%s|%s" % [_ear_serial, session.ear, session.trials_for().size(), session.awaiting_score, session.db,
+				session.mask_on, _store_warns, session.measure_key(), String(act)]
+	else:
+		key = "%d|%s|%d|%s|%d|%s|%d" % [_ear_serial, session.ear, session.trials_for().size(), session.awaiting_score, session.db, session.mask_on, _store_warns]
 	if key == _beat_key:
 		return
 	_beat_key = key
 	_beat_serial += 1
-	var info := {"ear": session.ear, "test": String(session.test), "action": String(act), "target_db": int(a["target_db"]),
-		"mouse": {"click": ACTION_BUTTONS[act]}}
-	Events.awaiting_input.emit(&"speech", info, _solve.bind(_beat_serial))
+	var info := {"ear": session.ear, "test": String(session.test), "action": String(act), "target_db": int(a.get("target_db", session.db)),
+		"mouse": {"click": _mouse_for(act, a)}}
+	var beat := &"speech"
+	if _mode != null:
+		info["slot"] = session.slot
+		info = _mode.beat_info(info)
+		beat = _mode.beat_id(a)
+	Events.awaiting_input.emit(beat, info, _solve.bind(_beat_serial))
 
 
-## The textbook move, with "none" on an unfinished ear (no words left) turned into STORE.
+## The textbook move, with "none" on an unfinished ear (no words left) turned into STORE. (Days 4-5)
+## A mode may replace the move (H18).
 func _beat_action() -> Dictionary:
 	var a := session.recommended_action()
+	if _mode != null:
+		var m := _mode.beat_action(a)
+		if not m.is_empty():
+			return m
+		return a if a.has("action") else {"action": &"none", "target_db": session.db}
 	if a["action"] == &"none" and not session.is_done() and not session.trials_for().is_empty():
 		return {"action": &"store", "target_db": session.db}
 	return a
+
+
+## The anchor a mouse clicks for `action` (H19, H21): the mode's route, else the button's own.
+func _mouse_for(action: StringName, args: Dictionary) -> String:
+	if _mode != null:
+		var m := _mode.mouse_for(action, args)
+		if m != "":
+			return m
+	var b := button(action)
+	return String(b.name) if b != null else String(ACTION_BUTTONS.get(action, ""))
 
 
 ## The beat's solver: the recommended action as a real InputEventAction (pressed, then released).
@@ -1129,11 +1406,14 @@ func _beat_action() -> Dictionary:
 func _solve(serial: int) -> void:
 	if serial != _beat_serial or serial == _solved_serial or not is_inside_tree() or not _idle():
 		return
-	var act: StringName = _beat_action()["action"]
-	if not ACTION_INPUTS.has(act):
-		return
+	var a := _beat_action()
+	var act := StringName(String(a.get("action", "none")))
+	var input: StringName = _mode.input_for(act, a) if _mode != null else &""
+	if input == &"":
+		if not ACTION_INPUTS.has(act):
+			return
+		input = ACTION_INPUTS[act]
 	_solved_serial = serial
-	var input: StringName = ACTION_INPUTS[act]
 	var press := InputEventAction.new()
 	press.action = input
 	press.pressed = true
@@ -1159,13 +1439,21 @@ func _coach_update() -> void:
 	_coach_key = key
 	if _coach_tip >= 0:
 		Hoot.dismiss(_coach_tip)
-	_coach_tip = Hoot.say(String(tip[0]), Hoot.HIGH, String(tip[1]), "", 0.0)
+	_coach_tip = Hoot.say(_fill_keys(String(tip[0])), Hoot.HIGH, String(tip[1]), "", 0.0)
 
 
 ## [text, ghost-hand target, key] for the textbook move. Every line stays under 18 words.
+## (Days 4-5) The mode's line first (H22); {key:<action>} is filled by _coach_update().
 func _coach_text(a: Dictionary) -> Array:
-	var act: StringName = a["action"]
-	var target_db := int(a["target_db"])
+	if _mode != null:
+		var m := _mode.coach_text(a)
+		if m.size() >= 3:
+			return m
+		# the SRT's level lines teach the SRT dance: a mode without its own line gets none for them
+		if StringName(String(a.get("action", "none"))) not in [&"present", &"score_correct", &"score_missed", &"mask_toggle", &"store"]:
+			return ["", "", ""]
+	var act := StringName(String(a.get("action", "none")))
+	var target_db := int(a.get("target_db", session.db))
 	var list := session.trials_for()
 	var n := list.size()
 	if _busy():
@@ -1220,10 +1508,311 @@ func _k(action: StringName) -> String:
 	return "[%s]" % ("SPACE" if label == "Space" else label)
 
 
+## (Days 4-5) D10: every {key:<input action>} in a line becomes that key's chip (_k()).
+func _fill_keys(text: String) -> String:
+	var at := text.find("{key:")
+	while at >= 0:
+		var end := text.find("}", at)
+		if end < 0:
+			break
+		var chip := _k(StringName(text.substr(at + 5, end - at - 5)))
+		text = text.substr(0, at) + chip + text.substr(end + 1)
+		at = text.find("{key:", at + chip.length())
+	return text
+
+
 func _say(text: String) -> String:
 	if session != null and session.patient != null:
 		return session.patient.say(text)
 	return PatientProfile.pronouns(text, "he").replace("{name}", "Mike")
+
+
+# ---------------------------------------------------------------- (Days 4-5) the test modes
+
+## H2: the screen's look and controls for test `t`. A mode of another test leaves first (its anchors
+## go, exit(), restore_base(), its buttons hide, the base widgets and hooks come back). A WRS or SIN
+## mode is made on first use (setup(), make_buttons()), then enter(plan) on every list. The SRT has no
+## mode: with none before, nothing here runs.
+func _set_mode(t: StringName) -> void:
+	var next := _mode_for(t)
+	if _mode != null and _mode != next:
+		_unregister_mode_anchors()
+		_mode.exit()
+		_mode.restore_base()
+		for b: AoButton in (_mode_buttons.get(_mode_test, {}) as Dictionary).values():
+			b.visible = false
+			b.beckon = false
+		_mode = null
+		_mode_test = &"srt"
+		_restore_base()
+		_register_anchors()
+		if next == null:
+			_layout()
+	if next == null:
+		return
+	_mode = next
+	_mode_test = t
+	_mode.enter(_plan)
+	_hidden_base = _mode.hidden_base_widgets()
+	for w: StringName in _hidden_base:
+		var c := _base_widget(w)
+		if c != null:
+			c.visible = false
+	_lcd.hide_tally = &"tally" in _hidden_base
+	_register_mode_anchors()
+	_layout()
+
+
+## The mode of test `t`, made and set up once (null for the SRT, or while its script is missing).
+func _mode_for(t: StringName) -> SpMode:
+	if t == &"srt":
+		return null
+	if _modes.has(t):
+		return _modes[t] as SpMode
+	var m := SpMode.make(t)
+	if m == null:
+		return null
+	m.name = "Mode" + String(t).to_pascal_case()
+	add_child(m)
+	_modes[t] = m
+	m.setup(self)
+	var mine := {}
+	var made := m.make_buttons()
+	for action: Variant in made:
+		var b := made[action] as AoButton
+		if b != null:
+			mine[StringName(String(action))] = b
+			b.visible = false
+	_mode_buttons[t] = mine
+	return m
+
+
+## A base widget a mode may hide (hidden_base_widgets()); &"tally" is the LCD's line (null here).
+func _base_widget(w: StringName) -> Control:
+	match w:
+		&"ladder":
+			return _ladder
+		&"meter":
+			return _meter
+		&"card":
+			return _card
+		&"mask_button":
+			return _btn("speech_mask_button")
+		&"store_button":
+			return _btn("speech_store_button")
+	return null
+
+
+## Back to the SRT: every base widget a mode hid, the deck's buttons and the widget hooks.
+func _restore_base() -> void:
+	for w: StringName in _hidden_base:
+		var c := _base_widget(w)
+		if c != null:
+			c.visible = true
+	_hidden_base.clear()
+	for id: String in ACTION_BUTTONS.values():
+		var b := _btn(id)
+		b.visible = true
+		var look: Dictionary = _base_looks.get(id, {})
+		for k: String in look:
+			b.set(k, look[k])
+		b.queue_redraw()
+	_lcd.hide_tally = false
+	_lcd.clear_optional()
+	_card.word_drawer = Callable()
+	_card.carrier = ""
+	_card.hide_word = false
+	_bubble.style = &"normal"
+	_bubble.aside = ""
+	_dance.set_specs([])
+
+
+## H27: the public helpers a mode works with (the read-only parts are fx, voice, booth, lcd, card,
+## bubble and dance, above).
+func player_ok() -> bool:
+	return _player_ok()
+
+
+func idle() -> bool:
+	return _idle()
+
+
+func busy() -> bool:
+	return _busy()
+
+
+func refresh() -> void:
+	_refresh()
+
+
+## `cb` after `seconds` of game time (a timer that pauses with the game).
+func after(seconds: float, cb: Callable) -> void:
+	_after(seconds, cb)
+
+
+## A deck button under ui_root(), named `id` (its Hoot anchor): a click does `action` through the
+## screen's controls (and so the mode's act()).
+func make_button(id: String, text: String, icon: AoButton.Icon, glyph: SpButton.Glyph, color: Color, input: StringName, action: StringName) -> SpButton:
+	return _make_button(id, text, icon, glyph, color, input, action)
+
+
+## The button that does `action`: the active mode's own, else the base one (null = none).
+func button(action: StringName) -> AoButton:
+	if _mode != null:
+		var mine: Dictionary = _mode_buttons.get(_mode_test, {})
+		if mine.has(action):
+			return mine[action] as AoButton
+	return _buttons.get(String(ACTION_BUTTONS.get(action, ""))) as AoButton
+
+
+## `t` with the patient's name and pronouns.
+func say(t: String) -> String:
+	return _say(t)
+
+
+## A technique tip (repeat slips with a cooldown, the rest once per visit); {key:...} filled.
+func tip(kind: StringName, msg: String, anchor: String) -> void:
+	_tip(kind, msg, anchor)
+
+
+## "Not now": the button wiggles; `msg` (else the screen's level-locked line) from Hoot.
+func deny(b: AoButton, msg: String = "") -> void:
+	if msg == "":
+		_deny(b)
+		return
+	_lcd.deny()
+	if b != null:
+		b.wiggle()
+	Sfx.play(&"error", 1.0, -12.0)
+	if not _auto_running:
+		Hoot.say(_fill_keys(msg), Hoot.NORMAL, String(b.name) if b != null else "")
+
+
+## The key chip of an input action ("[SPACE]", "[V]"), in the current key style.
+func k(action: StringName) -> String:
+	return _k(action)
+
+
+## A control as if pressed: its button flashes, then the mode's act() or the SRT's handler.
+func do_action(action: StringName, args: Dictionary = {}) -> void:
+	_do(action, args)
+
+
+## A WORD-mode score through the screen's own path (the bubble's badge, speech_scored, the burst,
+## on_scored(), the hoot_turn_after check).
+func score_word(correct: bool) -> void:
+	_score(correct)
+
+
+## The hoot_turn_after check, for a mode that counts its own units (a PARTY list's LOCK IN).
+func check_hoot_after() -> void:
+	_check_hoot_after()
+
+
+## Hoot takes a turn now (the tea demo, the practice), at `speed` (0 = the plan's hoot_speed, else
+## x8). The mode's hoot_step() runs it and hands back with -2.
+func hoot_turn(speed: float = 0.0) -> void:
+	if _auto_running or _finishing or _hidden_run:
+		return
+	_start_hoot_turn()
+	if _auto_running:
+		_hoot_speed_now = speed
+
+
+func hoot_running() -> bool:
+	return _auto_running
+
+
+func answer_shown() -> bool:
+	return _answer_shown
+
+
+## Game seconds since the screen opened (timers, cooldowns).
+func clock() -> float:
+	return _clock
+
+
+## &"key" or &"mouse": what the player used last (tracked while a mode is active).
+func last_device() -> StringName:
+	return _last_device
+
+
+## The Control the modes build their widgets under (it holds the screen's own widgets).
+func ui_root() -> Control:
+	return _root
+
+
+## H27: the end of a list a mode showed itself (on_stored() returned true): Events.speech_stored,
+## then the celebrate-and-finish of _complete_ear() (celebrate() at 1.2 s, test_finished at 4 s).
+func complete_list(sheet: Dictionary) -> void:
+	if _hidden_run or session == null:
+		return
+	_finishing = true
+	_accepting = false
+	Events.speech_stored.emit(String(sheet.get("ear", session.ear)), StringName(String(sheet.get("test", String(session.test)))), sheet)
+	_refresh()
+	_complete_ear()
+
+
+## H28: Hoot runs one measurement off-screen (D23). The screen's own session is configured for `plan`
+## (so the sheet joins this visit's results) and SpeechSession.run_by_textbook(ear) runs it: no
+## beats, no Hoot turn, no coach and no tips, whatever quick visit says. With `show`, a 2-3 s montage
+## (the SRT: the agreement meter swings to the result; a mode: its montage()). A coroutine: await it.
+## Returns the stored sheet ({} = none, or the mode script is missing).
+func run_hidden(patient: PatientProfile, ear: String, plan: Dictionary, show: bool = true) -> Dictionary:
+	if patient == null:
+		push_error("SpeechScreen.run_hidden: no patient")
+		return {}
+	if _auto_running:
+		_end_hoot_turn()
+	_ensure_session(patient, false)
+	_voice.stop()
+	_voice.stop_noise()
+	_plan = plan.duplicate(true)
+	_hidden_run = true
+	_accepting = false
+	_finishing = true
+	_hoot_pending = false
+	_hoot_first_wait = false
+	_coach_active = false
+	if _coach_tip >= 0:
+		Hoot.dismiss(_coach_tip)
+	_coach_tip = -1
+	_ear_serial += 1
+	_word_serial += 1
+	session.configure(_plan)
+	_set_mode(session.test if not session.mode_missing else &"srt")
+	if session.mode_missing:
+		push_warning("speech mode %s missing" % String(session.test))
+	var sheet := session.run_by_textbook(ear)
+	_ear = ear
+	if not sheet.is_empty():
+		Events.speech_stored.emit(String(sheet.get("ear", ear)), session.test, sheet)
+	_refresh()
+	if show and not sheet.is_empty() and is_inside_tree():
+		var t := _montage(sheet)
+		if t > 0.0:
+			await get_tree().create_timer(t, false).timeout
+	_hidden_run = false
+	return sheet
+
+
+## run_hidden's show of a sheet Hoot ran off-screen: the mode's montage(), or for the SRT the ladder's
+## stamp and the agreement meter swinging to the result. Returns its length (< 0 = nothing).
+func _montage(sheet: Dictionary) -> float:
+	if _mode != null:
+		return _mode.montage(sheet)
+	if String(sheet.get("test", "srt")) != "srt" or not is_inside_tree():
+		return -1.0
+	var db := int(sheet.get("stored_db", 0))
+	_show_agreement = true
+	_meter.reset()
+	_meter.visible = true
+	_layout()
+	_ladder.stamp(db)
+	_meter.lock_in(db, float(sheet.get("pta", NAN)), StringName(String(sheet.get("agreement", ""))))
+	_fx.chip("Hoot: SRT %d dB" % db, _ladder.row_global(db) + Vector2(0, -36), Palette.HOOT_FACE, Palette.INK, 16, 1.2)
+	return 2.5
 
 
 # ---------------------------------------------------------------- per frame and refresh
@@ -1289,12 +1878,17 @@ func _refresh() -> void:
 	if session != null and not session.tone_results.is_empty():
 		thresholds = ClinicRules.best_thresholds(session.tone_results, e, false)
 	var idle := _idle()
-	_lcd.update_view({"ear": e, "db": db, "talking": _talking, "test": String(st["test"]), "list_title": String(st["list_title"]),
+	var view := {"ear": e, "db": db, "talking": _talking, "test": String(st["test"]), "list_title": String(st["list_title"]),
 		"word_n": int(trail.size()), "words_left": int(st["words_left"]), "transducer": String(st["transducer"]), "pta": pta,
 		"pta_method": SpeechRules.pta_method(thresholds) if not thresholds.is_empty() else "three",
 		"start_db": int(st["recommended_start"]), "started": not trail.is_empty(), "tally": [right, total],
 		"mask_on": bool(st["mask_on"]), "mask_db": int(st["mask_db"]), "mask_ear": String(st["mask_ear"]),
-		"masking_needed": bool(st["masking_needed"]), "accepting": bool(st["accepting_input"])})
+		"masking_needed": bool(st["masking_needed"]), "accepting": bool(st["accepting_input"])}
+	if _mode != null:
+		# H23: the mode's LCD keys (SpLcd's optional keys), set afresh on every refresh
+		_lcd.clear_optional()
+		view = _mode.lcd_view(view)
+	_lcd.update_view(view)
 	_ladder.set_view({"ear": e, "trail": trail, "db": db, "pta": pta, "candidate_db": int(st["candidate_db"]),
 		"talking": _talking or _listening, "accepting": idle, "provisional": prov})
 	if _show_agreement and not bool(st["done"]):
@@ -1320,6 +1914,8 @@ func _refresh() -> void:
 	_status.set_points(_kept_session.points if _kept_session != null else int(st["points"]))
 	_refresh_buttons(st)
 	_update_dance(st)
+	if _mode != null:
+		_mode.refresh(st)
 	_coach_update()
 	Events.speech_state_changed.emit(st)
 	_queue_beat()
@@ -1354,6 +1950,12 @@ func _refresh_buttons(st: Dictionary) -> void:
 		if can_score and not _auto_running and (id == "speech_correct_button" or id == "speech_incorrect_button"):
 			want = true   # both pulse until the word is scored
 		b.beckon = want
+	if _mode != null:
+		# H24: the mode's own buttons lock with the deck and beckon for the coach; its refresh() may change both
+		var coach_id := _coach_action_button() if _coach_active else ""
+		for b: AoButton in (_mode_buttons.get(_mode_test, {}) as Dictionary).values():
+			b.locked = busy or done
+			b.beckon = not _auto_running and not done and coach_id != "" and String(b.name) == coach_id
 	for b: AoButton in _buttons.values():
 		b.queue_redraw()
 
@@ -1362,12 +1964,17 @@ func _refresh_buttons(st: Dictionary) -> void:
 func _coach_action_button() -> String:
 	if session == null or _busy():
 		return ""
+	if _mode != null:
+		var b := button(StringName(String(session.recommended_action().get("action", "none"))))
+		return String(b.name) if b != null else ""
 	return String(ACTION_BUTTONS.get(session.recommended_action()["action"], ""))
 
 
 ## The dance card lights the rule for the player's LAST score (never while a word waits for its
 ## score: that would give the answer away), or BRACKETED -> STORE.
 func _update_dance(st: Dictionary) -> void:
+	if _mode != null:
+		_dance.set_specs(_mode.dance_specs())   # H24 ([] = the SRT's chips)
 	if session == null or bool(st["done"]) or _busy() or bool(st["awaiting_score"]):
 		_dance.clear()
 		return
@@ -1436,6 +2043,27 @@ func _register_anchors() -> void:
 		Hoot.register_anchor("speech_response", _bubble)
 		Hoot.register_anchor("speech_ladder", _ladder)
 		Hoot.register_anchor("agreement_meter", _meter)
+	_register_mode_anchors()
+
+
+## (Days 4-5) H26: the active mode's buttons (by name) and its own anchors.
+func _register_mode_anchors() -> void:
+	if _mode == null:
+		return
+	for b: AoButton in (_mode_buttons.get(_mode_test, {}) as Dictionary).values():
+		Hoot.register_anchor(String(b.name), b)
+	var extra := _mode.anchors()
+	for id: Variant in extra:
+		Hoot.register_anchor(String(id), extra[id] as Node)
+
+
+func _unregister_mode_anchors() -> void:
+	if _mode == null:
+		return
+	for b: AoButton in (_mode_buttons.get(_mode_test, {}) as Dictionary).values():
+		Hoot.unregister_anchor(String(b.name))
+	for id: Variant in _mode.anchors():
+		Hoot.unregister_anchor(String(id))
 
 
 # ---------------------------------------------------------------- UI construction
@@ -1527,6 +2155,11 @@ func _build_ui() -> void:
 	_fx = AoFx.new()
 	_root.add_child(_fx)
 	_refresh_keys()
+	for id: String in ACTION_BUTTONS.values():
+		var look := {}
+		for k: String in BASE_LOOK_KEYS:
+			look[k] = _buttons[id].get(k)
+		_base_looks[id] = look
 
 
 func _make_button(id: String, text: String, icon: AoButton.Icon, glyph: SpButton.Glyph, color: Color, input: StringName, action: StringName) -> SpButton:
@@ -1613,6 +2246,14 @@ func _layout() -> void:
 	_deck.position = Vector2(m, bottom_y)
 	_deck.size = Vector2(vp.x - m * 2.0, bottom_h)
 	_layout_deck(Rect2(_deck.position, _deck.size))
+	if _mode != null:
+		# H25: the areas for the mode's widgets ("meter" is the meter's slot even while it is hidden)
+		var slot_w := clampf(mid_w * 0.42, 250.0, 340.0)
+		_mode.layout({"bubble": Rect2(_bubble.position, _bubble.size), "card": Rect2(_card.position, _card.size),
+			"mid": Rect2(mid_x, mid_y, mid_w, mid_h), "meter": Rect2(mid_x + mid_w - slot_w, mid_y, slot_w, mid_h),
+			"ladder": Rect2(_ladder.position, _ladder.size), "perch": Rect2(_hoot_spot.position, _hoot_spot.size),
+			"dance": Rect2(_dance.position, _dance.size), "deck": Rect2(_deck.position, _deck.size),
+			"booth": Rect2(_booth.position, _booth.size), "lcd": Rect2(_lcd.position, _lcd.size)})
 	_sync_bubble_hint()
 
 
@@ -1625,6 +2266,8 @@ func _layout_deck(deck: Rect2) -> void:
 		["NOISE", [["speech_mask_button", lerpf(116.0, 130.0, k)]]],
 	]
 	(groups[1] as Array)[0] = _say("SCORE WHAT {he} SAID").to_upper()
+	if _mode != null and not _mode.deck_groups().is_empty():
+		groups = _mode_deck(_mode.deck_groups(), k)
 	var gap := 9.0
 	var util_w := 132.0
 	var widths: Array[float] = []
@@ -1642,6 +2285,7 @@ func _layout_deck(deck: Rect2) -> void:
 	var y := deck.position.y + 26.0
 	var h := deck.size.y - 32.0
 	_group_labels.clear()
+	var placed := {}
 	for gi in groups.size():
 		var g: Array = groups[gi]
 		_group_labels.append([g[0], Rect2(Vector2(x, deck.position.y + 6.0), Vector2(widths[gi], 16.0))])
@@ -1649,8 +2293,14 @@ func _layout_deck(deck: Rect2) -> void:
 			var btn := _btn(String(b[0]))
 			btn.position = Vector2(x, y)
 			btn.size = Vector2(float(b[1]), h)
+			placed[String(b[0])] = true
 			x += float(b[1]) + gap
 		x += spacing - gap
+	if _mode != null:
+		# H25: a button the mode's deck does not place is hidden (the utility pills stay)
+		for id: String in _buttons:
+			if id not in ["keys_toggle", "style_toggle", "pause_button"]:
+				_buttons[id].visible = placed.has(id) and not _hidden_by_mode(id)
 	var ux := deck.end.x - 16.0 - util_w
 	var uy := deck.position.y + 14.0
 	var uh := (deck.size.y - 28.0 - 10.0) / 2.0
@@ -1659,6 +2309,31 @@ func _layout_deck(deck: Rect2) -> void:
 		btn.position = Vector2(ux, uy + i * (uh + 10.0))
 		btn.size = Vector2(util_w, uh)
 	_deck.queue_redraw()
+
+
+## (Days 4-5) A mode's deck_groups() as the layout's groups: [title, [[button id, width], ...]].
+## id names a base button or one of the mode's; without one, the action's button. width is px or
+## [narrow, wide], lerped by `k` (the window's width).
+func _mode_deck(mg: Array[Dictionary], k: float) -> Array:
+	var out: Array = []
+	for g: Dictionary in mg:
+		var row: Array = []
+		for b: Dictionary in g.get("buttons", []):
+			var id := String(b.get("id", ""))
+			if id == "":
+				var bb := button(StringName(String(b.get("action", ""))))
+				id = String(bb.name) if bb != null else ""
+			if id == "" or not _buttons.has(id):
+				continue
+			var wv: Variant = b.get("width", 120.0)
+			row.append([id, lerpf(float(wv[0]), float(wv[1]), k) if wv is Array else float(wv)])
+		if not row.is_empty():
+			out.append([String(g.get("title", "")), row])
+	return out
+
+
+func _hidden_by_mode(id: String) -> bool:
+	return (id == "speech_mask_button" and &"mask_button" in _hidden_base) or (id == "speech_store_button" and &"store_button" in _hidden_base)
 
 
 func _draw_bg() -> void:
@@ -1743,4 +2418,4 @@ func _draw_ff_banner() -> void:
 	for i in 3:
 		var a := 0.35 + 0.65 * maxf(0.0, sin(t * 7.0 - i * 0.9))
 		UiDraw.arrow(_ff_banner, Vector2(r.end.x - 70.0 + i * 16.0, r.get_center().y), 12.0, Vector2.RIGHT, Color(Palette.INK, a))
-	AoDraw.text_l(_ff_banner, Vector2(18.0, r.get_center().y), "HOOT'S TURN  x8", 20, Palette.INK, AoDraw.FONT_BOLD)
+	AoDraw.text_l(_ff_banner, Vector2(18.0, r.get_center().y), "HOOT'S TURN  x%d" % roundi(_hoot_speed()), 20, Palette.INK, AoDraw.FONT_BOLD)
