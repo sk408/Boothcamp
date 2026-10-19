@@ -779,8 +779,8 @@ func _recommended_masked() -> Dictionary:
 
 ## Textbook (tone, masker) after these masked records: ClinicRules.next_mask_step(), with the
 ## noise lifted to the initial level if it was below it (catching up is never a wrong step), and
-## (E9) never at or past the overmasking limit for the next tone.
-func _next_masked(recs: Array) -> Vector2i:
+## (E9) never at or past the overmasking limit for the next tone (capped = false skips that last cap).
+func _next_masked(recs: Array, capped := true) -> Vector2i:
 	var last: Dictionary = recs[-1]
 	var m := int(last.get("mask_db", -1))
 	var init := initial_mask_db()
@@ -791,9 +791,9 @@ func _next_masked(recs: Array) -> Vector2i:
 		nxt = Vector2i(tone, maxi(m, mini(init, safe_mask_max_db(ear, freq, mini(tone, _top())))))
 	nxt.x = mini(nxt.x, _top())
 	nxt.y = mini(nxt.y, ClinicRules.MASK_MAX_DB)
-	# (E9) never recommend a presentation that overmasks: drop to one step under the limit. A heard
-	# tone whose next raise would overmask never gets here (window_full: store it instead).
-	if nxt.y >= overmask_limit_db(ear, freq, nxt.x):
+	# (E9) never recommend a presentation that overmasks: drop to one step under the limit. After a
+	# heard tone this only bites when the window is full, and then the advice is to store instead.
+	if capped and nxt.y >= overmask_limit_db(ear, freq, nxt.x):
 		nxt.y = safe_mask_max_db(ear, freq, nxt.x)
 	return nxt
 
@@ -1492,8 +1492,13 @@ func _check_mask_step(recs: Array) -> void:
 			_clean(&"good_start")
 		return
 	var prev: Dictionary = recs[-1]
-	var nxt := _next_masked(recs)
+	# (E9) the textbook step, or the same step with the noise capped one step under overmasking.
+	# A full window is graded uncapped as before (the right move there is to store).
+	var nxt := _next_masked(recs, false)
 	var ok := db == nxt.x and mask_db == nxt.y
+	if not ok and not window_full(ear, freq):
+		var safe := _next_masked(recs)
+		ok = db == safe.x and mask_db == safe.y
 	if not ok and not bool(prev["responded"]) and int(prev["db"]) >= _top() and db == int(prev["db"]):
 		ok = true  # confirming a miss at maximum output
 	if ok:

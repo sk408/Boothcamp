@@ -402,7 +402,7 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 	var needed := int(pl.get("needed", 3))
 	var found := bool(pl.get("found", false))
 	# (E9) a full safe window: store the held level, no plateau
-	var full := not found and int(view.get("candidate", -1)) >= 0
+	var full := not found and int(view.get("candidate", -1)) != -1
 	var badge := "STORE!" if found else "STORE: no room" if full else ("%d/%d noise ups" % [mini(steps, needed), needed] if not narrow else "%d/%d ups" % [mini(steps, needed), needed])
 	var bw := AoDraw.text_size(badge, 12, AoDraw.FONT_BOLD).x + 14.0
 	var br := Rect2(Vector2(a.end.x - 4 - bw, head_y - 10), Vector2(bw, 20))

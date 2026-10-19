@@ -1786,7 +1786,8 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 				if steps >= 1 and steps < ClinicRules.PLATEAU_STEPS:
 					return ["Still heard! %d of %d noise raises. Noise UP 5 again: tap %s." % [steps, ClinicRules.PLATEAU_STEPS, key], btn, "mask_up%d_%d" % [recs.size(), session.mask_db]]
 				return ["Heard through the noise! Plateau dance: noise UP 5, same tone. Tap %s." % key, btn, "mask_up%d_%d" % [recs.size(), session.mask_db]]
-			if act == &"mask_softer" and tm < session.mask_db:
+			if act == &"mask_softer" and tm < session.mask_db \
+					and session.mask_db >= session.overmask_limit_db(session.ear, session.freq, int(a["target_db"])):
 				# (E9) the noise sits at or past overmasking for this tone
 				return ["Too much noise for this tone! Down to %d, the safe maximum: tap %s %s." % [tm, key, ntimes], btn, "mask_safe%d_%d" % [recs.size(), session.mask_db]]
 			return ["Noise to %d dB: tap %s %s." % [tm, key, ntimes], btn, "mask_to%d_%d" % [recs.size(), session.mask_db]]

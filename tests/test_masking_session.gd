@@ -359,6 +359,13 @@ func test_masking_dilemma_stops_short_of_overmasking() -> void:
 	_present(s)
 	var a2 := s.recommended_action()
 	assert_true(int(a2.get("target_mask", before)) < s.overmask_limit_db("right", s.freq, int(a2["target_db"])), "never recommends overmasking")
+	# and following that advice is graded a textbook step, not a wrong one
+	s.set_mask_level(int(a2["target_mask"]))
+	s.set_level(int(a2["target_db"]))
+	kinds.clear()
+	_present(s)
+	assert_has(kinds, &"textbook_step", "the capped step is the textbook step")
+	assert_false(kinds.has(&"mask_wrong_step"))
 
 func test_mask_status_light() -> void:
 	var s := _bonnie()

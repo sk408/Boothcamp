@@ -624,7 +624,8 @@ func _plateau(ear: String, freq: int, goal: StringName) -> void:
 				start = int(mine_un[e][freq]) if start == -999 else mini(start, int(mine_un[e][freq]))
 	if start == -999:
 		start = int(_state().get("db", 30))
-	var initial := int(_state().get("initial_mask_db", 30))
+	# (E9) the screen's start: the initial masking, or one step short of overmasking in a dilemma
+	var initial := int(_state().get("start_mask_db", _state().get("initial_mask_db", 30)))
 	await _set_mask(initial)
 	await _set_level(start)
 	var steps := 0
@@ -648,6 +649,9 @@ func _plateau(ear: String, freq: int, goal: StringName) -> void:
 				await _wait(0.3)
 				return
 			await _set_level(tone + ClinicRules.UP_AFTER_MISS_DB)
+			var lim := int(_state().get("overmask_limit_db", 999))
+			if int(_state()["mask_db"]) >= lim:
+				await _set_mask(lim - ClinicRules.MASK_STEP_DB)  # (E9) never overmask the next tone
 	if bool((_state().get("plateau", {}) as Dictionary).get("found", false)):
 		_plateaus += 1
 		if not _shot_flags.has("plateau"):
@@ -1042,6 +1046,7 @@ func _finish() -> void:
 func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var ears: Dictionary = res.get("ears", {})
 	var sheets := {}
+	var not_reached: Array[String] = []
 	for ear: String in ["right", "left"]:
 		var e: Dictionary = ears.get(ear, {})
 		for key: String in ["bc", "bc_masked", "ac_masked"]:
@@ -1052,12 +1057,17 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 			for f: int in sh:
 				var info: Dictionary = sh[f]
 				t[str(f)] = [info["stored_db"], info["true_db"]]
+				if bool(info.get("plateau_not_reached", false)):
+					not_reached.append("%s %s %d" % [ear, key, f])
+					if int(info["stored_db"]) <= int(info["true_db"]):
+						continue  # (E9) a full window: the true threshold may be poorer, that is the "?"
 				if absi(int(info["stored_db"]) - int(info["true_db"])) > 10:
 					problems.append("%s %s %d Hz off by more than 10 dB" % [ear, key, f])
 			sheets["%s_%s" % [ear, key]] = t
 	if not sheets.is_empty():
 		report["sheets"] = sheets
 		report["plateaus_found"] = _plateaus
+		report["plateau_not_reached"] = not_reached
 	if String(_summary.get("chapter_id", "")) == "bonnie":
 		var r: Dictionary = ears.get("right", {})
 		report["right_type"] = String(r.get("hearing_type", ""))
