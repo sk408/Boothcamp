@@ -151,6 +151,8 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Type of loss | "Conductive loss! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." |
 | Carhart | **(polish)** "See the bone dip at 2k? A Carhart notch: a stiff middle ear fakes a small bone dip. Her cochlea is fine!" |
 | Dilemma (mention only) | "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!" |
+| Tip `masking_dilemma` | **(E9)** "Masking dilemma! Even the starting noise could cross back. Inserts leak less. Else, use the safe maximum." |
+| Tip `plateau_not_reached` | **(E9)** "No room left! More noise would cross back to this ear. Store it: plateau not reached." Then, after the stamp: "That purple ? means no plateau: the true threshold may be poorer. Note it on the report." |
 | Takeaway | "Conductive loss with normal bone: refer to ENT. Often very treatable! Stamp it!" |
 
 Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask_too_low`, `mask_start`,
@@ -259,8 +261,8 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 | Plateau dance | heard: noise +5; missed: tone +5 | `next_mask_step` |
 | Plateau | the same tone level heard through 3 noise raises of 5 dB (15 dB), starting at or above the initial level | `PLATEAU_STEPS`, `plateau_run` |
 | Overmasking | masker - 40 >= test-ear bone (bone: masker >= tone + 40; air: masker >= the test ear's best bone + 40, the nearest measured bone frequency standing in where none was measured, e.g. 500 for 250) | `overmask_limit`, `is_overmasked`, session `overmask_limit_db` |
-| Full window | heard with the noise at or above the initial level and one more step would overmask: store the held level (a narrow window, no plateau error) | session `window_full` |
-| Masking dilemma | initial masking already at the overmasking limit (mention only) | `masking_dilemma` |
+| Full window | heard with the noise at or above the initial level and one more step would overmask: store the held level (a narrow window, no plateau error). **(Clinical review E9)** The stamp is recorded as "plateau not reached" (`plateau_not_reached` in the stamp info; a purple "?" badge on the audiogram: the true threshold may be poorer) | session `window_full` |
+| Masking dilemma | initial masking already at the overmasking limit. **(E9)** The coach starts the noise one step short of overmasking (`safe_mask_max_db`, `start_mask_db`), `mask_too_low` is measured against that, the lamp shows "dilemma", Hoot explains once (`masking_dilemma` tip, inserts leak less), and the first heard tone at the safe maximum fills the window: store it, "plateau not reached" (BSA 2018, 8.8 step 5 and 8.9). No current day reaches it; the advanced case C9 will | `masking_dilemma`, session `in_dilemma` |
 | Type of loss | normal (air <= 25); conductive (gap > 10 at 2+ of 500-4k, bone average <= 25); mixed (same gaps, poorer bone); sensorineural (no real gap) | `hearing_type` |
 | Carhart notch | **(polish)** bone at 2k at least 10 poorer than the better of 500 and 4k (1k stands in when 500 is missing), at least 5 poorer than 4k (a notch, not a slope) and no better than 1k (the bottom of the dip) | `has_carhart_notch` |
 | Masker range | 0-100 dB EM, 5 dB steps, starts at 10 when switched on | `MASK_MIN_DB`, `MASK_MAX_DB`, `MASK_STEP_DB` |
@@ -276,14 +278,17 @@ during bone tests. Gus (no bone data, no masking) gets exactly his air threshold
 - Results get one sheet per test (`ac`, `bc`, `bc_masked`, `ac_masked`). Accuracy, technique and efficiency
   average over every scored stamp on every sheet; Hoot's stamps are not scored.
 - **Par** for a masked measurement = the presentations of the deterministic textbook dance from its start
-  (initial noise, tone at the unmasked threshold) + `MASK_PAR_SLACK` 2. Unmasked bone uses the normal par.
+  (initial noise, tone at the unmasked threshold; **(E9)** the safe maximum in a dilemma, and the dance ends once
+  the window is full) + `MASK_PAR_SLACK` 2. Unmasked bone uses the normal par.
   Fair golf as Day 1.
 - **Masked technique errors** (break the combo, lower technique): `mask_too_low` (first masked tone with the
-  noise below the initial level), `mask_start` (first masked tone more than 10 dB from the unmasked threshold),
+  noise below the initial level; **(E9)** in a dilemma, below the safe maximum), `mask_start` (first masked tone more than 10 dB from the unmasked threshold),
   `mask_wrong_step` (anything but noise +5 after heard / tone +5 after missed), `store_no_plateau` (stored
   before 3 noise raises held, unless the safe window is full), `overmasked` (noise at or past the limit; once per measurement, not a check).
-  Observations: `cross_hearing`, `undermasked`, `plateau_step` {steps, needed, db, mask_db, found},
-  `plateau_found`, `vibrotactile`.
+  Observations: `cross_hearing`, `undermasked`, `plateau_step` {steps, needed, db, mask_db, found, window_full},
+  `plateau_found`, `vibrotactile`; **(E9)** `masking_dilemma` {initial_db, limit_db} and `plateau_not_reached`
+  {db, mask_db, limit_db}, each once per visit. A "plateau not reached" stamp at or better than the truth scores
+  full accuracy (the true threshold may be poorer, so it is not a miss).
 - **Medals (Day 2 paper row):** Chat (`history`), Bone (`bc_placement`), Mask (`masking`), Case (`evidence`),
   Refer (`referral`). Gold 10 / silver 6 / bronze 3 coins as before.
 - Golf card: rows R O, L X, plus R [ (masked bone) and R O+ (masked air) when present. **(v4)** plus L > (left

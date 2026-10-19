@@ -64,6 +64,9 @@ const TIPS: Dictionary[StringName, String] = {
 	&"cross_hearing": "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!",
 	&"undermasked": "The Ghost answered! Not enough noise yet: heard means noise up 5.",
 	&"plateau_found": "Flat line! Same answer through 15 dB more noise: that's the true threshold. Store it!",
+	# clinical review E9: the masking dilemma and an unreached plateau (BSA 2018, 8.8 and 8.9)
+	&"masking_dilemma": "Masking dilemma! Even the starting noise could cross back. Inserts leak less. Else, use the safe maximum.",
+	&"plateau_not_reached": "No room left! More noise would cross back to this ear. Store it: plateau not reached.",
 	&"vibrotactile": "Loud low bone tones get FELT, not heard. A tickle is not a threshold!",
 }
 ## Positive kinds and the points they are worth (times the combo multiplier).
@@ -598,7 +601,9 @@ func store_candidate(e: String, f: int) -> Variant:
 
 ## (v3) The masked measurement at (e, f) holds a heard level with the noise at or above the
 ## initial masking, and one more 5 dB noise step would overmask: the plateau cannot be finished
-## safely, so the held level is the answer (a narrow window, not a dilemma).
+## safely, so the held level is the answer, stored as "plateau not reached" (E9). In a masking
+## dilemma (the initial level would already overmask) the noise only has to sit at the safe
+## maximum, safe_mask_max_db().
 func window_full(e: String, f: int) -> bool:
 	var pl := plateau_info(e, f)
 	var recs := measurement(e, f)
@@ -606,7 +611,7 @@ func window_full(e: String, f: int) -> bool:
 		return false
 	var last: Dictionary = recs[-1]
 	var m := int(last.get("mask_db", -1))
-	if not bool(last["responded"]) or m < int(pl["initial"]):
+	if not bool(last["responded"]) or m < mini(int(pl["initial"]), safe_mask_max_db(e, f, int(pl["db"]))):
 		return false
 	return m + ClinicRules.MASK_STEP_DB >= overmask_limit_db(e, f, int(pl["db"]))
 
@@ -736,9 +741,10 @@ func recommended_action() -> Dictionary:
 ## The plateau dance's next move on a masked sheet (see recommended_action()).
 func _recommended_masked() -> Dictionary:
 	var recs := measurement(ear, freq)
-	var init := initial_mask_db()
 	if recs.is_empty():
 		var start := recommended_start(ear, freq)
+		# (E9) in a masking dilemma the noise starts one step short of overmasking
+		var init := start_mask_db(ear, freq, start)
 		if mask_db != init:
 			# the textbook begins at the initial level (more is allowed, but eats the safe window)
 			return {"action": &"mask_louder" if init > mask_db else &"mask_softer", "target_db": start, "target_mask": init, "then": &"present"}
@@ -779,7 +785,9 @@ func _next_masked(recs: Array) -> Vector2i:
 	var init := initial_mask_db()
 	var nxt := ClinicRules.next_mask_step(int(last["db"]), maxi(m, 0), bool(last["responded"]))
 	if m < init:
-		nxt = Vector2i(int(last["db"]) if bool(last["responded"]) else nxt.x, init)
+		# (E9) catching up stops one step short of overmasking: a dilemma never lifts the noise past it
+		var tone := int(last["db"]) if bool(last["responded"]) else nxt.x
+		nxt = Vector2i(tone, maxi(m, mini(init, safe_mask_max_db(ear, freq, mini(tone, _top())))))
 	nxt.x = mini(nxt.x, _top())
 	nxt.y = mini(nxt.y, ClinicRules.MASK_MAX_DB)
 	return nxt
@@ -850,6 +858,24 @@ func overmask_limit_db(e: String = "", f: int = -1, tone_db: int = -999) -> int:
 		if nf > 0:
 			gap = maxi(0, tone - int(bc[nf]))
 	return ClinicRules.overmask_limit(tone, t, gap, air_transducer)
+
+
+## (Clinical review E9) The most noise the rules allow at (e, f) for a tone at tone_db (default: the
+## dial): one 5 dB step under the overmasking limit, never below the masker's minimum.
+func safe_mask_max_db(e: String = "", f: int = -1, tone_db: int = -999) -> int:
+	return maxi(ClinicRules.MASK_MIN_DB, overmask_limit_db(e, f, tone_db) - ClinicRules.MASK_STEP_DB)
+
+
+## (E9) Where the noise starts for a masked tone at tone_db: the initial masking, or in a masking
+## dilemma (that level would already overmask) the safe maximum instead.
+func start_mask_db(e: String = "", f: int = -1, tone_db: int = -999) -> int:
+	return mini(initial_mask_db(e, f), safe_mask_max_db(e, f, tone_db))
+
+
+## (E9) A masking dilemma at (e, f) for a tone at tone_db: the initial masking already reaches the
+## overmasking limit, so no safe window is left (BSA 2018, 8.9: a large conductive loss in both ears).
+func in_dilemma(e: String = "", f: int = -1, tone_db: int = -999) -> bool:
+	return ClinicRules.masking_dilemma(initial_mask_db(e, f), overmask_limit_db(e, f, tone_db))
 
 
 ## The key of `by_freq` (freq -> value) closest to f in octaves (f itself when present); 0 if empty.
@@ -944,7 +970,7 @@ static func textbook_presentations(start_db: int, threshold: int, f: int) -> int
 func par_for(e: String, f: int) -> int:
 	var start := recommended_start(e, f)
 	if ClinicRules.test_is_masked(test):
-		return maxi(1, textbook_mask_presentations(e, f, start, initial_mask_db(e, f)) + MASK_PAR_SLACK)
+		return maxi(1, textbook_mask_presentations(e, f, start, start_mask_db(e, f, start)) + MASK_PAR_SLACK)
 	var t := response_truth(e, f)
 	var typical := expected_presentations(start - t, _top(f) - t, ClinicRules.MIN_DB - t, patient.psychometric_slope_db)
 	return maxi(1, int(round(typical)) + PAR_SLACK)
@@ -973,7 +999,8 @@ func response_truth(e: String, f: int) -> int:
 
 ## (v3) Presentations of a by-the-book plateau dance on a perfectly consistent patient (hears iff
 ## the tone reaches the response threshold under that masker), from (start_db, start_mask), until
-## the plateau is complete or the maximum is missed. Uses the current sheet's transducer.
+## the plateau is complete, the safe window is full (E9: one more noise step would overmask) or the
+## maximum is missed. Uses the current sheet's transducer.
 func textbook_mask_presentations(e: String, f: int, start_db: int, start_mask: int) -> int:
 	var tr := transducer
 	var top := ClinicRules.max_db_for(f, tr)
@@ -987,6 +1014,8 @@ func textbook_mask_presentations(e: String, f: int, start_db: int, start_mask: i
 		var heard := tone >= thr
 		recs.append({"db": tone, "mask_db": m, "responded": heard})
 		if heard and int(_plateau_steps(recs, start_mask)["steps"]) >= ClinicRules.PLATEAU_STEPS:
+			return n
+		if heard and m + ClinicRules.MASK_STEP_DB >= overmask_limit_db(e, f, tone):
 			return n
 		if not heard and tone >= top:
 			return n
@@ -1374,8 +1403,9 @@ func _close_current() -> void:
 
 
 ## presentation_closed for the current record, plus (v3, masked sheets) the plateau progress:
-## technique &"plateau_step" {steps, needed, db, mask_db} after a heard masked tone, and the
-## lesson &"plateau_found" once a plateau is complete.
+## technique &"plateau_step" {steps, needed, db, mask_db, found, window_full} after a heard masked
+## tone, and the lesson &"plateau_found" once a plateau is complete (E9: &"plateau_not_reached",
+## once per visit, when the safe window fills first).
 func _emit_closed() -> void:
 	presentation_closed.emit(_cur_ear, _cur_freq, public_record(_cur))
 	if int(_cur.get("mask_db", -1)) < 0 or StringName(_cur.get("test", &"")) != test or _cur_ear != ear or _cur_freq != freq:
@@ -1383,10 +1413,15 @@ func _emit_closed() -> void:
 	if not bool(_cur["responded"]):
 		return
 	var pl := plateau_info(_cur_ear, _cur_freq)
+	var full := not bool(pl["found"]) and window_full(_cur_ear, _cur_freq)
 	technique.emit(&"plateau_step", {"ear": _cur_ear, "freq": _cur_freq, "steps": int(pl["steps"]), "needed": ClinicRules.PLATEAU_STEPS,
-		"db": int(_cur["db"]), "mask_db": int(_cur["mask_db"]), "found": bool(pl["found"]), "auto": not scoring})
+		"db": int(_cur["db"]), "mask_db": int(_cur["mask_db"]), "found": bool(pl["found"]), "window_full": full, "auto": not scoring})
 	if bool(pl["found"]) and int(pl["steps"]) == ClinicRules.PLATEAU_STEPS:
 		_observe(&"plateau_found", {"db": int(pl["db"]), "start_mask": int(pl["start_mask"]), "end_mask": int(_cur["mask_db"])})
+	elif full and scoring and not _once.has("plateau_not_reached"):
+		_once["plateau_not_reached"] = true
+		_observe(&"plateau_not_reached", {"db": int(pl["db"]), "mask_db": int(_cur["mask_db"]),
+			"limit_db": overmask_limit_db(_cur_ear, _cur_freq, int(pl["db"]))})
 
 
 ## Storing ends the wait: a press still on its way for the last tone is dropped.
@@ -1441,7 +1476,10 @@ func _check_mask_step(recs: Array) -> void:
 	var init := initial_mask_db()
 	if recs.is_empty():
 		var start := recommended_start(ear, freq)
-		if mask_db < init:
+		if scoring and in_dilemma(ear, freq, db) and not _once.has("masking_dilemma"):
+			_once["masking_dilemma"] = true
+			_observe(&"masking_dilemma", {"initial_db": init, "limit_db": overmask_limit_db(ear, freq, db)})
+		if mask_db < mini(init, safe_mask_max_db(ear, freq, db)):
 			_error(&"mask_too_low", {"mask_db": mask_db, "initial_db": init}, true)
 		elif absi(db - start) > MASK_START_TOLERANCE_DB:
 			_error(&"mask_start", {"db": db, "start_db": start}, true)
@@ -1484,6 +1522,12 @@ func _make_info(recs: Array, errs: Array[StringName], no_response: bool, kind: S
 	var acc := ClinicRules.accuracy_for_error(err_db)
 	if ClinicRules.test_is_masked(test) and err_db > 0.0:
 		acc = ClinicRules.accuracy_for_error(maxf(0.0, err_db - MASKED_GRACE_DB))
+	# (E9) a full window with no plateau: the held level is the honest answer, and the true threshold
+	# may be poorer (the other cochlea may still answer), so a stamp at or above the truth is not an error
+	var not_reached := ClinicRules.test_is_masked(test) and not no_response and candidate != null \
+		and not bool(plateau_info(ear, freq)["found"])
+	if not_reached and err_db <= 0.0 and errs.is_empty():
+		acc = 1.0
 	if no_response:
 		acc = 1.0 if true_db > _top() else 0.0
 	var strokes := recs.size()
@@ -1525,6 +1569,7 @@ func _make_info(recs: Array, errs: Array[StringName], no_response: bool, kind: S
 		"transducer": String(transducer),
 		"mask_db": mask_db if mask_on else -1,
 		"plateau": plateau_info(ear, freq) if masked else {},
+		"plateau_not_reached": not_reached,
 	}
 
 
@@ -1535,7 +1580,8 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 		_error(k, {"db": db}, true)
 	if errs.is_empty():
 		_clean(&"store_ok")
-	if not bool(info["no_response"]) and absf(float(info["error_db"])) > 10.0:
+	var may_be_poorer := bool(info.get("plateau_not_reached", false)) and float(info["error_db"]) < 0.0
+	if not bool(info["no_response"]) and absf(float(info["error_db"])) > 10.0 and not may_be_poorer:
 		_observe(&"store_far_off", {"db": db})
 	var e := ear
 	var f := freq

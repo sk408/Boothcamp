@@ -1025,6 +1025,8 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var at2 := _lcd.last_dot_global() + Vector2(0, -26)
 			if bool(data.get("found", false)):
 				pass  # the FLAT LINE! callout says it (plateau_found)
+			elif bool(data.get("window_full", false)):
+				_fx.chip("no room: STORE", at2, Color("#8e5cc4"), Palette.PAPER, 14, 1.2)   # (E9)
 			else:
 				_fx.chip("%d/%d" % [int(data["steps"]), int(data["needed"])], at2, Palette.SUNNY, Palette.INK, 14, 0.8)
 			Sfx.play_note(392.0 * pow(2.0, int(data.get("steps", 0)) / 6.0), -12.0)
@@ -1050,7 +1052,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var error := kind in ERROR_KINDS
 			if error and not _coach_active:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
-			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap"]:
+			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma", &"plateau_not_reached"]:
 				# (polish) a lesson during the coached steps waits for the coached stamp
 				_deferred_tips.append([kind, msg, _target_for(kind, data)])
 			elif msg != "" and not (_coach_active and error):
@@ -1086,6 +1088,8 @@ func _target_for(kind: StringName, data: Dictionary) -> String:
 			return "mask_louder_button"
 		&"overmasked":
 			return "mask_softer_button"
+		&"plateau_not_reached":
+			return "store_button"
 		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"vibrotactile":
 			return "tone_button"
 	return ""
@@ -1111,8 +1115,9 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 	var by_hoot := bool(info.get("by_hoot", false))
 	_last_store_t = session.time
 	var test := StringName(String(info.get("test", "ac")))
+	var no_plateau := bool(info.get("plateau_not_reached", false))
 	if not is_retest:
-		card.audiogram.set_point(ear, freq, db, no_resp, true, test)
+		card.audiogram.set_point(ear, freq, db, no_resp, true, test, no_plateau)
 	var at := card.audiogram.get_global_transform_with_canvas() * (Vector2(card.audiogram.freq_to_x(freq), card.audiogram.db_to_y(db)) + UiDraw.symbol_offset(ear, test, 17.0))
 	Sfx.play(&"stamp", randf_range(0.95, 1.05), -2.0 if not by_hoot else -12.0)
 	# hit-stop: the stamp lands, freezes for a beat, then the card jolts and ink flies
@@ -1154,6 +1159,9 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 	elif not by_hoot and freq == 4000 and not _told_3k6k and test == &"ac":
 		_told_3k6k = true
 		Hoot.say("Many clinics also test 3000 and 6000 Hz: fitting formulas use them.", Hoot.LOW, "", "tip_3k6k", 5.0)
+	if no_plateau and not by_hoot:
+		# (E9) what the purple ? on the chart means (once per visit)
+		Hoot.say("That purple ? means no plateau: the true threshold may be poorer. Note it on the report.", Hoot.HIGH, "", "tip_no_plateau_mark", 6.0)
 	_refresh()
 	if session.is_ear_complete(_ear) and ear == _ear and not _finishing:
 		_complete_ear(ear)
@@ -1191,6 +1199,8 @@ func _celebrate_stamp(_ear_s: String, _freq: int, at: Vector2, info: Dictionary)
 		sub = _say("{name} wobbled: +%d on {him}, not you") % maxi(1, strokes - par)
 	elif not clean and raw in [&"birdie", &"eagle", &"albatross"]:
 		sub = "birdie pace, but a slip on the way"
+	if bool(info.get("plateau_not_reached", false)):
+		sub = "no plateau: marked ?"   # (E9) the honest best answer, not a slip
 	if not errs.is_empty():
 		word = "Oops!"
 		col = Palette.PAPER
@@ -1756,6 +1766,9 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 			var ntimes := "once" if n == 1 else ("twice" if n == 2 else "%d times" % n)
 			var key := _k(&"mask_louder" if act == &"mask_louder" else &"mask_softer")
 			var btn := "mask_louder_button" if act == &"mask_louder" else "mask_softer_button"
+			if recs.is_empty() and tm < session.initial_mask_db():
+				# (E9) a masking dilemma: the textbook start would already overmask
+				return ["Masking dilemma! Noise to %d only, the most that's safe. Tap %s %s." % [tm, key, ntimes], btn, "mask_dil%d" % session.mask_db]
 			if recs.is_empty():
 				var occl := _occlusion_part(tm)
 				if occl > 0 and not _mask_tapped:
@@ -1790,6 +1803,9 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 				return ["Back down to %d dB, the plateau level." % int(a["target_db"]), "softer_button", "mto_store%d" % session.db]
 			return [_masked_start_text(int(a["target_db"]), &"softer", times), "softer_button", "mstart%d" % session.db]
 		&"store":
+			if not bool(session.plateau_info()["found"]):
+				# (E9) the safe window is full: store the held level, marked "plateau not reached"
+				return ["No room for more noise: it would cross back. Press %s to STORE, no plateau." % _k(&"store"), "store_button", "mstore_full%d" % recs.size()]
 			return ["Flat line! %d dB held through 15 dB more noise. Press %s to STORE." % [session.db, _k(&"store")], "store_button", "mstore%d" % recs.size()]
 	return []
 
