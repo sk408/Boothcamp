@@ -27,14 +27,23 @@ const MODE := "chart_chute"
 const TOP_H := 82.0
 const CARD_RECT := Rect2(330, 92, 560, 368)
 const PREVIEW_RECT := Rect2(912, 104, 352, 240)
-const CHUTE_Y := 488.0
-const CHUTE_SIZE := Vector2(250, 214)
+const CHUTE_Y := 506.0
+const CHUTE_SIZE := Vector2(250, 200)
+## The patient's line after a right drop sits in the strip between the belt and the chutes.
+const LINE_Y := 488.0
+## Points float up in the empty corner under the NEXT card, clear of the chart and the streak.
+const POINTS_AT := Vector2(1090, 404)
 const CHUTE_GAP := 20.0
 const HOOT_HINT := Rect2(16, 96, 300, 150)
 const BELT := Color("#3b3550")
 const FLOOR := Color("#e9d8c0")
 const WALL := Color("#f7e7cf")
 const GOLD := Color("#f2b632")
+## Hoot on the first two warm-up charts (a slope, then a notch), pointing at the right chute.
+const WARMUP_HINTS: Dictionary = {
+	&"sloping": "Drop each chart down the chute it matches. This one slopes down: SLOPE!",
+	&"notch": "This one dips at 4k and comes back up: NOTCH!",
+}
 
 var seed_value := -1
 var autostart := true
@@ -62,6 +71,7 @@ var _requeue: Array[Dictionary] = []   # [{"card", "due"}]
 var _card: Dictionary = {}
 var _said := {}
 var _shots := {}
+var _shot_queue: PackedStringArray = []
 
 var _bg: Control
 var _top: Control
@@ -71,6 +81,7 @@ var _view_i := 0
 var _preview: Control
 var _chutes: Dictionary[StringName, ChuteView] = {}
 var _help_btn: Button
+var _lines: Control
 var _banner: Label
 var _results: Control
 
@@ -236,6 +247,21 @@ class ChuteView extends Control:
 		if animating:
 			queue_redraw()
 
+	## The shape as a tiny chart (lower = harder to hear), so the picture links to the line.
+	func _draw_mini_chart(box: Rect2) -> void:
+		UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
+		# the normal band (25 dB HL and better), as on the big chart
+		draw_rect(Rect2(box.position + Vector2(4, 3), Vector2(box.size.x - 8, 2 + (box.size.y - 10) * 25.0 / 70.0)), Color(Palette.MINT, 0.25))
+		var dbs: Array = ChartDeck.ARCH[shape]["plain"][0]
+		var pts := PackedVector2Array()
+		for i in dbs.size():
+			var x := box.position.x + 10 + (box.size.x - 20) * i / float(dbs.size() - 1)
+			var y := box.position.y + 5 + (box.size.y - 10) * clampf(float(dbs[i]) / 70.0, 0.0, 1.0)
+			pts.append(Vector2(x, y))
+		draw_polyline(pts, Palette.INK, 3.0, true)
+		for p: Vector2 in pts:
+			draw_circle(p, 2.5, Palette.INK)
+
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
 		var lift := -4.0 if _hover and not locked else 0.0
@@ -244,11 +270,12 @@ class ChuteView extends Control:
 		# the hopper mouth
 		var mouth := Rect2(18, 14 + lift, size.x - 36, size.y - 74)
 		UiDraw.rounded_rect(self, mouth, Color("#2b2440"), 18)
-		var c := mouth.get_center()
+		var c := mouth.position + Vector2(mouth.size.x * 0.5, 40)
 		if gag_t >= 0.0:
-			ArcadeArt.gag(self, shape, c, 62.0, gag_t)
+			ArcadeArt.gag(self, shape, c, 46.0, gag_t)
 		else:
-			ArcadeArt.picture(self, shape, c, 62.0)
+			ArcadeArt.picture(self, shape, c, 46.0)
+		_draw_mini_chart(Rect2(mouth.position.x + 26, mouth.end.y - 42, mouth.size.x - 52, 36))
 		var word := ChartDeck.CHUTE_WORDS[shape]
 		draw_string(_font, Vector2(0, size.y - 22 + lift), word, HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.PAPER)
 		# the key chip
@@ -262,12 +289,17 @@ class ChuteView extends Control:
 		if locked:
 			UiDraw.rounded_rect(self, r, Color(Palette.INK, 0.72), 26)
 			draw_string(_font, Vector2(0, size.y * 0.5 + 10), "SOON", HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(Palette.PAPER, 0.8))
-		if line_t >= 0.0:
-			var a := clampf((1.0 - line_t) * 3.0, 0.0, 1.0)
-			var lw := _font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 26
-			var at := Vector2(size.x * 0.5 - lw * 0.5, -54 - 14 * line_t)
-			UiDraw.rounded_rect(self, Rect2(at, Vector2(lw, 38)), Color(Palette.PAPER, a), 18, 3, Color(Palette.INK, a))
-			draw_string(_font, at + Vector2(13, 26), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(Palette.INK, a))
+
+	## The patient's line, drawn by the scene's top layer (over the belt, under nothing).
+	func draw_line_bubble(ci: CanvasItem) -> void:
+		if line_t < 0.0 or line == "":
+			return
+		var a := clampf((1.0 - line_t) * 3.0, 0.0, 1.0)
+		var lw := _font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 26
+		var cx := clampf(position.x + size.x * 0.5, lw * 0.5 + 8.0, 1272.0 - lw * 0.5)
+		var at := Vector2(cx - lw * 0.5, LINE_Y - 17)
+		UiDraw.rounded_rect(ci, Rect2(at, Vector2(lw, 34)), Color(Palette.PAPER, a), 17, 3, Color(Palette.INK, a))
+		ci.draw_string(_font, at + Vector2(13, 23), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(Palette.INK, a))
 
 
 # ================================================================ lifecycle
@@ -313,6 +345,7 @@ func _process(delta: float) -> void:
 	_side.queue_redraw()
 	if _phase == "run":
 		_bg.queue_redraw()   # the belt rollers turn while the clock runs
+	_lines.queue_redraw()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -358,7 +391,6 @@ func stats() -> Dictionary:
 func _run() -> void:
 	Sfx.music_start()
 	_phase = "warmup"
-	_say("start", "Drop each chart down the chute it looks like!", "chute_sloping")
 	var warm: Array[StringName] = [&"sloping", &"notch", &"notch" if _rng.randf() < 0.5 else &"sloping"]
 	for i in ChuteRules.WARMUP_CARDS:
 		await _serve(ChartDeck.make_card(_rng, warm[i], {"ear": "right"}, _next_serial()), i < 2)
@@ -410,14 +442,17 @@ func _serve(card: Dictionary, hint: bool) -> void:
 	if _phase == "run":
 		_cards += 1
 	if not bool(card.get("golden", false)) and not (card.get("look", {}) as Dictionary).is_empty():
-		CasePortraits._looks[String(card["who"])] = card["look"]
+		CasePortraits.register(String(card["who"]), card["look"])
 	var view := _views[_view_i]
 	_view_i = 1 - _view_i
 	view.show_card(card)
 	_slide_in(view)
 	_preview.queue_redraw()
 	_ramp_tips(card)
-	await get_tree().create_timer(0.22, false).timeout
+	await get_tree().create_timer(0.3, false).timeout
+	for n: String in _shot_queue:
+		_shot_once(n)
+	_shot_queue.clear()
 	while true:
 		if _phase != "run" and _phase != "warmup":
 			_park(view)
@@ -426,7 +461,7 @@ func _serve(card: Dictionary, hint: bool) -> void:
 		var shape: StringName = card["shape"]
 		if hint:
 			_chutes[shape].pulse = true
-			Hoot.say("Pick the picture it looks like.", Hoot.NORMAL, "chute_" + String(shape), "", 3.0)
+			Hoot.say(String(WARMUP_HINTS.get(shape, "Drop it down the chute it looks like!")), Hoot.URGENT, "chute_" + String(shape), "", 6.0)
 		_beat_serial += 1
 		var serial := _beat_serial
 		_waiting = true
@@ -435,13 +470,14 @@ func _serve(card: Dictionary, hint: bool) -> void:
 			"mouse": {"click": "chute_" + String(shape)}}, func() -> void:
 				if serial == _beat_serial:
 					sort_into(shape))
-		_shot_once("chute_first_card")
 		var pick: StringName = await _sorted
 		_waiting = false
 		_beat_serial += 1
 		Events.input_resolved.emit(&"chute_sort")
 		for s: StringName in _chutes:
 			_chutes[s].pulse = false
+		if hint:
+			Hoot.dismiss_target("chute_" + String(shape))   # a hint never outlives its chart
 		if pick == &"":
 			_park(view)
 			return
@@ -472,7 +508,7 @@ func _right_drop(view: CardView, card: Dictionary) -> void:
 		var pts := ChuteRules.points(_streak, golden)
 		_score += pts
 		var mult := ClinicRules.combo_multiplier(_streak) * (ChuteRules.GOLDEN_FACTOR if golden else 1)
-		Juice.float_text(self, "+%d%s" % [pts, ("  x%d" % mult) if mult > 1 else ""], chute.position + Vector2(chute.size.x * 0.5, -30), Palette.MINT if not golden else GOLD, 30)
+		Juice.float_text(self, "+%d%s" % [pts, ("  x%d" % mult) if mult > 1 else ""], POINTS_AT, Palette.MINT if not golden else GOLD, 30)
 		if golden:
 			ArcadeScores.mark_found(MODE, String(shape))
 			_golden_seen = String(card["who"])
@@ -499,7 +535,7 @@ func _wrong_drop(view: CardView, card: Dictionary, pick: StringName) -> void:
 	tw.tween_property(view, "position", toward, 0.12).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(view, "position", home, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Juice.shake(chute, 6.0, 0.25)
-	_flash_banner("JAM!", Palette.CORAL)
+	_flash_banner("JAM!", Palette.CORAL, 0.6, Vector2(CARD_RECT.get_center().x, CARD_RECT.position.y + 8))
 	view.show_tell(card["shape"])
 	_shot_once("chute_jam_tell")
 	await get_tree().create_timer(ChuteRules.JAM_S, false).timeout
@@ -509,7 +545,8 @@ func _wrong_drop(view: CardView, card: Dictionary, pick: StringName) -> void:
 
 func _help(view: CardView, card: Dictionary) -> void:
 	_busy = true
-	_helps += 1
+	if _phase == "run":
+		_helps += 1
 	var shape: StringName = card["shape"]
 	view.show_tell(shape)
 	_chutes[shape].pulse = true
@@ -525,16 +562,18 @@ func _help(view: CardView, card: Dictionary) -> void:
 
 
 func _ramp_tips(card: Dictionary) -> void:
+	if _phase == "warmup" and _serial == 2:
+		_shot_queue.append("chute_warmup")   # the second warm-up card: past the scene's fade-in
 	if _phase != "run":
 		return
 	if String(card["ear"]) == "left":
 		_say("left", "Blue X is the left ear. Same shapes!", "")
 	elif String(card["ear"]) == "both":
 		_say("both", "Two ears? Sort the colour on the tag.", "")
-		_shot_once("chute_both_ears")
+		_shot_queue.append("chute_both_ears")
 	if bool(card.get("golden", false)):
 		_say("golden", "A story patient's chart! Triple points!", "")
-		_shot_once("chute_golden")
+		_shot_queue.append("chute_golden")
 
 
 func _refresh_locks() -> void:
@@ -546,7 +585,7 @@ func _refresh_locks() -> void:
 			c.locked = false
 			Juice.pop(c, 1.25, 0.4)
 			Sfx.play(&"pop", 1.2, -4.0)
-			_flash_banner("NEW CHUTE!", Palette.SUNNY)
+			_flash_banner("NEW CHUTE!", Palette.SUNNY, 0.8, Vector2(c.position.x + c.size.x * 0.5, CHUTE_Y - 40))
 			_say("unlock_" + String(s), "New chute: %s. %s." % [ChartDeck.CHUTE_WORDS[s].to_lower(), ChartDeck.TELLS[s]["text"]], "chute_" + String(s))
 			_shot_once("chute_unlock_" + String(s))
 		c.locked = lock
@@ -563,6 +602,7 @@ func _countdown() -> void:
 func _tally() -> void:
 	_phase = "tally"
 	_waiting = false
+	Hoot.clear()
 	Sfx.play(&"fanfare", 1.0, -4.0)
 	_flash_banner("TIME!", Palette.CORAL, 1.2)
 	await get_tree().create_timer(1.3, false).timeout
@@ -621,13 +661,17 @@ func _park(view: CardView) -> void:
 	tw.tween_property(view, "modulate:a", 0.0, 0.3)
 
 
-func _flash_banner(text: String, color: Color, hold := 0.6) -> void:
+## A big word that pops and fades, centred on `at` (default: the reading spot).
+func _flash_banner(text: String, color: Color, hold := 0.6, at := Vector2(-1, -1)) -> void:
+	if at.x < 0.0:
+		at = CARD_RECT.get_center()
 	_banner.text = text
 	_banner.add_theme_color_override("font_color", color)
+	_banner.add_theme_font_size_override("font_size", 84 if text.length() <= 5 else 64)
 	_banner.visible = true
 	_banner.modulate.a = 1.0
 	_banner.reset_size()
-	_banner.position = Vector2(CARD_RECT.get_center().x - _banner.size.x * 0.5, CARD_RECT.get_center().y - _banner.size.y * 0.5)
+	_banner.position = Vector2(clampf(at.x - _banner.size.x * 0.5, 8.0, 1272.0 - _banner.size.x), at.y - _banner.size.y * 0.5)
 	_banner.pivot_offset = _banner.size * 0.5
 	Juice.pop(_banner, 1.6, 0.25)
 	var tw := _banner.create_tween()
@@ -672,6 +716,11 @@ func _build() -> void:
 	_help_btn.pressed.connect(press_help)
 	add_child(_help_btn)
 	Hoot.register_anchor("chute_help", _help_btn)
+	_lines = UiKit.full_rect()
+	_lines.draw.connect(func() -> void:
+		for s: StringName in _chutes:
+			_chutes[s].draw_line_bubble(_lines))
+	add_child(_lines)
 	_banner = UiKit.label("", 84, Palette.SUNNY, 700, 18, Palette.INK)
 	_banner.visible = false
 	add_child(_banner)
@@ -706,12 +755,13 @@ func _draw_top() -> void:
 		if frac > 0.0:
 			UiDraw.rounded_rect(_top, Rect2(bar.position, Vector2(maxf(34.0, bar.size.x * frac), bar.size.y)), col, 17)
 		_top.draw_string(f, bar.position + Vector2(0, 26), "%d" % ceili(left), HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 24, Palette.INK)
-	_top.draw_string(UiKit.font(600), Vector2(912, 34), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.PAPER, 0.7))
-	_top.draw_string(f, Vector2(912, 68), _thousands(int(_shown_score)), HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.PAPER)
-	_top.draw_string(UiKit.font(600), Vector2(1080, 34), "RIGHT", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.MINT, 0.9))
-	_top.draw_string(f, Vector2(1080, 68), str(_right), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.MINT)
-	_top.draw_string(UiKit.font(600), Vector2(1176, 34), "OOPS", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.CORAL, 0.9))
-	_top.draw_string(f, Vector2(1176, 68), str(_oops), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.CORAL)
+	# (the pause button sits at the top right corner, so the numbers stop short of it)
+	_top.draw_string(UiKit.font(600), Vector2(906, 34), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.PAPER, 0.7))
+	_top.draw_string(f, Vector2(906, 68), _thousands(int(_shown_score)), HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.PAPER)
+	_top.draw_string(UiKit.font(600), Vector2(1056, 34), "RIGHT", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.MINT, 0.9))
+	_top.draw_string(f, Vector2(1056, 68), str(_right), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.MINT)
+	_top.draw_string(UiKit.font(600), Vector2(1136, 34), "OOPS", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.CORAL, 0.9))
+	_top.draw_string(f, Vector2(1136, 68), str(_oops), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.CORAL)
 
 
 func _draw_side() -> void:
@@ -773,8 +823,8 @@ func _show_results() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	var panel := UiKit.panel(Palette.PAPER, Palette.INK, 28)
-	panel.position = Vector2(170, 40)
-	panel.custom_minimum_size = Vector2(940, 640)
+	panel.position = Vector2(170, 60)
+	panel.custom_minimum_size = Vector2(940, 0)
 	add_child(panel)
 	_results = panel
 	var col := VBoxContainer.new()
@@ -826,6 +876,7 @@ func _show_results() -> void:
 	again.visible = false
 	title.visible = false
 	Juice.bounce_in(panel)
+	await get_tree().create_timer(0.6, false).timeout
 	_shot_once("chute_results")
 	var placed := -1
 	if ChuteRules.on_board(_right, _oops) and ArcadeScores.qualifies(MODE, _score):
@@ -836,6 +887,7 @@ func _show_results() -> void:
 	_fill_board(board, placed)
 	again.visible = true
 	title.visible = true
+	await get_tree().create_timer(0.3, false).timeout
 	_shot_once("chute_board")
 	Events.awaiting_input.emit(&"arcade_results", {"options": ["Play again", "Back to the title"], "best": 1,
 		"mouse": {"text": "Back to the title"}}, func() -> void: Events.goto_scene.emit(TITLE_SCENE))
@@ -870,6 +922,8 @@ func _draw_speed_chart(c: Control) -> void:
 	var runs := ArcadeScores.runs(MODE)
 	if runs.is_empty():
 		return
+	if runs.size() < 2:
+		c.draw_string(f, r.position + Vector2(40, 44), "Play again to see your climb.", HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 60, 16, Palette.INK_SOFT)
 	var top := maxf(ChuteRules.FLUENT_RIGHT_PM + 5.0, 10.0)
 	for rr: Dictionary in runs:
 		top = maxf(top, float(rr["right"]) + 5.0)

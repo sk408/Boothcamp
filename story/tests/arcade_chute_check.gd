@@ -10,10 +10,13 @@ extends Node
 ##   mouse    real clicks only: the chute, the initials' + button and OK, "Back to the title"
 ##   guess    a random open chute every time (real keys): far fewer points, never on the board
 ##   help     HOOT HELP every time (the H key): no points, no slips, no board
+## --via-title: start on the title and open the arcade from its Arcade button (a click with
+## --policy=mouse, Down arrows and Enter otherwise), as a player would.
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
 
 const CHUTE_SCENE := "res://story/arcade/chart_chute.tscn"
+const TITLE_SCENE := "res://story/title_screen.tscn"
 const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 
 
@@ -25,7 +28,7 @@ func _ready() -> void:
 	var d := Driver.new()
 	d.name = "ArcadeChuteDriver"
 	get_tree().root.add_child.call_deferred(d)
-	Events.goto_scene.emit.call_deferred(CHUTE_SCENE)
+	Events.goto_scene.emit.call_deferred(TITLE_SCENE if Game.cli_flag("via-title") else CHUTE_SCENE)
 
 
 class ErrorCounter extends Logger:
@@ -106,6 +109,38 @@ class Driver extends Node:
 			&"arcade_results":
 				await _wait(0.8)
 				await _results()
+			&"disclaimer_ok":
+				await _wait(0.5)
+				if policy == "mouse":
+					await _click_text("Got it")
+				else:
+					solver.call()
+			&"title_start":
+				await _wait(0.8)
+				await _open_arcade()
+
+	## The title's Arcade button, like a player: a click, or Down until it is highlighted and Enter.
+	func _open_arcade() -> void:
+		if policy == "mouse":
+			await _click_text("Arcade")
+			return
+		for i in 10:
+			var b := _find_text("> Arcade") as Button
+			if b != null:
+				break
+			await _action(&"ui_down")
+		await _wait(0.4)
+		Events.screenshot_requested.emit("title_arcade")
+		await _wait(0.2)
+		await _action(&"ui_accept")
+
+	func _action(a: StringName) -> void:
+		for pressed: bool in [true, false]:
+			var ev := InputEventAction.new()
+			ev.action = a
+			ev.pressed = pressed
+			Input.parse_input_event(ev)
+			await _frames(2)
 
 	func _sort(info: Dictionary, solver: Callable) -> void:
 		var shape: StringName = info["shape"]
@@ -171,6 +206,8 @@ class Driver extends Node:
 			problems.append("typed initials KEY are not on the board")
 		if policy == "mouse" and on_board and not table.any(func(r: Dictionary) -> bool: return r["initials"] == "BAA"):
 			problems.append("clicked initials BAA are not on the board")
+		if Game.cli_flag("via-title") and not is_instance_valid(chute):
+			problems.append("the title's Arcade button never opened Chart Chute")
 		if policy == "mouse":
 			await _click_text("Back to the title")
 			for i in 90:

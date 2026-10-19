@@ -375,7 +375,7 @@ func test_tray_ignores_a_double_click() -> void:
 	assert_eq(got, [1], "a press once armed answers")
 
 
-## The title's menu card (six buttons for a returning player, with stats) ends above the safety footer.
+## The title's menu card (seven buttons for a returning player, with stats) ends above the safety footer.
 func test_title_menu_clears_the_footer() -> void:
 	Game.reset_save()
 	Game.progress["plays"] = 3
@@ -388,7 +388,7 @@ func test_title_menu_clears_the_footer() -> void:
 	title.call("_on_notice_ok")
 	await wait_seconds(0.6)
 	var buttons: Array = title.get("_menu_buttons")
-	assert_eq(buttons.size(), 6, "Play, Days, Freestyle, New player, Options, Quit")
+	assert_eq(buttons.size(), 7, "Play, Days, Freestyle, Arcade, New player, Options, Quit")
 	var card := title.get("_menu_card") as Control
 	var foot := title.get_viewport_rect().size.y - float(title.get("FOOTER_H"))
 	assert_true(card.get_global_rect().end.y <= foot, "the card ends at %d, the footer starts at %d" % [int(card.get_global_rect().end.y), int(foot)])

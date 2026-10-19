@@ -187,3 +187,25 @@ Everything is in `story/freestyle/` plus `core/patients/fs_*.tres`. Changes to s
 - **Reused**: `story/games/case_tymp.gd` (the cases tympanometer), the AudiOtron's plans, `CaseRules`, `ClinicRules`.
   No second tympanometer.
 - **Tests:** `story/tests/test_freestyle.gd`.
+
+## Arcade: Chart Chute (arcade branch; docs/ARCADE.md)
+
+Everything is in `story/arcade/` plus its tests in `story/tests/`. Changes to shared files are additive:
+
+- **Title menu.** An **Arcade** button after Freestyle, sharing its row (as Options and Quit share theirs), so a
+  returning player's seven buttons still clear the safety footer. `test_title_menu_clears_the_footer` now expects
+  seven buttons.
+- **Game.DEFAULT_PROGRESS** gained `"arcade": {}` (mode -> {table, runs, found, initials}; `story/arcade/arcade_scores.gd`).
+- **New beats (CONTRACTS.md §3.2 table):**
+  - `chute_sort`: chart_chute. Info {shape, options, best, mouse: {click: "chute_<shape>"}}. The solver sorts into the right chute.
+  - `arcade_initials`: chart_chute's results. Info {mouse: {click: "arcade_initials_ok"}}. The solver enters BOT.
+  - `arcade_results`: chart_chute's results. Info {options, best, mouse: {text: "Back to the title"}}. The solver goes to the title.
+- **Autoplay bot.** It is not used for the arcade, because its `_finish` expects a visit's `results_continue`. The
+  arcade has its own harness, `story/tests/arcade_chute_check.tscn` (tools/README.md).
+- **Reused:**
+  - `ClinicRules.classify_shape`, `combo_multiplier`, `required_interoctaves` and `clamp_db`.
+  - The Audiogram and `CasePortraits.register` (for the belt's made-up patients).
+  - `Game.load_patient` for the story charts of Gus, Rocco, Ginger and Marina.
+- **Engine gotcha.** A typed dictionary const such as `Dictionary[StringName, PackedStringArray]` keeps its array
+  literals as plain Arrays. Indexing one through a `PackedStringArray` variable crashes Godot 4.7.2 (signal 11). For
+  such tables, use an untyped `Dictionary` and read the values as `Array`.

@@ -25,6 +25,7 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | **(cases)** `docs/CASE_SCRIPTS.md` matches the case JSON (regenerate it: drop `--check`; `tools/run_tests.sh` runs the check too) | `python3 tools/case_scripts.py --check` | ~1 s |
 | **(freestyle)** One walk-in from the waiting room, keys or mouse only (any `fs_` id from `FsData.CASE_IDS`); Quick visit off: add `--full` | `tools/autoplay_check.sh --scene=res://story/freestyle/waiting_room.tscn --freestyle=fs_penny` / add `--mouse` | ~60 s |
 | **(freestyle)** From the title's Freestyle button, like a player | `tools/autoplay_check.sh --via-freestyle --freestyle=fs_penny --mouse` | ~60 s |
+| **(arcade)** One Chart Chute run with a test bot; prints `ARCADE_RESULT`, exit 0 = every check passed (policies `careful`, `keys`, `mouse`, `guess`, `help`; add `--via-title` to start from the title's Arcade button; add `--shots=/abs/dir` under xvfb for its named shots) | `timeout 300 godot --headless --path . --fixed-fps 30 -- --scene=res://story/tests/arcade_chute_check.tscn --fresh --policy=careful --speed=4 --seed=1` | ~25 s |
 | Rendered autoplay with screenshots at every phase | `tools/shots.sh /abs/out/dir` (Day 2: add `--day=2`) | ~5 min (Day 2 ~13 min) |
 | Button-mashing stress test of the AudiOtron (both ears, Hoot's x8 turn, pause menu); prints `MONKEY_RESULT` | `timeout 900 godot --headless --path . --fixed-fps 30 -- --scene=res://tools/monkey.tscn --speed=3 --seed=1` (Day 2's tests and the masking keys: add `--day=2`; a case day's tests, its masking and any retest: `--day=6` to `--day=11`; **(v4)** first Hoot's masking movie three ways (as the level plays it with Space / Enter / clicks / P but no Esc: it must reach the end and freeze under the pause menu; the same plus Esc and Skip movie; the pause menu's "Watch" replay by a real click), `movie_runs` in the result; then six tests: right and left air, LEFT bone, the right Ghost demo, masked right bone and air) | ~10 s (Day 2 ~20 s) |
 | **(v3)** Day 2 set pieces without playing (bone placement with a wrong spot, the oscillator on Bonnie, the board's reveal, bridge and stamp on made-up results) | `tools/scene_shot.sh res://story/dev_day2.tscn /abs/out/dir "60" 30` (the scene takes its own shots) | ~2 min |
@@ -135,6 +136,7 @@ Scenes with a `demo_start()` for `--scene`:
 - `res://story/dev_day3.tscn` **(Speech)**: Day 3's set pieces (see above). Also a dev tool, excluded from the export.
 - `res://ui/speech/speech_screen.tscn` **(Speech)**: a coached right-ear SRT of Mike (see above).
 - `res://story/freestyle/waiting_room.tscn` **(freestyle)**: the walk-in clinic's waiting room (add `--freestyle=<id>`).
+- `res://story/arcade/chart_chute.tscn` **(arcade)**: a Chart Chute run (play it yourself; `--seed=N` repeats a belt).
 - `res://tools/monkey.tscn`: the stress test (`--day=2` for Day 2).
 
 ## Generators (one-off, foundation-owned)
