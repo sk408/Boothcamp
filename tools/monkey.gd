@@ -18,8 +18,8 @@ extends Node
 ## scenes go 0, 1, 2, ... one at a time, every movie ends within MOVIE_MAX_S, nothing is left paused
 ## or in the explainer_player group.
 ## (cases) --day=6 and up (any chapter with a "case"): that case's test plan on its patient (with
-## its montage and Hoot's turns), then masked bone on each bone-tested ear and masked air on each
-## air-tested ear wherever the stamps ask (the runner's order), then the case's retest plan if it
+## its montage and Hoot's turns), then masked bone and masked air on each ear wherever the stamps
+## ask (the runner's order, CaseData.masked_bone_ears), then the case's retest plan if it
 ## has one (a fresh session on the treated ear). The masking keys and Day 2's invariants apply.
 ## Prints MONKEY_RESULT {json}; exit 0 ok, 1 an invariant broke, 3 timeout.
 
@@ -139,8 +139,7 @@ func _run_case(case_id: String) -> void:
 	var pid := String(c["patient_id"])
 	Game.begin_visit(pid)
 	var patient := Game.load_patient(pid) as PatientProfile
-	var wax := String((c["otoscopy"] as Dictionary).get("view", "clear")) == "wax"
-	var tr: StringName = &"inserts" if Game.has_upgrade("insert_earphones") and not wax else &"phones"
+	var tr := CaseData.air_transducer(CaseData.canal_blocked(c))
 	var res := {}
 	for p: Variant in c["audiometry"]:
 		var pd: Dictionary = p
@@ -152,7 +151,7 @@ func _run_case(case_id: String) -> void:
 			plan["bc_freqs"] = ClinicRules.BC_REQUIRED
 			plan["masking_controls"] = true
 		res = await _case_test(patient, String(pd["ear"]), plan)
-	for ear: String in CaseData.plan_ears(c["audiometry"], "bc"):
+	for ear: String in CaseData.masked_bone_ears(c["audiometry"]):
 		if not ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty():
 			res = await _case_test(patient, ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2, "air_transducer": tr})
 	for ear: String in CaseData.plan_ears(c["audiometry"], "ac"):
@@ -161,7 +160,7 @@ func _run_case(case_id: String) -> void:
 	if c.get("retest", null) is Dictionary:
 		var rt: Dictionary = c["retest"]
 		var after := Game.load_patient(String(rt["patient_id"])) as PatientProfile
-		var tr2: StringName = &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
+		var tr2 := CaseData.air_transducer(false)   # the retest: the canal is clear again
 		for p: Variant in rt["audiometry"]:
 			var pd: Dictionary = p
 			await _case_test(after, String(pd["ear"]), {"test": "ac", "hoot_turn_after": int(pd.get("hoot_turn_after", 0)), "air_transducer": tr2})

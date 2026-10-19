@@ -196,9 +196,18 @@ func _draw() -> void:
 
 ## 1. meet: curtains open on the title card; the head bounces in; Righty and Lefty pop in and wave.
 func _set_meet() -> void:
-	var card_out := _k(2.0, 2.45)
+	# (Steve) the title card holds while Hoot says what the movie is about (params.card_hold, its
+	# question chips underneath), then everything below runs as before, card_hold - 2 s later
+	var hold := float(params.get("card_hold", 2.0))
+	var real_t := t
+	var card_out := _k(hold, hold + 0.45)
 	if card_out < 1.0:
 		_title_card(1.0 - card_out * card_out * card_out, card_out * 0.5)
+		var qs: Array = params.get("questions", [])
+		for i in qs.size():
+			var qk := _pop(2.0 + 2.6 * i, 0.4) * (1.0 - card_out)
+			_chip(String(qs[i]), Vector2(240.0 + 400.0 * i, 404.0), Palette.SUNNY if i == 0 else Palette.SKY, 19, INK, qk)
+	t = real_t - (hold - 2.0)
 	var head_k := _elastic(_k(2.2, 3.1))
 	if head_k > 0.01:
 		_push(_about(Vector2(HEAD_C.x, 424), 0.0, Vector2(head_k, head_k)))
@@ -215,6 +224,7 @@ func _set_meet() -> void:
 	_pointer_label("her LEFT\ncochlea", Vector2(788, 176), LEFTY_AT + Vector2(34, -70), Palette.LEFT_BLUE, _pop(3.9))
 	_chip("She faces you: her right is on YOUR left", CALLOUT_AT, Palette.PAPER, 17, INK, _pop(4.8))
 	_hoot(HOOT_AT, 40.0, {"pop": _pop(4.2), "mood": &"wave"})
+	t = real_t
 	_curtains(_ease_out(_k(0.1, 1.2)))
 
 
@@ -1657,9 +1667,10 @@ func _title_card(k: float, rot: float) -> void:
 
 
 func _scene_chip() -> void:
-	if scene_title == "" or (set_id == &"meet" and t < 2.4):
+	var card_end := float(params.get("card_hold", 2.0)) + 0.4
+	if scene_title == "" or (set_id == &"meet" and t < card_end):
 		return
-	var k := _pop(0.35 if set_id != &"meet" else 2.4, 0.4)
+	var k := _pop(0.35 if set_id != &"meet" else card_end, 0.4)
 	if k <= 0.01:
 		return
 	var f := UiKit.font(700)

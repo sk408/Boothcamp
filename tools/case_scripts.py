@@ -42,7 +42,9 @@ TYMP_ADULT_ECV_MAX = rules_number(r"const TYMP_ADULT_ECV := Vector2\([\d.]+, ([\
 def runner_line(name):
     """One of level_case.gd's own Hoot lines (const NAME := "..."), so this page stays in step."""
     m = re.search(r'const %s := "([^"]*)"' % name, RUNNER.read_text(encoding="utf-8"))
-    return m.group(1) if m else "?"
+    if not m:
+        sys.exit(f"case_scripts.py: const {name} not found in {RUNNER}")
+    return m.group(1)
 
 
 def tymp_desc(t):
@@ -162,7 +164,7 @@ def render(c):
     out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no "
                f"ear needed masked air: **Hoot:** {runner_line('NO_MASKED_AIR')}")
     out.append("")
-    out.append("After the tests (said when the measured bone ear agrees with the case; "
+    out.append("After the tests (said when every ear with bone agrees with the case; "
                "otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):")
     out.append("")
     script(c.get("after_audiometry", []), out)

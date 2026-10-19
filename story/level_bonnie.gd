@@ -143,6 +143,9 @@ func _movie() -> void:
 		var c: int = await dialogue.choose("Hoot's masking movie again? Popcorn's on me!", opts, 1)
 		if c != 0:
 			return
+	else:
+		# (Steve) say what the movie is for before it starts
+		await _say("Hoot", "New trick today: MASKING. A quick cartoon first, then our next patient!")
 	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
 	add_child(player)
 	var r: Dictionary = await player.call("play", MOVIE_ID, "day_start")
@@ -481,9 +484,9 @@ func _ghost_demo() -> void:
 	var ub: Variant = ClinicRules.unmasked_bone(results, DEMO_FREQ)
 	var ubi := int(ub) if ub != null else lb
 	if ClinicRules.bc_masking_needed(a1, ubi):
-		await _say("Hoot", "Right air %d, unmasked bone %d: a gap over 10 dB. Any gap over 10? Mask the bone!" % [a1, ubi])
+		await _say("Hoot", "Right air %d, unmasked bone %d: a %d dB gap. Gap of 10 or more? Mask the bone!" % [a1, ubi, a1 - ubi])
 	else:
-		await _say("Hoot", "The rule: air more than 10 dB poorer than unmasked bone? Mask the bone!")
+		await _say("Hoot", "The rule: air 10 dB or more poorer than unmasked bone? Mask the bone!")
 	await _say("Hoot", "That's the Ghost's trick. Only masking the left ear can tell us the right cochlea's truth.")
 	hud.call("complete_step", &"bone")
 
