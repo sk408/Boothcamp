@@ -25,6 +25,15 @@ const KEYS := {
 	# word (present_tone), Up / Down set the level (louder / softer), S stores, M is speech noise.
 	"speech_correct": [KEY_RIGHT, KEY_KP_ADD, KEY_EQUAL],
 	"speech_incorrect": [KEY_LEFT, KEY_KP_SUBTRACT, KEY_MINUS],
+	# Speech, Days 4-5 (CONTRACTS.md §9.19): V = the word lens; 1-5 (and the keypad) flip a party
+	# sentence's key words, G = all got. Nothing is rebound: 6 and 8 stay the transducers.
+	"toggle_lens": [KEY_V],
+	"party_word_1": [KEY_1, KEY_KP_1],
+	"party_word_2": [KEY_2, KEY_KP_2],
+	"party_word_3": [KEY_3, KEY_KP_3],
+	"party_word_4": [KEY_4, KEY_KP_4],
+	"party_word_5": [KEY_5, KEY_KP_5],
+	"party_all_got": [KEY_G],
 	"advance_dialogue": [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER],
 	"pause": [KEY_ESCAPE, KEY_P],
 }
