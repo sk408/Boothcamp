@@ -10,6 +10,9 @@ extends CanvasLayer
 ## and a "Next day" button (key N, returns "next") once the next chapter is open.
 ## (Speech) On a speech day (audiometry results with "speech", CONTRACTS.md §9.5) column 2 is the
 ## word golf card instead: per ear the stored SRT, the PTA, the agreement chip and words vs par.
+## (Days 4-5) A summary may bring its day's "weather" line, "subheads" (by grade) and "sports_script"
+## (a script path whose build(c2, audiometry, summary) fills column 2), so this file serves every
+## speech day unchanged (CONTRACTS.md §9.10.7, D8).
 
 signal _continued
 
@@ -343,7 +346,9 @@ func _build(s: Dictionary) -> void:
 	l1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(l1)
 	var aud0: Dictionary = s.get("audiometry", {})
-	top.add_child(UiKit.label("Weather: scattered spondees, clearing later" if _is_speech(aud0) else "Weather: 100% chance of beeps", 14, Palette.INK_SOFT, 600))
+	# (Days 4-5) D8: a day may bring its own weather line in the summary
+	var weather := "Weather: scattered spondees, clearing later" if _is_speech(aud0) else "Weather: 100% chance of beeps"
+	top.add_child(UiKit.label(String(s.get("weather", weather)), 14, Palette.INK_SOFT, 600))
 	var mast := UiKit.label("THE DAILY DECIBEL", 58, Palette.INK, 700)
 	mast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(mast)
@@ -418,7 +423,13 @@ func _build(s: Dictionary) -> void:
 	c2.add_theme_constant_override("separation", 4)
 	cols.add_child(c2)
 	var aud: Dictionary = s.get("audiometry", {})
-	if _is_speech(aud):
+	var sports := String(s.get("sports_script", ""))
+	if sports != "" and not ResourceLoader.exists(sports):
+		push_warning("DailyDecibel: no sports script " + sports)
+	if sports != "" and ResourceLoader.exists(sports):
+		# (Days 4-5) D8: the day's own sports column (a script with build(c2, audiometry, summary))
+		(load(sports) as GDScript).new().call("build", c2, aud, s)
+	elif _is_speech(aud):
 		_speech_column(c2, aud["speech"] as Dictionary)
 	else:
 		c2.add_child(UiKit.label("SPORTS: THE BEEP GOLF CARD", 16, Palette.INK, 700))
@@ -704,12 +715,17 @@ func _golf_card(res: Dictionary) -> Control:
 
 # ---------------------------------------------------------------- (Speech) the word golf card
 
-## A speech day: the results carry stored speech sheets (§9.5).
+## A speech day: the results carry stored speech sheets (§9.5): an SRT, (Days 4-5) a word list or a
+## party list.
 static func _is_speech(aud: Dictionary) -> bool:
 	var sp: Variant = aud.get("speech", {})
 	if not (sp is Dictionary):
 		return false
-	return not ((sp as Dictionary).get("srt", {}) as Dictionary).is_empty()
+	for t: String in ["srt", "wrs", "sin"]:
+		var per: Variant = (sp as Dictionary).get(t, {})
+		if per is Dictionary and not (per as Dictionary).is_empty():
+			return true
+	return false
 
 
 func _speech_column(c2: VBoxContainer, sp: Dictionary) -> void:
