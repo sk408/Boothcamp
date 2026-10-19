@@ -32,10 +32,10 @@
 		], "note": "Aids 8 years old, maxed out and whistling"},
 		"hardest": {"say": [
 			"Dinner parties. And the opera! I hear every violin, but the singers' words just melt.",
-			"My grandson might as well be mumbling in Latin."
-		], "note": "Words melt at dinners and the opera"}
+			"And on the telephone, my grandson might as well be mumbling in Latin."
+		], "note": "Trouble: dinner parties, opera words, phone"}
 	},
-	"key_questions": ["red_flags", "onset", "which_ear", "aids"],
+	"key_questions": ["red_flags", "onset", "which_ear", "aids", "hardest"],
 	"otoscopy": {
 		"canal": "narrow",
 		"right": {"view": "clear", "caption": "Viola's RIGHT ear: a narrow little canal, clean, with a pearly eardrum at the end."},
@@ -66,7 +66,8 @@
 	"debrief": [
 		["Hoot", "A bigger loss isn't a red flag. Slow, matching, no gap, no red flags: that's a fit."],
 		["Hoot", "Eight-year-old aids wear out, and hearing drifts. New ones get checked in her ear with a tiny mic."],
-		["Hoot", "Honest goals: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check."]
+		["Hoot", "Dinner parties, the opera, the phone: those are Viola's goals. We check each at her tune-up."],
+		["Hoot", "Be honest: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check."]
 	],
 	"goodbye": [
 		{"do": "hearing_aids"},

@@ -38,10 +38,11 @@
 		"aids": {"say": "Hearing aids? I'm nineteen! ...Wait. Is that a thing at nineteen?", "note": "Never worn hearing aids"},
 		"hardest": {"say": [
 			"Lectures. If the prof's on my left, I'm toast.",
-			"And at the park my mates shout tricks at me. From the left, I miss the lot."
-		], "note": "Misses talk from the left side"}
+			"At the skatepark my mates shout tricks at me. From the left, I miss the lot.",
+			"On the bus too. If they sit on my left, I just nod along."
+		], "note": "Trouble: lectures, the skatepark, the bus"}
 	},
-	"key_questions": ["red_flags", "which_ear", "onset", "ear_history"],
+	"key_questions": ["red_flags", "which_ear", "onset", "ear_history", "hardest"],
 	"otoscopy": {
 		"canal": "average-sized",
 		"right": {"view": "clear", "caption": "Skyler's RIGHT ear: a clean canal and a shiny, pearly eardrum. All good."},

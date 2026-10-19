@@ -60,7 +60,7 @@ const TOPICS: Dictionary = {
 	"which_ear": "which ear is better", "onset": "how it started", "ringing": "ringing",
 	"red_flags": "pain, drainage and dizziness", "noise": "loud noise", "ear_history": "ear infections and injuries",
 	"family": "family hearing loss", "health": "health and medicines", "aids": "hearing aids before",
-	"hardest": "where hearing is hardest",
+	"hardest": "daily trouble spots",
 }
 
 var case_id := ""

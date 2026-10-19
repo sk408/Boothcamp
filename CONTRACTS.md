@@ -1541,6 +1541,7 @@ view off and the music back; the next test re-registers it. It is freed when the
 **Anchors.** `freestyle_chart` (the chart card).
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
-agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, the tymp tip
+agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in
+asks where they have trouble hearing (and a FIT's debrief turns those places into goals), the tymp tip
 matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
 screen, an unmasked gap is never an accepted chart type, and the title's menu ends above the footer.

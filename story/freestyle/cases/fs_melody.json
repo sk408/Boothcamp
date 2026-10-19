@@ -39,10 +39,11 @@
 		"aids": {"say": "Never. Until two days ago I had perfect ears. Nearly perfect pitch, too.", "note": "Never worn hearing aids"},
 		"hardest": {"say": [
 			"Choir practice. I can't tell where the altos are any more.",
-			"And the piano sounds a bit sour on my right side. For a music teacher, that's a nightmare."
-		], "note": "Can't place voices; piano sounds off on right"}
+			"And the piano sounds a bit sour on my right side. For a music teacher, that's a nightmare.",
+			"The phone too. Since it happened, I've switched it to my left ear."
+		], "note": "Trouble: choir, piano sour on right, phone"}
 	},
-	"key_questions": ["red_flags", "onset", "which_ear", "ringing"],
+	"key_questions": ["red_flags", "onset", "which_ear", "ringing", "hardest"],
 	"otoscopy": {
 		"canal": "narrow",
 		"right": {"view": "clear", "caption": "Melody's RIGHT ear: a narrow, clean canal and a shiny, healthy eardrum. No wax, no fluid in sight."},
