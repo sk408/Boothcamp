@@ -114,8 +114,9 @@ reported sudden loss still goes to a doctor before any hearing aid.
 
 ## 4. WRS: word recognition score (Day 4)
 
-One-syllable words at a **comfortably loud** level. The score is the percentage repeated correctly: when speech
-is loud enough, how clearly does it come through?
+One-syllable words at a level **loud enough for every sound, never uncomfortable** (the game's rule: PTA + 35, at
+least 55). The score is the percentage repeated correctly: when speech is loud enough, how clearly does it come
+through?
 
 | Rule | Value | Constant / function |
 |---|---|---|
@@ -124,10 +125,11 @@ is loud enough, how clearly does it come through?
 | List | 25 words, each worth 4 % | `WRS_WORDS` 25 |
 | Scoring | whole word only; a rhyme ("heap" for "sheep") is wrong | `SpeechSession.score` |
 | Bands | 90+ excellent, 78-89 good, 66-77 fair, 54-65 poor, below 54 very poor | `WRS_BANDS`, `wrs_band` |
-| Ear difference | 20 % or more between ears is a red flag | `WRS_ASYMMETRY_PCT` 20 |
-| Worse than the audiogram predicts | below the minimum the PTA predicts (PTA 25 or less: 88; 40: 76; 55: 64; 70: 48) | `WRS_PREDICTED_MIN`, `wrs_below_predicted` |
-| Rollover | 20 dB louder scores 20 points or more lower (rollover index 0.25 or more) | `ROLLOVER_STEP_DB` 20, `ROLLOVER_DROP_PCT` 20, `rollover_index` |
-| Speech masking | as SRT (level - 40 reaches the other ear's bone: speech noise at level - 20 plus that ear's largest air-bone gap) | `speech_masking_needed`, `speech_mask_level` |
+| Ear difference | the two ears' best scores differ by more than chance: the 95 % critical difference for the list length (arcsine-transformed, Thornton & Raffin 1978). On 25 words a 44 % score is the same as 20-68 %; 96 vs 52 differ, 96 vs 88 do not | `WRS_CRIT_Z` 1.96, `wrs_differ`, `wrs_same_range` (Day 3's fixed `WRS_ASYMMETRY_PCT` 20 is no longer used) |
+| Worse than the audiogram predicts | the ear's best score is below the minimum its PTA predicts, interpolated between the rows PTA 0: 88, 20: 80, 30: 72, 40: 60, 50: 48, 60: 36, 70: 24, 80: 12 (a game approximation of the published 95 % lower limits; Steve checks it). Lines say "her tones predict at least {min}%" | `WRS_PREDICTED_MIN_25`, `wrs_predicted_min_interp` (the old step table `WRS_PREDICTED_MIN` is no longer used) |
+| Rollover | PBmax is the best score, PBmin the lowest score at a level ABOVE PBmax's; rollover when the index (PBmax - PBmin) / PBmax is 0.45 or more (a lower score at a softer level never counts) | `ROLLOVER_INDEX_CUTOFF` 0.45, `wrs_rollover`, `rollover_index_of` (Day 3's `is_rollover` and `rollover_index` are no longer used) |
+| The louder list | 20 dB above the comfortable list (15-25 accepted), never past 100 | `WRS_LOUDER_DB` 20, `wrs_louder_level`, `wrs_louder_ok` |
+| Speech masking | needed when the level - 40 (phones) reaches the other ear's best bone, taken per frequency over 500-4000 Hz (masked bone, else unmasked bone, else air). Noise at level - 20 plus that ear's largest air-bone gap, clamped to [level - IA, the test ear's best bone + IA - 5] so it never crosses back | `nontest_best_bone`, `ear_best_bone`, `wrs_mask_level`, `wrs_mask_capped` |
 
 **The patient model.** At level L, an ear repeats a fraction `p(L) = wrs_max x A(L) - rollover(L)` of the words:
 `A(L) = logistic((L - (SRT_true + 12)) / 5)` (audibility of the whole word), `wrs_max` from `speech.wrs_max[ear]`
