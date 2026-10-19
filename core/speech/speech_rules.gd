@@ -499,3 +499,13 @@ static func estimated_snr_loss(thresholds: Dictionary) -> float:
 static func sin_expected_words(snr: float, loss: float) -> float:
 	var snr50 := SIN_NORMAL_SNR50_DB + loss
 	return float(SIN_KEY_WORDS) / (1.0 + exp(-(snr - snr50) / SIN_SLOPE_DB))
+
+# ---------------------------------------------------------------- lists (Days 4-5)
+# Golf on a fixed list (word lists and party lists, CONTRACTS.md §9.15, D19). Each player list is a
+# hole: golf_strokes = golf_par + slips - tee_bonus. Both test modes read these.
+
+## Strokes off a solo list whose set-up the player made unprompted (the textbook level, and noise
+## exactly when needed): the only way a clean list becomes a birdie.
+const LIST_TEE_BONUS := 2
+## Slips added when the player confirms a wrong set-up ("test at this level anyway").
+const LIST_CONFIRM_SLIP := 3
