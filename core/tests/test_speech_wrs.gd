@@ -3,6 +3,15 @@ extends TestCase
 ## the WRS rules, the four word lists and their originality guard, and the word model (WrsModel).
 ## Nora's numbers are CHAPTER4 §2's; where an amendment changed a pinned number, the test says so.
 ## Random tests use fixed seeds (SpeechSim.new(profile, seed)), so a failure replays.
+## Word list 1 is CHAPTER4 §6's table (the targets, in order).
+const LIST_1: PackedStringArray = ["sock", "sand", "price", "fox", "leaf", "thorn", "booth", "tub", "night", "cork",
+	"hike", "shore", "chess", "zone", "van", "pear", "bunch", "dice", "gate", "mug", "nose", "lamb", "rope", "wave",
+	"hut"]
+## Words no list may hold: scary, medical, rude or alcohol (CHAPTER4 §6); the last row also bars foils.
+const BANNED_TARGETS: PackedStringArray = ["lump", "pain", "scan", "pill", "drug", "blood", "dead", "death", "kill",
+	"gun", "bomb", "grave", "tomb", "skull", "ghost", "germ", "sick", "cough", "flu", "cut"]
+const BANNED_ANYWHERE: PackedStringArray = ["booze", "beer", "wine", "pub", "keg", "gin", "rum", "knob", "bum", "poo",
+	"hell", "damn", "crap", "weed", "dope"]
 
 
 ## Nora (CHAPTER4 §2): core/patients/nora.tres once it exists, else the same truth built here.
@@ -248,3 +257,177 @@ func test_referral() -> void:
 	assert_eq(SpeechRules.wrs_referral(false, true, true, false), &"", "below in both, nothing else: no referral")
 	assert_eq(SpeechRules.wrs_referral(false, false, false, false), &"")
 	assert_eq(SpeechRules.wrs_referral(true, true, true, true), &"refer")
+
+
+# ---------------------------------------------------------------- material
+
+func test_four_lists_of_25() -> void:
+	var ids := {}
+	var seen := {}
+	for n in SpeechRules.WRS_LISTS.size():
+		var id := SpeechRules.WRS_LISTS[n]
+		var list := SpeechMaterial.load_list(id)
+		assert_eq(SpeechMaterial.validate(list), PackedStringArray(), id)
+		assert_eq(String(list.get("title", "")), "Word list %d" % (n + 1))
+		assert_eq(SpeechMaterial.kind(id), &"monosyllable")
+		assert_true(bool(list.get("original", false)), id)
+		var its := SpeechMaterial.items(id)
+		assert_eq(its.size(), SpeechRules.WRS_WORDS, id)
+		var mix := {}
+		var targets := {}
+		for it: Dictionary in its:
+			targets[String(it["text"]).to_lower()] = true
+		for i in its.size():
+			var it: Dictionary = its[i]
+			var iid := String(it["id"])
+			var word := String(it["text"])
+			assert_eq(iid, "w%d_%02d" % [n + 1, i + 1], "ids in order")
+			assert_false(ids.has(iid), "unique id " + iid)
+			ids[iid] = true
+			assert_false(seen.has(word.to_lower()), "%s is in two lists" % word)
+			seen[word.to_lower()] = id
+			assert_false(word.contains(" "), "one word: " + word)
+			var key := String(it["key_sound"])
+			mix[key] = int(mix.get(key, 0)) + 1
+			# chunks: required for word lists; they spell the word, with one carrying the key sound
+			assert_true(it.has("chunks"), "%s has chunks" % word)
+			var spelled := ""
+			var carries := false
+			for c: Array in it.get("chunks", []):
+				spelled += String(c[0])
+				carries = carries or String(c[1]) == key
+			assert_eq(spelled, word, "%s's chunks" % word)
+			assert_true(carries, "%s: a chunk carries %s" % [word, key])
+			# foils: 3 or more distinct rhymes, never the word, never a target of this list
+			var foils: Array = it["foils"]
+			assert_true(foils.size() >= 3, word)
+			var fs := {}
+			for f: Variant in foils:
+				var fl := String(f).to_lower()
+				assert_false(fs.has(fl), "%s: foil %s twice" % [word, f])
+				fs[fl] = true
+				assert_ne(fl, word.to_lower())
+				assert_false(targets.has(fl), "%s: foil %s is a target of %s" % [word, f, id])
+			if it.has("plural"):
+				var pl := String(it["plural"]).to_lower()
+				assert_false(pl == word.to_lower() or fs.has(pl), "%s: plural %s" % [word, pl])
+		assert_eq(mix, SpeechRules.WRS_KEY_MIX, "%s keeps the key-sound mix" % id)
+	assert_eq(seen.size(), 100, "100 different target words")
+
+
+## Word list 1 is CHAPTER4 §6's table; the faint f and th come early (the coached right ear).
+func test_word_list_1_is_the_design() -> void:
+	var words := PackedStringArray()
+	for it: Dictionary in SpeechMaterial.items("words_1"):
+		words.append(String(it["text"]))
+	assert_eq(words, LIST_1)
+	var fox := SpeechMaterial.item("words_1", "w1_04")
+	assert_eq(String(fox["text"]), "fox", "Call it #1 on her right")
+	# fox has a lost chunk on her right at 55: the faint-letter Call it has a word to land on
+	assert_true(SpeechRules.word_min_margin(fox, 55.0, _octaves("right")) < 0.0)
+
+
+## The audible-word rule (CHAPTER4 §6): Lists 2 and 3 each have at least two words in places 2-6
+## whose every sound reaches Nora's left (her octaves) at 70, 75 and 80 dB, built only from sounds
+## that clear 8 dB at 70 so Hoot's 5 dB wobble keeps them audible.
+func test_audible_word_rule() -> void:
+	var left := _octaves("left")
+	for id: String in ["words_2", "words_3"]:
+		var its := SpeechMaterial.items(id)
+		for level in [70, 75, 80]:
+			var n := 0
+			var robust := 0
+			for i in range(1, 6):
+				if SpeechRules.word_fully_audible(its[i], float(level), left):
+					n += 1
+					if level == 70 and SpeechRules.word_min_margin(its[i], 70.0, left) >= 8.0:
+						robust += 1
+			assert_true(n >= 2, "%s at %d: %d audible words in places 2-6" % [id, level, n])
+			if level == 70:
+				assert_true(robust >= 2, "%s: %d words clear 8 dB at 70" % [id, robust])
+
+
+## The two in-jokes (CHAPTER4 §6): "bike" in places 1-8 of List 2 with "Mike", "hook" in places 1-5
+## of List 3 with exactly Hoot, hoof and hood (its last sound changes, never its first: the
+## first-sound rhymes of "hook" are a published rhyme set).
+func test_asides() -> void:
+	var bike := {}
+	var its := SpeechMaterial.items("words_2")
+	for i in 8:
+		if String(its[i]["text"]) == "bike":
+			bike = its[i]
+	assert_false(bike.is_empty(), "bike in places 1-8 of Word list 2")
+	assert_has(bike["foils"], "Mike")
+	assert_eq(String((bike["asides"] as Dictionary).get("mike", "")), "Mike? He's in the break room. With donuts.")
+	var hook := {}
+	its = SpeechMaterial.items("words_3")
+	for i in 5:
+		if String(its[i]["text"]) == "hook":
+			hook = its[i]
+	assert_false(hook.is_empty(), "hook in places 1-5 of Word list 3")
+	assert_eq(hook["foils"], ["Hoot", "hoof", "hood"], "hook's foils keep its first sound")
+	for f: Variant in hook["foils"]:
+		assert_true(String(f).to_lower().begins_with("hoo"), String(f))
+	assert_eq(String((hook["asides"] as Dictionary).get("hoot", "")), "Present!")
+	# every aside is a short side line, keyed by one of its own foils
+	for id: String in SpeechRules.WRS_LISTS:
+		for it: Dictionary in SpeechMaterial.items(id):
+			for k: Variant in it.get("asides", {}):
+				var line := String(it["asides"][k])
+				assert_true(line.split(" ", false).size() <= Hoot.MAX_WORDS, line)
+				assert_false(line.contains("{"), line)
+
+
+func test_content_rules() -> void:
+	for id: String in SpeechRules.WRS_LISTS:
+		for it: Dictionary in SpeechMaterial.items(id):
+			var word := String(it["text"]).to_lower()
+			assert_false(BANNED_TARGETS.has(word) or BANNED_ANYWHERE.has(word), "%s: %s" % [id, word])
+			for f: Variant in it["foils"]:
+				assert_false(BANNED_ANYWHERE.has(String(f).to_lower()), "%s: %s's foil %s" % [id, word, f])
+			assert_false(BANNED_ANYWHERE.has(String(it.get("plural", "")).to_lower()))
+
+
+## The originality guard (CONTRACTS.md §9.11.1, as amended on 2026-10-19). It checks only our own
+## material: the repo never holds a published test's words, so nothing here compares with one. Every
+## list says it was written fresh for the game and names the published tests it must not copy; no
+## target repeats within or across the lists (test_four_lists_of_25); no target is its own foil or a
+## foil of its own list; and no two items share more than two words of their rhyme sets (the target
+## and its foils), so no set is reused with a word swapped.
+func test_originality_guard() -> void:
+	var sets: Array = []
+	for id: String in SpeechRules.WRS_LISTS:
+		var note := String(SpeechMaterial.load_list(id).get("note", ""))
+		assert_true(note.begins_with("Written fresh for Booth Camp"), id + ": " + note)
+		for name: String in ["NU-6", "W-22", "CID W-1", "PB-50", "Boothroyd", "NU-CHIPS", "WIPI", "Modified Rhyme Test"]:
+			assert_has(note, name, "%s names %s" % [id, name])
+		var targets := {}
+		for it: Dictionary in SpeechMaterial.items(id):
+			targets[String(it["text"]).to_lower()] = true
+		for it: Dictionary in SpeechMaterial.items(id):
+			var word := String(it["text"]).to_lower()
+			var set := {word: true}
+			for f: Variant in it["foils"]:
+				var fl := String(f).to_lower()
+				assert_ne(fl, word, "%s is its own foil" % word)
+				assert_false(targets.has(fl), "%s: foil %s is a target of %s" % [word, fl, id])
+				assert_false(fl.contains(" "), "%s: one-word foils (%s)" % [word, fl])
+				set[fl] = true
+			assert_eq(set.size(), 1 + (it["foils"] as Array).size(), "%s: distinct foils" % word)
+			sets.append([String(it["id"]), set])
+	assert_eq(sets.size(), 4 * SpeechRules.WRS_WORDS)
+	for a in sets.size():
+		for b in range(a + 1, sets.size()):
+			var shared := _shared_words(sets[a][1], sets[b][1])
+			assert_true(shared <= 2, "%s and %s share %d rhyme words" % [sets[a][0], sets[b][0], shared])
+	# the check catches a reused set (two made-up sets with one word swapped)
+	assert_eq(_shared_words({"moon": true, "noon": true, "soon": true, "loon": true},
+		{"spoon": true, "noon": true, "soon": true, "loon": true}), 3)
+
+
+static func _shared_words(a: Dictionary, b: Dictionary) -> int:
+	var n := 0
+	for w: Variant in a:
+		if b.has(w):
+			n += 1
+	return n

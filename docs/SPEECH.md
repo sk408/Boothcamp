@@ -20,7 +20,11 @@ copy. These are teaching defaults: Steve reviews every number before release. Th
   order or recording is copied; every word is checked against ASHA (1988) Appendices A-C and CID W-1. The guard
   in `core/tests/test_speech_core.gd` holds those four published spondee lists whole (ASHA Appendix A Table 1, B
   and C, and CID W-1) and fails on any match in any material list, ignoring case, spaces and hyphens. No CID W-22,
-  NU-6, AB, BKB, HINT, IEEE or QuickSIN list, order or recording is used either. The in-game test names are
+  NU-6, AB, BKB, HINT, IEEE or QuickSIN list, order or recording is used either. Word lists 1-4 (Day 4) were
+  written fresh for the game: no word list, order or rhyme set comes from NU-6, W-22, CID W-1, PB-50, AB /
+  Boothroyd, NU-CHIPS, WIPI or the Modified Rhyme Test, and their guard (`core/tests/test_speech_wrs.gd`) checks
+  only our own lists (no repeats within or across lists, no reused rhyme set, the banned words, the structure of
+  `CONTRACTS.md` §9.11). The repo never holds a published word list to compare with. The in-game test names are
   "Spondee list A", "Word list 1-4" and the "Party Noise Test"; real test names only appear in an educational
   "in real clinics" line, if ever.
 - **Text first, audio later.** Every item plays as on-screen text: the clinician's word card shows the target,
