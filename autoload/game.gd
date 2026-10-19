@@ -168,8 +168,13 @@ func _input(event: InputEvent) -> void:
 
 ## Windowed start: about 85% of the usable screen at 16:9 (a 1280x720 window looks tiny on a
 ## 1440p or 4K desktop), centred. Never for headless, autoplay, shots or scene demos.
+## Never on the web either: the page owns the canvas size there, so a set window size only
+## shrinks the picture into the canvas's bottom-left corner (and moves every click) until the
+## browser window next changes size.
 func _fit_window() -> void:
 	if DisplayServer.get_name() == "headless" or is_autoplay() or cli.has("shots") or cli.has("scene") or cli.has("shot"):
+		return
+	if OS.has_feature("web"):
 		return
 	if bool(settings.get("fullscreen", false)) or DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
 		return
