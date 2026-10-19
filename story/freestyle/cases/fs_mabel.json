@@ -56,7 +56,7 @@
 		"options": [
 			["A slow, matching loss in both ears, and no red flags.", true, "Exactly! Gradual, even and safe to fit. That's the classic first fitting."],
 			["She's 74: everyone her age needs hearing aids.", false, "Age decides nothing. Plenty of 74-year-olds hear fine. Her chart and her history decide."],
-			["Bone matched air, so any inner-ear loss is safe to fit.", false, "No gap clears one red flag. But a sudden or one-sided inner-ear loss still needs a doctor."],
+			["Bone matched air, so any inner-ear loss is safe to fit.", false, "No gap clears one red flag. Sudden, or one ear worse for no known reason? Still a doctor."],
 			["Hearing aids will switch off her ringing.", false, "They often make ringing less noticeable, but no promises. She's fitted for her hearing."]
 		]
 	},

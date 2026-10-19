@@ -58,7 +58,7 @@
 		"prompt": "Why are new, stronger aids the right call for Viola?",
 		"options": [
 			["Slow and even in both ears, no gap, no red flags.", true, "Bravo! Size isn't a red flag. Slow, matching and inner ear means fit."],
-			["Bigger losses never need a doctor.", false, "Careful! Any size of loss needs a doctor if it's sudden, one-sided or painful. Hers isn't."],
+			["Bigger losses never need a doctor.", false, "Careful! Sudden, painful, or one ear worse for no known reason: any size needs a doctor. Hers isn't."],
 			["Stronger aids will make her hear like new.", false, "If only! New aids help a lot, but noisy rooms stay tricky. Set honest expectations."],
 			["Her aids are eight years old: reason enough.", false, "Old aids explain the visit, not the safety. The red-flag check makes it a fit."]
 		]

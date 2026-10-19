@@ -50,7 +50,7 @@
 		"fit": "Hearing aids for normal hearing? Every tone was 25 or better. They'd only make things louder.",
 		"refer": "Refer for what? Normal hearing, healthy eardrums, no red flags. No doctor needed.",
 		"today": "No emergency here: nothing sudden, no pain, and normal hearing in both ears.",
-		"clear": "Normal hearing in both ears! No aids needed. Distance and chatter are her trouble, not her ears."
+		"clear": "Normal hearing in both ears! No aids needed. Distance is her trouble at home, not her ears."
 	},
 	"why": {
 		"prompt": "Why does Penny need no hearing aids?",
@@ -82,7 +82,7 @@
 		},
 		"subheads": {
 			"S": "Normal hearing in both ears, no red flags. No hearing aids: just talk face to face.",
-			"A": "25 dB or better everywhere means normal. The fix is in the kitchen, not the ears.",
+			"A": "25 dB or better everywhere means normal. Talk face to face; test speech in noise.",
 			"B": "Normal hearing still needs a full check. Look, ask, then test.",
 			"C": "Normal means 25 dB or better at every pitch. Check every tone.",
 			"Do-over": "Penny will be back. So will her husband, mumbling."

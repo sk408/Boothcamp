@@ -7,7 +7,9 @@ extends RefCounted
 ##   const FsRules := preload("res://story/freestyle/fs_rules.gd")
 
 ## The calls, in the stamp tray's order. CaseRules.DECISIONS plus "clear": normal hearing in both
-## ears, no red flag: no hearing aids needed (counsel, retest if anything changes).
+## ears, no red flag: no hearing aids needed (counsel, retest if anything changes). One departure from
+## CaseRules' fit (Steve, 2026-10-19): a difference between the ears that a known cause explains, with
+## no other red flag, is a FIT with a yearly recheck (Buck).
 const DECISIONS: Array[StringName] = [&"fit", &"refer", &"today", &"clear"]
 ## What each rubber stamp says (the stamp buttons' text starts with this).
 const DECISION_STAMPS: Dictionary[StringName, String] = {

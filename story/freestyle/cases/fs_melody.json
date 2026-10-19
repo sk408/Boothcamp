@@ -67,7 +67,7 @@
 		"prompt": "Why does Melody see a doctor TODAY?",
 		"options": [
 			["It came on overnight, and her bone is down too.", true, "Right! Sudden, one ear, and deeper than wax or fluid: a doctor the same day."],
-			["Her right ear is much worse than her left.", false, "True, and that alone means refer. What makes it TODAY is how fast it came."],
+			["Her right ear is much worse than her left.", false, "True, and with no known cause that means refer. TODAY is about how fast it came."],
 			["Her full ear means fluid behind the eardrum.", false, "Her tymp was type A: no fluid. A full feeling often comes with a sudden loss."],
 			["Ringing in one ear is an emergency.", false, "One-sided ringing is a red flag, but alone it means refer. The sudden loss makes it today."]
 		]

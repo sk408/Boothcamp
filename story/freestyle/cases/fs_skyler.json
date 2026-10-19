@@ -73,7 +73,7 @@
 	"debrief": [
 		["Hoot", "Healed eardrum, floppy peak, big gap after a knock: that points to the hearing chain behind it."],
 		["Hoot", "The hearing chain: three tiny bones behind the eardrum. Masked bone was normal, so the inner ear's fine."],
-		["Hoot", "Often fixable, but the doctor decides. Red flags: blood, sudden change, one ear worse, that gap."]
+		["Hoot", "Often fixable, but the doctor decides. Red flags: blood, the knock, sudden change, that gap."]
 	],
 	"goodbye": [
 		{"do": "letter"},
