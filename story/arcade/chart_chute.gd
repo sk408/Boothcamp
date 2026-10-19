@@ -243,16 +243,16 @@ class CardView extends Control:
 			var x := inv * Vector2(ag.get_global_transform_with_canvas() * Vector2(ag.freq_to_x(8000), 0))
 			UiDraw.arrow(_over, Vector2(x.x, rr.position.y + rr.size.y * 0.35), 26.0, Vector2.UP, Palette.CORAL)
 		if ear_cue:
-			# the other ear has the shape that was picked: flash the tag and say which colour to sort
+			# the other ear has the shape that was picked: the tag flashes and says which colour to
+			# sort (drawn over the tag row, so the chart's frequency labels stay clear)
 			var tag := _tag_rect()
-			var on := steady or fmod(tell_t, 0.4) < 0.25
-			_over.draw_rect(tag.grow(5), Color(Palette.CORAL, 1.0 if on else 0.35), false, 5.0)
 			var sort_ear := String(card.get("sort_ear", "right"))
 			var say := "Other ear! Sort the %s" % ("RED O" if sort_ear == "right" else "BLUE X")
-			var sw := _font.get_string_size(say, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 26
-			var sat := Vector2(size.x - sw - 16, tag.end.y + 8)
-			UiDraw.rounded_rect(_over, Rect2(sat, Vector2(sw, 34)), Palette.CORAL, 17, 3, Palette.INK)
-			_over.draw_string(_font, sat + Vector2(13, 24), say, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.PAPER)
+			var sw := maxf(_font.get_string_size(say, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 28, tag.size.x)
+			var cue := Rect2(Vector2(tag.end.x - sw, tag.position.y), Vector2(sw, tag.size.y))
+			var on := steady or fmod(tell_t, 0.5) < 0.3
+			UiDraw.rounded_rect(_over, cue, Palette.CORAL if on else Palette.ear_color(sort_ear), 19, 3, Palette.INK)
+			_over.draw_string(_font, cue.position + Vector2(14, 26), say, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.PAPER)
 
 
 ## One chute: its picture and word, its key, locked until its time, and the gag when a chart lands.
@@ -411,6 +411,7 @@ func _process(delta: float) -> void:
 		if _t >= ChuteRules.RUN_S:
 			_t = ChuteRules.RUN_S
 			_phase = "tally"
+			_preview.queue_redraw()   # the NEXT card leaves the belt with the clock
 			if _waiting:
 				_sorted.emit(&"")
 		_refresh_locks()
@@ -442,11 +443,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_title_btn.pressed.emit()
 			get_viewport().set_input_as_handled()
 		return
-	if code >= KEY_1 and code <= KEY_4:
-		sort_into(ChartDeck.SHAPES[code - KEY_1])
+	var digit := code
+	if (digit < KEY_1 or digit > KEY_9) and (digit < KEY_KP_1 or digit > KEY_KP_9):
+		digit = k.physical_keycode   # AZERTY and friends: the digit row by position
+	if digit >= KEY_1 and digit <= KEY_4:
+		sort_into(ChartDeck.SHAPES[digit - KEY_1])
 		get_viewport().set_input_as_handled()
-	elif code >= KEY_KP_1 and code <= KEY_KP_4:
-		sort_into(ChartDeck.SHAPES[code - KEY_KP_1])
+	elif digit >= KEY_KP_1 and digit <= KEY_KP_4:
+		sort_into(ChartDeck.SHAPES[digit - KEY_KP_1])
 		get_viewport().set_input_as_handled()
 	elif code == KEY_H:
 		press_help()
@@ -579,6 +583,9 @@ func _meet_new_chute(s: StringName) -> void:
 ## One chart at the reading spot until it is sorted (or the clock runs out).
 func _serve(card: Dictionary, hint: bool) -> void:
 	_card = card
+	# a key kept from the last chart's drop, jam or help was meant for that chart, not this one
+	# (only a press while this chart lands carries over; a warm-up retry stays on its own chart)
+	_pending = &""
 	if _phase == "run":
 		_cards += 1
 	if not bool(card.get("golden", false)) and not (card.get("look", {}) as Dictionary).is_empty():
@@ -679,11 +686,13 @@ func _wrong_drop(view: CardView, card: Dictionary, pick: StringName) -> void:
 	tw.tween_property(view, "position", toward, 0.12).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(view, "position", home, 0.22).set_trans(Tween.TRANS_SINE if _reduced() else Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Juice.shake(chute, 6.0, 0.25)
-	# the banner sits left of the ear tag, so the tag (and the other-ear cue) stays readable
-	_flash_banner("JAM!", Palette.CORAL, 0.6, Vector2(CARD_RECT.position.x + 150, CARD_RECT.position.y + 8))
+	# stamped on the streak box (the streak just broke), clear of the chart, the name and the ear tag
+	_flash_banner("JAM!", Palette.CORAL, 0.6, Vector2(165, 326))
 	var other_ear := String(card["ear"]) == "both" and pick == StringName(card.get("other_shape", &""))
 	view.show_tell(shape, other_ear)
 	_chutes[shape].pulse = true   # where it should have gone
+	for s: StringName in _chutes:
+		_chutes[s].line_t = -1.0   # the last patient's line gives way to the tell
 	_shot_once("chute_jam_tell")
 	await get_tree().create_timer(ChuteRules.JAM_S, false).timeout
 	view.show_tell(&"")
@@ -753,6 +762,7 @@ func _tally() -> void:
 	_phase = "tally"
 	_waiting = false
 	_pending = &""
+	_preview.queue_redraw()
 	Hoot.clear()
 	Sfx.play(&"fanfare", 1.0, -4.0)
 	_flash_banner("TIME!", Palette.CORAL, 1.2)
@@ -1097,11 +1107,13 @@ func _story_line() -> String:
 	var line := "Story charts found: %d of %d" % [found.size(), total]
 	if _golden_seen != "":
 		line += "  (%s today!)" % _golden_seen
-	var waiting: PackedStringArray = []
+	var days_left: Array[int] = []
 	for s: StringName in ChartDeck.SHAPES:
 		var id := String(ChartDeck.GOLDEN[s]["patient"])
 		if not Game.is_chapter_done(id):
-			waiting.append(str(_day_of(id)))
+			days_left.append(_day_of(id))
+	days_left.sort()
+	var waiting := PackedStringArray(days_left.map(func(d: int) -> String: return str(d)))
 	if waiting.is_empty():
 		return line + "."
 	var days := ", ".join(waiting.slice(0, -1)) + " or " + waiting[-1] if waiting.size() > 1 else waiting[0]

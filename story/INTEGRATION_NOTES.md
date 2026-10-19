@@ -215,6 +215,16 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Changes to sh
   - `ClinicRules.classify_shape`, `combo_multiplier`, `required_interoctaves` and `clamp_db`.
   - The Audiogram and `CasePortraits.register` (for the belt's made-up patients).
   - `Game.load_patient` for the story charts of Gus, Rocco, Ginger and Marina.
+- **Audiogram `dim` fix (shared file, a bug fix).** `ui/audiogram/audiogram.gd` documents `dim` as fading an ear's
+  marks, but it only faded the symbols: the pen lines and the stamp splats stayed full strength. Both now multiply by
+  the same fade (two lines). `case_board.gd` and `day2_board.gd` use `dim` too; their dimmed ear now looks dimmed all
+  the way through, which is what their comments already describe.
+- **Story charts need their Day.** `ChartDeck.golden_pool()` reads `Game.is_chapter_done()`: Gus, Rocco, Ginger and
+  Marina's own charts only ride the belt once Days 1, 6, 9 and 7 are finished, so the arcade never shows a Day's
+  pattern (or Marina's clue) first.
+- **Wide and tall windows.** The scene keeps its 1280x720 playfield centred with `get_viewport_rect()` and the
+  `size_changed` signal (the desktop stretch aspect is `expand`); the wall, floor, top band and belt fill the rest.
+  The web build's `keep` aspect needs nothing extra.
 - **Engine gotcha.** A typed dictionary const such as `Dictionary[StringName, PackedStringArray]` keeps its array
   literals as plain Arrays. Indexing one through a `PackedStringArray` variable crashes Godot 4.7.2 (signal 11). For
   such tables, use an untyped `Dictionary` and read the values as `Array`.

@@ -10,6 +10,8 @@ extends Node
 ##   mouse    real clicks only: the chute, the initials' + button and OK, "Back to the title"
 ##   guess    a random open chute every time (real keys): far fewer points, never on the board
 ##   help     HOOT HELP every time (the H key): no points, no slips, no board
+##   slip     real keys; on each two-ear card, first the OTHER ear's shape (a JAM with the
+##            "Other ear!" cue, shot chute_jam_tell), then the right one when it comes back
 ## --via-title: start on the title and open the arcade from its Arcade button (a click with
 ## --policy=mouse, Down arrows and Enter otherwise), as a player would.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
@@ -70,6 +72,7 @@ class Driver extends Node:
 	var _clock := 0.0
 	var _done := false
 	var _mouse_pos := Vector2(640, 360)
+	var _slipped := {}   # card serials the slip bot already jammed
 
 	func _ready() -> void:
 		process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -174,6 +177,19 @@ class Driver extends Node:
 				await _key(KEY_1 + ChartDeck.SHAPES.find(ChartDeck.CHUTE_WORDS.find_key(w)))
 			"help":
 				await _key(KEY_H)
+			"slip":
+				var card: Dictionary = chute.get("_card") if is_instance_valid(chute) else {}
+				var other: StringName = card.get("other_shape", &"")
+				var serial := int(card.get("serial", -1))
+				if String(card.get("ear", "")) == "both" and other != &"" and not _slipped.has(serial) and (info["options"] as Array).has(ChartDeck.CHUTE_WORDS[other]):
+					var before := int(chute.get("_oops"))
+					await _key(KEY_1 + ChartDeck.SHAPES.find(other))
+					await _frames(2)
+					# a slip counts as planned unless the clock ran out under the key
+					if String(chute.get("_phase")) == "run" or int(chute.get("_oops")) > before:
+						_slipped[serial] = true
+				else:
+					await _key(KEY_1 + ChartDeck.SHAPES.find(shape))
 
 	func _initials(solver: Callable) -> void:
 		match policy:
@@ -212,6 +228,11 @@ class Driver extends Node:
 					problems.append("guessing was %.0f%% accurate" % (float(st.get("accuracy", 0.0)) * 100.0))
 				if on_board:
 					problems.append("a guessing run reached the high-score board")
+			"slip":
+				if oops == 0:
+					problems.append("the slip bot never jammed a two-ear card")
+				if oops != _slipped.size():
+					problems.append("%d slips for %d planned (a key landed on the wrong chart?)" % [oops, _slipped.size()])
 			"help":
 				if right != 0 or oops != 0 or int(st.get("score", -1)) != 0:
 					problems.append("HOOT HELP scored or slipped (%d right, %d oops)" % [right, oops])
