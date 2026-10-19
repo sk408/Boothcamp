@@ -5,12 +5,14 @@ extends Control
 ##   [GOT IT -> down 10]  [MISSED -> up 5]  [BRACKETED -> STORE]
 ## pulse(i) bounces one chip and keeps it lit. The screen lights the chip for the player's LAST
 ## score (never while a word waits for its score, so it cannot give the answer away).
+## (Days 4-5) set_specs(): a test mode's own three chips; the SRT's stay the default.
 
 const CHIP_GOT := 0
 const CHIP_MISSED := 1
 const CHIP_STORE := 2
 
 var _pulse: Array[float] = [0.0, 0.0, 0.0]
+var _specs: Array[Dictionary] = []
 var _lit := -1
 var _t := 0.0
 
@@ -25,6 +27,18 @@ func pulse(i: int) -> void:
 	if i != _lit:
 		_pulse[i] = 1.0
 	_lit = i
+	queue_redraw()
+
+
+## (Days 4-5) Three chips [{title, sub}] (optional color: Color; icon: &"check" / &"cross" /
+## &"stamp" / &"none"; the chip's own icon when left out). [] = the SRT's chips.
+func set_specs(specs: Array[Dictionary]) -> void:
+	if specs == _specs:
+		return
+	_specs.clear()
+	if specs.size() == 3:
+		for d: Dictionary in specs:
+			_specs.append(d.duplicate(true))
 	queue_redraw()
 
 
@@ -56,6 +70,10 @@ func _draw() -> void:
 		["MISSED", "up 5", Palette.SUNNY],
 		["BRACKETED", "STORE", Palette.MINT],
 	]
+	var custom := _specs.size() == 3
+	if custom:
+		for i in 3:
+			specs[i] = [String(_specs[i].get("title", "")), String(_specs[i].get("sub", "")), _specs[i].get("color", specs[i][2])]
 	for i in 3:
 		var spec: Array = specs[i]
 		var cell := Rect2(Vector2(pad + i * (w + gap), pad), Vector2(w, h))
@@ -70,7 +88,9 @@ func _draw() -> void:
 			Palette.SELECT_ORANGE if on else Color(Palette.LCD_DIM, 0.9))
 		var ic := Vector2(rc.position.x + 13.0, rc.get_center().y)
 		var col: Color = spec[2]
-		match i:
+		var icon := StringName(String(_specs[i].get("icon", ""))) if custom else &""
+		var which := i if icon == &"" else int({&"check": CHIP_GOT, &"cross": CHIP_MISSED, &"stamp": CHIP_STORE}.get(icon, -1))
+		match which:
 			CHIP_GOT:
 				draw_circle(ic, 7.0, Palette.MINT)
 				UiDraw.check(self, ic + Vector2(0, 1), 8.0, Palette.INK, 2.2)
@@ -88,6 +108,9 @@ func _draw() -> void:
 		var by := rc.position.y + rc.size.y * 0.72
 		var bw := AoDraw.text_size(bottom, 14, AoDraw.FONT_BOLD).x
 		var bx := tx + tw * 0.5 - (bw + 14.0) * 0.5
+		if custom:
+			AoDraw.text_c(self, Vector2(tx + tw * 0.5, by), bottom, 14, col, AoDraw.FONT_BOLD)
+			continue
 		match i:
 			CHIP_GOT:
 				UiDraw.triangle(self, Vector2(bx + 5.0, by + 1.0), 9.0, false, col)
