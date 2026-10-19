@@ -436,6 +436,35 @@ static func predicted_wrs_max(thresholds: Dictionary) -> int:
 			lost += clampf(-m / 15.0, 0.0, 1.0)
 	return clampi(int(round(100.0 - lost * 4.0)), 30, 100)
 
+
+## (Days 4-5) One ear's best bone per frequency over SPEECH_ABG_FREQS (D17): masked bone, else
+## unmasked bone, else air (masked air where measured). {freq: dB}; a frequency with nothing
+## measured is left out. The WRS noise rules read it: nontest_best_bone() for "is noise needed" and
+## its lowest value on the test ear for the noise ceiling.
+static func ear_best_bone(tone_results: Dictionary, ear: String) -> Dictionary:
+	var masked := ClinicRules.sheet_thresholds(tone_results, ear, &"bc_masked")
+	var bone := ClinicRules.sheet_thresholds(tone_results, ear, &"bc")
+	var air := ClinicRules.best_thresholds(tone_results, ear, false)
+	var out := {}
+	for f: int in SPEECH_ABG_FREQS:
+		if masked.has(f):
+			out[f] = int(masked[f])
+		elif bone.has(f):
+			out[f] = int(bone[f])
+		elif air.has(f):
+			out[f] = int(air[f])
+	return out
+
+
+## (Days 4-5) The non-test ear's lowest best bone (D17): "is noise needed" for word lists (the SRT
+## keeps nontest_best_threshold). NAN when nothing was measured there.
+static func nontest_best_bone(tone_results: Dictionary, test_ear: String) -> float:
+	var best := INF
+	var t := ear_best_bone(tone_results, "left" if test_ear == "right" else "right")
+	for f: int in t:
+		best = minf(best, float(t[f]))
+	return best if best != INF else NAN
+
 # ---------------------------------------------------------------- Party Noise Test (Day 5)
 
 const SIN_LEVEL_DB := 70
