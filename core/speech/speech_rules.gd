@@ -538,3 +538,222 @@ static func sin_expected_words(snr: float, loss: float) -> float:
 const LIST_TEE_BONUS := 2
 ## Slips added when the player confirms a wrong set-up ("test at this level anyway").
 const LIST_CONFIRM_SLIP := 3
+
+# ---------------------------------------------------------------- party lists (Day 5)
+# The Party Noise Test as Day 5 runs it (CONTRACTS.md §9.11.2, §9.12.2, §9.14, §9.15.2; docs/CHAPTER5.md).
+# The SIN_* rules above are shared and stay as they were. SIN_BAND_TITLES and SIN_HELP are kept for
+# them, but no Day 5 file reads them (a test): Day 5 prints SIN_BAND_NAMES and SIN_REMEDIES.
+
+## Party lists 1-6, in play order: unaided 1-2, programme A 3-4, programme B 5-6.
+const SIN_LISTS: Array[String] = ["party_1", "party_2", "party_3", "party_4", "party_5", "party_6"]
+## The practice sentence (one item, never scored or stored) and the SNR it plays at.
+const SIN_PRACTICE_LIST := "party_practice"
+const SIN_PRACTICE_SNR := 25
+## Lists averaged per condition: one list is a rough guess, two make it solid.
+const SIN_LISTS_PER_CONDITION := 2
+## Unaided under earphones; hearing aids on all-round microphones (OMNI); directional (FOCUS).
+const SIN_CONDITIONS: Array[StringName] = [&"unaided", &"omni", &"directional"]
+const SIN_CONDITION_TITLES: Dictionary[StringName, String] = {
+	&"unaided": "Unaided", &"omni": "OMNI", &"directional": "FOCUS",
+}
+## Every slot a party sheet can sit in (sin_slot), in the order results list them.
+const SIN_SLOTS: Array[String] = ["both", "right", "left", "aided_omni", "aided_directional"]
+## The course of each sentence, in SIN_SNRS order (Starter 25 dB ... Dessert 0 dB).
+const SIN_COURSES: Array[String] = ["Starter", "Soup", "Fish", "Main", "Cheese", "Dessert"]
+const SIN_AIDED_DB := 50     ## aided party tests in the sound field: about 65 dB SPL (check your calibration)
+## Band names and remedies in our own words (D22, amendment A7: 0-3 dB is normal or near-normal).
+## Lines print "{Band} SNR loss"; the receipt prints "{BAND} SNR LOSS". Unaided sheets only (D21).
+const SIN_BAND_NAMES: Dictionary[StringName, String] = {
+	&"normal": "Near-normal", &"mild": "Mild", &"moderate": "Moderate", &"severe": "Severe"}
+const SIN_REMEDIES: Dictionary[StringName, String] = {
+	&"normal": "good habits", &"mild": "if aids: standard settings",
+	&"moderate": "+ directional mics", &"severe": "+ a remote mic"}
+
+## The party model's misses (§9.12.2): a key word whose high, soft cue sits within SIN_PICK_WINDOW_DB
+## of threshold at the talker level is missed first; each such sound adds 1 to its weight, up to
+## SIN_PICK_CAP more.
+const SIN_PICK_WINDOW_DB := 15.0
+const SIN_PICK_CAP := 3
+## What a missed key word becomes: a mishear from the item, a filler ("something"), or nothing.
+const SIN_MISS_SHARES: Dictionary[StringName, float] = {&"mishear": 0.55, &"filler": 0.30, &"drop": 0.15}
+## One answer in five swaps a little word ("the" for "a"): little words never count.
+const SIN_LITTLE_SWAP_SHARE := 0.2
+## When the noise wins (count 0 and fewer than this many key words expected), half the answers are
+## one of the patient's lost lines.
+const SIN_LOST_EXPECTED := 0.25
+const SIN_LOST_SHARE := 0.5
+## The little words an answer may swap, and what each becomes. Never a key word.
+const SIN_LITTLE_WORDS: Dictionary[String, String] = {
+	"the": "a", "a": "the", "an": "the", "my": "the", "our": "the", "his": "the", "her": "the",
+	"on": "in", "in": "on",
+}
+## Letter-based key sounds (key_word_sounds): the high, soft consonants a noisy room steals first.
+const SIN_KEY_SOUNDS: PackedStringArray = ["s", "f", "th", "t", "k", "sh", "ch", "z", "v", "p"]
+## Past tenses that no suffix rule finds, mapped to the word they come from (is_trap).
+const SIN_IRREGULAR_FORMS: Dictionary[String, String] = {
+	"drew": "draw", "hid": "hide", "kept": "keep", "lent": "lend", "sang": "sing", "sat": "sit",
+	"shook": "shake", "slept": "sleep", "stole": "steal", "woke": "wake", "wore": "wear", "heard": "hear",
+	"lost": "lose", "left": "leave", "met": "meet", "fell": "fall", "rang": "ring", "swam": "swim",
+}
+
+
+## The sheet slot of a party test: unaided "both" or an ear as given, then "aided_omni" or
+## "aided_directional" (CONTRACTS.md §9.14.1).
+static func sin_slot(condition: StringName, ear: String = "both") -> String:
+	match condition:
+		&"omni":
+			return "aided_omni"
+		&"directional":
+			return "aided_directional"
+	return ear if ear == "right" or ear == "left" else "both"
+
+
+## The party (babble) level for a sentence: the talker level minus its SNR (same dial scale).
+static func sin_babble_level(talker_db: int, snr: int) -> int:
+	return talker_db - snr
+
+
+## The SNR of sentence n (1-6, SIN_SNRS); n = 0 is the practice sentence (SIN_PRACTICE_SNR).
+static func sin_snr_for(n: int) -> int:
+	if n <= 0:
+		return SIN_PRACTICE_SNR
+	return SIN_SNRS[mini(n, SIN_SNRS.size()) - 1]
+
+
+## Key words the patient gets in one sentence: the expected number, dithered by `u` (0..1, one
+## rng.randf()). Never more than one away from `expected`, and exactly `expected` on average.
+static func sin_count(expected: float, u: float) -> int:
+	return clampi(floori(expected + u), 0, SIN_KEY_WORDS)
+
+
+## The key sounds a word's letters suggest (SIN_KEY_SOUNDS only, each once, in order): "socks" ->
+## s, k; "phone" -> f; "watched" -> ch; "city" -> s, t. A sentence item's `key_sounds` overrides
+## this where the spelling misleads (the silent t of "castle", the "ch" of "school").
+static func key_word_sounds(word: String) -> PackedStringArray:
+	var w := word.to_lower()
+	var out := PackedStringArray()
+	var i := 0
+	while i < w.length():
+		var two := w.substr(i, 2)
+		var sound := ""
+		var step := 1
+		if w.substr(i, 3) == "tch":
+			sound = "ch"
+			step = 3
+		elif two == "th" or two == "sh" or two == "ch":
+			sound = two
+			step = 2
+		elif two == "ph":
+			sound = "f"
+			step = 2
+		elif two == "ck":
+			sound = "k"
+			step = 2
+		else:
+			match w[i]:
+				"s", "f", "t", "k", "z", "v", "p":
+					sound = w[i]
+				"q":
+					sound = "k"
+				"c":
+					var next := w.substr(i + 1, 1)
+					sound = "s" if next == "e" or next == "i" or next == "y" else "k"
+				"x":
+					if not out.has("k"):
+						out.append("k")
+					sound = "s"
+		if sound != "" and not out.has(sound):
+			out.append(sound)
+		i += step
+	return out
+
+
+## How likely a key word is to be the one missed (the party model draws misses by this weight):
+## 1 + the number of its key sounds whose cue margin at `level` is under SIN_PICK_WINDOW_DB, at most
+## SIN_PICK_CAP more. `sounds` empty = key_word_sounds(word). `thresholds` are the TRUE ones.
+static func key_word_miss_weight(word: String, sounds: PackedStringArray, thresholds: Dictionary, level: float) -> float:
+	var list := sounds if not sounds.is_empty() else key_word_sounds(word)
+	var near := 0
+	for s: String in list:
+		if sound_margin(s, level, thresholds) < SIN_PICK_WINDOW_DB:
+			near += 1
+	return 1.0 + float(mini(near, SIN_PICK_CAP))
+
+
+## Is `said` a trap for `key_word`: the same word with a plural or tense change ("streets" for
+## "street", "drop" for "dropped", "chews" for "chewed", "keeps" for "kept")? Still a miss, but it
+## gets its own line ("Plurals and tenses must match"). One word starts with the other, or both
+## share a stem once a regular ending (s, es, ies, ves, ed, ied, ing) or an irregular past is undone
+## ("leaves" for "leaf", "sat" for "sit").
+static func is_trap(said: String, key_word: String) -> bool:
+	var a := said.strip_edges().to_lower()
+	var b := key_word.strip_edges().to_lower()
+	if a.is_empty() or b.is_empty() or a == b:
+		return false
+	if a.begins_with(b) or b.begins_with(a):
+		return true
+	var stems_a := _word_stems(a)
+	for s: String in _word_stems(b):
+		if stems_a.has(s):
+			return true
+	return false
+
+
+## A word and the bases it may come from by a regular ending or SIN_IRREGULAR_FORMS (stems of 3
+## letters or more only, so "red" never becomes "r").
+static func _word_stems(w: String) -> PackedStringArray:
+	var out := PackedStringArray([w])
+	if SIN_IRREGULAR_FORMS.has(w):
+		out.append(SIN_IRREGULAR_FORMS[w])
+	var cuts: Array = [["ies", "y"], ["ied", "y"], ["ves", "f"], ["ves", "fe"], ["es", ""], ["s", ""], ["ed", ""],
+		["ed", "e"], ["ing", ""], ["ing", "e"]]
+	for c: Array in cuts:
+		var end := String(c[0])
+		if w.ends_with(end) and w.length() - end.length() >= 3:
+			var base := w.left(w.length() - end.length()) + String(c[1])
+			out.append(base)
+			# a doubled consonant before -ed / -ing: slipped -> slip, hugged -> hug
+			var n := base.length()
+			if String(c[1]).is_empty() and (end == "ed" or end == "ing") and n >= 4 and base[n - 1] == base[n - 2]:
+				out.append(base.left(n - 1))
+	return out
+
+
+## The average SNR loss over lists (dB); -1 before the first list.
+static func sin_average(losses: Array) -> float:
+	if losses.is_empty():
+		return -1.0
+	var sum := 0.0
+	for l: Variant in losses:
+		sum += float(l)
+	return sum / float(losses.size())
+
+
+## The critical difference for comparing two conditions with `lists` lists each (SIN_CRIT_DIFF_DB:
+## 3.9 dB for one against one, 2.7 for two against two).
+static func sin_crit_diff(lists: int) -> float:
+	return float(SIN_CRIT_DIFF_DB[clampi(lists, 1, 2)])
+
+
+## Is a benefit (the compared condition's loss minus this one's) a real improvement, not list luck?
+## Only above the critical difference; a benefit at or under it could be luck, and a loss of benefit
+## never counts as one.
+static func sin_real_change(benefit_db: float, lists: int) -> bool:
+	return benefit_db > sin_crit_diff(lists)
+
+
+## Par for one party list (D3, D19): the sentences the player scores, one stroke each.
+static func sin_par(player_sentences: int) -> int:
+	return maxi(0, player_sentences)
+
+
+## Marco's forks for a condition's slips (CHAPTER5 §8.3): 3 with none, 2 for one, 1 for two or
+## three, 0 ("sent back") for four or more.
+static func sin_forks(slips: int) -> int:
+	if slips <= 0:
+		return 3
+	if slips == 1:
+		return 2
+	if slips <= 3:
+		return 1
+	return 0
