@@ -92,7 +92,9 @@ masked bone on the case ear (§11).
   - Every tone is synthesized.
   - Displayed dB HL is **simulated**.
   - All tone levels go through `AudioSafety.hl_to_peak()` and `AudioSafety.clamp_sample()`. The mapping is about -75 dBFS at 0 dB HL, plus 0.6 dB per dB HL,
-    and the peak never goes above **-12 dBFS**.
+    and the peak never goes above **-12 dBFS**. Tones get `TONE_BOOST_DB` (4 dB) on top, about -71 dBFS at 0 dB HL (clinical
+    review E7); masking noise and words keep the base mapping.
+  - (E7) The audiometer screen starts on **pulsed** tones; the stimulus key cycles pulsed, warble and steady.
   - Bus limiters back this up: Tones -12 dB, Master -6 dB (`default_bus_layout.tres`).
   - Sfx are normalized to a -18 dBFS peak.
 - **(v3) Masking noise:** synthesized narrow-band noise (white noise through a 1/3-octave band-pass at the
@@ -383,7 +385,7 @@ recap "The short version". How to add one: `docs/ADDING_A_CHAPTER.md`, "Hoot's m
 
 | Part | File | What it is |
 |---|---|---|
-| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies), `replay_ids()` (every movie but the recaps), `is_short(id)`, `day_label(id)` ("Day 2"), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies), `replay_ids()` (every movie but the recaps), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask and has none) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
 | Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list) and `stage` (the movie's own sets script, below) |
 | Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
 | Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | Fully animated: `SETS` (the built-in set ids: the ten masking sets of `docs/CHAPTER2.md` §16 and `card`), `use_movie(movie)` (the player calls it: loads `MOVIE.stage`), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes, a screenshot repeats and a skipped scene leaves nothing behind. `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. **Fallback:** a `set` nobody knows (neither the stage nor the movie's sets script) draws a card with the scene's title (never an error, never a blank screen) |
@@ -740,7 +742,8 @@ On non-`ac` sheets `start_not_1k`, `missed_retest` and the inter-octave rule do 
 did), `plateau_step` {steps, needed, db, mask_db, found, window_full, auto} after every masked verdict, `plateau_found`
 {db, start_mask, end_mask}, `vibrotactile` {db} (a felt low bone tone). **(E9)** `masking_dilemma` {initial_db,
 limit_db} (the first scored masked tone where the initial masking already overmasks) and `plateau_not_reached`
-{db, mask_db, limit_db} (the safe window filled before a plateau), each once per visit.
+{db, mask_db, limit_db} (the safe window filled before a plateau), each once per visit. **(E8)** `tinnitus_steady`
+{tinnitus_hz} (the first scored steady tone near the patient's tinnitus pitch; once per visit).
 
 Combo multiplier (`combo_changed`): x1, x2 at 3, x3 at 6, x5 at 10 consecutive clean checks.
 
@@ -855,6 +858,10 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
 - **(polish)** `ToneGenerator.render()`: the masker keeps playing when a tone ramps out (it never drops with the tone).
 - **(v3)** `PatientSim`: `transducer`, `masker_db`, `masker_transducer`, `condition()`, `condition_for(ear, freq, tr,
   mask, mask_tr)` (via `ClinicRules.response_threshold`), `last_heard_by` (&"test" / &"cross", reactions only).
+- **(E8)** `PatientSim.steady_tone` (false = pulsed or warble, the E7 default) and `tinnitus_confuses(freq)`: within
+  `TINNITUS_OCTAVES` (0.6: the half-octave pitches either side) of `profile.tinnitus_hz` a steady tone near threshold is missed `TINNITUS_MISS_P` (35 %) more
+  often, and `false_alarm_tick(delta)` presses `TINNITUS_FA_FACTOR` (3) times as often while `dialled_freq` is in range. The
+  session sets it (`set_steady_tone(on)`, `steady_tone`); the AudiOtron passes its stimulus before every tone.
 - `ToneGenerator` (Node): `AudioStreamGenerator` at 44.1 kHz on the Tones bus.
   - **(v3)** masker: `start_masker(ear, freq, db_em)`, `set_masker(freq, db_em)`, `stop_masker()`, through `AudioSafety` (§1.3).
   - **(v3, builders)** `bone: bool` (set by the AudiOtron when the route is bone) and `BONE_CROSS_DB` -10: a bone tone also

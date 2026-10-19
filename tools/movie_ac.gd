@@ -36,6 +36,7 @@ func demo_start() -> void:
 	cam.current = false
 	var screen: Node = (load(AUDIOMETER) as PackedScene).instantiate()
 	add_child(screen)
+	screen.set("_stim", ToneGenerator.Stimulus.PURE)   # (E7) steady tones: the analysers measure continuous tones
 	var patient: Resource = Game.load_patient("gus")
 	for ear: String in ["right", "left"]:
 		Events.phase_changed.emit(&"audiometry", {"ear": ear})
@@ -75,6 +76,7 @@ func _day2() -> void:
 	cam.current = false
 	var screen: Node = (load(AUDIOMETER) as PackedScene).instantiate()
 	add_child(screen)
+	screen.set("_stim", ToneGenerator.Stimulus.PURE)   # (E7) steady tones: the analysers measure continuous tones
 	var patient: Resource = Game.load_patient("bonnie")
 	var plans: Array = [
 		["right", {"test": "ac", "hoot_turn_after": 0}],
