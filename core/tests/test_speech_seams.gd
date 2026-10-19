@@ -2,7 +2,7 @@ extends TestCase
 ## (Days 4-5) The S0 seams that Day 4 (word scores) and Day 5 (the Party Noise Test) build on
 ## (CONTRACTS.md §9.10, §9.24). S0a: SpeechSim's helpers and model facades, SpeechMaterial.tokens()
 ## and the new validate checks, the "lists" rules, the new keys, the Events block, the counselling
-## phase and the CHAPTERS markers. S0b: the test modes, with probe word (wrs) and party (sin) modes
+## phase, the CHAPTERS markers and the two stub movies (valid, and hidden until their day). S0b: the test modes, with probe word (wrs) and party (sin) modes
 ## from this folder (probe_test_mode.gd, probe_sp_mode.gd) on every session seam (C1-C23) and screen
 ## seam (H1-H28), a missing mode script, run_by_textbook / run_hidden, the Hoot-turn gate, key
 ## placeholders, and the Daily Decibel hook. Day 3 must not notice any of it: its goldens (written
@@ -337,6 +337,94 @@ func test_chapter_markers() -> void:
 	if at.has("marco_marker"):
 		assert_eq(int(at["marco"]), int(at["sep"]) + 1, "the Day 5 marker sits right below the separator")
 		assert_true(Game.chapter("marco").is_empty(), "no marco chapter while its marker stands")
+	# Days 3-5 stay before the cases (Days 6 onward)
+	var cases_at := -1
+	for i in lines.size():
+		if lines[i].strip_edges().begins_with("{\"id\": \"rocco\""):
+			cases_at = i
+			break
+	assert_true(cases_at > int(at["marco"]), "the Day 5 line sits before the first case (rocco)")
+
+
+# ---------------------------------------------------------------- S0a: the two movies (§9.10.7, §9.20)
+
+const Movies := preload("res://story/explainers/movies.gd")
+const Stage2D := preload("res://story/explainers/explainer_stage.gd")
+## The Days 4-5 movies and their chapters, registered after main's (S0a stubs until W5a / P5a).
+const DAYS45_MOVIES: Dictionary = {"letter_choir": "nora", "party_noise": "marco"}
+
+
+## Both are registered after main's movies, in order, and valid for the shared player: the stage's
+## sets, 45-110 s, captions of 18 words or fewer, card params on every scene, quiet Sfx cues.
+func test_days45_movies_registered() -> void:
+	var ids := Movies.ids()
+	var last := ids.find("masking_recap")
+	assert_true(last >= 0, "main's movies stay")
+	for id: String in DAYS45_MOVIES:
+		assert_true(Movies.has(id), "%s is registered" % id)
+		assert_true(ids.find(id) > last, "%s after the movies before it" % id)
+		last = ids.find(id)
+		var bad := Movies.validate(id, Stage2D.SETS)
+		assert_true(bad.is_empty(), "validate %s: %s" % [id, ", ".join(bad)])
+		var m := Movies.movie(id)
+		assert_eq(String(m.get("chapter", "")), String(DAYS45_MOVIES[id]), "%s's day" % id)
+		assert_between(Movies.total_s(id), Movies.MIN_TOTAL_S, Movies.MAX_TOTAL_S, "%s's length" % id)
+		for sc: Dictionary in m["scenes"]:
+			var p: Dictionary = sc.get("params", {})
+			assert_true(String(p.get("heading", "")).length() <= 30, "%s/%s: a short heading" % [id, sc["id"]])
+			var card_lines: Array = p.get("lines", [])
+			assert_true(card_lines.size() <= Movies.CARD_MAX_LINES, "%s/%s: at most 4 card lines" % [id, sc["id"]])
+			for ln: Variant in card_lines:
+				assert_true(String(ln).length() <= Movies.CARD_MAX_CHARS, "%s/%s: card line %s" % [id, sc["id"], ln])
+			assert_has(Stage2D.CARD_ICONS, String(p.get("icon", "")), "%s/%s: a card icon" % [id, sc["id"]])
+			for c: Variant in sc["captions"]:
+				assert_true(Movies.word_count(String(c)) <= 18, "%s: 18 words or fewer: %s" % [id, c])
+			for cue: Dictionary in sc.get("cues", []):
+				assert_has(Sfx.SOUNDS, StringName(String(cue["sfx"])), "%s/%s: a known Sfx" % [id, sc["id"]])
+				assert_true(float(cue.get("vol_db", 0.0)) <= -8.0, "%s/%s: a quiet cue" % [id, sc["id"]])
+
+
+## Before its day exists a movie is the S0a stub: three "card" scenes of 16 s, no sets script.
+## (The day's builder replaces the stub and the chapter marker in the same step, W5a / P5a.)
+func test_days45_movie_stubs() -> void:
+	for id: String in DAYS45_MOVIES:
+		if not Game.chapter(String(DAYS45_MOVIES[id])).is_empty():
+			continue
+		var m := Movies.movie(id)
+		assert_false(m.has("stage"), "%s: no sets script yet" % id)
+		var scenes: Array = m["scenes"]
+		assert_eq(scenes.size(), 3, "%s: three scenes" % id)
+		for sc: Dictionary in scenes:
+			assert_eq(String(sc["set"]), "card", "%s/%s: a card" % [id, sc["id"]])
+			assert_near(float(sc["duration"]), 16.0, 0.001, "%s/%s: 16 s" % [id, sc["id"]])
+		assert_near(Movies.total_s(id), 48.0, 0.001, "%s: 48 s" % id)
+
+
+## A registered movie whose day is not in Game.CHAPTERS yet is in no replay list (the title's
+## "Hoot's Movies" and its Options, through Movies.replay_ids()): the stubs stay hidden until
+## their day exists, and nothing a player sees changes before then.
+func test_days45_movies_hidden_until_their_day() -> void:
+	for id: String in DAYS45_MOVIES:
+		var listed := Movies.replay_ids().has(id)
+		if Game.chapter(String(DAYS45_MOVIES[id])).is_empty():
+			assert_false(listed, "%s: no %s chapter yet, so not listed" % [id, DAYS45_MOVIES[id]])
+			assert_false(Movies.for_chapter(Game.current_chapter_id).has(id), "%s: not in this day's pause menu" % id)
+		else:
+			assert_true(listed, "%s: its day exists, so it is listed" % id)
+	assert_has(Movies.replay_ids(), "masking", "Day 2's movie stays listed")
+	# the guard itself, on two made-up movies
+	var here := Movies.movie("masking")
+	here["id"] = "s0_here"
+	var nowhere := here.duplicate(true)
+	nowhere["id"] = "s0_nowhere"
+	nowhere["chapter"] = "no_such_day"
+	Movies.extra["s0_here"] = here
+	Movies.extra["s0_nowhere"] = nowhere
+	var ids := Movies.replay_ids()
+	Movies.extra.erase("s0_here")
+	Movies.extra.erase("s0_nowhere")
+	assert_has(ids, "s0_here", "a movie of a real day is listed")
+	assert_false(ids.has("s0_nowhere"), "a movie of a day that does not exist is not")
 
 
 # ---------------------------------------------------------------- Day 3 goldens (S0b: written before the seams)

@@ -141,7 +141,8 @@ need to edit the shared stage or player: everything below lives in your chapter'
    `--mouse` need no edits.
 5. **Replay is free:** the pause menu offers every movie whose `chapter` is the current chapter (one: a "Watch
    <title>" button; two or more: a "Hoot's Movies..." vertical list with the day, title and length per row), and
-   every movie on the title's Options and its "Hoot's Movies" button. Recaps (`"short": true`) are never listed.
+   every movie on the title's Options and its "Hoot's Movies" button. Recaps (`"short": true`) are never listed,
+   nor is a movie whose `chapter` is not in `Game.CHAPTERS` yet (so a movie can be registered before its day lands).
    Nothing to add; check the list with `dev_explainer --list`.
 6. **Test it:** add your movie to a test like `tests/test_contracts_v4.gd` (`Movies.validate(id, Stage2D.SETS)` is
    empty, the scene ids, the facts against `ClinicRules`).
