@@ -135,9 +135,9 @@
 			"noise_years": "That's why he has a loss, not why it's safe to fit. Find the red-flag check!",
 			"noise_trouble": "That's why he WANTS hearing aids. What shows it's safe to fit them?",
 			"notch": "That's the pattern, not the safety check. Find the red-flag check!",
-			"ear_clear": "True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?",
-			"tymp_a": "True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?",
-			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?"
+			"ear_clear": "True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?",
+			"tymp_a": "True: no fluid, no blockage. Which clue clears past drips, pain, dizziness and sudden change?",
+			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears past drips, pain, dizziness and sudden change?"
 		},
 		"right_line": "Exactly! History, exam and chart all clear, and ears that match: fitting is the right call."
 	},

@@ -17,7 +17,7 @@ const EXPECTED: Dictionary = {
 	"fs_mabel": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
 	"fs_sid": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
 	"fs_viola": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
-	"fs_buck": [&"refer", &"sensorineural", &"sensorineural", true, true, false],
+	"fs_buck": [&"fit", &"sensorineural", &"sensorineural", true, true, false],
 	"fs_melody": [&"today", &"sensorineural", &"normal", true, true, true],
 	"fs_skyler": [&"refer", &"normal", &"conductive", true, true, true],
 	"fs_hector": [&"refer", &"sensorineural", &"mixed", true, true, true],
@@ -56,6 +56,24 @@ func test_expected_cases_exist() -> void:
 		assert_true(_patient(id) != null, "patient for " + id)
 	for id: String in FsData.CASE_IDS:
 		assert_true(EXPECTED.has(id), "%s has an EXPECTED row (its call and truth are pinned)" % id)
+
+
+## Steve (2026-10-19): every workup asks where the patient has trouble, and the answer names places in
+## their daily life. A FIT turns those places into goals. The keys always leave the player a free pick.
+func test_every_walk_in_asks_where_they_have_trouble() -> void:
+	for id: String in FsData.CASE_IDS:
+		var c := _case(id)
+		var keys: Array = c["key_questions"]
+		assert_has(keys, FsRules.TROUBLE_QUESTION, id + ": the trouble question is a key question")
+		assert_true(keys.size() < FsRules.CHAT_BUDGET, id + ": the keys leave a free pick")
+		assert_true(FsData.answer_note(c, FsRules.TROUBLE_QUESTION).begins_with("Trouble: "), id + ": the note lists the trouble spots")
+		assert_true(FsData.answer_lines(c, FsRules.TROUBLE_QUESTION).size() >= 2, id + ": more than one place")
+		if String(c["decision"]) != "fit":
+			continue
+		var goals := false
+		for l: Array in FsData.hoot_lines(c):
+			goals = goals or (String(l[0]) == "debrief" and String(l[1]).contains("goals"))
+		assert_true(goals, id + ": the debrief turns the trouble spots into goals")
 
 
 ## Every DOCTOR TODAY walk-in meets the game's sudden-loss definition (CaseRules, like Dash).

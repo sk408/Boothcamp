@@ -175,8 +175,10 @@ static func validate(c: Dictionary) -> PackedStringArray:
 	var keys: Array = c["key_questions"]
 	if not keys.has(FsRules.RED_FLAG_QUESTION):
 		out.append("key_questions must include " + FsRules.RED_FLAG_QUESTION)
-	if keys.size() > FsRules.CHAT_BUDGET:
-		out.append("key_questions: more than the %d a visit allows" % FsRules.CHAT_BUDGET)
+	if not keys.has(FsRules.TROUBLE_QUESTION):
+		out.append("key_questions must include " + FsRules.TROUBLE_QUESTION)
+	if keys.size() >= FsRules.CHAT_BUDGET:
+		out.append("key_questions: %d at most, so the player has a free pick" % (FsRules.CHAT_BUDGET - 1))
 	for k: Variant in keys:
 		if not _deck_ids().has(String(k)):
 			out.append("key_questions: unknown " + String(k))

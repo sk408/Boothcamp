@@ -12,7 +12,7 @@ extends Control
 ##   g.reveal_type("right")              # the type badge (after the quiz); a flat (B) ear also gets
 ##                                       # a ribbon reading its canal volume ("... = BLOCKED")
 ## data: {"type", "peak_daPa", "peak_ml", "ecv_ml"} as in a case file. ecv_ml (the canal volume) also
-## gives the readout's chip (CaseRules.ecv_band: TINY / LOW / NORMAL / LARGE).
+## gives the readout's chip (CaseRules.ecv_band: TINY / NORMAL / LARGE).
 ## Anchor: "tymp_screen".
 
 const UiKit := preload("res://story/ui_kit.gd")
@@ -28,10 +28,10 @@ const LCD_TEXT := Color("#d7f5ee")
 const BODY := Color("#ffd166")
 const TIP_COLORS: Dictionary = {&"small": Color("#7bdff2"), &"medium": Color("#b2f7ef"), &"large": Color("#f7d6e0")}
 ## Canal volume bands (CaseRules.ecv_band): the chip's word and colour, and what a flat line means with it.
-const ECV_WORDS: Dictionary = {&"tiny": "TINY", &"low": "LOW", &"normal": "NORMAL", &"large": "LARGE"}
-const ECV_COLORS: Dictionary = {&"tiny": Palette.CORAL, &"low": Palette.SELECT_ORANGE, &"normal": Palette.MINT, &"large": Palette.SKY}
+const ECV_WORDS: Dictionary = {&"tiny": "TINY", &"normal": "NORMAL", &"large": "LARGE"}
+const ECV_COLORS: Dictionary = {&"tiny": Palette.CORAL, &"normal": Palette.MINT, &"large": Palette.SKY}
 const FLAT_READINGS: Dictionary = {
-	&"tiny": "FLAT + TINY CANAL = BLOCKED", &"low": "FLAT + LOW CANAL = LOOK AGAIN",
+	&"tiny": "FLAT + TINY CANAL = BLOCKED",
 	&"normal": "FLAT + NORMAL CANAL = FLUID?", &"large": "FLAT + BIG CANAL = HOLE?",
 }
 const RIBBON_GAP := 40.0          # px between stacked ribbons (both ears flat)
@@ -171,6 +171,8 @@ func _draw_device() -> void:
 	UiDraw.rounded_rect(c, Rect2(DEVICE.position + Vector2(0, 8), DEVICE.size), Color(Palette.INK, 0.2), 30)
 	UiDraw.rounded_rect(c, DEVICE, BODY, 30, 4, Palette.INK)
 	c.draw_string(f, DEVICE.position + Vector2(30, 20), "TYMP-O-MATIC", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK)
+	# the probe tone every adult tympanogram uses
+	c.draw_string(fr, DEVICE.position + Vector2(178, 20), "226 Hz probe tone", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Palette.INK_SOFT)
 	# the printed canal-volume norm, above the screen's right end (the readout chips are read against it)
 	var norm := "Adult canal: about %.1f-%.1f mL" % [CaseRules.TYMP_ADULT_ECV.x, CaseRules.TYMP_ADULT_ECV.y]
 	c.draw_string(fr, Vector2(SCREEN.end.x - 240, DEVICE.position.y + 20), norm, HORIZONTAL_ALIGNMENT_RIGHT, 220, 12, Palette.INK_SOFT)

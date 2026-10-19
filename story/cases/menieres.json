@@ -83,7 +83,7 @@
 			"prompt": "Her ear feels full. Is it fluid behind the eardrum?",
 			"options": [
 				["No: type A, a normal peak. No fluid.", true, ""],
-				["Yes: it's flat, type B.", false, "A flat B would mean fluid. Hers has a normal peak."],
+				["Yes: it's flat, type B.", false, "Flat with a normal canal volume would point to fluid. Hers has a normal peak."],
 				["Yes: type C, negative pressure.", false, "Her peaks sit near zero. A type C sits far to the left."]
 			]
 		},
@@ -188,7 +188,7 @@
 		},
 		"wrong_first": {
 			"fit": {"headline": "TRAINEE NEARLY FITS A SPINNING CAPTAIN; OWL GRABS THE WHEEL", "subhead": "Dizziness and a one-sided, changing loss: a doctor looks first."},
-			"today": {"headline": "MARINA RUSHED TO DOCTOR; DOCTOR SAYS THIS WEEK WAS FINE", "subhead": "Her hearing dips with spells and returns: soon, not today."}
+			"today": {"headline": "MARINA SEEN SAME DAY; DOCTOR: NO HARM CHECKING, BUT THIS WEEK WAS FINE", "subhead": "Her hearing dips with spells and returns: soon, not today."}
 		}
 	}
 }
