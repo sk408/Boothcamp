@@ -351,7 +351,8 @@ func _air() -> void:
 	hud.call("set_step", &"air")
 	# a career-fair player may start here (Unlock all days): no "like yesterday"
 	var veteran := Game.is_chapter_done("gus")
-	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "skip_hoot_retest": true, "done_title": "RIGHT AIR DONE!",
+	# (E2) the first ear keeps its 1 kHz retest (Hoot does it in his turn); the left, second, owes none
+	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "done_title": "RIGHT AIR DONE!",
 		"intro": "Air first, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
 			else "New trainee? Air first: I'll coach your first beep, then whizz through the rest!",
 		"intro_full": "Air first: her whole right ear is yours. I'll coach the first beep."})

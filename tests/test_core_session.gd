@@ -262,7 +262,7 @@ func test_store_rules() -> void:
 	assert_false(bool(info["technique_ok"]))
 
 
-func test_start_not_1k_and_missed_retest() -> void:
+func test_start_not_1k_and_lows_before_the_retest() -> void:
 	var s := _session()
 	var kinds := _kinds(s)
 	s.set_freq(2000)
@@ -282,7 +282,43 @@ func test_start_not_1k_and_missed_retest() -> void:
 		s.set_level(lvl)
 		_present(s)
 	s.store()
-	assert_has(kinds, &"missed_retest")
+	# (E2) BSA retests after 250 Hz, ASHA before 500: either is fine, and the retest is still owed
+	assert_false(kinds.has(&"missed_retest"), "lows before the retest are not an error")
+	assert_has(s.required_remaining("right"), 1000, "the first ear still owes its retest")
+
+
+## (E2) The 1 kHz retest is owed by the first air ear of the visit only (ASHA 2005; BSA 2018, 6.4).
+func test_retest_first_ear_only() -> void:
+	var s := _session()
+	_play_by_the_book(s, "right")
+	assert_false((s.retest["right"] as Dictionary).is_empty(), "the first ear retested 1 kHz")
+	assert_eq(s.air_ear_order, ["right"] as Array[String])
+	assert_true(s.retest_required("right"))
+	assert_false(s.retest_required("left"), "the second ear does not owe it")
+	_play_by_the_book(s, "left")
+	assert_true(s.is_ear_complete("left"), "the left ear closes without a retest")
+	assert_true((s.retest["left"] as Dictionary).is_empty())
+	assert_eq((s.order["left"] as Array).count(1000), 1, "1 kHz once on the second ear")
+
+
+## (E2) The second ear owes a retest when the first ear's was off by more than 5 dB; a waived first
+## ear (Hoot's montage) passes nothing on; the left-first visit makes the left ear the one.
+func test_retest_second_ear_after_a_mismatch() -> void:
+	var s := _session()
+	s.air_ear_order = ["right"] as Array[String]
+	(s.sheet(&"ac")["retest"] as Dictionary)["right"] = {"stored_db": 40, "diff": 15, "strokes": 6, "par": 6, "first_db": 25}
+	assert_true(s.retest_required("left"), "a 15 dB mismatch on the first ear: retest the second too")
+	(s.sheet(&"ac")["retest"] as Dictionary)["right"] = {"stored_db": 30, "diff": 5, "strokes": 6, "par": 6, "first_db": 25}
+	assert_false(s.retest_required("left"), "within 5 dB: the second ear is free")
+	var s2 := _session()
+	s2.retest_waived["left"] = true
+	s2.air_ear_order = ["left"] as Array[String]
+	assert_false(s2.retest_required("left"), "a waived ear never owes it")
+	assert_false(s2.retest_required("right"), "and the next ear is a second ear")
+	var s3 := _session()
+	s3.set_ear("left")
+	assert_true(s3.retest_required("left"), "nothing stored yet: whichever ear comes first owes it")
+	assert_true(s3.retest_required("right"))
 
 
 func test_retest_ok_and_mismatch() -> void:
