@@ -60,7 +60,7 @@
 		"options": [
 			["Shooting explains why his left ear is worse.", true, "Right! A right-hander's left ear sits nearer the muzzle. A likely cause, and no other red flags."],
 			["A lopsided loss never needs a doctor.", false, "It does when nothing explains it, or it came on fast. Buck's shooting explains his."],
-			["Ringing in both ears rules out a problem.", false, "Ringing rules nothing out. Both-ear ringing is common with noise; one-sided ringing is a flag."],
+			["Ringing in both ears rules out a problem.", false, "Ringing rules nothing out. Flags: ONE-sided, pulsing or suddenly changed ringing. His is both-ear noise ringing."],
 			["His tympanograms were both type A.", false, "Type A says the eardrums move well. It can't explain why one ear is worse."]
 		]
 	},
