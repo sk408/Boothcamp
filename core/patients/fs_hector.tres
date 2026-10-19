@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = "fs_hector"
+display_name = "Hector Ticktock"
+age = 63
+complaint = "My left ear has been running slow for years. Oddly, it keeps better time in a noisy room."
+thresholds_right = Dictionary[int, int]({
+250: 10,
+500: 10,
+750: 10,
+1000: 15,
+1500: 15,
+2000: 20,
+3000: 25,
+4000: 35,
+6000: 40,
+8000: 45
+})
+thresholds_left = Dictionary[int, int]({
+250: 65,
+500: 65,
+750: 60,
+1000: 60,
+1500: 55,
+2000: 60,
+3000: 60,
+4000: 60,
+6000: 65,
+8000: 65
+})
+bc_left = Dictionary[int, int]({
+250: 30,
+500: 30,
+750: 30,
+1000: 30,
+1500: 35,
+2000: 40,
+3000: 35,
+4000: 35
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.4
+reaction_time_min_s = 0.4
+reaction_time_max_s = 0.9
+psychometric_slope_db = 1.8
+attention = 0.97
+fatigue_per_tone = 0.0005
+min_tone_s = 0.5
+rhythm_sensitivity = 0.85
+tags = PackedStringArray("freestyle", "mixed", "unilateral", "middle_ear")
+pronoun = "he"
+nickname = "Hector"

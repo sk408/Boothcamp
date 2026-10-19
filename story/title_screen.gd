@@ -14,6 +14,7 @@ const Portraits := preload("res://story/portraits.gd")
 const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const Movies := preload("res://story/explainers/movies.gd")
+const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -392,6 +393,16 @@ func _days_nav(dx: int, dy: int) -> void:
 			_set_hl(back)
 
 
+## (freestyle, docs/FREESTYLE.md) The walk-in clinic: practice outside the story.
+func _on_freestyle() -> void:
+	if _state != &"menu" or _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"click")
+	Events.goto_scene.emit(FREESTYLE_SCENE)
+
+
 func _on_options() -> void:
 	var pm := get_tree().get_first_node_in_group("pause_menu")
 	if pm:
@@ -451,9 +462,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_days_nav(1 if event.is_action_pressed(&"ui_right") else -1, 0)
 	elif _state == &"days" and (event.is_action_pressed(&"ui_down") or event.is_action_pressed(&"ui_up")):
 		_days_nav(0, 1 if event.is_action_pressed(&"ui_down") else -1)
-	elif event.is_action_pressed(&"ui_down"):
+	elif event.is_action_pressed(&"ui_down") or event.is_action_pressed(&"ui_right"):
 		_set_hl((_hl + 1) % _buttons.size())
-	elif event.is_action_pressed(&"ui_up"):
+	elif event.is_action_pressed(&"ui_up") or event.is_action_pressed(&"ui_left"):
 		_set_hl((_hl - 1 + _buttons.size()) % _buttons.size())
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
 		_buttons[_hl].pressed.emit()
@@ -494,7 +505,7 @@ func _build() -> void:
 	root.add_child(_logo)
 
 	_menu_card = UiKit.panel(Color(Palette.PAPER, 0.97), Palette.INK, 26)
-	_menu_card.position = Vector2(92, 284)  # (polish) five buttons + stats fit above the footer
+	_menu_card.position = Vector2(92, 284)  # (polish) five rows + stats fit above the footer
 	_menu_card.custom_minimum_size = Vector2(380, 0)
 	root.add_child(_menu_card)
 	var v := VBoxContainer.new()
@@ -504,21 +515,32 @@ func _build() -> void:
 	var play_txt := "Play"
 	if _has_progress():
 		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
-	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Options", _on_options]]
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Freestyle", _on_freestyle]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
+	specs.append(["Options", _on_options])
 	specs.append(["Quit", _on_quit])
+	# (freestyle) Options and Quit share the last row, so a returning player's six buttons still
+	# clear the safety footer (Up/Down still walk them in order)
+	var pair := HBoxContainer.new()
+	pair.add_theme_constant_override("separation", 6)
 	for spec: Array in specs:
-		var b := UiKit.button(spec[0], &"", Vector2(340, 48))
+		var paired := String(spec[0]) in ["Options", "Quit"]
+		var b := UiKit.button(spec[0], &"", Vector2(167 if paired else 340, 48))
 		b.set_meta("label", spec[0])
-		b.add_theme_font_size_override("font_size", 24)
+		b.add_theme_font_size_override("font_size", 22 if paired else 24)
 		b.pressed.connect(spec[1])
 		var idx := _buttons.size()
 		b.mouse_entered.connect(func() -> void:
 			if _state == &"menu" and _hl != idx:
 				_set_hl(idx))
-		v.add_child(b)
+		if paired:
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pair.add_child(b)
+		else:
+			v.add_child(b)
 		_buttons.append(b)
+	v.add_child(pair)
 	_menu_buttons = _buttons.duplicate()
 	if not Movies.replay_ids().is_empty():
 		_movies_btn = UiKit.button("Hoot's Movies", &"", Vector2(214, 46))

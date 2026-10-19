@@ -1,0 +1,86 @@
+{
+	"id": "fs_penny",
+	"patient_id": "fs_penny",
+	"speaker": "Penny",
+	"stars": 1,
+	"teaser": "Her husband says she never listens. She says he mumbles.",
+	"look": {
+		"face": "bonnie", "skin": "#f3c9a5", "skin_shade": "#d9a882", "nose": "#e8ad88",
+		"cardigan": "#2d6cdf", "pants": "#2b2440", "shirt": "#ffd23f", "accent": "#ffd23f", "shoes": "#f4f4f4",
+		"hair": "#b5452b", "hair_style": "bun", "mustache": false, "brows": false,
+		"glasses": "round", "glasses_color": "#2e2442", "walker": false, "prop": "",
+		"extras": ["headband"], "headband": "#5bc8a3",
+		"portrait_bg": "#dceaff", "name_color": "#2d6cdf"
+	},
+	"voice": {"f0": 230.0, "wobble": 0.06, "roll": 0.64, "vowels": ["e", "i", "a", "e", "o", "i"]},
+	"hello": [
+		["Penny", "Hi! Penny Natter. My husband says I never listen. I say he mumbles."],
+		["Penny", "So here I am. Test me, and I'll take the results home and frame them."]
+	],
+	"answers": {
+		"which_ear": {"say": "Both the same, I think. I hear everything. When I want to.", "note": "Both ears seem the same"},
+		"onset": {"say": "He says it's been years. Nothing sudden. I'd have noticed. Probably.", "note": "No sudden change"},
+		"ringing": {"say": "No ringing. Just my phone, all day long.", "note": "No ringing"},
+		"red_flags": {"say": "No pain, no gunk, no spinning. My ears feel totally fine.", "note": "No pain, drainage or dizziness"},
+		"noise": {"say": "Earbuds on the train, every day. Loud enough to drown out the train. Is that bad?", "note": "Loud earbuds on her commute"},
+		"ear_history": {"say": "Never had an ear infection. Never even had my ears looked at.", "note": "No infections, surgery or injuries"},
+		"family": {"say": "Nope. Grandma's ninety-six and hears gossip through walls.", "note": "No hearing loss in the family"},
+		"health": {"say": "Healthy as a horse. No medicines. A LOT of coffee.", "note": "Healthy, no medicines"},
+		"aids": {"say": "Never! I'm only here to prove him wrong.", "note": "Never worn hearing aids"},
+		"hardest": {"say": "He talks to me from the kitchen while I'm editing my podcast. I hear him... later.", "note": "Misses talk from another room"}
+	},
+	"key_questions": ["red_flags", "onset", "noise", "hardest"],
+	"otoscopy": {
+		"canal": "average-sized",
+		"right": {"view": "clear", "caption": "Penny's RIGHT ear: a clean canal, a shiny pearly eardrum."},
+		"left": {"view": "clear", "caption": "Penny's LEFT ear: just the same. Healthy and clear."},
+		"note": "Canals clear, eardrums normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.8, "ecv_ml": 1.3},
+		"left": {"type": "A", "peak_daPa": -5, "peak_ml": 0.9, "ecv_ml": 1.3},
+		"note": "Tymp: type A both ears"
+	},
+	"decision": "clear",
+	"decision_lines": {
+		"fit": "Hearing aids for normal hearing? Every tone was 25 or better. They'd only make things louder.",
+		"refer": "Refer for what? Normal hearing, healthy eardrums, no red flags. No doctor needed.",
+		"today": "No emergency here: nothing sudden, no pain, and normal hearing in both ears.",
+		"clear": "Normal hearing in both ears! No aids needed. Her trouble is distance, not her ears."
+	},
+	"why": {
+		"prompt": "Why does Penny need no hearing aids?",
+		"options": [
+			["Every tone was 25 dB or better in both ears.", true, "Right! 25 dB or better is the normal range for adults."],
+			["She is too young for hearing aids.", false, "Age doesn't decide. Children wear hearing aids too. The chart decides."],
+			["Her tympanograms were both type A.", false, "Type A means the eardrum moves well. It can't tell how well she hears."],
+			["Her husband admitted that he mumbles.", false, "Wishful thinking! It's her chart that clears her: 25 or better everywhere."]
+		]
+	},
+	"debrief": [
+		["Hoot", "Normal hearing is good news, not a wasted visit. Now there's a baseline for later."],
+		["Hoot", "Talking from another room fails for everyone. Face each other, get attention first."],
+		["Hoot", "And those loud earbuds: keep them at half volume, with breaks. Damaged hearing doesn't grow back."]
+	],
+	"goodbye": [
+		["Penny", "So I DO hear him. I just wasn't listening. Please don't put that in writing."],
+		{"react": "cheer"},
+		["Penny", "Half volume on the train. Got it. Bye, Hoot!"]
+	],
+	"paper": {
+		"headlines": {
+			"S": "WIFE'S EARS PERFECT; HUSBAND TOLD TO STOP MUMBLING",
+			"A": "PENNY PASSES WITH FLYING COLOURS; BASELINE FILED",
+			"B": "NORMAL EARS CONFIRMED, A FEW STAMPS WANDERED",
+			"C": "PENNY'S EARS FINE, CLINIC'S STAMPING LESS SO",
+			"Do-over": "HEARING CHECK HEARD BUT NOT LISTENED TO"
+		},
+		"subheads": {
+			"S": "Normal hearing in both ears, no red flags. No hearing aids: just talk face to face.",
+			"A": "25 dB or better everywhere means normal. The fix is in the kitchen, not the ears.",
+			"B": "Normal hearing still needs a full check. Look, ask, then test.",
+			"C": "Normal means 25 dB or better at every pitch. Check every tone.",
+			"Do-over": "Penny will be back. So will her husband, mumbling."
+		}
+	}
+}

@@ -25,6 +25,8 @@ const PHASES: Array[StringName] = [
 	&"tymp", &"decision",
 	# cases batch 2: the patient comes back after treatment (Day 10's wax)
 	&"retest",
+	# freestyle (docs/FREESTYLE.md): the waiting room, the tool tray, the chart question, the debrief
+	&"freestyle_room", &"freestyle_tray", &"freestyle_chart", &"freestyle_debrief",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.

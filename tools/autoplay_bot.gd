@@ -94,6 +94,10 @@ var _plateaus := 0
 ## so any --pick works on any save. The result gets a "days" report and problems for any failed
 ## expectation.
 var _via_days := false
+## (freestyle) --via-freestyle: start from the title's Freestyle button; the waiting room's pick
+## is then an ordinary choice beat (best = --freestyle=<id>, docs/FREESTYLE.md).
+var _via_freestyle := false
+var _freestyle_opened := false
 var _days_opened := false
 var _days_report: Dictionary = {}
 var _days_problems: PackedStringArray = []
@@ -131,8 +135,10 @@ func _ready() -> void:
 	Events.speech_stored.connect(_on_speech_stored)
 	_mouse = Game.cli_flag("mouse")
 	_via_days = Game.cli_flag("via-days")
+	_via_freestyle = Game.cli_flag("via-freestyle")
 	Events.scene_changed.connect(func(path: String, _n: Node) -> void:
-		if _want_title and path.ends_with("title_screen.tscn"):
+		# (freestyle) the paper's main button can lead elsewhere: summary "continue_scene"
+		if _want_title and (path.ends_with("title_screen.tscn") or path == String(_summary.get("continue_scene", "-"))):
 			_back_at_title = true)
 	Events.input_resolved.connect(func(b: StringName) -> void:
 		_resolved[b] = int(_resolved.get(b, 0)) + 1)
@@ -209,6 +215,10 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 		return
 	if beat == &"explainer" and not _mouse:
 		await _keys_explainer(solver, info)
+		return
+	if _via_freestyle and beat == &"title_start" and not _freestyle_opened:
+		_freestyle_opened = true
+		await _open_title_button("Freestyle")
 		return
 	if _mouse:
 		await _mouse_beat(beat, info)
@@ -833,7 +843,7 @@ func _mouse_route(m: Dictionary) -> void:
 
 func _mouse_results_continue() -> void:
 	_want_title = true
-	await _click_text("Back to the title")
+	await _click_text(String(_summary.get("continue_text", "Back to the title")))
 	var t0 := Game.clock
 	while not _back_at_title and Game.clock - t0 < 10.0:
 		await _frames(2)
@@ -846,11 +856,17 @@ func _mouse_results_continue() -> void:
 ## Title menu -> "Days", like a player: click it (--mouse) or move the highlight with ui_down and
 ## press ui_accept (keys). The title then emits the chapter_select beat.
 func _open_days() -> void:
+	await _open_title_button("Days")
+
+
+## A title menu button by its text (Days, Freestyle): a click (--mouse), or ui_down until it is
+## highlighted and ui_accept (keys).
+func _open_title_button(text: String) -> void:
 	if _mouse:
-		await _click_text("Days")
+		await _click_text(text)
 		return
 	for i in 8:
-		var b := _find_visible_text("Days") as Button
+		var b := _find_visible_text(text) as Button
 		if b != null and b.text.begins_with(">"):
 			break
 		await _tap(&"ui_down")
@@ -993,6 +1009,14 @@ func _finish() -> void:
 		elif String(_summary.get("chapter_id", "")) != String(_days_report["picked"]):
 			problems.append("days: picked %s but played %s" % [_days_report["picked"], _summary.get("chapter_id", "")])
 		problems.append_array(_days_problems)
+	if _summary.has("freestyle_case"):
+		report["freestyle"] = {"case": _summary["freestyle_case"], "medals": _summary.get("medals", {}),
+			"visit_score": snappedf(float(_summary.get("visit_score", 0.0)), 0.1)}
+		var want_fs := String(Game.cli_value("freestyle", ""))
+		if want_fs != "" and String(_summary["freestyle_case"]) != want_fs:
+			problems.append("freestyle: asked for %s but played %s" % [want_fs, _summary["freestyle_case"]])
+	if _via_freestyle and not _freestyle_opened:
+		problems.append("freestyle: the title's Freestyle button never opened")
 	report["problems"] = problems
 	print("AUTOPLAY_RESULT ", JSON.stringify(report))
 	var code := 0

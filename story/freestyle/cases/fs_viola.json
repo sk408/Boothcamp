@@ -1,0 +1,96 @@
+{
+	"id": "fs_viola",
+	"patient_id": "fs_viola",
+	"speaker": "Viola",
+	"stars": 2,
+	"teaser": "Her old aids whistle a top C, and still the world mumbles.",
+	"look": {
+		"face": "doris", "skin": "#e2b08c", "skin_shade": "#c48f6b", "nose": "#d69e7a",
+		"cardigan": "#7b1e5a", "pants": "#2b1630", "shirt": "#f7e7c6", "accent": "#d4a017", "shoes": "#8c1c3a",
+		"hair": "#efe0b0", "hair_style": "beehive", "mustache": false, "brows": false,
+		"glasses": "cateye", "glasses_color": "#d4a017", "walker": false, "prop": "",
+		"extras": [],
+		"portrait_bg": "#f7e1ef", "name_color": "#7b1e5a"
+	},
+	"voice": {"f0": 250.0, "wobble": 0.12, "roll": 0.62, "vowels": ["a", "o", "a", "i", "o", "e"]},
+	"hello": [
+		["Viola", "Dame Viola Vibrato, soprano. Forty years on the opera stage. Retired, darling, not finished."],
+		["Viola", "My hearing aids are eight years old. They whistle like a kettle, and STILL everyone mumbles."]
+	],
+	"answers": {
+		"which_ear": {"say": "Both equally, darling. A matched pair, like my pearl earrings.", "note": "Both ears seem the same"},
+		"onset": {"say": ["Slowly. Every season the chorus mumbles a little more.", "Nothing sudden. I never did sudden exits."], "note": "Slowly worse over years, nothing sudden"},
+		"ringing": {"say": "A faint hiss in both ears when it's quiet. Like an audience before curtain-up.", "note": "Faint hiss in both ears, in quiet"},
+		"red_flags": {"say": "No pain, no drips, no dizzy spells. Forty years of stage trapdoors and I never wobbled once.", "note": "No pain, drainage or dizziness"},
+		"noise": {"say": "An orchestra at my feet for forty years. And my own top C, right beside my ears!", "note": "40 years singing over a loud orchestra"},
+		"ear_history": {"say": "Never an infection, never an operation. These ears never missed a performance.", "note": "No infections, surgery or injuries"},
+		"family": {"say": "Papa was a tenor. Hard of hearing by sixty-five. He simply sang louder.", "note": "Her father lost hearing in his sixties"},
+		"health": {"say": "A little pill for cholesterol. Otherwise honey, lemon and splendid health.", "note": "Cholesterol pill; otherwise well"},
+		"aids": {"say": [
+			"These two, from my last hearing test. Eight years ago.",
+			"Turned up as far as they go. They whistle, and still everyone mumbles."
+		], "note": "Aids 8 years old, maxed out and whistling"},
+		"hardest": {"say": [
+			"Dinner parties. And the opera! I hear every violin, but the singers' words just melt.",
+			"My grandson might as well be mumbling in Latin."
+		], "note": "Words melt at dinners and the opera"}
+	},
+	"key_questions": ["red_flags", "onset", "which_ear", "aids"],
+	"otoscopy": {
+		"canal": "narrow",
+		"right": {"view": "clear", "caption": "Viola's RIGHT ear: a narrow little canal, clean, with a pearly eardrum at the end."},
+		"left": {"view": "clear", "caption": "Viola's LEFT ear: just as narrow, just as tidy. No wax to blame for the whistle."},
+		"note": "Narrow canals, clear; eardrums normal"
+	},
+	"tymp": {
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.5, "ecv_ml": 0.9},
+		"left": {"type": "A", "peak_daPa": -15, "peak_ml": 0.6, "ecv_ml": 1.0},
+		"note": "Tymp: type A both ears"
+	},
+	"decision": "fit",
+	"decision_lines": {
+		"fit": "Fit! Slow, matching, no red flags. A bigger loss just needs stronger aids, fitted and checked properly.",
+		"refer": "Refer for what? A bigger loss isn't a red flag. Slow, matching, no gap, healthy ears: fit her.",
+		"today": "Nothing sudden here. It crept down over years, like a very long aria. Not an emergency.",
+		"clear": "No aids? Around 60 dB in both ears is a big loss. She needs MORE help, not none."
+	},
+	"why": {
+		"prompt": "Why are new, stronger aids the right call for Viola?",
+		"options": [
+			["Slow and even in both ears, no gap, no red flags.", true, "Bravo! Size isn't a red flag. Slow, matching and inner ear means fit."],
+			["Bigger losses never need a doctor.", false, "Careful! Any size of loss needs a doctor if it's sudden, one-sided or painful. Hers isn't."],
+			["Stronger aids will make her hear like new.", false, "If only! New aids help a lot, but noisy rooms stay tricky. Set honest expectations."],
+			["Her aids are eight years old: reason enough.", false, "Old aids explain the visit, not the safety. The red-flag check makes it a fit."]
+		]
+	},
+	"debrief": [
+		["Hoot", "A bigger loss isn't a red flag. Slow, matching, no gap, no red flags: that's a fit."],
+		["Hoot", "Eight-year-old aids wear out, and hearing drifts. New ones get checked in her ear with a tiny mic."],
+		["Hoot", "Honest goals: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check."]
+	],
+	"goodbye": [
+		{"do": "hearing_aids"},
+		{"react": "cheer"},
+		["Viola", "Oh! The consonants! I can hear every S in 'Mississippi'! Bravissima!"],
+		["Hoot", "No whistle either: a snug fit for those narrow canals, and the tiny mic checked every pitch."],
+		["Hoot", "Wear them all day. Come back in two weeks for a tune-up."],
+		["Viola", "A second performance? Darling, I never refuse an encore."],
+		{"react": "wave"}
+	],
+	"paper": {
+		"headlines": {
+			"S": "DIVA'S EARS BACK IN TUNE; KETTLE AIDS RETIRED",
+			"A": "DAME VIOLA HEARS EVERY S; ENCORE BOOKED",
+			"B": "SOPRANO FITTED; A FEW STAMPS SLIGHTLY FLAT",
+			"C": "VIOLA FITTED, BUT THE WORKUP MISSED ITS CUE",
+			"Do-over": "CURTAIN DOWN ON VISIT; REHEARSAL CALLED"
+		},
+		"subheads": {
+			"S": "A big, slow, matching loss with no red flags: fitted, checked in the ear and back in tune.",
+			"A": "Size isn't a red flag. New aids, a snug fit and a tiny-mic check did the rest.",
+			"B": "The right call, though a few stamps wandered. Chart every pitch in both ears.",
+			"C": "A bigger loss still needs the full workup: ask, look, air tones, then bone.",
+			"Do-over": "Slow and matching with no red flags means fit, however big the loss. Viola will be back."
+		}
+	}
+}

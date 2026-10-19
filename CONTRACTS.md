@@ -1486,3 +1486,61 @@ props, speakers), patients match their chapters and validate, flat tymps read th
 validate rule and broken file is reported, the retest profile, finding conditions, wrong-first headlines,
 `merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw. `tools/run_tests.sh` also
 fails when `docs/CASE_SCRIPTS.md` is stale.
+
+---------------------------------------------------------------------------------------------
+
+## §12 Freestyle (the walk-in clinic)
+
+Design and Steve's checklist: `docs/FREESTYLE.md`. Practice outside the story: the title's **Freestyle** button opens a
+waiting room of walk-in patients; the player picks the tools in any order, then charts and makes the call.
+
+**Files.** Everything lives in `story/freestyle/` (owner: freestyle): `fs_rules.gd` (`FsRules`, preload by path: the
+question deck, the workup a pro runs, masking needs, medals), `fs_data.gd` (`FsData`: loader and validator,
+`CASE_IDS` in waiting-room order), `waiting_room.gd/.tscn` (the hub), `level_freestyle.gd/.tscn` (one runner for
+every walk-in), `fs_tray.gd`, `fs_questions.gd`, `fs_clipboard.gd`, `fs_chart.gd`, `fs_debrief.gd`, and
+`cases/<id>.json`. Truth tables: `core/patients/fs_<id>.tres` (same conventions as §11). Ids start with `fs_`.
+
+**Not chapters.** Walk-ins are never in `Game.CHAPTERS`, never on the Days grid and never in `chapters_done`.
+The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>` wins.
+The best result per walk-in is stored inside the save's patient record: `progress.patients[<id>].fs_best_grade`
+and `fs_best_score`.
+
+**Reused, not copied.** The AudiOtron (`start_test` plans, never coached), the clinic, `CaseRules` (tymp types, red
+flags, asymmetry, decisions), `ClinicRules` (types of loss, masking rules, PTA), the story tympanometer gadget
+`story/games/case_tymp.gd` (the tray hides the Tympanometer when that file is missing) and the Daily Decibel.
+
+**Phases** (`Events.phase_changed`): `freestyle_room`, `intro`, `freestyle_tray`, `history`, `otoscopy`, `tymp`,
+`audiometry` (info `{ear, test}`), `freestyle_chart`, `decision`, `freestyle_debrief`, `results`. `Game.PHASES`
+gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief`.
+
+**Beats.** No new beat kinds: everything is `dialogue`, `choice` and the AudiOtron's own beats. The waiting room's
+pick, the tool tray, the question board and every clinic choice (tip, tymp type, ear first, mastoid, masked test,
+chart type, the stamp) are `choice` beats whose `best` is the pro's pick (`FsRules.best_tool`). Buttons start
+with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique).
+
+**Visit and medals.** Medals `fs_chat` (Chat), `fs_workup` (Workup), `fs_chart` (Chart), `fs_call` (Call). The
+paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit's own score. Summary keys:
+`freestyle_case`, `visit_score`, `headlines`, `subheads`, `medal_beats`, `continue_text` ("Waiting room"),
+`continue_scene` (the waiting room), `next_chapter_id` "" and `first_clear` false. Visit flags:
+`freestyle_case`, `freestyle_asked`, `freestyle_tip_tries`, `freestyle_types`, `freestyle_tymp_misreads`,
+`freestyle_slips`, `decision_first`, `decision`, `decision_tries`.
+
+**The AudiOtron between tests.** One screen per visit. Between tests it stays in the tree (its Hoot anchors are
+registered once) but is hidden and `PROCESS_MODE_DISABLED`, unregistered from `Stage.audiometer`, with the booth
+view off and the music back; the next test re-registers it. It is freed when the patient walks to the desk.
+
+**Hooks in other modules (all additive).**
+- `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`) after Days; Options and Quit share the last
+  row (Up/Down and Left/Right walk the buttons in order) so six buttons still clear the safety footer.
+- `story/case_portraits.gd`: `CasePortraits.register(who, look)` (walk-ins aren't chapters, so they register).
+- `story/daily_decibel.gd`: the summary's optional `continue_text` labels the main button (default "Back to the title";
+  keep it short, the paper must fit 1280 px).
+- `tools/autoplay_bot.gd`: `--mouse` clicks `continue_text` and counts `continue_scene` as being back;
+  `--via-freestyle` presses the title's Freestyle button; the report gains `freestyle` {case, medals, visit_score}.
+
+**Anchors.** `freestyle_chart` (the chart card).
+
+**Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
+agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, the tymp tip
+matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
+screen, an unmasked gap is never an accepted chart type, and the title's menu ends above the footer.
