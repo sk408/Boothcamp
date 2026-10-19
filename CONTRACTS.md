@@ -23,6 +23,8 @@ Engine: Godot 4.7.2, statically typed GDScript, Compatibility (OpenGL) renderer,
 | **(Speech)** `core/speech/**`, `ui/speech/**`, `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | Day 3: the SPEECH screen and its logic (§9) |
 | **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-9: the case files and their runner (§11) |
 
+**Export presets.** `export_presets.cfg` has two presets, "Windows Desktop" and "Web" (Steve's, 2026-10-19; `.github/workflows/pages.yml` deploys the web build to GitHub Pages on every push to main). A run-time data file that is not a Godot resource (patient and case JSON, word lists) must be in BOTH presets' `include_filter`, or the exported game runs without it.
+
 The foundation stubs in `core/`, `ui/`, `world/` and `story/` have been replaced by the builders' real modules
 (integrated 2026-10-17). Owners may keep changing their internals, but must keep the public API in this file.
 Contract changes from that integration are marked **(v2)**.
@@ -637,6 +639,8 @@ After a store, the screen moves to the next remaining frequency (the rule is in 
   "mask_on": true, "mask_db": 25, "mask_ear": "left",  # masker dial (dB EM) and the ear it plays in
   "mask_status": &"ok",                                # ClinicRules.MASK_STATUSES (the NOISE box light)
   "initial_mask_db": 25,                               # the helper's starting level here (0 without masking UI)
+  "start_mask_db": 25,                                 # (E9) where the coach starts the noise: initial_mask_db, or one
+                                                       #   step under overmasking in a masking dilemma
   "overmask_limit_db": 50,                             # noise at or above this overmasks (bone: tone + 40; air: test-ear bone + 40)
   "plateau": {"db": 10, "steps": 2, "needed": 3, "found": false, "start_mask": 25, "initial": 25, "points": [...]},  # masked sheets only, else {}
   "stored_tests": {"ac": {"right": {...}, "left": {...}}, "bc": {...}, "bc_masked": {...}, "ac_masked": {...}},
@@ -661,6 +665,9 @@ Before the first `start_test`, `accepting_input` is false and `stored` is empty.
   # v3: "test" ("ac" / "bc" / "bc_masked" / "ac_masked"), "transducer", "mask_db" (-1 = off),
   #     "plateau" (masked sheets: plateau_info at the store), "start_db", "by_hoot", "clean", "golf_raw";
   #     masked "responses" are [db, heard, mask_db]
+  # clinical review E9: "plateau_not_reached" (true = a masked stamp stored because the safe window was
+  #     full, or in a masking dilemma, before a plateau: the true threshold may be poorer; the audiogram
+  #     draws a purple "?" badge; a stamp at or better than true_db scores full accuracy)
 }
 ```
 **(v3)** `true_db` is the response threshold for that sheet: unmasked bone = whichever cochlea answers first
@@ -721,7 +728,7 @@ it during the test.
 
 | kind | when | data |
 |---|---|---|
-| `mask_too_low` | the first masked tone of a measurement with the noise below the initial level | mask_db, initial_db |
+| `mask_too_low` | the first masked tone of a measurement with the noise below the initial level (**E9**: in a masking dilemma, below the safe maximum `safe_mask_max_db`) | mask_db, initial_db |
 | `mask_start` | the first masked tone more than 10 dB from the unmasked threshold | db, start_db |
 | `mask_wrong_step` | not the plateau dance: heard = noise +5 (same tone), missed = tone +5 (same noise) | expected, expected_mask, got, got_mask, prev_db, prev_heard |
 | `store_no_plateau` | stored before 3 noise raises held (not when `window_full`: one more step would overmask) | db |
@@ -730,8 +737,10 @@ it during the test.
 On non-`ac` sheets `start_not_1k`, `missed_retest` and the inter-octave rule do not apply.
 
 **(v3) Observations:** `cross_hearing` (unmasked: the other cochlea answered), `undermasked` (masked: it still
-did), `plateau_step` {steps, needed, db, mask_db, found, auto} after every masked verdict, `plateau_found`
-{db, start_mask, end_mask}, `vibrotactile` {db} (a felt low bone tone).
+did), `plateau_step` {steps, needed, db, mask_db, found, window_full, auto} after every masked verdict, `plateau_found`
+{db, start_mask, end_mask}, `vibrotactile` {db} (a felt low bone tone). **(E9)** `masking_dilemma` {initial_db,
+limit_db} (the first scored masked tone where the initial masking already overmasks) and `plateau_not_reached`
+{db, mask_db, limit_db} (the safe window filled before a plateau), each once per visit.
 
 Combo multiplier (`combo_changed`): x1, x2 at 3, x3 at 6, x5 at 10 consecutive clean checks.
 
@@ -756,6 +765,8 @@ func point_count(ear) -> int
 func freq_at(local_x: float) -> int          # nearest test frequency, -1 outside the plot
 # v3:
 func set_point(ear, freq, db, no_response := false, animate := true, test := &"ac") -> void
+# clinical review E9: set_point(..., test, no_plateau := false) draws the purple "?" badge (plateau not
+#   reached) beside a masked symbol; show_results() reads it from "plateau_not_reached" (§4.4)
 func point_count(ear, test := &"ac") -> int
 func get_point_global_position(ear, freq, test := &"ac") -> Vector2   # includes the bone symbol offset
 var layers: Dictionary                        # test -> ear -> freq -> point (the non-ac sheets)
@@ -830,6 +841,8 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   `nontest_bone_estimate`), **(v4)** `discard_open(e, f)` (drops the open measurement, closes its tone record and
   cancels any patient press or anticipation still on its way: the Ghost demo), `mask_status`, `plateau_info`, `store_candidate` (the plateau
   level, or the held level once `window_full(e, f)`), `window_full`, `results_view`; per-test sheets; `MASK_PAR_SLACK` 2 (masked par = textbook dance + 2).
+  **(Clinical review E9)** `safe_mask_max_db(e, f, tone_db)` (one step under the overmasking limit), `start_mask_db`
+  (the initial masking, or the safe maximum in a dilemma: where the coach starts the noise), `in_dilemma`.
 - **(polish)** `AudiometrySession`: `MASKED_GRACE_DB` 0 (a masked stamp is scored like any other: the simulator is
   calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); `instant_measure(ear, freq)
   -> Dictionary` runs one whole textbook measurement at once through the public controls with simulated time (Hoot's
@@ -911,7 +924,7 @@ but must not rename or remove these.
 - **Par (v2):** per measurement, the median presentations of a textbook search from that measurement's start
   level (typically 7-13). Golf names use run-sized bands (§2.5). Teaching defaults that need playtesting.
 - **(v3) Masked par:** the presentations of the deterministic textbook plateau dance from the measurement's start
-  (initial noise, tone at the unmasked stamp) + 2. Masking errors (§4.5) lower technique like any other.
+  (initial noise, tone at the unmasked stamp; **E9:** the safe maximum in a dilemma, ending once the window is full) + 2. Masking errors (§4.5) lower technique like any other.
 
 ### §5.3 Visit summary (`Game.finish_visit()`, `Events.level_finished`)
 

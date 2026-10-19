@@ -346,6 +346,26 @@ func test_symbol_layers_and_offsets() -> void:
 	ag.masker_view = {"freq": 1000, "db": 60, "role": &"leak", "hot": true}
 	await wait_frames(2)
 	assert_true(ag._attention_count() >= 1)
+	assert_eq(ag._no_plateau_count(), 0)
+
+
+## (Clinical review E9) A masked stamp with no plateau carries the purple "?" badge, from the
+## AudiOtron's set_point and from a results Dictionary (the reveal), with its legend.
+func test_no_plateau_badge() -> void:
+	var ag := (load(AUDIOGRAM) as PackedScene).instantiate() as Audiogram
+	ag.ear = "both"
+	ag.size = Vector2(520, 380)
+	add_node(ag)
+	await wait_frames(1)
+	ag.set_point("right", 1000, 10, false, false, &"bc_masked", true)
+	ag.set_point("right", 2000, 10, false, false, &"bc_masked")
+	assert_eq(ag._no_plateau_count(), 1)
+	await wait_frames(2)
+	var res := {"ears": {"right": {"freqs": {1000: {"stored_db": 60}}, "bc_masked": {
+		1000: {"stored_db": 10, "plateau_not_reached": true}, 2000: {"stored_db": 15}}}, "left": {}}}
+	ag.show_results(res)
+	assert_eq(ag._no_plateau_count(), 1, "show_results keeps the mark")
+	await wait_frames(2)
 
 
 ## (polish) The reveal sorts many marks per ear at one frequency (air, masked air, bone, masked

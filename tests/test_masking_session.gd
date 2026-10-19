@@ -26,6 +26,17 @@ class FixedSim extends PatientSim:
 		return true
 
 
+## A patient who never answers (a miss on every tone).
+class DeafSim extends FixedSim:
+	func on_tone_start(_ear: String, _freq: int, _db: int, _gap_s: float) -> Dictionary:
+		last_heard_by = &""
+		return {"heard": false, "press": false, "guess": false, "latency_s": 0.5}
+
+
+func _deaf_sim(p: PatientProfile) -> PatientSim:
+	return DeafSim.new(p)
+
+
 const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]
 var _n := 0
 
@@ -281,6 +292,80 @@ func test_air_overmask_limit_and_full_window() -> void:
 	assert_eq(s.recommended_action()["action"], &"store")
 	var info := s.store()
 	assert_false((info["errors"] as Array).has(&"store_no_plateau"), "a full window is not a skipped plateau")
+	assert_true(bool(info["plateau_not_reached"]), "E9: stored as plateau not reached")
+
+
+## (Clinical review E9) A masking dilemma: a large conductive loss in both ears. The textbook start
+## (other ear's air 60 + 10 = 70) already overmasks a bone tone at 5 dB (limit 5 + 40 = 45), so the
+## coach starts the noise one step short (40), never says "too little", explains the dilemma once,
+## and the heard tone is stored as "plateau not reached" with full credit.
+func test_masking_dilemma_stops_short_of_overmasking() -> void:
+	var p := PatientProfile.new()
+	p.id = "dilemma"
+	p.display_name = "Test dilemma"
+	for f: int in ClinicRules.AC_FREQS:
+		p.thresholds_right[f] = 60
+		p.thresholds_left[f] = 60
+	for f: int in ClinicRules.BC_FREQS:
+		p.bc_right[f] = 5
+		p.bc_left[f] = 5
+	var s := AudiometrySession.new(p, 7)
+	s.sim = FixedSim.new(p)
+	_play(s, "right")
+	s.set_ear("left")
+	s.set_freq(1000)
+	s.set_level(40)
+	_play(s, "left")
+	s.set_ear("right")
+	s.configure({"test": &"bc"})
+	s.set_freq(1000)
+	s.set_level(40)
+	_play(s, "right")
+	s.configure({"test": &"bc_masked"})
+	s.set_freq(1000)
+	assert_eq(s.recommended_action()["action"], &"mask_toggle")
+	s.toggle_mask()
+	assert_eq(s.initial_mask_db(), 70, "other ear's air 60 + 10, no occlusion (that ear has a gap)")
+	assert_true(s.in_dilemma("right", 1000, 5), "70 already reaches the limit 45")
+	assert_eq(s.start_mask_db("right", 1000, 5), 40, "one step short of overmasking")
+	var a := s.recommended_action()
+	assert_eq(int(a["target_mask"]), 40, "the coach never asks for the overmasking start")
+	s.set_mask_level(40)
+	s.set_level(int(s.recommended_start("right", 1000)))
+	assert_eq(s.mask_status(), &"impossible", "the lamp shows the dilemma")
+	var kinds := []
+	s.technique.connect(func(k: StringName, _d: Dictionary) -> void: kinds.append(k))
+	_present(s)
+	assert_has(kinds, &"masking_dilemma")
+	assert_has(kinds, &"plateau_not_reached")
+	assert_false(kinds.has(&"mask_too_low"), "the safe maximum is not too little noise")
+	assert_false(kinds.has(&"overmasked"))
+	assert_true(s.window_full("right", 1000))
+	assert_eq(s.recommended_action()["action"], &"store")
+	var info := s.store()
+	assert_true(bool(info["plateau_not_reached"]))
+	assert_eq((info["errors"] as Array).size(), 0, "storing the held level is the right call")
+	assert_eq(float(info["accuracy"]), 1.0)
+	assert_true(s.textbook_mask_presentations("right", 1000, 5, 40) <= 2, "par ends when the window is full")
+	# the next pitch is dialled to the safe start, never the overmasking textbook level
+	assert_true(s.freq != 1000, "moved on to the next masked bone pitch")
+	assert_eq(s.mask_db, s.start_mask_db("right", s.freq, s.db))
+	assert_true(s.mask_db < s.overmask_limit_db(), "the preset noise does not overmask")
+	assert_eq(s.recommended_action()["action"], &"present", "no noise fix needed first")
+	# a player who overmasks and misses: the coach brings the noise back under the limit
+	s.set_mask_level(s.overmask_limit_db() + 5)
+	var before := s.mask_db
+	s.sim = _deaf_sim(p)
+	_present(s)
+	var a2 := s.recommended_action()
+	assert_true(int(a2.get("target_mask", before)) < s.overmask_limit_db("right", s.freq, int(a2["target_db"])), "never recommends overmasking")
+	# and following that advice is graded a textbook step, not a wrong one
+	s.set_mask_level(int(a2["target_mask"]))
+	s.set_level(int(a2["target_db"]))
+	kinds.clear()
+	_present(s)
+	assert_has(kinds, &"textbook_step", "the capped step is the textbook step")
+	assert_false(kinds.has(&"mask_wrong_step"))
 
 func test_mask_status_light() -> void:
 	var s := _bonnie()

@@ -173,5 +173,10 @@ makes the change on `main`.
    (`--via-days --pick=<id>`, add `--mouse` to scroll and click the card like a player).
 3. A few rendered screenshots of the new chapter (`tools/shots.sh`) attached to the PR.
 4. The PR description lists every shared-file addition.
+5. Any new data file the game reads at run time that is not a Godot resource (patient or case JSON, word
+   lists, movie data in JSON) is added to the `include_filter` of BOTH presets in `export_presets.cfg`,
+   "Windows Desktop" and "Web", or the exported game silently runs without it. Every push to main
+   redeploys the web build to GitHub Pages (`.github/workflows/pages.yml`), so a missing filter shows up
+   there first.
 
 No vendor names, logos, art, word lists or recordings anywhere in the repo.
