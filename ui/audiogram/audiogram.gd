@@ -557,7 +557,7 @@ func _draw_ear(e: String) -> void:
 		var age := float(p["age"])
 		if age >= STAMP_IN_S:
 			var fade := clampf(1.0 - (age - STAMP_IN_S) / 0.6, 0.0, 1.0)
-			AoDraw.splat(self, Vector2(freq_to_x(f), db_to_y(float(p["db"]))), 17.0, Color(col, 0.22 * fade), int(p["seed"]))
+			AoDraw.splat(self, Vector2(freq_to_x(f), db_to_y(float(p["db"]))), 17.0, Color(col, 0.22 * fade * fade_e), int(p["seed"]))
 	# pen lines
 	for k: String in _segments:
 		if not k.begins_with(e + ":"):
@@ -577,7 +577,7 @@ func _draw_ear(e: String) -> void:
 		if a.distance_to(b) < 20.0:
 			continue
 		var end := ia.lerp(ib, prog)
-		draw_line(ia, end, Color(col, 0.9), 3.0, true)
+		draw_line(ia, end, Color(col, 0.9 * fade_e), 3.0, true)   # (arcade) dim fades the line too, as documented
 		if prog < 1.0:
 			draw_circle(end, 4.0, Palette.INK)
 	# symbols

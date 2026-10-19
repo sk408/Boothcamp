@@ -51,6 +51,10 @@ static func next_spec(rng: RandomNumberGenerator, t: float, recent: Array, golde
 	var open := unlocked(t)
 	if t >= GOLDEN_FROM_S:
 		var g: Array = golden_left.filter(func(s: Variant) -> bool: return open.has(s))
+		if g.size() > 1 and recent.size() >= 2 and recent[-1] == recent[-2]:
+			g.erase(recent[-1])
+		elif g.size() == 1 and recent.size() >= 2 and recent[-1] == recent[-2] and recent[-1] == g[0]:
+			g = []   # it waits a card: never three of a shape running
 		if not g.is_empty():
 			return {"shape": g[rng.randi() % g.size()], "ear": "", "lookalike": false, "golden": true}
 	# a newly opened chute gets the next card, so the player meets it straight away
@@ -101,6 +105,6 @@ static func rank(right: int, oops: int, seconds: float = RUN_S) -> String:
 		return "Sharp Eye"
 	if acc >= 0.8:
 		return "Steady Sorter"
-	if right == 0:
+	if right + oops == 0:
 		return "Belt Watcher"
 	return "Jam Master"

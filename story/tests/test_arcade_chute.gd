@@ -54,6 +54,18 @@ func test_every_card_sorts_by_the_ear_it_names() -> void:
 				assert_false(String(c["line"]).is_empty(), "a line for the right chute")
 
 
+## A slope that comes back up 10 dB at 6k reads as a 4k notch to a clinician (the noise-notch rule
+## looks at 6k or 8k), so the belt never deals one, lookalikes included.
+func test_slopes_never_recover_at_6k() -> void:
+	for lookalike: bool in [false, true]:
+		for s in SEEDS:
+			var t := ChartDeck.make_chart(_rng(s * 3 + 50), &"sloping", lookalike)
+			assert_true(maxi(int(t[3000]), int(t[4000])) - int(t[6000]) < 10, "slope seed %d: no 6k recovery (%s)" % [s, str(t)])
+	var bounce := {250: 15, 500: 20, 1000: 25, 2000: 40, 3000: 50, 4000: 65, 6000: 55, 8000: 70}
+	if ClinicRules.classify_shape(bounce) == &"sloping":
+		assert_false(ChartDeck.stable(bounce, &"sloping"), "a 10 dB bounce at 6k is not a clean slope")
+
+
 func test_notches_bottom_out_deep_enough_to_see() -> void:
 	for s in SEEDS:
 		var t := ChartDeck.make_chart(_rng(s + 900), &"notch", s % 2 == 0)
@@ -91,6 +103,19 @@ func test_story_charts_have_the_shape_their_chute_claims() -> void:
 		var sort_ear := String(c["sort_ear"])
 		assert_eq(ClinicRules.classify_shape(c["ac"][sort_ear]), shape, "%s's %s ear really is %s" % [g["who"], sort_ear, shape])
 		assert_true(ChartDeck.stable(c["ac"][sort_ear], shape), "%s's chart keeps its shape 5 dB either way" % g["who"])
+
+
+## A story chart shows a Day's pattern (and for Marina, a clue to her call), so it only rides the
+## belt once that Day is finished; unfound ones come first, then all of them come round again.
+func test_story_charts_wait_for_their_day() -> void:
+	Game.progress["chapters_done"] = []
+	assert_eq(ChartDeck.golden_pool(PackedStringArray()), [], "no Days done: no story charts")
+	Game.progress["chapters_done"] = ["gus", "bonnie"]
+	assert_eq(ChartDeck.golden_pool(PackedStringArray()), [&"sloping"], "Day 1 done: only Gus")
+	assert_eq(ChartDeck.golden_pool(PackedStringArray(["sloping"])), [&"sloping"], "found, and the only one open: it comes round again")
+	Game.progress["chapters_done"] = ["gus", "rocco", "marina", "ginger"]
+	assert_eq(ChartDeck.golden_pool(PackedStringArray(["sloping", "notch"])), [&"cookie_bite", &"rising"], "the unfound ones first")
+	assert_eq(ChartDeck.golden_pool(PackedStringArray(["sloping", "notch", "cookie_bite", "rising"])).size(), 4, "all found: all again")
 
 
 func test_marina_shows_only_her_left_ear() -> void:
@@ -149,6 +174,15 @@ func test_never_three_of_a_shape_running() -> void:
 			recent.pop_front()
 
 
+func test_a_story_chart_never_makes_three_in_a_row() -> void:
+	var s := ChuteRules.next_spec(_rng(2), 55.0, [&"notch", &"notch"], [&"notch"])
+	assert_false(bool(s["golden"]) and s["shape"] == &"notch", "Rocco waits a card after two notches")
+	assert_ne(s["shape"], &"notch", "and the card dealt instead is not a third notch")
+	s = ChuteRules.next_spec(_rng(2), 55.0, [&"notch", &"notch"], [&"notch", &"rising"])
+	assert_true(bool(s["golden"]), "another story chart is free to come")
+	assert_eq(s["shape"], &"rising", "and it is not the third notch")
+
+
 func test_points_and_streaks() -> void:
 	assert_eq(ChuteRules.points(1, false), 100, "plain")
 	assert_eq(ChuteRules.points(3, false), 200, "x2 at a streak of 3")
@@ -167,6 +201,7 @@ func test_fluent_rank_and_board() -> void:
 	assert_eq(ChuteRules.rank(8, 2), "Steady Sorter", "80%")
 	assert_eq(ChuteRules.rank(5, 5), "Jam Master", "guessing")
 	assert_eq(ChuteRules.rank(0, 0), "Belt Watcher", "nothing sorted")
+	assert_eq(ChuteRules.rank(0, 5), "Jam Master", "only slips is jamming, not watching")
 	assert_true(ChuteRules.on_board(9, 1), "90% makes the board")
 	assert_false(ChuteRules.on_board(8, 2), "80% does not")
 	assert_false(ChuteRules.on_board(0, 0), "an empty run does not")
@@ -245,6 +280,16 @@ func test_runs_and_found_survive_a_bad_save() -> void:
 	for i in 20:
 		ArcadeScores.add_run("chart_chute", {"right": i, "oops": 0, "score": 0})
 	assert_eq(ArcadeScores.runs("chart_chute").size(), ArcadeScores.RUNS_KEPT, "the last twelve runs")
+
+
+## Hand-edited or odd saves: numbers where strings belong read as text, never crash.
+func test_scores_read_numbers_as_text() -> void:
+	Game.progress["arcade"] = {"chart_chute": {"table": [{"initials": 123.0, "score": 500.0, "accuracy": 1.0}], "found": [1.0, "notch"], "initials": 42.0}}
+	var t := ArcadeScores.table("chart_chute")
+	assert_eq(t.size(), 1, "the row reads")
+	assert_eq(String(t[0]["initials"]).length(), 3, "initials are three letters")
+	assert_eq(ArcadeScores.found("chart_chute").size(), 2, "found reads both")
+	assert_eq(ArcadeScores.last_initials("chart_chute").length(), 3, "last initials read")
 
 
 func test_arcade_save_key_is_in_the_defaults() -> void:

@@ -6,7 +6,7 @@ extends RefCounted
 ##   const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 ##   var card := ChartDeck.make_card(rng, &"notch", {"ear": "right", "lookalike": false}, 7)
 ##   card = {"shape", "ear" (right | left | both), "sort_ear", "ac": {ear: {freq: dB}}, "name",
-##           "look", "who", "golden", "line", "serial"}
+##           "look", "who", "golden", "line", "serial", "other_shape" (two-ear cards, else &"")}
 ##   ChartDeck.stable(thresholds, shape)    # the margin check every card passes
 ##   ChartDeck.golden_card(&"notch", 3)     # a story patient's own chart (Rocco's notch)
 
@@ -20,6 +20,7 @@ const MARGIN_DB := 5
 ## A notch on this belt bottoms out at 40 dB HL or worse, so it reads as a notch at a glance.
 const NOTCH_FLOOR_MIN := 40
 const MAX_TRIES := 80
+const PORTRAIT_IDS := 4
 
 ## Archetypes over FREQS. "plain" first; "lookalike" ones are the same shape with a trap in it.
 const ARCH: Dictionary[StringName, Dictionary] = {
@@ -92,15 +93,18 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		sort_ear = "right" if rng.randf() < 0.5 else "left"
 	var ac := {}
 	ac[sort_ear] = make_chart(rng, shape, bool(opts.get("lookalike", false)))
+	var other_shape: StringName = &""
 	if ear == "both":
 		var others: Array = SHAPES.filter(func(s: StringName) -> bool: return s != shape)
 		var other_ear := "left" if sort_ear == "right" else "right"
-		ac[other_ear] = make_chart(rng, others[rng.randi() % others.size()], false)
+		other_shape = others[rng.randi() % others.size()]
+		ac[other_ear] = make_chart(rng, other_shape, false)
 	var lines: Array = LINES[shape]
 	var first := FIRST[rng.randi() % FIRST.size()]
 	return {
-		"serial": serial, "shape": shape, "ear": ear, "sort_ear": sort_ear, "ac": ac, "golden": false,
-		"name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]], "who": "chute_%d" % serial,
+		"serial": serial, "shape": shape, "ear": ear, "sort_ear": sort_ear, "ac": ac, "golden": false, "other_shape": other_shape,
+		# a few portrait ids, reused: only two cards are ever on screen, so the look registry stays small
+		"name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]], "who": "chute_%d" % (serial % PORTRAIT_IDS),
 		"look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"), "line": lines[rng.randi() % lines.size()],
 	}
 
@@ -122,7 +126,16 @@ static func golden_card(shape: StringName, serial: int) -> Dictionary:
 				t[f] = int(src[f])
 			ac[ear] = t
 	return {"serial": serial, "shape": shape, "ear": String(g["ear"]), "sort_ear": String(g["sort_ear"]), "ac": ac, "golden": true,
-		"name": String(g["who"]), "who": String(g["who"]), "look": {}, "line": String(g["line"])}
+		"other_shape": &"", "name": String(g["who"]), "who": String(g["who"]), "look": {}, "line": String(g["line"])}
+
+
+## The shapes whose story chart may be dealt this run: only patients whose Day the player has
+## finished (a story chart shows the day's pattern and, for Marina, a clue to her call), and of
+## those the ones not found yet; once all of those are found they come round again.
+static func golden_pool(found: PackedStringArray) -> Array:
+	var done: Array = SHAPES.filter(func(s: StringName) -> bool: return Game.is_chapter_done(String(GOLDEN[s]["patient"])))
+	var left: Array = done.filter(func(s: StringName) -> bool: return not found.has(String(s)))
+	return left if not left.is_empty() else done
 
 
 ## (seeded) One ear's chart of `shape`, clear of every rule edge (stable()).
@@ -144,7 +157,8 @@ static func make_chart(rng: RandomNumberGenerator, shape: StringName, lookalike:
 
 
 ## The margin check: classify_shape says `shape`, it still says so with any one frequency 5 dB
-## better or worse, the chart is clearly not normal, and a notch bottoms out at NOTCH_FLOOR_MIN.
+## better or worse, the chart is clearly not normal, a notch bottoms out at NOTCH_FLOOR_MIN, and a
+## slope never recovers 10 dB at 6k.
 static func stable(t: Dictionary, shape: StringName) -> bool:
 	if ClinicRules.classify_shape(t) != shape:
 		return false
@@ -154,6 +168,10 @@ static func stable(t: Dictionary, shape: StringName) -> bool:
 	if worst <= 25 + 2 * MARGIN_DB:
 		return false
 	if shape == &"notch" and maxi(int(t[3000]), maxi(int(t[4000]), int(t[6000]))) < NOTCH_FLOOR_MIN:
+		return false
+	# a slope never comes back up at 6k either: 10 dB of recovery there reads as a 4k notch to a
+	# clinician (the usual noise-notch rule looks at 6k or 8k), even though classify_shape checks 8k
+	if shape == &"sloping" and maxi(int(t[3000]), int(t[4000])) - int(t[6000]) >= 10:
 		return false
 	for f: int in FREQS:
 		for d: int in [-MARGIN_DB, MARGIN_DB]:

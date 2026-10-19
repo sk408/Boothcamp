@@ -66,14 +66,20 @@ static func _skier(ci: CanvasItem, at: Vector2, s: float, lean: float) -> void:
 	ci.draw_circle(at + up * s * 0.78, s * 0.12, SKIER)
 
 
+## A crash cymbal on its stand (loud noise is what leaves a notch). The stand is light so it shows
+## on the dark chute.
 static func _cymbal(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 	var wob := sin(t * TAU * 3.0) * 0.18 * (1.0 - t)
-	ci.draw_line(c + Vector2(0, -s * 0.05), c + Vector2(0, s * 0.55), INK, 4.0)
-	ci.draw_set_transform(c, wob, Vector2(1.0, 0.32))
+	var stand := Color("#c9c4bb")
+	var foot := c + Vector2(0, s * 0.62)
+	ci.draw_line(c + Vector2(0, -s * 0.05), foot, stand, 4.0)
+	ci.draw_line(foot, foot + Vector2(-s * 0.3, s * 0.12), stand, 4.0)
+	ci.draw_line(foot, foot + Vector2(s * 0.3, s * 0.12), stand, 4.0)
+	ci.draw_set_transform(c, -0.18 + wob, Vector2(1.0, 0.45))
 	ci.draw_circle(Vector2.ZERO, s * 0.55, BRASS)
-	ci.draw_arc(Vector2.ZERO, s * 0.55, 0.0, TAU, 40, INK, 4.0)
-	ci.draw_arc(Vector2.ZERO, s * 0.3, 0.0, TAU, 32, Color(INK, 0.4), 2.5)
-	ci.draw_circle(Vector2.ZERO, s * 0.08, INK)
+	ci.draw_arc(Vector2.ZERO, s * 0.55, 0.0, TAU, 40, Color("#b07d12"), 4.0)
+	ci.draw_arc(Vector2.ZERO, s * 0.3, 0.0, TAU, 32, Color("#b07d12", 0.6), 2.5)
+	ci.draw_circle(Vector2.ZERO, s * 0.1, stand)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

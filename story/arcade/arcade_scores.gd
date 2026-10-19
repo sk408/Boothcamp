@@ -40,7 +40,7 @@ static func table(mode: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for row: Variant in data(mode)["table"]:
 		if row is Dictionary:
-			out.append({"initials": clean_initials(String((row as Dictionary).get("initials", "???"))),
+			out.append({"initials": clean_initials(str((row as Dictionary).get("initials", "???"))),
 				"score": int((row as Dictionary).get("score", 0)), "accuracy": float((row as Dictionary).get("accuracy", 0.0)), "you": false})
 	if out.is_empty():
 		for row: Dictionary in SEED_TABLE:
@@ -100,7 +100,7 @@ static func runs(mode: String) -> Array[Dictionary]:
 static func found(mode: String) -> PackedStringArray:
 	var out := PackedStringArray()
 	for v: Variant in data(mode)["found"]:
-		out.append(String(v))
+		out.append(str(v))
 	return out
 
 
@@ -121,4 +121,4 @@ static func clean_initials(s: String) -> String:
 
 
 static func last_initials(mode: String) -> String:
-	return clean_initials(String(data(mode)["initials"]))
+	return clean_initials(str(data(mode)["initials"]))

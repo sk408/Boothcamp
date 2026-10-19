@@ -12,6 +12,9 @@ extends Node
 ##   help     HOOT HELP every time (the H key): no points, no slips, no board
 ## --via-title: start on the title and open the arcade from its Arcade button (a click with
 ## --policy=mouse, Down arrows and Enter otherwise), as a player would.
+## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
+## then has to sort one); without it no story chart may appear.
+## The results are left with a click on "Back to the title" (mouse) or the T key (keys).
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
 
@@ -25,6 +28,8 @@ func demo_start() -> void:
 
 
 func _ready() -> void:
+	if Game.cli_flag("days-done"):
+		Game.progress["chapters_done"] = Game.CHAPTERS.map(func(c: Dictionary) -> String: return String(c["id"]))
 	var d := Driver.new()
 	d.name = "ArcadeChuteDriver"
 	get_tree().root.add_child.call_deferred(d)
@@ -122,17 +127,29 @@ class Driver extends Node:
 	## The title's Arcade button, like a player: a click, or Down until it is highlighted and Enter.
 	func _open_arcade() -> void:
 		if policy == "mouse":
+			if _find_text("Arcade") == null:
+				_finish(6, "the title has no Arcade button")
+				return
 			await _click_text("Arcade")
-			return
-		for i in 10:
-			var b := _find_text("> Arcade") as Button
-			if b != null:
-				break
-			await _action(&"ui_down")
-		await _wait(0.4)
-		Events.screenshot_requested.emit("title_arcade")
-		await _wait(0.2)
-		await _action(&"ui_accept")
+		else:
+			var lit := false
+			for i in 10:
+				if _find_text("> Arcade") != null:
+					lit = true
+					break
+				await _action(&"ui_down")
+			if not lit:
+				_finish(1, "Down never highlighted the title's Arcade button")
+				return
+			await _wait(0.4)
+			Events.screenshot_requested.emit("title_arcade")
+			await _wait(0.2)
+			await _action(&"ui_accept")
+		for i in 90:
+			if is_instance_valid(chute):
+				return
+			await _frames(1)
+		_finish(1, "the title's Arcade button never opened Chart Chute")
 
 	func _action(a: StringName) -> void:
 		for pressed: bool in [true, false]:
@@ -206,16 +223,24 @@ class Driver extends Node:
 			problems.append("typed initials KEY are not on the board")
 		if policy == "mouse" and on_board and not table.any(func(r: Dictionary) -> bool: return r["initials"] == "BAA"):
 			problems.append("clicked initials BAA are not on the board")
-		if Game.cli_flag("via-title") and not is_instance_valid(chute):
-			problems.append("the title's Arcade button never opened Chart Chute")
-		if policy == "mouse":
-			await _click_text("Back to the title")
+		var golden := String(st.get("golden", ""))
+		if Game.cli_flag("days-done"):
+			if policy == "careful" and golden == "":
+				problems.append("every Day was done, but no story chart was sorted")
+		elif golden != "":
+			problems.append("story chart %s rode the belt before its Day was finished" % golden)
+		if policy == "mouse" or policy == "keys":
+			at_title = false
+			if policy == "mouse":
+				await _click_text("Back to the title")
+			else:
+				await _key(KEY_T)
 			for i in 90:
 				if at_title:
 					break
 				await _frames(1)
 			if not at_title:
-				problems.append("Back to the title did not reach the title")
+				problems.append("%s did not reach the title" % ("Back to the title" if policy == "mouse" else "The T key"))
 		var code := 0
 		if not problems.is_empty():
 			code = 1
