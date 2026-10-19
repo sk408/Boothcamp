@@ -1,0 +1,15 @@
+{
+	"id": "party_3",
+	"title": "Party list 3",
+	"kind": "sentence",
+	"original": true,
+	"note": "Every sentence, key word and mishear here was written fresh for Booth Camp (docs/CHAPTER5.md Appendix A): everyday, low-context sentences of 6-9 words with five key words each, in a fixed order. None copies or paraphrases a published sentence test (HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN, AzBio): no sentence, list, order or recording. core/tests/test_speech_sin.gd checks the structure and that no sentence repeats. Mishears: one group per key word, the first a sound-alike, a second often a plural or tense trap; none is a homophone of its key word.",
+	"items": [
+		{"id": "p3_1", "text": "My nephew folded a pink ticket into a star.", "key_words": ["nephew", "folded", "pink", "ticket", "star"], "mishears": [["nephews"], ["rolled", "fold"], ["ink", "sink"], ["picket", "tickets"], ["car", "stars"]]},
+		{"id": "p3_2", "text": "My cousin sells shiny shoes from a canoe.", "key_words": ["cousin", "sells", "shiny", "shoes", "canoe"], "mishears": [["dozen", "cousins"], ["smells", "sell"], ["tiny"], ["juice", "shoe"], ["Peru", "canoes"]]},
+		{"id": "p3_3", "text": "We watched an orange balloon drift over the hills.", "key_words": ["watched", "orange", "balloon", "drift", "hills"], "mishears": [["washed"], ["arrange"], ["saloon", "balloons"], ["drip", "drifts"], ["pills", "hill"]]},
+		{"id": "p3_4", "text": "The doctor wore a stripy hat to work.", "key_words": ["doctor", "wore", "stripy", "hat", "work"], "mishears": [["rocker"], ["four"], ["slippy"], ["cat", "hats"], ["fork"]]},
+		{"id": "p3_5", "text": "Grandpa hugged the broken radio all evening.", "key_words": ["grandpa", "hugged", "broken", "radio", "evening"], "mishears": [["grandma"], ["tugged", "hugs"], ["open"], ["ratio", "radios"], ["evenings"]]},
+		{"id": "p3_6", "text": "A duck snored loudly behind the yellow tractor.", "key_words": ["duck", "snored", "loudly", "yellow", "tractor"], "mishears": [["truck", "ducks"], ["snowed", "snores"], ["proudly", "loud"], ["mellow"], ["actor", "tractors"]]}
+	]
+}
