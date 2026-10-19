@@ -160,6 +160,7 @@ def render(c):
     script(ty.get("after", []), out)
     out.append("")
     out.append("### Instructions")
+    out.append(f"- **Hoot:** {runner_line('ROUTINE_LINE')}")
     script(c["instructions"], out)
     out.append("")
     out.append("### Test plan")
@@ -248,6 +249,9 @@ def plan(steps, out):
         if p.get("before"):
             out.append("  - before:")
             script(p["before"], out, "    ")
+        for f, lines in p.get("if_tested", {}).items():
+            out.append(f"  - after it, if the stamps asked for {f} Hz (and it is on the chart):")
+            script(lines, out, "    ")
 
 
 def retest(rt, out):

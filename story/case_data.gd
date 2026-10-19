@@ -174,6 +174,9 @@ static func _section_scripts(c: Dictionary, prefix: String, out: Array) -> void:
 		for p: Variant in plan:
 			if p is Dictionary and (p as Dictionary).has("before"):
 				out.append([prefix + "audiometry.before", (p as Dictionary)["before"]])
+			if p is Dictionary and (p as Dictionary).get("if_tested", null) is Dictionary:
+				for f: Variant in (p as Dictionary)["if_tested"]:
+					out.append(["%saudiometry.if_tested.%s" % [prefix, f], (p as Dictionary)["if_tested"][f]])
 
 
 ## Every line of Hoot's in a case file (for the word-count test), as ["where", "text"].
@@ -512,7 +515,9 @@ static func _check_tymp(ty: Dictionary, where: String) -> PackedStringArray:
 	return out
 
 
-## A test plan: steps {ear, test, hoot_turn_after?, intro?, before?, montage?, skip_hoot_retest?}.
+## A test plan: steps {ear, test, hoot_turn_after?, intro?, before?, montage?, skip_hoot_retest?,
+## if_tested? (air steps: {"750": script}, said once the stamps asked for that half-octave and it
+## is on the ear's chart)}.
 ## Masked tests are never listed: the rules add them. air_only: the retest's plan (air tests only).
 static func _check_plan(plan: Array, where: String, air_only: bool) -> PackedStringArray:
 	var out := PackedStringArray()
@@ -538,6 +543,13 @@ static func _check_plan(plan: Array, where: String, air_only: bool) -> PackedStr
 				out.append("%s: %s must be true or false" % [where, k])
 		if pd.has("intro") and not pd["intro"] is String:
 			out.append(where + ": intro must be text")
+		if pd.has("if_tested"):
+			if not pd["if_tested"] is Dictionary or String(pd.get("test", "")) != "ac" or air_only:
+				out.append(where + ": if_tested is for the first visit's air steps: {\"750\": script}")
+			else:
+				for f: Variant in pd["if_tested"]:
+					if not ClinicRules.INTEROCTAVES.has(int(String(f))):
+						out.append("%s: if_tested %s is not a half-octave (750, 1500, 3000, 6000)" % [where, f])
 	return out
 
 
