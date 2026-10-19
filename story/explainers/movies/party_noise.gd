@@ -24,11 +24,11 @@ const MOVIE: Dictionary = {
 		},
 		{
 			"id": "crowd", "set": "card", "title": "Talk over chatter", "duration": 16.0,
-			"captions": ["Sentences play over party chatter, and the talker gets a little softer each time."],
-			"teaches": "A speech-in-noise list: the chatter stays put while the talker steps down.",
+			"captions": ["Sentences play over party chatter, and the chatter gets a little louder each time."],
+			"teaches": "A speech-in-noise list: the talker stays put while the chatter steps up.",
 			"board": "The same card style: three lines pop in; Hoot waves.",
 			"params": {"heading": "Sentences in the noise", "icon": "hoot", "tint": "#ffe9c7",
-				"lines": ["The chatter stays the same", "The talker gets softer", "Count the key words caught"]},
+				"lines": ["The talker stays the same", "The chatter gets louder", "Count the key words caught"]},
 			"cues": [{"t": 0.2, "sfx": "pop", "pitch": 1.0, "vol_db": -10.0}],
 		},
 		{
