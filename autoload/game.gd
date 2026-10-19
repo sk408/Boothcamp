@@ -83,6 +83,7 @@ const DEFAULT_PROGRESS: Dictionary = {
 	"plays": 0,
 	"chapters_done": [],         ## (v3) chapter ids completed at least once (CHAPTERS)
 	"last_chapter": "",          ## (v3) the chapter started most recently
+	"arcade": {},                ## arcade modes: mode -> {table, runs, found, initials} (story/arcade/arcade_scores.gd)
 }
 
 var save_path: String = DEFAULT_SAVE_PATH
