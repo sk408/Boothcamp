@@ -192,8 +192,8 @@ flags the missing masked bone.
 
 | Stamp | Means |
 |---|---|
-| **FIT** | hearing aids, no red flags. One exception, Steve's rule (2026-10-19, question 10): a clear difference between the ears that a known cause explains, with no other red flag, is not referred. The game fits it with a yearly recheck (its default). Buck, a right-handed shooter with a worse left ear, is the example, a working call until Steve answers question 14 |
-| **REFER** | see a doctor before (or instead of) hearing aids: any red flag in `CaseRules.RED_FLAGS` (these include an air-bone gap and a clear difference between the ears), except a difference that a known cause explains (the FIT exception) |
+| **FIT** | hearing aids, no red flags. A long-standing loss with no red flag is fitted without a referral first (Steve, 2026-10-19, question 10: Sid) |
+| **REFER** | see a doctor before (or instead of) hearing aids: any red flag in `CaseRules.RED_FLAGS` (these include an air-bone gap and a clear difference between the ears). Steve's rule (question 10): refer for red flags or an asymmetry with no known cause. A likely cause is not a proven one: Buck's shooting explains his worse left ear, and he still sees a doctor first (Steve, question 14) |
 | **DOCTOR TODAY** | a sudden loss (`CaseRules` sudden definition) within the last 30 days, not explained by wax or the middle ear: same-day referral |
 | **NO AIDS NEEDED** | normal hearing in both ears and no red flag: counsel, baseline on file |
 
@@ -276,7 +276,7 @@ Penny's debrief, and every FIT's debrief says a full fitting also checks words, 
 
 Eight walk-ins, from easy to hard. Every call was checked against current guidance by a researcher and then by a
 second, adversarial reviewer (sources under each case). Where published guidance differs, the game teaches Steve's
-practice and the case says so (Buck, 7.5). Truth tables live in `core/patients/fs_*.tres`; what each
+practice and the case says so. Truth tables live in `core/patients/fs_*.tres`; what each
 patient says is in `story/freestyle/cases/fs_*.json`.
 
 | # | Walk-in | Stars | What it teaches | The call |
@@ -285,7 +285,7 @@ patient says is in `story/freestyle/cases/fs_*.json`.
 | 2 | Mabel Shush, 74, retired librarian | ★ | the classic first fitting: slow, matching, sloping loss | **FIT** |
 | 3 | Sid Sprocket, 45, bike mechanic | ★ | a lifelong, stable loss still gets the full workup | **FIT** |
 | 4 | Dame Viola Vibrato, 68, retired soprano | ★★ | a bigger loss is not a red flag; old aids wear out; narrow canals | **FIT** |
-| 5 | Buck Shotwell, 58, duck hunter | ★★ | an asymmetry that shooting explains, with no other red flag, is fitted and rechecked; masked bone on the worse ear | **FIT** |
+| 5 | Buck Shotwell, 58, duck hunter | ★★ | an asymmetry is a red flag even with a good excuse; masked bone on the worse ear | **REFER** |
 | 6 | Melody Belle, 36, music teacher | ★★ | a sudden loss in one ear is urgent with no pain; mask bone and air | **DOCTOR TODAY** |
 | 7 | Skyler Kickflip, 19, skateboarder | ★★★ | a big air-bone gap and a floppy tymp after a knock | **REFER** |
 | 8 | Hector Ticktock, 63, clockmaker | ★★★ | a mixed loss with a stiff tymp: masking shows the two parts | **REFER** |
@@ -372,7 +372,7 @@ Bone = air in both ears (no bone rows in the file).
 - **Hoot's debrief:** "A bigger loss isn't a red flag. Slow, matching, no gap, no red flags: that's a fit." "Eight-year-old aids wear out, and hearing drifts. New ones get checked in her ear with a tiny mic." "Dinner parties, the opera, the phone: those are Viola's goals. We check each at her tune-up." "Be honest: words get clearer, noise stays tricky. If good aids fall short, ask about an implant check." "A full fitting also checks words, in quiet and in noise."
 - **Checked against:** [WHO grades of hearing loss (2021), German consensus version, PMC11266198](https://pmc.ncbi.nlm.nih.gov/articles/PMC11266198); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [21 CFR 801.422, prescription hearing aid labeling with red-flag conditions for dispensers](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422); [FDA OTC hearing aid final rule, 87 FR 50698 (Aug 2022), comment responses on tinnitus in one ear](https://www.govinfo.gov/content/pkg/FR-2022-08-17/html/2022-17230.htm); [BSA Practice Guidance: Verification of hearing devices using probe microphone measurements (2018)](https://www.baaudiology.org/app/uploads/2020/11/REMS-2018.pdf).
 
-### 7.5 Buck Shotwell, 58 (★★☆): **FIT**
+### 7.5 Buck Shotwell, 58 (★★☆): **REFER**
 
 Waiting-room card: "Forty years of duck hunting. Now the ducks sneak up on him." Case `fs_buck`.
 
@@ -388,11 +388,10 @@ Bone = air in both ears (no bone rows in the file).
 - **Key questions:** red_flags, which_ear, onset, noise, hardest. Red-flag answers: which_ear.
 - **Trouble spots** ("Where do you have trouble hearing?"): wife in the truck, duck wings, lodge.
 - **The workup a pro runs:** questions, then look in the ears, then air (right ear first), then bone (right mastoid), then masked bone left (1k, 2k, 4k).
-- **The call:** FIT. Hoot: "Fit! Shooting explains the left ear, and no other red flags. Aids, plugs, and a yearly recheck." Right reason: "Shooting explains why his left ear is worse."
-- **Working call, by Steve's question 10 rule (question 14 waits on his answer)** (2026-10-19): refer only for red flags or an asymmetry with no known cause. Shooting explains Buck's left ear and nothing else flags, so FIT, with earplugs under electronic earmuffs and a yearly recheck (a doctor if the left keeps slipping). The yearly interval is the game's default, not a guideline's.
-- **Hoot's debrief:** "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left." "One ear worse is a red flag, unless something explains it. Buck's shotgun does; nothing else flags." "The truck and the lodge are goals for the aids. The duck wings? That's the electronic muffs' job." "Recheck him every year. If the left keeps slipping away from the right, then a doctor." "A full fitting also checks words, in quiet and in noise."
-- **Checked against:** [Meinke et al., Prevention of NIHL from Recreational Firearms, Semin Hear 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5634813); [ASHA, Recreational Firearm Noise Exposure](https://asha.org/public/hearing/Recreational-Firearm-Noise-Exposure).
-- Where guidance differs: [NICE NG98 rec 1.3.2](https://www.nice.org.uk/guidance/NG98/chapter/recommendations) (consider MRI) and the [BAA Onward Referral Guidance (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf) (refer) both send on an asymmetry of 15 dB or more at 2 adjacent frequencies, with no exception for noise, and Buck's chart meets both. The FDA dispenser red flags ([21 CFR 801.422](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422), `CaseRules.RED_FLAGS` `one_sided`) list a clear difference between the ears. [Schiff et al., Laryngoscope 2024](https://einstein.elsevierpure.com/en/publications/practice-patterns-in-asymmetric-sensorineural-hearing-loss-survey/) finds no clear guidelines, and general ENTs often watch an asymmetry with serial audiograms. The game teaches Steve's practice; Hoot's REFER line says many clinics would refer.
+- **The call:** REFER. Hoot: "Refer! The shotgun likely did it, but ears this lopsided need a doctor's all-clear first." Right reason: "His left ear is much worse than his right."
+- **Steve's call** (2026-10-19): question 14: keep REFER (his answer on the decision card). Hoot's reason: shooting is a likely cause of the worse left ear, not a proven one, so a doctor sees him before any fitting.
+- **Hoot's debrief:** "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left." "But a lopsided loss is a red flag until a doctor clears it. Even with a good excuse." "Note his trouble spots, the truck and the lodge: the fitting goals once he's cleared."
+- **Checked against:** [Meinke et al., Prevention of NIHL from Recreational Firearms, Semin Hear 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5634813); [ASHA, Recreational Firearm Noise Exposure](https://asha.org/public/hearing/Recreational-Firearm-Noise-Exposure); [NICE NG98, Hearing loss in adults, recommendation 1.3.2](https://www.nice.org.uk/guidance/NG98/chapter/recommendations); [BAA/BSA Onward Referral Guidance for Adult Audiology Service Users (Sept 2023)](https://www.baaudiology.org/app/uploads/2023/04/Onward-Referral-Guidance-for-Adult-Audiology-Service-Users-Sept-23.pdf); [21 CFR 801.422, prescription hearing aid labeling (red flags)](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-801/subpart-H/section-801.422).
 
 ### 7.6 Melody Belle, 36 (★★☆): **DOCTOR TODAY**
 
@@ -467,9 +466,9 @@ reminder that freestyle teaches methods and situations and does not replace trai
 - **8:** yes. Speech in noise is part of every test. Hoot names it in Penny's debrief, and speech in noise joins
   every workup when the speech screens are on main.
 - **10:** no referral for Sid. Refer only for red flags or an asymmetry with no known cause.
-- **14** (Claude's reading of 10; Steve to confirm on the decision card): Buck is now **FIT**, with earplugs under
-  electronic earmuffs and a yearly recheck (a doctor if the left ear keeps slipping). NICE, the BAA and the FDA
-  red-flag list would refer him; 7.5 has the details.
+- **14:** keep REFER (Steve, on the decision card, 2026-10-19). Buck's shooting is a likely cause of his worse
+  left ear, not a proven one, so a doctor sees him before any fitting, as NICE, the BAA and the FDA red-flag list
+  would also have it. Hoot still teaches plugs under electronic muffs.
 - The rest keep their defaults: 1 keep 25 dB; 3 no; 4 wait for the doctor; 5 keep (since the clinical review,
   Buck's reply also names pulsing, changed or distressing ringing, FS-16); 6 yes, once word scores are in
   freestyle; 7 keep; 9 yes; 11 yes; 12 yes; 13 two weeks; 15 keep "ringing"; 16 yes; 17 yes (the game's felt
@@ -527,6 +526,9 @@ does now); answer only where you disagree, by number. The first seven change the
 - **FS-14:** Viola's left air (and so bone) at 500 Hz is 50 (was 55); a test keeps every walk-in under 55 there.
 - **FS-16:** Buck's ringing reply names NICE NG98's tinnitus flags: one-sided, pulsing, changed or distressing.
 - **A1, A2:** the routine lines and the masking recap (4.6).
+
+Steve's answer on the Buck decision card (2026-10-19, question 14: keep REFER) is in this change too: Buck is a
+REFER again, with his trouble spots kept as the goals for a fitting once a doctor clears him.
 
 Not changed: FS-02 (already right), FS-06 (done with E5), FS-12 (question 24: no), FS-17 (NO AIDS NEEDED stays
 for normal hearing only; a "not yet" stamp is a later choice). FS-07 (the second-ear 1 kHz retest) waits for the

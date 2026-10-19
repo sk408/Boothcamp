@@ -17,7 +17,7 @@ const EXPECTED: Dictionary = {
 	"fs_mabel": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
 	"fs_sid": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
 	"fs_viola": [&"fit", &"sensorineural", &"sensorineural", false, true, false],
-	"fs_buck": [&"fit", &"sensorineural", &"sensorineural", true, true, false],
+	"fs_buck": [&"refer", &"sensorineural", &"sensorineural", true, true, false],
 	"fs_melody": [&"today", &"sensorineural", &"normal", true, true, true],
 	"fs_skyler": [&"refer", &"normal", &"conductive", true, true, true],
 	"fs_hector": [&"refer", &"sensorineural", &"mixed", true, true, true],

@@ -1547,9 +1547,9 @@ view off and the music back; the next test re-registers it. It is freed when the
 
 **Anchors.** `freestyle_chart` (the chart card).
 
-**Rules.** Freestyle's one departure from the `CaseRules` fit rule (Steve's question 10 rule, 2026-10-19): a clear
-difference between the ears that a known cause explains, with no other red flag, may be fitted, with a yearly recheck
-(the game's default; Buck is a working call until Steve answers question 14; docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
+**Rules.** The calls follow `CaseRules` (red flags, including a clear difference between the ears); Steve,
+2026-10-19: refer for red flags or an asymmetry with no known cause, and a likely cause (Buck's shooting) still
+sees a doctor first (docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
 Masked bone starts from unmasked bone stamped on either mastoid; with none yet the runner sends the player to bone
 first (no unmasked pre-run on the poorer side). Any test begun before the otoscope looked, bone included, is the
 "look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (an ear with a
