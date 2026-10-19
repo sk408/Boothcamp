@@ -162,6 +162,7 @@
 		["Hoot", "Three o'clock? Perfect. His audiogram is on its way to you now."],
 		["Hoot", "Dash, the ear doctor sees you at three. Go straight there, pizzas or not."],
 		["Hoot", "No ear doctor free today? Then the emergency department. Same day, either way."],
+		["Hoot", "Sudden means it came on over three days or less. Started in the last month? Doctor today."],
 		{"react": "cheer"},
 		["Dash", "Same day? Faster than my pizzas! Thanks, owl!"]
 	],

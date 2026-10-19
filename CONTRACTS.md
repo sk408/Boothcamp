@@ -1442,7 +1442,7 @@ test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a
 
 **Optional case keys (batch 2; all default to the Days 6-9 behaviour).** `otoscopy.view` `clear` / `wax` / `fluid`
 (a wax view keeps the first visit's air on headphones); `otoscopy.kind` and `findings[].kind` `clue` / `flag`;
-`tymp.<ear>.ecv_ml` (required: a B ear sits outside 0.6-0.9 mL, any other type inside 0.9-2.0); `findings[].when`
+`tymp.<ear>.ecv_ml` (required: any type but B inside the adult band 0.6-2.0 mL; a B reads with it); `findings[].when`
 `symmetric` / `asymmetric` / `conductive` / `abg_flag`; `reveal.pattern` `gap` with `reveal.plug` `wax` / `fluid`;
 `audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
 `do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first

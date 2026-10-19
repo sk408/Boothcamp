@@ -83,7 +83,7 @@
 			"prompt": "Is her middle ear the problem?",
 			"options": [
 				["No sign of it: type A, both sides.", true, ""],
-				["Yes: flat, type B. Fluid.", false, "A flat B would mean fluid. Hers have normal peaks."],
+				["Yes: flat, type B.", false, "Flat with a normal canal volume would point to fluid. Hers have normal peaks."],
 				["Yes: type C, negative pressure.", false, "Her peaks sit near zero. A type C sits far to the left."]
 			]
 		},
@@ -155,7 +155,7 @@
 		"wrong_line": "True, but it doesn't show she's safe to fit. Look for the red-flag check!",
 		"wrong_lines": {
 			"family": "That's family history, not a red flag. What shows it's safe?",
-			"ear_clear": "True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?",
+			"ear_clear": "True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?",
 			"tymp_a": "True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?",
 			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?",
 			"voices_drop": "That's what's wrong, not why it's safe. Look for the red-flag check!",

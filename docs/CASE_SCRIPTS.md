@@ -37,6 +37,8 @@ Red-flag card: *Pain, drainage, dizziness, sudden change: NONE.*
 - **Hoot:** Crept up slowly, no red flags so far. Let's look inside!
 
 ### Otoscopy
+First caption: *Rocco's LEFT ear first: a clear canal, a healthy eardrum.*
+
 Caption: *Rocco's RIGHT ear: a roomy canal, shiny eardrum.*
 
 - **Hoot:** Roomy canals, healthy eardrums. No drumsticks stuck in there either.
@@ -95,7 +97,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
   - noise_years: That's why he has a loss, not why it's safe to fit. Find the red-flag check!
   - noise_trouble: That's why he WANTS hearing aids. What shows it's safe to fit them?
   - notch: That's the pattern, not the safety check. Find the red-flag check!
-  - ear_clear: True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?
+  - ear_clear: True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?
   - tymp_a: True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?
   - snhl: True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?
 
@@ -157,6 +159,8 @@ Red-flag card: *Dizziness: YES, spinning spells. / One ear only: YES = see a doc
 - **Hoot:** Brilliant! Old results are gold. We'll compare them with today's.
 
 ### Otoscopy
+First caption: *Marina's RIGHT ear first: a clear canal, a healthy eardrum.*
+
 Caption: *Marina's LEFT ear: an average-sized canal, shiny eardrum.*
 
 - **Hoot:** Clear canals, healthy eardrums. No seawater, no barnacles.
@@ -168,7 +172,7 @@ Tip: medium (average-sized canal). Right: type A, peak 0 daPa, 0.7 mL, canal 1.2
 
 Question: **Her ear feels full. Is it fluid behind the eardrum?**
 - (right) No: type A, a normal peak. No fluid.
-- Yes: it's flat, type B.: Hoot: A flat B would mean fluid. Hers has a normal peak.
+- Yes: it's flat, type B.: Hoot: Flat with a normal canal volume would point to fluid. Hers has a normal peak.
 - Yes: type C, negative pressure.: Hoot: Her peaks sit near zero. A type C sits far to the left.
 
 - **Hoot:** No fluid behind that drum. The bone test will tell us where the fullness lives.
@@ -237,7 +241,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - C: **SOME BEEPS LOST AT SEA, CONFIRMS OWL** Watch the low pitches, and compare with old results.
 - Do-over: **MARINA BACK TOMORROW, FIRST MATE AT THE WHEEL; BRINGS FISH PIE** Spinning plus one ear: always a doctor first.
 - First stamp FIT (S to C): **TRAINEE NEARLY FITS A SPINNING CAPTAIN; OWL GRABS THE WHEEL** Dizziness and a one-sided, changing loss: a doctor looks first.
-- First stamp DOCTOR TODAY (S to C): **MARINA RUSHED TO DOCTOR; DOCTOR SAYS THIS WEEK WAS FINE** Her hearing dips with spells and returns: soon, not today.
+- First stamp DOCTOR TODAY (S to C): **MARINA SEEN SAME DAY; DOCTOR: NO HARM CHECKING, BUT THIS WEEK WAS FINE** Her hearing dips with spells and returns: soon, not today.
 
 ## Dash Delgado's Case (`sudden`)
 
@@ -275,6 +279,8 @@ Red-flag card: *Sudden, one ear, yesterday: YES. Dizzy too. / See a doctor. How 
 - **Hoot:** A sudden loss in one ear, yesterday. Quick AND careful: let's look.
 
 ### Otoscopy
+First caption: *Dash's LEFT ear first: a clear canal, a healthy eardrum.*
+
 Caption: *Dash's RIGHT ear: an average-sized canal. No wax at all!*
 
 - **Hoot:** Clear canal, healthy eardrum. Not a speck of wax!
@@ -346,6 +352,7 @@ Cards from the chart: *Right ear down, bone too: inner ear or nerve*; *Left ear 
 - **Hoot:** Three o'clock? Perfect. His audiogram is on its way to you now.
 - **Hoot:** Dash, the ear doctor sees you at three. Go straight there, pizzas or not.
 - **Hoot:** No ear doctor free today? Then the emergency department. Same day, either way.
+- **Hoot:** Sudden means it came on over three days or less. Started in the last month? Doctor today.
 - *(patient: cheer)*
 - **Dash:** Same day? Faster than my pizzas! Thanks, owl!
 
@@ -394,6 +401,8 @@ Red-flag card: *Pain, drainage, dizziness, sudden change: NONE.*
 - **Hoot:** Old results are gold! No red flags so far. Let's take a look.
 
 ### Otoscopy
+First caption: *Ginger's LEFT ear first: a clear canal, a healthy eardrum.*
+
 Caption: *Ginger's RIGHT ear: a narrow canal, shiny eardrum.*
 
 - **Hoot:** Narrow canals, healthy eardrums. Nothing hiding in there.
@@ -405,7 +414,7 @@ Tip: small (narrow canal). Right: type A, peak -10 daPa, 0.7 mL, canal 1.0 mL. L
 
 Question: **Is her middle ear the problem?**
 - (right) No sign of it: type A, both sides.
-- Yes: flat, type B. Fluid.: Hoot: A flat B would mean fluid. Hers have normal peaks.
+- Yes: flat, type B.: Hoot: Flat with a normal canal volume would point to fluid. Hers have normal peaks.
 - Yes: type C, negative pressure.: Hoot: Her peaks sit near zero. A type C sits far to the left.
 
 - **Hoot:** Type A both sides: no fluid, no blockage. The bone test decides if it's deeper.
@@ -453,7 +462,7 @@ Present the evidence: **Her dad and grandma have it too. Why is it still safe to
 - Proof cards (tags): no_red_flags, symmetric, both_ears, stable, stable_chart. Right: Exactly! History, exam and chart all clear, stable and matching: fitting is the right call.
 - Wrong card (default): True, but it doesn't show she's safe to fit. Look for the red-flag check!
   - family: That's family history, not a red flag. What shows it's safe?
-  - ear_clear: True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?
+  - ear_clear: True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?
   - tymp_a: True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?
   - snhl: True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?
   - voices_drop: That's what's wrong, not why it's safe. Look for the red-flag check!
@@ -514,6 +523,8 @@ Red-flag card: *Sudden change, one ear: YES. Pain, drainage, dizziness: none. / 
 - **Barnaby:** Look all you like. You'll see a man who needs hearing aids!
 
 ### Otoscopy
+First caption: *Barnaby's LEFT ear first: a clear canal, a healthy eardrum.*
+
 Caption: *Barnaby's RIGHT ear: a roomy canal... packed solid with wax.* (view: wax)
 
 - **Hoot:** That's a wall of wax! I can't even see the eardrum.
@@ -527,11 +538,12 @@ Caption: *Barnaby's RIGHT ear: a roomy canal... packed solid with wax.* (view: w
 Tip: large (roomy canal). Right: type B, flat, canal 0.4 mL: reads blocked. Left: type A, peak -10 daPa, 0.8 mL, canal 1.5 mL.
 
 Question: **His right is flat. What does the canal volume say?**
-- (right) Blocked: the probe is pressed against wax.
+- (right) Blocked: the probe faces a wall of wax.
 - Fluid behind the eardrum.: Hoot: Fluid gives a flat line with a NORMAL canal volume. His is tiny: 0.4 mL.
 - A hole in the eardrum.: Hoot: A hole makes the canal volume BIG. His is tiny: the probe met wax.
 
 - **Hoot:** The probe is talking to a wall of wax, not an eardrum. Left side: normal.
+- **Hoot:** A gentle seal at the entrance, never a push. Many clinics skip the probe on a packed canal.
 
 ### Instructions
 - **Hoot:** Headphones today, not foam inserts: they go deep, and could push the wax further.
@@ -569,21 +581,21 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 
 ### The call
 - **FIT**: Hold the honey! No hearing aid works through a plug. Wax out first, then retest.
-- **REFER** (right): Right! A lot of wax is a red flag: wax out by a doctor, then we retest.
+- **REFER** (right): Right! Lots of wax is a red flag: out by a doctor or trained clinician, then we retest.
 - **DOCTOR TODAY**: The wax explains the sudden block, and his bone is normal. Soon, not today.
 
-**Present the evidence: what proves the wax must come out first?**
-- Proof cards (tags): wax_plug, tymp_blocked, gap, abg_flag. Right: Exactly! Something's blocking the sound: wax out by a doctor, then we retest.
+**Present the evidence: what shows something is blocking the sound?**
+- Proof cards (tags): wax_plug, tymp_blocked, gap, abg_flag. Right: Exactly! Something's blocking the sound: wax out by a doctor or trained clinician, then we retest.
   - wax_plug: Yes! A lot of wax is a red flag. A plug can hide more: we'll retest.
   - tymp_blocked: Yes! Flat with a tiny canal volume: the probe hit the plug. Wax out first.
   - gap: Yes! Bone is fine, air is blocked: the plug costs him that gap.
   - abg_flag: Yes! His gap tops 15 dB at 500, 1k and 2k: a red flag. Wax out first.
-- Wrong card (default): True, but that doesn't prove a plug is in the way. Look again!
+- Wrong card (default): True, but that doesn't show the sound is blocked. Look again!
   - wants_aids: That's why he WANTS aids. What proves something's in the way first?
   - cotton_buds: That's how it got packed in. What proves it's still in there?
   - bees_quiet: That's what he notices. What proves the sound is blocked?
   - sudden_block: Sudden, yes, and the wax explains it. What proves the plug is there?
-  - right_only: One ear sends him to a doctor. But what proves a plug is blocking it?
+  - right_only: One ear sends him to a doctor. But what shows the sound is blocked?
   - right_blocked: That's the story. Which look or test proves the plug?
   - home_fixes: Never again, please! But what proves the plug is there?
   - red_flag_check: Good news, but no proof of a plug. Look again!
@@ -599,7 +611,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - *(patient: nod)*
 - **Barnaby:** Promise. Gerald's my witness.
 
-### The retest: *TWO DAYS LATER* (unscored)
+### The retest: *A WEEK LATER* (unscored)
 - **Barnaby:** Bzzz-back again! And look what the doctor's nurse got out!
 - *(wax jar)*
 - *(Hoot: gasp)*
@@ -682,6 +694,8 @@ Red-flag card: *One ear only: YES. Pain, drainage, dizziness, sudden: none. / Se
 - **Hoot:** Gently! Forcing it can hurt. Let's look inside instead.
 
 ### Otoscopy
+First caption: *Skye's RIGHT ear first: a clear canal, a healthy eardrum.*
+
 Caption: *Skye's LEFT ear: an average-sized canal, no wax... and a dull, amber eardrum.* (view: fluid)
 
 - **Hoot:** No wax. But the drum is dull and amber, with bubbles behind it. No cone of light.
@@ -736,16 +750,16 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - **REFER** (right): Fluid behind one eardrum in a grown-up: a doctor this week, before Friday's flight.
 - **DOCTOR TODAY**: Bone's normal: middle ear, not inner ear. Soon, not today.
 
-**Present the evidence: why this week, and not TODAY?**
+**Present the evidence: what shows the trouble is in the middle ear?**
 - Proof cards (tags): tymp_fluid, amber_drum, gap. Right: Exactly! It's the middle ear: a doctor this week, before she flies. Not today.
-  - tymp_fluid: Yes! Flat with a normal volume: fluid behind the drum. Middle ear: soon, not today.
-  - amber_drum: Yes! You can almost see the fluid. Middle ear: a doctor this week, not today.
+  - tymp_fluid: Yes! Flat with a normal volume: fluid behind the drum. With normal bone: soon, not today.
+  - amber_drum: Yes! You can almost see the fluid. With normal bone: a doctor this week, not today.
   - gap: Yes! Bone is normal, so the inner ear's fine. Not a sudden inner-ear loss.
 - Wrong card (default): True, but that doesn't show where the trouble is. Look again!
   - flies_friday: That's HER deadline, not a medical emergency. What shows it's the middle ear?
   - after_cold: Careful: a cold can come before an inner-ear loss too. What proves it's the middle ear?
-  - abg_flag: That gap sends her to a doctor. Mixed losses have gaps too. What shows the inner ear's fine?
-  - left_only: One ear sends her to a doctor. What says it can wait a few days?
+  - abg_flag: That gap sends her to a doctor. Mixed losses have gaps too. What points at the middle ear?
+  - left_only: One ear sends her to a doctor. What shows it's the middle ear?
   - red_flag_check: Good news, but not the proof. What shows where the trouble is?
   - left_underwater: That's what she feels. What shows where it's coming from?
   - crackle: A hint, not proof. Which test shows it's the middle ear?

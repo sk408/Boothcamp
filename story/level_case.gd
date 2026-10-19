@@ -47,6 +47,9 @@ const BORROW_BONE_DB := 10
 const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
 ## The runner's own lines (case_scripts.py prints them too: keep the two in step).
 ## After masked bone, when no ear needed masked air (built from the stamps).
+## The first look in every case: the other ear, before the case's own (both ears get a look before
+## any probe or insert goes in). %s: the speaker, then the ear in capitals.
+const OTHER_EAR_CAPTION := "%s's %s ear first: a clear canal, a healthy eardrum."
 const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bone needed masking today!"
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
 const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
@@ -361,8 +364,9 @@ func _history() -> void:
 
 # ---------------------------------------------------------------- 3. otoscopy (a quick look)
 
-## A look in the ear: the case's otoscopy section, or the retest's (first_pass false: no step pill,
-## and no card unless the section has a clue). A "wax" view blocks the canal for the air tests.
+## A look in the ear: the case's otoscopy section (the other ear first, then the case's), or the
+## retest's (first_pass false: the treated ear only, no step pill, and no card unless the section has
+## a clue). A "wax" view blocks the canal for the air tests.
 func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
 	_phase(&"otoscopy", {} if first_pass else {"retest": true})
 	if first_pass:
@@ -372,7 +376,12 @@ func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
 	_canal_blocked = view == "wax"
 	var g := CaseOtoscopy.new()
 	hud.call("add_game", g)
-	await g.show_view(String(oto.get("ear", "right")), view, String(oto.get("caption", "")))
+	var ear := String(oto.get("ear", "right"))
+	if first_pass:
+		var other := "left" if ear == "right" else "right"
+		await g.show_view(other, "clear", OTHER_EAR_CAPTION % [speaker, other.to_upper()])
+		await _wait(0.5)
+	await g.show_view(ear, view, String(oto.get("caption", "")))
 	_shot("otoscopy" if first_pass else "retest_otoscopy")
 	await _play(oto.get("lines", []))
 	if String(oto.get("clue", "")) != "":
@@ -992,7 +1001,7 @@ func _retest() -> void:
 	var first_comfort := Game.get_comfort()
 	_phase(&"retest")
 	hud.call("set_step", &"retest")
-	hud.call("clear_notes")   # two days on: the first visit's sticky notes are history
+	hud.call("clear_notes")   # a week on: the first visit's sticky notes are history
 	clinic.call("focus_camera", &"door", 0.0)
 	await _props().call("play", "later", String(rt.get("card", "LATER")))
 	_shot("retest_later")

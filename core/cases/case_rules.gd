@@ -74,10 +74,10 @@ const TYMP_SHAPES: Dictionary[StringName, String] = {
 const TYMP_NORMAL_PRESSURE := Vector2i(-100, 50)
 const TYMP_NORMAL_PEAK := Vector2(0.3, 1.7)
 ## Typical adult ear canal volume (mL): the printed normal band, and the "hole" ceiling. Smaller with
-## a wax plug, bigger with a hole in the eardrum.
-const TYMP_ADULT_ECV := Vector2(0.9, 2.0)
-## Below this a flat tymp reads "blocked" (wax, or the probe against the wall). 0.6-0.9 stays a grey
-## zone ("low": look again): CaseData.validate keeps every flat case tymp out of it.
+## a wax plug, bigger with a hole in the eardrum. The lower edge is BSA's 0.6 (many women's canals
+## are 0.7-0.9 mL; 0.9 is a male lower edge), so it meets TYMP_BLOCKED_ECV: no grey zone.
+const TYMP_ADULT_ECV := Vector2(0.6, 2.0)
+## Below this a flat tymp reads "blocked" (wax, or the probe against the canal wall).
 const TYMP_BLOCKED_ECV := 0.6
 ## The pressure sweep, positive to negative (daPa).
 const TYMP_SWEEP_FROM := 200
@@ -132,8 +132,7 @@ static func tymp_normal(tymp: Dictionary) -> bool:
 ## What a flat (type B) tympanogram means, read with the canal volume (mL): normal volume = fluid
 ## behind the eardrum (&"fluid"); tiny (under TYMP_BLOCKED_ECV) = wax or the probe against the canal
 ## wall (&"blocked"); large = a hole in the eardrum or an open ear tube (&"hole"). Compare with the
-## other ear. The 0.6-0.9 grey zone reads &"fluid" here, while ecv_band (the gadget's chip) says LOW:
-## no case uses it (CaseData.validate).
+## other ear.
 static func tymp_b_reading(ecv_ml: float) -> StringName:
 	if ecv_ml < TYMP_BLOCKED_ECV:
 		return &"blocked"
@@ -142,13 +141,11 @@ static func tymp_b_reading(ecv_ml: float) -> StringName:
 	return &"fluid"
 
 
-## Where a canal volume (mL) sits: &"tiny" (under TYMP_BLOCKED_ECV), &"low" (the grey zone up to the
-## adult band), &"normal" (inside TYMP_ADULT_ECV) or &"large" (above it).
+## Where a canal volume (mL) sits: &"tiny" (under TYMP_BLOCKED_ECV, the adult band's lower edge),
+## &"normal" (inside TYMP_ADULT_ECV) or &"large" (above it).
 static func ecv_band(ecv_ml: float) -> StringName:
 	if ecv_ml < TYMP_BLOCKED_ECV:
 		return &"tiny"
-	if ecv_ml < TYMP_ADULT_ECV.x:
-		return &"low"
 	if ecv_ml > TYMP_ADULT_ECV.y:
 		return &"large"
 	return &"normal"

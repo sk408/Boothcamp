@@ -148,6 +148,12 @@ Requests for the integrator and the title owner:
   your `_t` (the game-time clock `_process` keeps), so please keep that name too.
 - **Retest and `Game.finish_visit`.** A case with a retest (Barnaby) calls `finish_visit` before the retest, so a
   player who quits during it keeps the day; `_results` reuses that summary (`tools/autoplay_bot.gd` checks it).
+- **Tympanometer (shared with freestyle).** `story/games/case_tymp.gd` now prints "226 Hz probe tone" by its name
+  and the adult canal band 0.6-2.0 mL (`CaseRules.TYMP_ADULT_ECV`, was 0.9-2.0); `CaseRules.ecv_band` no longer
+  returns `&"low"` (the old 0.6-0.9 grey zone). Every freestyle canal volume is 1.0 mL or more, so no freestyle
+  reading changes.
+- **Otoscopy on both ears.** A case's first look shows the other ear first (`OTHER_EAR_CAPTION`), then the
+  case's ear, so both ears are looked at before any probe or insert goes in (about two seconds longer).
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
