@@ -186,7 +186,7 @@ func test_player_keys_space_next_esc_skip() -> void:
 	var p := _player()
 	await wait_frames(1)
 	p.call("play", "masking", "test")
-	await wait_seconds(0.5)   # past the input grace; scene 1's only caption is typing
+	await wait_seconds(0.5)   # past the input grace; scene 1's first caption is typing
 	assert_eq(int(p.get("scene_index")), 0)
 	var cap: Label = p.get("_caption")
 	assert_true(cap.visible_characters >= 0 and cap.visible_characters < cap.text.length(), "the caption is still typing")
@@ -194,7 +194,13 @@ func test_player_keys_space_next_esc_skip() -> void:
 	assert_eq(int(p.get("scene_index")), 0, "the first Space finishes the caption")
 	assert_eq(cap.visible_characters, -1, "the whole caption shows")
 	await tap_action(&"ui_accept")
-	assert_eq(int(p.get("scene_index")), 1, "then Enter: the next scene (scene 1 has one caption)")
+	assert_eq(int(p.get("scene_index")), 0, "(Steve) scene 1 opens with what the movie is about: three captions")
+	assert_eq(int(p.get("_cap_i")), 1, "then Enter: the scene's next caption")
+	for i in 8:
+		if int(p.get("scene_index")) >= 1:
+			break
+		await tap_action(&"advance_dialogue")
+	assert_eq(int(p.get("scene_index")), 1, "after its last caption: the next scene")
 	p.call("skip_scene")
 	await wait_frames(3)
 	assert_eq(int(p.get("scene_index")), 2, "the wall scene: two captions")
@@ -280,7 +286,7 @@ func test_player_buttons_for_the_mouse() -> void:
 	assert_eq(next_btn.focus_mode, Control.FOCUS_NONE, "buttons never take focus")
 	assert_eq(pause_btn.focus_mode, Control.FOCUS_NONE, "buttons never take focus")
 	assert_true(pause_btn.visible, "(polish) a pause button for the mouse")
-	for i in 3:
+	for i in 8:
 		if int(p.get("scene_index")) >= 1:
 			break
 		next_btn.pressed.emit()

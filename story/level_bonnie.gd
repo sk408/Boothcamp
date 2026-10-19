@@ -143,6 +143,9 @@ func _movie() -> void:
 		var c: int = await dialogue.choose("Hoot's masking movie again? Popcorn's on me!", opts, 1)
 		if c != 0:
 			return
+	else:
+		# (Steve) say what the movie is for before it starts
+		await _say("Hoot", "New trick today: MASKING. A quick cartoon first, then our next patient!")
 	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
 	add_child(player)
 	var r: Dictionary = await player.call("play", MOVIE_ID, "day_start")
