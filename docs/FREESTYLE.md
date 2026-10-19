@@ -365,7 +365,7 @@ Bone = air in both ears (no bone rows in the file).
 - **Look and tymp:** Canals clear, eardrums normal; average-sized canals (medium tip). Tymp right A (-10 daPa, 0.7 mL, canal 1.4 mL), left A (-5 daPa, 0.8 mL, canal 1.5 mL).
 - **Key questions:** red_flags, which_ear, onset, noise, hardest. Red-flag answers: which_ear.
 - **Trouble spots** ("Where do you have trouble hearing?"): wife in the truck, duck wings, lodge.
-- **The workup a pro runs:** questions, then look in the ears, then air (right ear first), then bone (right mastoid), then masked bone left (2k, 4k).
+- **The workup a pro runs:** questions, then look in the ears, then air (right ear first), then bone (right mastoid), then masked bone left (1k, 2k, 4k).
 - **The call:** FIT. Hoot: "Fit! Shooting explains the left ear, and no other red flags. Aids, plugs, and a yearly recheck." Right reason: "Shooting explains why his left ear is worse."
 - **Working call, by Steve's question 10 rule (question 14 waits on his answer)** (2026-10-19): refer only for red flags or an asymmetry with no known cause. Shooting explains Buck's left ear and nothing else flags, so FIT, with earplugs under electronic earmuffs and a yearly recheck (a doctor if the left keeps slipping). The yearly interval is the game's default, not a guideline's.
 - **Hoot's debrief:** "His pattern points to the shotgun: the ear nearer the muzzle takes the blast. For right-handers, the left." "One ear worse is a red flag, unless something explains it. Buck's shotgun does; nothing else flags." "The truck and the lodge are goals for the aids. The duck wings? That's the electronic muffs' job." "Recheck him every year. If the left keeps slipping away from the right, then a doctor."
