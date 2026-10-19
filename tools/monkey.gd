@@ -10,6 +10,17 @@ extends Node
 ## bone and masked air), mashing the MASKING / ROUTE controls too (M, PgUp / PgDn, Shift+Up / Down,
 ## A, B). Extra invariants: the noise dial stays in 0..100 dB EM, the masker only plays while
 ## MASK is on, and no masker is left playing after a test.
+## (v4) --day=2 first mashes Hoot's masking movie three ways (story/explainers/, CONTRACTS.md §3.4):
+## (1) as a level plays it (a pausable parent) with Space / Enter / clicks / Next / P / II but no
+## Esc: it must step one scene at a time to the end, not skipped, and P must freeze it; (2) the same
+## plus Esc and "Skip movie": an accepted Esc ends it at once; (3) the pause menu's "Watch Hoot's
+## masking movie" replay (a real click) with the same keys: the menu comes back. Invariants: the
+## scenes go 0, 1, 2, ... one at a time, every movie ends within MOVIE_MAX_S, nothing is left paused
+## or in the explainer_player group.
+## (cases) --day=6 and up (any chapter with a "case"): that case's test plan on its patient (with
+## its montage and Hoot's turns), then masked bone on each bone-tested ear and masked air on each
+## air-tested ear wherever the stamps ask (the runner's order), then the case's retest plan if it
+## has one (a fresh session on the treated ear). The masking keys and Day 2's invariants apply.
 ## (Speech) --day=3: Mike's Day 3 instead: the SPEECH screen (the coached right ear, Hoot's recheck
 ## of it on a fresh session at x8, then the left ear with Hoot's x8 turn after the step up 5, as
 ## the level plans it), mashing PRESENT / CORRECT / MISSED / the level / STORE / MASK by key and by
@@ -20,10 +31,13 @@ extends Node
 ## turn, and none is left after an ear; no TALK lamp stuck; Hoot's recheck stores its bracket; the
 ## board ticks every card the say-along covered, drops exactly the unknown word, lands the
 ## measurement clue and stamps.
-## Any other --day (or --chapter) is refused with a message and exit 2: nothing runs.
+## Any other day (Days 4 and 5, or a --day / --chapter that names no chapter) is refused with a
+## message and exit 2: nothing runs, never Day 1 in its place.
 ## Prints MONKEY_RESULT {json}; exit 0 ok, 1 an invariant broke, 2 unsupported day, 3 timeout.
 
 const ErrorCounter := preload("res://tools/autoplay_bot.gd").ScriptErrorCounter
+const Movies := preload("res://story/explainers/movies.gd")
+const CaseData := preload("res://story/case_data.gd")
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
 const MAX_GAME_S := 1500.0
 const ACTIONS: Array[StringName] = [&"present_tone", &"louder", &"softer", &"freq_up", &"freq_down", &"store",
@@ -32,14 +46,17 @@ const ACTIONS: Array[StringName] = [&"present_tone", &"louder", &"softer", &"fre
 const ACTIONS_V3: Array[StringName] = [&"toggle_mask", &"mask_louder", &"mask_softer", &"transducer_air", &"transducer_bone"]
 const MAX_GAME_S_DAY2 := 3600.0
 ## (v3) Bonnie's tests in story order: [ear, coached, plan].
+## (v4) bone on the better (left) ear first, then the one-tone Ghost demo on the right (plan
+## demo_tone: only TONE works, nothing is stored), then masked right bone and air.
 const DAY2_TESTS := [
 	["right", true, {"test": "ac", "hoot_turn_after": 1}],
 	["left", false, {"test": "ac", "hoot_turn_after": 0}],
-	["right", true, {"test": "bc", "hoot_turn_after": 2}],
+	["left", true, {"test": "bc", "masking_controls": true, "hoot_turn_after": 1}],
+	["right", false, {"test": "bc", "bc_freqs": [1000], "masking_controls": false, "hoot_turn_after": 99, "demo_tone": {"freq": 1000, "db": 10, "title": "BOO!"}}],
 	["right", true, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2}],
 	["right", false, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0}],
 ]
-## (Speech) The days this monkey plays: chapter id -> day number.
+## (Speech) The days this monkey plays: chapter id -> day number (and every case day: _supported()).
 const SUPPORTED: Dictionary[String, int] = {"gus": 1, "bonnie": 2, "mike": 3}
 const SPEECH_SCENE := "res://ui/speech/speech_screen.tscn"
 const LevelMike := preload("res://story/level_mike.gd")
@@ -66,6 +83,8 @@ var _base_scale := 1.0
 var _problems: PackedStringArray = []
 var _stats := {"inputs": 0, "clicks": 0, "pauses": 0, "short_beeps": 0, "long_beeps": 0, "hoot_turn_frames": 0, "stores": 0}
 var _day2 := false
+## Day 2 or a case day: the masking controls and their invariants.
+var _masking := false
 var _actions: Array[StringName] = ACTIONS.duplicate()
 var _masker_on := false
 var _tone_unheld_s := 0.0
@@ -82,13 +101,26 @@ var _talk_s := 0.0
 var _flagged: Dictionary = {}
 var _srt: Dictionary = {}            ## test label -> {stored_db, candidate_db, agreement, words}
 var _board_report: Dictionary = {}
+## (v4) Hoot's movie mashing: -1 = off; 0 = level, no Esc; 1 = level, anything; 2 = pause-menu replay.
+const MOVIE_PLAYER := "res://story/explainers/explainer_player.tscn"
+const MOVIE_ID := "masking"
+const MOVIE_MAX_S := 300.0
+var _movie_style := -1
+var _in_movies := false
+var _movie_player: CanvasLayer
+var _movie_t0 := 0.0
+var _movie_scene := -1
+var _movie_esc_t := -1.0
+var _movie_paused_t := -1.0
+var _movie_frozen_at := -1.0
+var _movie_runs: Array = []
 
 
 func demo_start() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # keeps mashing inside the pause menu too
 	OS.add_logger(_errors)
 	var chapter := _chapter_id()
-	if not SUPPORTED.has(chapter):
+	if not _supported(chapter):
 		_refuse()
 		return
 	_rng.seed = int(Game.cli.get("seed", 1))
@@ -107,9 +139,14 @@ func demo_start() -> void:
 	Events.threshold_stored.connect(func(_e: String, _f: int, _d: int, _i: Dictionary) -> void: _stats["stores"] = int(_stats["stores"]) + 1)
 	Events.masker_changed.connect(func(_e: String, _f: int, _d: int, on: bool) -> void: _masker_on = on)
 	_day2 = chapter == "bonnie"
-	if _day2:
+	var case_id := _case_id(chapter)
+	_masking = _day2 or case_id != ""
+	if _masking:
 		_actions.append_array(ACTIONS_V3)
+	if _day2:
 		await _run_day2()
+	elif case_id != "":
+		await _run_case(case_id)
 	else:
 		_screen.call("demo_start")
 		await _screen.test_finished
@@ -128,6 +165,13 @@ func demo_start() -> void:
 ## (v3) Day 2: Bonnie's tests in order on one session (CONTRACTS.md §4.2 plans).
 func _run_day2() -> void:
 	Game.begin_visit("bonnie")
+	Events.explainer_scene.connect(_on_movie_scene)
+	_in_movies = true   # no AudiOtron mashing in between the movie runs
+	for style in 3:
+		await _run_movie(style)
+		if _done:
+			return
+	_in_movies = false
 	var bonnie := Game.load_patient("bonnie")
 	for t: Array in DAY2_TESTS:
 		_screen.call("start_test", bonnie, String(t[0]), bool(t[1]), (t[2] as Dictionary).duplicate())
@@ -454,14 +498,68 @@ func _chapter_id() -> String:
 	return Game.cli_chapter_id()
 
 
+## A day this monkey plays: Days 1-3 (SUPPORTED) or a case day (a chapter with a "case").
+func _supported(chapter_id: String) -> bool:
+	return SUPPORTED.has(chapter_id) or _case_id(chapter_id) != ""
+
+
+## (cases) The chapter's case file id, "" when it is not a case day.
+func _case_id(chapter_id: String) -> String:
+	return String(Game.chapter(chapter_id).get("case", "")) if chapter_id != "" else ""
+
+
 ## (Speech) A day the monkey doesn't play: say so and quit with 2 (never Day 1 in its place).
 func _refuse() -> void:
 	var asked := ("--day=" + Game.cli_value("day")) if Game.cli.has("day") else ("--chapter=" + Game.cli_value("chapter"))
-	var msg := "%s is not supported: the monkey plays --day=1 (Gus), --day=2 (Bonnie) or --day=3 (Mike). Nothing ran." % asked
+	var msg := "%s is not supported: the monkey plays --day=1 (Gus), --day=2 (Bonnie), --day=3 (Mike) or a case day (--day=6 and up). Nothing ran." % asked
 	printerr("MONKEY: " + msg)
 	print("MONKEY_RESULT ", JSON.stringify({"ok": false, "unsupported": asked, "problems": [msg]}))
 	_done = true
 	Events.quit_requested.emit(2)
+
+
+## (cases) A case day's tests, in the runner's order (story/level_case.gd _audiometry).
+func _run_case(case_id: String) -> void:
+	var c := CaseData.load_case(case_id)
+	var pid := String(c["patient_id"])
+	Game.begin_visit(pid)
+	var patient := Game.load_patient(pid) as PatientProfile
+	var wax := String((c["otoscopy"] as Dictionary).get("view", "clear")) == "wax"
+	var tr: StringName = &"inserts" if Game.has_upgrade("insert_earphones") and not wax else &"phones"
+	var res := {}
+	for p: Variant in c["audiometry"]:
+		var pd: Dictionary = p
+		var plan := {"test": String(pd["test"]), "hoot_turn_after": int(pd.get("hoot_turn_after", 0)), "air_transducer": tr}
+		for k: String in CaseData.PLAN_KEYS:
+			if pd.has(k):
+				plan[k] = bool(pd[k])
+		if plan["test"] == "bc":
+			plan["bc_freqs"] = ClinicRules.BC_REQUIRED
+			plan["masking_controls"] = true
+		res = await _case_test(patient, String(pd["ear"]), plan)
+	for ear: String in CaseData.plan_ears(c["audiometry"], "bc"):
+		if not ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty():
+			res = await _case_test(patient, ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2, "air_transducer": tr})
+	for ear: String in CaseData.plan_ears(c["audiometry"], "ac"):
+		if not ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", tr).is_empty():
+			res = await _case_test(patient, ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0, "air_transducer": tr})
+	if c.get("retest", null) is Dictionary:
+		var rt: Dictionary = c["retest"]
+		var after := Game.load_patient(String(rt["patient_id"])) as PatientProfile
+		var tr2: StringName = &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
+		for p: Variant in rt["audiometry"]:
+			var pd: Dictionary = p
+			await _case_test(after, String(pd["ear"]), {"test": "ac", "hoot_turn_after": int(pd.get("hoot_turn_after", 0)), "air_transducer": tr2})
+
+
+func _case_test(patient: PatientProfile, ear: String, plan: Dictionary) -> Dictionary:
+	_screen.call("start_test", patient, ear, false, plan)
+	var r: Dictionary = await _screen.test_finished
+	_release_all()
+	_stats["tests"] = int(_stats.get("tests", 0)) + 1
+	if _masker_on:
+		_problem("masker still playing after the %s %s test" % [ear, String(plan["test"])])
+	return r
 
 
 func _process(delta: float) -> void:
@@ -471,9 +569,13 @@ func _process(delta: float) -> void:
 	if _done or _screen == null or not is_instance_valid(_screen):
 		return
 	_t += get_process_delta_time() if not get_tree().paused else delta
-	if Game.clock > (MAX_GAME_S_DAY2 if _day2 else MAX_GAME_S):
+	if Game.clock > (MAX_GAME_S_DAY2 if _masking else MAX_GAME_S):
 		_problem("timeout")
 		_finish(3)
+		return
+	if _in_movies:
+		if _movie_style >= 0:
+			_movie_tick()
 		return
 	var st: Dictionary = _screen.call("get_state")
 	var hoot := bool(st.get("hoot_turn", false))
@@ -489,7 +591,7 @@ func _process(delta: float) -> void:
 			_problem("tone on with nothing held (%.1f s)" % _tone_unheld_s)
 	else:
 		_tone_unheld_s = 0.0
-	if _day2:
+	if _masking:
 		var m := int(st.get("mask_db", 0))
 		if m < ClinicRules.MASK_MIN_DB or m > ClinicRules.MASK_MAX_DB:
 			_problem("noise dial at %d dB EM" % m)
@@ -527,6 +629,146 @@ func _act(st: Dictionary) -> void:
 		_stats["pauses"] = int(_stats["pauses"]) + 1
 		_tap(&"pause")
 	# else: idle
+
+
+## (v4) One run of Hoot's masking movie under the monkey's fingers (see the header).
+func _run_movie(style: int) -> void:
+	_movie_scene = -1
+	_movie_esc_t = -1.0
+	_movie_paused_t = -1.0
+	_movie_frozen_at = -1.0
+	_movie_t0 = _t
+	_next_t = _t + 0.1
+	var holder: Node = null
+	var r: Dictionary = {}
+	var pm := get_tree().get_first_node_in_group("pause_menu")
+	if style < 2:
+		# as a level plays it: a pausable parent, so P (the pause menu) freezes the movie
+		holder = Node.new()
+		holder.process_mode = Node.PROCESS_MODE_PAUSABLE
+		add_child(holder)
+		_movie_player = (load(MOVIE_PLAYER) as PackedScene).instantiate()
+		holder.add_child(_movie_player)
+		_movie_style = style
+		r = await _movie_player.call("play", MOVIE_ID, "test")
+	else:
+		if pm == null:
+			_problem("no pause menu for the movie replay")
+			return
+		pm.call("open")
+		await get_tree().create_timer(0.4, true, false, true).timeout
+		var btn: Button = pm.call("movie_button")
+		if btn == null or not btn.is_visible_in_tree():
+			_problem("pause menu: no visible 'Watch' button on Day 2")
+			pm.call("close")
+			return
+		_movie_style = style
+		var done := [false, true]   # [finished, skipped] (a lambda cannot assign the outer r)
+		var cb := func(_id: String, sk: bool) -> void:
+			done[0] = true
+			done[1] = sk
+		Events.explainer_finished.connect(cb)
+		_click(btn.get_global_rect().get_center(), false)
+		await get_tree().process_frame
+		_movie_player = get_tree().get_first_node_in_group("explainer_player")
+		if _movie_player == null:
+			_problem("the Watch button did not start the replay")
+		while not done[0] and not _done and _t - _movie_t0 < MOVIE_MAX_S:
+			await get_tree().process_frame
+		Events.explainer_finished.disconnect(cb)
+		r = {"skipped": bool(done[1]), "scenes_seen": _movie_scene + 1}
+		await get_tree().create_timer(0.2, true, false, true).timeout
+		if not bool(pm.call("is_open")):
+			_problem("the pause menu did not come back after the replay")
+	_movie_style = -1
+	_release_all()
+	if pm != null and bool(pm.call("is_open")):
+		pm.call("close")
+	await get_tree().process_frame
+	_movie_runs.append({"style": style, "skipped": bool(r.get("skipped", true)), "scenes": int(r.get("scenes_seen", 0)), "s": snappedf(_t - _movie_t0, 0.1)})
+	if style == 0 and (bool(r.get("skipped", true)) or int(r.get("scenes_seen", 0)) != (Movies.movie(MOVIE_ID)["scenes"] as Array).size()):
+		_problem("movie without Esc did not play to the end: %s" % JSON.stringify(r))
+	if get_tree().get_first_node_in_group("explainer_player") != null:
+		_problem("an explainer player is still playing after the movie (style %d)" % style)
+	if get_tree().paused:
+		_problem("the game is still paused after the movie (style %d)" % style)
+	if holder != null:
+		holder.queue_free()
+	_movie_player = null
+
+
+func _on_movie_scene(_id: String, index: int, _scene: String) -> void:
+	if _movie_style < 0:
+		return
+	if index != _movie_scene + 1:
+		_problem("movie jumped from scene %d to %d" % [_movie_scene, index])
+	_movie_scene = index
+
+
+## (v4) The movie's invariants and the next mash.
+func _movie_tick() -> void:
+	if _t - _movie_t0 > MOVIE_MAX_S:
+		_problem("movie still playing after %.0f s (style %d)" % [MOVIE_MAX_S, _movie_style])
+		_finish(3)
+		return
+	var p := _movie_player
+	var playing := p != null and is_instance_valid(p) and bool(p.call("is_playing"))
+	var pm := get_tree().get_first_node_in_group("pause_menu")
+	var menu_up := pm != null and bool(pm.call("is_open")) and _movie_style != 2
+	if _movie_esc_t >= 0.0 and playing and _t - _movie_esc_t > 1.0:
+		_problem("Esc did not skip the movie (style %d)" % _movie_style)
+		_movie_esc_t = -1.0
+	if menu_up and playing:
+		# P froze the level's movie: its clock must not move while the menu is open
+		var st := float(p.get("_scene_t"))
+		_stats["movie_menu_frames"] = int(_stats.get("movie_menu_frames", 0)) + 1
+		if _movie_paused_t < 0.0:
+			_movie_paused_t = _t
+			_movie_frozen_at = st
+		elif _t - _movie_paused_t > 0.3 and absf(st - _movie_frozen_at) > 0.001 and int(p.get("scene_index")) == _movie_scene:
+			_problem("the movie kept playing under the pause menu")
+			_movie_frozen_at = st
+	else:
+		_movie_paused_t = -1.0
+	if _t < _next_t or not playing:
+		return
+	_next_t = _t + _rng.randf_range(0.08, 1.2)
+	_stats["movie_inputs"] = int(_stats.get("movie_inputs", 0)) + 1
+	if menu_up:
+		# the level's pause menu over the movie: wander a little, then P closes it
+		if _rng.randf() < 0.6:
+			_tap(&"pause")
+		else:
+			_key(KEY_DOWN if _rng.randf() < 0.5 else KEY_UP)
+		return
+	var age := float(p.get("_age"))
+	var roll := _rng.randf()
+	if roll < 0.18:
+		_key(KEY_SPACE)
+	elif roll < 0.26:
+		_key(KEY_ENTER)
+	elif roll < 0.32:
+		_tap(&"advance_dialogue")
+	elif roll < 0.5:
+		# a click somewhere on the screen (never on "Skip movie" without Esc allowed)
+		var at := Vector2(_rng.randf_range(0, 1280), _rng.randf_range(0, 720))
+		var skip_b: Control = p.get("_skip_btn")
+		if _movie_style == 0 and skip_b != null and skip_b.get_global_rect().grow(6.0).has_point(at):
+			return
+		_click(at, _rng.randf() < 0.15)
+	elif roll < 0.58:
+		_click((p.get("_next_btn") as Control).get_global_rect().get_center(), false)
+	elif roll < 0.66:
+		_stats["movie_p"] = int(_stats.get("movie_p", 0)) + 1
+		_key(KEY_P)
+	elif roll < 0.70 and _movie_style != 0:
+		_stats["movie_esc"] = int(_stats.get("movie_esc", 0)) + 1
+		_key(KEY_ESCAPE)
+		if age > 0.4:
+			_movie_esc_t = _t   # past the start grace: the movie must end at once
+	elif roll < 0.72 and _movie_style != 0:
+		_click((p.get("_skip_btn") as Control).get_global_rect().get_center(), false)
+	# else: idle, watch a bit
 
 
 ## Roughly what the coach says, with sloppy timing.
@@ -667,6 +909,7 @@ func _finish(code: int) -> void:
 		"ok": code == 0, "game_seconds": Game.clock, "script_errors": _errors.count, "errors": _errors.messages,
 		"problems": _problems, "stats": _stats, "grade": res.get("grade", "?"), "presentations": res.get("presentations", 0),
 		"technique_errors": (res.get("technique_errors", []) as Array).size(),
+		"movie_runs": _movie_runs,
 	}
 	if _day3:
 		out["srt"] = _srt

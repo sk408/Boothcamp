@@ -181,7 +181,7 @@ func _enter_tree() -> void:
 	add_to_group("speech_screen")
 	Stage.set_booth_view_active(true)
 	if Sfx.has_method("music_duck") and not _music_ducked:
-		Sfx.music_duck(true)
+		Sfx.music_duck(true, "speech:%d" % get_instance_id())   # its own owner key (CONTRACTS.md §2.4)
 		_music_ducked = true
 	if not _buttons.is_empty():
 		_register_anchors()
@@ -204,7 +204,7 @@ func _exit_tree() -> void:
 		_unregister_mode_anchors()
 	memory.clear()
 	if _music_ducked:
-		Sfx.music_duck(false)
+		Sfx.music_duck(false, "speech:%d" % get_instance_id())
 		_music_ducked = false
 
 

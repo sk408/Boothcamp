@@ -22,6 +22,12 @@ var masker_text: String = "":
 			masker_text = v
 			queue_redraw()
 var progress_total: int = 7
+## (v4) The active card's badge ("TESTING"; the Ghost demo says "GHOST TEST").
+var badge: String = "TESTING":
+	set(v):
+		if v != badge:
+			badge = v
+			queue_redraw()
 var audiogram: Audiogram
 var _t := 0.0
 var _flash := 0.0
@@ -85,9 +91,10 @@ func _draw() -> void:
 	var title := "RIGHT EAR" if ear == "right" else "LEFT EAR"
 	var tw := AoDraw.text_l(self, Vector2(54, sc.y), title, 21, Palette.PAPER, AoDraw.FONT_BOLD)
 	if active:
-		var br := Rect2(Vector2(62 + tw, sc.y - 11), Vector2(78, 22))
+		var bw := maxf(78.0, AoDraw.text_size(badge, 12, AoDraw.FONT_BOLD).x + 20.0)
+		var br := Rect2(Vector2(62 + tw, sc.y - 11), Vector2(bw, 22))
 		AoDraw.rbox(self, br, Palette.SUNNY, 11, 2, Palette.INK)
-		AoDraw.text_c(self, br.get_center(), "TESTING", 12, Palette.INK, AoDraw.FONT_BOLD)
+		AoDraw.text_c(self, br.get_center(), badge, 12, Palette.INK, AoDraw.FONT_BOLD)
 	elif masker_text != "":
 		var mw := AoDraw.text_size(masker_text, 13, AoDraw.FONT_BOLD).x + 40.0
 		var mr := Rect2(Vector2(62 + tw, sc.y - 12), Vector2(mw, 24))
@@ -101,7 +108,9 @@ func _draw() -> void:
 		var bd := Rect2(Vector2(62 + tw, sc.y - 11), Vector2(64, 22))
 		AoDraw.rbox(self, bd, Palette.MINT, 11, 2, Palette.INK)
 		AoDraw.text_c(self, bd.get_center(), "DONE", 12, Palette.INK, AoDraw.FONT_BOLD)
-	# progress pips, right aligned
+	# progress pips, right aligned ((v4) none when there is nothing to stamp: the Ghost demo)
+	if progress_total <= 0:
+		return
 	var n := maxi(progress_total, 1)
 	var pip := 12.0
 	var gap := 5.0

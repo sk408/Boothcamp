@@ -17,10 +17,16 @@ const PHASES: Array[StringName] = [
 	&"audiometry", &"reveal", &"evidence", &"fitting", &"results",
 	# v3 (Chapter 2): the title's day picker, the bone oscillator, the masking lesson, the referral stamp
 	&"chapter_select", &"bc_placement", &"masking", &"referral",
+	# v4 (Day 2 feedback): Hoot's movie before Bonnie arrives; the Cross-Hearing Ghost demo
+	&"explainer", &"ghost_demo",
 	# Speech (Days 3-5): go through the word list with the patient, then the SPEECH screen
 	&"familiarize", &"speech",
 	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
 	&"tymp", &"decision",
+	# cases batch 2: the patient comes back after treatment (Day 10's wax)
+	&"retest",
+	# freestyle (docs/FREESTYLE.md): the waiting room, the tool tray, the chart question, the debrief
+	&"freestyle_room", &"freestyle_tray", &"freestyle_chart", &"freestyle_debrief",
 	# Speech, Days 4-5 (CONTRACTS.md §9.21): talking the results through with the patient
 	&"counselling",
 ]
@@ -52,6 +58,11 @@ const CHAPTERS: Array[Dictionary] = [
 		"scene": "res://story/level_case.tscn", "requires": "marina", "case": "sudden", "face": "Dash", "tint": Color("#ffe0d6")},
 	{"id": "ginger", "day": 9, "title": "Day 9: Ginger Snapp", "patient_id": "ginger", "teaches": "Case file: the ventriloquist",
 		"scene": "res://story/level_case.tscn", "requires": "dash", "case": "cookie_bite", "face": "Ginger", "tint": Color("#f3e1ff")},
+	# cases batch 2: the conductive cases (where is the sound stuck?)
+	{"id": "barnaby", "day": 10, "title": "Day 10: Barnaby Bumble", "patient_id": "barnaby", "teaches": "Case file: the beekeeper",
+		"scene": "res://story/level_case.tscn", "requires": "ginger", "case": "wax", "face": "Barnaby", "tint": Color("#e6f4c4")},
+	{"id": "skye", "day": 11, "title": "Day 11: Skye Tailwind", "patient_id": "skye", "teaches": "Case file: the cabin crew",
+		"scene": "res://story/level_case.tscn", "requires": "barnaby", "case": "fluid", "face": "Skye", "tint": Color("#ffe4ef")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
@@ -88,6 +99,7 @@ const DEFAULT_PROGRESS: Dictionary = {
 	"plays": 0,
 	"chapters_done": [],         ## (v3) chapter ids completed at least once (CHAPTERS)
 	"last_chapter": "",          ## (v3) the chapter started most recently
+	"movies_seen": [],           ## (v4) Hoot's movies (story/explainers/movies.gd ids) shown at least once
 }
 
 var save_path: String = DEFAULT_SAVE_PATH
@@ -495,6 +507,22 @@ func chapter_for_day(day: int) -> Dictionary:
 
 func is_chapter_done(id: String) -> bool:
 	return (progress.get("chapters_done", []) as Array).has(id)
+
+
+## (v4) Hoot's movies (CONTRACTS.md §3.4): a movie id (story/explainers/movies.gd) was shown at
+## least once, watched to the end or skipped. The explainer player calls mark_movie_seen() when a
+## movie ends; a level asks is_movie_seen() to offer a replay instead of playing it again.
+func is_movie_seen(id: String) -> bool:
+	return (progress.get("movies_seen", []) as Array).has(id)
+
+
+func mark_movie_seen(id: String) -> void:
+	if id == "" or is_movie_seen(id):
+		return
+	if not progress.get("movies_seen") is Array:
+		progress["movies_seen"] = []
+	(progress["movies_seen"] as Array).append(id)
+	save_game()
 
 
 ## (polish) Every chapter is open from the start, in any order: always true. Kept so callers

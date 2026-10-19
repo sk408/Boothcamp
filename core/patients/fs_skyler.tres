@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = "fs_skyler"
+display_name = "Skyler Kickflip"
+age = 19
+complaint = "Since I smacked my head on a handrail, my left ear sounds like it's wearing a beanie."
+thresholds_right = Dictionary[int, int]({
+250: 10,
+500: 5,
+750: 5,
+1000: 5,
+1500: 10,
+2000: 5,
+3000: 10,
+4000: 10,
+6000: 15,
+8000: 10
+})
+thresholds_left = Dictionary[int, int]({
+250: 50,
+500: 50,
+750: 50,
+1000: 45,
+1500: 45,
+2000: 50,
+3000: 50,
+4000: 55,
+6000: 55,
+8000: 50
+})
+bc_left = Dictionary[int, int]({
+250: 5,
+500: 0,
+750: 5,
+1000: 5,
+1500: 5,
+2000: 10,
+3000: 10,
+4000: 5
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+ia_bone_db = 0
+false_alarms_per_minute = 0.9
+reaction_time_min_s = 0.3
+reaction_time_max_s = 0.6
+psychometric_slope_db = 2.0
+attention = 0.88
+fatigue_per_tone = 0.0005
+min_tone_s = 0.5
+rhythm_sensitivity = 0.7
+tags = PackedStringArray("freestyle", "conductive", "unilateral", "trauma")
+pronoun = "they"
+nickname = "Skyler"
