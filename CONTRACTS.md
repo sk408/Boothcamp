@@ -1445,6 +1445,8 @@ test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a
 `tymp.<ear>.ecv_ml` (required: any type but B inside the adult band 0.6-2.0 mL; a B reads with it); `findings[].when`
 `symmetric` / `asymmetric` / `conductive` / `abg_flag`; `reveal.pattern` `gap` with `reveal.plug` `wax` / `fluid`;
 `audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
+`audiometry[].if_tested` `{"750": script}` on a first-visit air step (half-octaves only), said after that step once the
+ear's stamps asked for that frequency and it is on the chart (Ginger's 750 Hz);
 `do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first
 stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),
 reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, unmasked bone goes on the better ear only; the runner then masks bone on each ear

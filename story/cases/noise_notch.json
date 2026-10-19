@@ -142,6 +142,8 @@
 		"right_line": "Exactly! History, exam and chart all clear, and ears that match: fitting is the right call."
 	},
 	"payoff": [
+		["Hoot", "We fit because his hearing trips him up at the pub."],
+		["Hoot", "Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year."],
 		["Hoot", "Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too."],
 		["Hoot", "A full fitting also checks words in each ear."],
 		{"do": "hearing_aids"},

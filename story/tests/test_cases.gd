@@ -466,6 +466,10 @@ func test_tymp_and_plug_rules_are_checked() -> void:
 		["no canal volume", func(c: Dictionary) -> void: (c["tymp"]["left"] as Dictionary).erase("ecv_ml"), "ecv_ml must be a number"],
 		["a type A with a tiny canal", func(c: Dictionary) -> void: c["tymp"]["left"]["ecv_ml"] = 0.5, "outside the adult band"],
 		["a type A with a huge canal", func(c: Dictionary) -> void: c["tymp"]["left"]["ecv_ml"] = 2.5, "outside the adult band"],
+		["if_tested on a bone step", func(c: Dictionary) -> void: c["audiometry"][2]["if_tested"] = {"750": [["Hoot", "Hi."]]}, "if_tested is for"],
+		["if_tested at an octave", func(c: Dictionary) -> void: c["audiometry"][1]["if_tested"] = {"1000": [["Hoot", "Hi."]]}, "not a half-octave"],
+		["if_tested on the retest", func(c: Dictionary) -> void: c["retest"]["audiometry"][0]["if_tested"] = {"750": [["Hoot", "Hi."]]}, "if_tested is for"],
+		["a bad if_tested script", func(c: Dictionary) -> void: c["audiometry"][1]["if_tested"] = {"750": [["Nobody", "Hi."]]}, "if_tested.750"],
 		["a bad view", func(c: Dictionary) -> void: c["otoscopy"]["view"] = "foggy", "view must be"],
 		["a bad kind", func(c: Dictionary) -> void: c["otoscopy"]["kind"] = "purple", "kind must be"],
 		["a bad plug", func(c: Dictionary) -> void: c["reveal"]["plug"] = "jam", "needs plug"],
@@ -602,6 +606,19 @@ func test_borrowed_bone_needs_no_real_gap() -> void:
 		for f: int in [500, 1000, 2000, 4000]:
 			right_bone[f] = p.get_bc_threshold("right", f)
 		assert_eq(LevelCase.borrowed_type(CaseData.truth(p, "left"), right_bone), &"sensorineural", id)
+
+
+func test_ginger_tests_750_in_both_ears() -> void:
+	# (C11) her 500-to-1k jump is 25 dB in both ears, so a 5 dB wobble still asks for 750 Hz, and
+	# her right-ear step explains it once it is on the chart
+	var p := _patient("cookie_bite")
+	for ear: String in ["right", "left"]:
+		var t := CaseData.truth(p, ear)
+		assert_eq(int(t[1000]) - int(t[500]), 25, "%s jump" % ear)
+		assert_true(ClinicRules.required_interoctaves(t).has(750), ear)
+	var step: Dictionary = _case("cookie_bite")["audiometry"][0]
+	assert_true((step.get("if_tested", {}) as Dictionary).has("750"))
+	assert_true(int(step["hoot_turn_after"]) > 7, "the player gets the 750 stamp too")
 
 
 func test_wrong_first_headlines() -> void:

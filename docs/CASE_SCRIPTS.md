@@ -37,7 +37,7 @@ Red-flag card: *Pain, drainage, dizziness, sudden change: NONE.*
 - **Hoot:** Crept up slowly, no red flags so far. Let's look inside!
 
 ### Otoscopy
-First caption: *Rocco's LEFT ear first: a clear canal, a healthy eardrum.*
+First caption: *Fresh speculum. Rocco's LEFT ear first: a clear canal, a healthy eardrum.*
 
 Caption: *Rocco's RIGHT ear: a roomy canal, shiny eardrum.*
 
@@ -54,6 +54,7 @@ Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
 - **Hoot:** Type A both sides: no fluid, no blockage. The bone test will tell us if it's deeper.
 
 ### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell him: press for every beep, even faint ones. Not for the cymbal in his head!
 - **Rocco:** Beeps yes, ringing no. Got it, boss.
 - **Hoot:** Tip: with ringing ears, pulsed beeps stand out from the ring. Most audiometers can pulse them.
@@ -102,6 +103,8 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
   - snhl: True: no air-bone gap, one red flag cleared. Which clue clears past drips, pain, dizziness and sudden change?
 
 ### Payoff
+- **Hoot:** We fit because his hearing trips him up at the pub.
+- **Hoot:** Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year.
 - **Hoot:** Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too.
 - **Hoot:** A full fitting also checks words in each ear.
 - *(hearing aids)*
@@ -159,7 +162,7 @@ Red-flag card: *Dizziness: YES, spinning spells. / One ear only: YES = see a doc
 - **Hoot:** Brilliant! Old results are gold. We'll compare them with today's.
 
 ### Otoscopy
-First caption: *Marina's RIGHT ear first: a clear canal, a healthy eardrum.*
+First caption: *Fresh speculum. Marina's RIGHT ear first: a clear canal, a healthy eardrum.*
 
 Caption: *Marina's LEFT ear: an average-sized canal, shiny eardrum.*
 
@@ -178,6 +181,7 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
 - **Hoot:** No fluid behind that drum. The bone test will tell us where the fullness lives.
 
 ### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell her: press for every beep, even faint ones. Not for the roar!
 - **Marina:** Beeps yes, engine room no. Aye aye!
 - **Hoot:** Tip: with a roaring ear, pulsed beeps stand out better. Most audiometers can pulse them.
@@ -279,7 +283,7 @@ Red-flag card: *Sudden, one ear, yesterday: YES. Dizzy too. / See a doctor. How 
 - **Hoot:** A sudden loss in one ear, yesterday. Quick AND careful: let's look.
 
 ### Otoscopy
-First caption: *Dash's LEFT ear first: a clear canal, a healthy eardrum.*
+First caption: *Fresh speculum. Dash's LEFT ear first: a clear canal, a healthy eardrum.*
 
 Caption: *Dash's RIGHT ear: an average-sized canal. No wax at all!*
 
@@ -300,6 +304,7 @@ Question: **Dash says it's wax. Does the tymp agree?**
 - **Hoot:** Type A both sides: no fluid, no wax plug. The bone test shows if it's deeper.
 
 ### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell him: press for every beep, even faint ones. No racing the beeps!
 - **Dash:** Beeps only. Fast but accurate. Like my deliveries!
 
@@ -401,7 +406,7 @@ Red-flag card: *Pain, drainage, dizziness, sudden change: NONE.*
 - **Hoot:** Old results are gold! No red flags so far. Let's take a look.
 
 ### Otoscopy
-First caption: *Ginger's LEFT ear first: a clear canal, a healthy eardrum.*
+First caption: *Fresh speculum. Ginger's LEFT ear first: a clear canal, a healthy eardrum.*
 
 Caption: *Ginger's RIGHT ear: a narrow canal, shiny eardrum.*
 
@@ -420,12 +425,16 @@ Question: **Is her middle ear the problem?**
 - **Hoot:** Type A both sides: no fluid, no blockage. The bone test decides if it's deeper.
 
 ### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell her: press for every beep, even faint ones. Chip doesn't get a button.
 - **Chip:** Discrimination! I'm calling my agent.
 - **Ginger:** Beeps only. Got it.
 
 ### Test plan
-- Right AC (player for 7 stamps, then Hoot): "Right ear's yours. Watch the middle pitches!"
+- Right AC (player for 8 stamps, then Hoot): "Right ear's yours. Watch the middle pitches!"
+  - after it, if the stamps asked for 750 Hz (and it is on the chart):
+    - **Hoot:** Extra stop at 750! A 500-to-1k jump of 20 dB or more gets tested in between.
+    - **Hoot:** Hearing aids care exactly where her loss begins. Now we know.
 - Left AC (Hoot at x8): "Left ear at Hoot speed. Same shape?"
 - Right BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
   - before:
@@ -523,7 +532,7 @@ Red-flag card: *Sudden change, one ear: YES. Pain, drainage, dizziness: none. / 
 - **Barnaby:** Look all you like. You'll see a man who needs hearing aids!
 
 ### Otoscopy
-First caption: *Barnaby's LEFT ear first: a clear canal, a healthy eardrum.*
+First caption: *Fresh speculum. Barnaby's LEFT ear first: a clear canal, a healthy eardrum.*
 
 Caption: *Barnaby's RIGHT ear: a roomy canal... packed solid with wax.* (view: wax)
 
@@ -546,6 +555,7 @@ Question: **His right is flat. What does the canal volume say?**
 - **Hoot:** A gentle seal at the entrance, never a push. Many clinics skip the probe on a packed canal.
 
 ### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Headphones today, not foam inserts: they go deep, and could push the wax further.
 - **Hoot:** Tell him: press for every beep, even faint ones. Gerald waits outside.
 - **Barnaby:** Hear that, Gerald? Out. Shoo. Sorry, he's clingy.
@@ -694,7 +704,7 @@ Red-flag card: *One ear only: YES. Pain, drainage, dizziness, sudden: none. / Se
 - **Hoot:** Gently! Forcing it can hurt. Let's look inside instead.
 
 ### Otoscopy
-First caption: *Skye's RIGHT ear first: a clear canal, a healthy eardrum.*
+First caption: *Fresh speculum. Skye's RIGHT ear first: a clear canal, a healthy eardrum.*
 
 Caption: *Skye's LEFT ear: an average-sized canal, no wax... and a dull, amber eardrum.* (view: fluid)
 
@@ -714,6 +724,7 @@ Question: **Skye says it just needs a good pop. What does the tymp say?**
 - **Hoot:** Flat, but a normal canal volume: the probe reaches the drum. It just won't move.
 
 ### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell her: press for every beep, even faint ones. Not for the crackles!
 - **Skye:** Beeps only. Cabin crew, prepare for hearing test!
 

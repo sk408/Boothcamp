@@ -134,15 +134,16 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
 | Hz | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Right air (O) | 15 | 20 | 30 | 45 | 50 | 50 | 40 | 25 | 20 | 15 |
-| Left air (X) | 15 | 25 | 35 | 45 | 50 | 55 | 45 | 30 | 25 | 20 |
+| Left air (X) | 15 | 20 | 35 | 45 | 50 | 55 | 45 | 30 | 25 | 20 |
 | Right air, nine years ago (on file) | 15 | 20 | | 40 | | 50 | | 25 | | 15 |
 
-- Shape `cookie_bite` both ears: the middle (1k-2k) 25-27.5 dB poorer than 500 Hz and 20-22.5 dB poorer than 4-8k.
+- Shape `cookie_bite` both ears: the middle (1k-2k) 27.5-30 dB poorer than 500 Hz and 20-22.5 dB poorer than 4-8k.
+- The 500-to-1k jump is 25 dB in both ears (clinical review C11), so 750 Hz is tested in both, even with a 5 dB wobble.
 - Ears within 5 dB: symmetric. Bone: Hoot, right mastoid, unmasked: it matches BOTH ears' air (it is the better
   cochlea, so the left gap can only be smaller), so no masking, and both ears read sensorineural.
 - Her dad and his mum (Grandma Snapp) have the same pattern: one family line, three generations. School hearing
   tests found it; the right-ear chart from nine years ago is within 5 dB of today: stable.
-- PTA: right 38.3, left 41.7. Tympanograms: A both (tip small, a narrow canal).
+- PTA: right 38.3, left 40. Tympanograms: A both (tip small, a narrow canal).
 
 ### 2.5 Barnaby (wax, right: conductive)
 
@@ -194,9 +195,9 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 |---|---|---|---|
 | 1 | `intro` | First case ever: Hoot's briefing ("Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."). The patient's entrance gag and complaint (joke + real clue), Hoot's personal opener. The "always" clues go on the notes. | dialogue |
 | 2 | `history` | Two rounds of three questions (2 / 1 / 0 points). The red-flag sweep always happens: if the player skipped it, Hoot asks it. Red-flag card, plus any extra cards the sweep reveals. Medal `history` (4 points gold, 2 silver). | choice |
-| 3 | `otoscopy` | A quick look at the other ear ("<name>'s <OTHER EAR> ear first: a clear canal, a healthy eardrum.": both ears are looked at before any probe or insert goes in), then the case's ear (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); its caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
+| 3 | `otoscopy` | A quick look at the other ear ("Fresh speculum. <name>'s <OTHER EAR> ear first: a clear canal, a healthy eardrum.": both ears are looked at before any probe or insert goes in), then the case's ear (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); its caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
-| 5 | `instructions` | One line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. | dialogue |
+| 5 | `instructions` | Hoot's routine line first, every case ("This morning's listening check: every beep clean, the button works. Dials stay out of view.", clinical review A1), then one line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. | dialogue |
 | 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. | the AudiOtron's tone beats |
 | 7 | `reveal` | The case board: the audiogram stamps in. Hoot: "What shape do you see?" | dialogue |
 | 8 | `evidence` | The shape question (for Dash and Barnaby, the type of loss; for Skye, where the sound is stuck). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file: a card with a `when` shows only when the measured chart says so (symmetric, asymmetric, conductive, or the air-bone-gap flag), and if any of them read differently on the truth tables Hoot says once: "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!" Medal `evidence`. | choice |
@@ -220,8 +221,8 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
    required frequency after each store, and a half-octave joins as soon as its neighbours differ by 20 dB, so N
    counts those too. Rocco: right ear, N = 6 (1k, 2k, 4k, 3k, 8k, 6k: the 8k recovery stays the player's even if
    1.5k is also needed). Marina: left ear, N = 8 (the whole ear: 1k, 2k, 1.5k, 4k, 8k, retest, 500, 250). Dash:
-   right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 7 (1k, 2k, 4k, 3k, 8k, retest, 500: the bite's low
-   edge is the player's). Barnaby: right ear, N = 2 (1k and 2k); on the retest, N = 1 (1k, where he was 35 a week
+   right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 8 (1k, 2k, 4k, 3k, 8k, retest, 500, 750: the bite's
+   low edge is the player's, and once 750 is on her chart Hoot says why it was tested). Barnaby: right ear, N = 2 (1k and 2k); on the retest, N = 1 (1k, where he was 35 a week
    ago). Skye: left ear, N = 2.
 3. Unmasked bone (Hoot). One-sided cases: on the better ear only (Steve's convention, as on Day 2; x8 for Marina
    and Dash, a montage for Barnaby and Skye), since it answers for the better cochlea wherever it sits;
@@ -317,7 +318,9 @@ an urgent refer.
 | Barnaby: what shows something is blocking the sound? | the wax plug; flat tymp, tiny canal volume; the gap card ("bone normal, air down"); the gap of 15+ at 500, 1k and 2k | his wallet (why he WANTS aids), the cotton buds (how it got packed in), "sudden" (the wax explains it), "one ear only" (a reason for a doctor, not what shows the sound is blocked) |
 | Skye: what shows the trouble is in the middle ear? (her normal bone is why it's this week, not today, and Hoot's lines say so) | flat tymp, normal canal volume; the dull amber drum; the gap card ("bone normal") | her Friday flight (her deadline, not an emergency), "after a cold" (a cold can come before an inner-ear loss too), the 15+ gap card (mixed losses have gaps too), one ear only |
 
-Counselling that ships: every FIT, "A full fitting also checks words in each ear" (word scores per case can follow
+Counselling that ships: Rocco's payoff opens with why he is a FIT and not a "not yet" ("We fit because his hearing
+trips him up at the pub." "Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year.", clinical review
+C14). Every FIT, "A full fitting also checks words in each ear" (word scores per case can follow
 once the speech days are on main). Rocco, aids help though noisy pubs stay tricky; aids often make ringing less
 noticeable; the damage so far is permanent, more is
 preventable; earplugs at every gig and rehearsal; filtered musicians' earplugs (a filter turns pitches down more
