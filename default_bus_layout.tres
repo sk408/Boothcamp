@@ -1,4 +1,4 @@
-[gd_resource type="AudioBusLayout" format=3]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://bklbt1s5nfuof"]
 
 [sub_resource type="AudioEffectHardLimiter" id="AudioEffectHardLimiter_j3pel"]
 ceiling_db = -6.0
