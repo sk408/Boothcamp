@@ -316,6 +316,21 @@ func test_daily_decibel_replay_has_no_stamp() -> void:
 	assert_true(has_next, "Next: Day 2 is offered")
 
 
+## A paper that fits the window settles at exactly scale 1 (Days 1, 2 and 6-9 unchanged); one
+## too tall for it is scaled down until its tilted box fits with a margin.
+func test_daily_decibel_fit_scale() -> void:
+	var paper_script := load("res://story/daily_decibel.gd") as GDScript
+	var window := Vector2(1280, 720)
+	assert_eq(float(paper_script.call("fit_scale", Vector2(1178, 688), window)), 1.0, "a tall paper that fits")
+	assert_eq(float(paper_script.call("fit_scale", Vector2(1060, 595), window)), 1.0, "a short paper")
+	var tilt := absf(float(paper_script.get("TILT")))
+	for sz: Vector2 in [Vector2(1178, 710), Vector2(1212, 836)]:
+		var fit := float(paper_script.call("fit_scale", sz, window))
+		assert_true(fit < 1.0, "scaled down: %s" % sz)
+		var box := (sz.y * cos(tilt) + sz.x * sin(tilt)) * fit
+		assert_near(box, window.y - float(paper_script.get("FIT_MARGIN")), 0.01, "fits with the margin: %s" % sz)
+
+
 func test_title_screen_beats() -> void:
 	var t: Node = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
 	add_node(t)

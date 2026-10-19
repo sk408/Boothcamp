@@ -297,6 +297,8 @@ New beats are fine if they follow the same rule. Add them to this table through 
   - It emits `Events.dialogue_line`.
 - `DailyDecibel`: `await show_summary(summary) -> String`: "title", "again" or **(v3)** "next" (the "Next: Day N"
   button / key N, shown when the next chapter is open; the level then calls `Game.start_chapter(summary.next_chapter_id)`).
+  The paper settles at `fit_scale(size, window)`: exactly 1 when its tilted box fits the window's height, else
+  scaled down to fit with `FIT_MARGIN` (16 px) to spare.
 - **(v3)** HUD: `set_steps(steps, labels, title, colors)` replaces Day 1's step tracker.
 - **(v3)** Earphones game: `setup(clinic, pronoun := "his")`.
 - **(v3, builders)** Day 2 board (`story/games/day2_board.gd`): `run_reveal(results)`, `show_gap()` (the toll
@@ -1032,7 +1034,7 @@ leave every other day as it was, plus one removed rule:
   mode), and the new `tests/test_contracts_speech.gd`.
 - Changed in place, other days unchanged: `story/daily_decibel.gd` (column 2, the weather line and the C subhead
   branch on the speech results: `speech_c_subhead()` names the slip on a speech day's C; other days keep their
-  subhead tables), `world/characters/bean.gd` (the shirt block moves inside a `vest` branch for Mike),
+  subhead tables; `fit_scale()` scales down only a paper too tall for the window, on any day), `world/characters/bean.gd` (the shirt block moves inside a `vest` branch for Mike),
   `world/characters/face_rig.gd` (Mike's face; one comment reworded), `story/portraits.gd` and
   `tests/test_chapters.gd` (their tables gain Mike; the header comment changes), `story/pause_menu.gd` and
   `story/hud.gd` (the speech phase hides the pause corner and the tracker, like the audiometry phase), `story/dialogue_box.gd` (Mike's display name "Mike
@@ -1239,7 +1241,11 @@ sheet for the grade. The SRT-vs-PTA measurement is always the strongest clue. Ch
 (the suggested order only: any chapter can be picked). Medals: `history`, `instructions`, `familiarize`, `evidence`,
 `referral`. Anchors: `word_card_<item id>`, `familiarize_cue` (familiarize), `objection_claim`, `clue_srt_pta`, `clue_coffee`,
 `clue_canals` (evidence), `referral_stamp`. Without the SPEECH scene the level lets Hoot say the words (unscored), so
-the visit still ends.
+the visit still ends. The Daily Decibel's column 2 is the word golf card: per ear the stored SRT, PTA, agreement chip,
+words vs par and golf ("no bracket" for an unbracketed player store, "N slips" / "no golf" for a bracketed one with
+errors), then Hoot's recheck note (`recheck_note()`, from `speech.recheck.srt.right`, never graded) and the agreement
+legend with the direction (`agreement_legend()`). A speech C's subhead names the slip (`speech_c_subhead()`); a
+misscored C says which way (`misscore_way()`, `SPEECH_C_MISSCORED`).
 
 ### §9.9 Autoplay (Speech)
 

@@ -156,8 +156,12 @@ words or fewer (`story/tests/test_level_mike.gd::test_hoot_lines_fit`).
 - Results: the tone sheets from Hoot's run (not scored) plus `speech.srt.right` and `speech.srt.left` (the
   player's own sheets, with `bracketed`; Hoot's recheck is kept apart for the board and never graded).
 - Feedback after a store: praise ("ear done: nice work!", the golf name, the fanfare) only for a bracketed store;
-  the Daily Decibel's C-grade subhead names the slip that actually happened (`SPEECH_C_SUBHEADS`), and its golf
-  cell reads "no bracket" for an unbracketed store.
+  the Daily Decibel's C-grade subhead names the slip that actually happened (`SPEECH_C_SUBHEADS`; a misscored C
+  says which way the scores went, generous or strict, `SPEECH_C_MISSCORED`), and its golf cell reads "no bracket"
+  for an unbracketed store and "N slips" / "no golf" for a bracketed store with slips. Hoot's recheck gets its own
+  line under the card ("Hoot's recheck: SRT N dB on the right, by the book... Not graded."), and the agreement
+  legend says which way a gap points (words better than beeps: non-organic; worse: instructions, language, word
+  recognition or a sloping loss).
 - Accuracy: `ClinicRules.accuracy_for_error(|stored SRT - true SRT|)`. Technique: every step and every score is
   a check. Efficiency: par / words. Golf per SRT (fair golf, like tones).
 - Medals (Day 3 paper row): Chat (`history`), Explain (`instructions`), Words (`familiarize`), Case (`evidence`),

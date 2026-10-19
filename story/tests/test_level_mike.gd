@@ -796,6 +796,37 @@ func test_daily_decibel_after_a_misscored_ear() -> void:
 	assert_eq(String(paper.call("recheck_note", {"srt": {}})), "", "no recheck: no note")
 
 
+## The tallest Day 3 paper (a C with Hoot's recheck note, the legend and the real visit's three
+## buttons) fits a 1280x720 window without scaling down.
+func test_daily_decibel_day3_paper_fits_the_window() -> void:
+	var aud := _merged()
+	var sp: Dictionary = aud["speech"]
+	var right: Dictionary = (sp["srt"] as Dictionary)["right"]
+	sp["recheck"] = {"srt": {"right": right.duplicate(true)}}
+	right["by_hoot"] = false
+	right["errors"] = [&"misscored", &"misscored"]
+	sp["technique_errors"] = [{"kind": "misscored", "scored": true, "said_kind": "half"}, {"kind": "misscored", "scored": true, "said_kind": "wrong"}]
+	var summary := _summary(aud)
+	summary["grade"] = "C"
+	summary["next_chapter_id"] = "rocco"
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var run := func() -> void:
+		await paper.call("show_summary", summary)
+	run.call()
+	await wait_seconds(1.0)
+	var texts: Array[String] = []
+	for b: Node in paper.find_children("*", "Button", true, false):
+		texts.append((b as Button).text)
+	assert_true(texts.any(func(t: String) -> bool: return t.begins_with("Next: Day")), "three buttons: %s" % str(texts))
+	assert_true(_find_label(paper, String(paper.call("recheck_note", sp))) != null, "Hoot's recheck note")
+	var sz: Vector2 = (paper.get("_paper") as Control).size
+	assert_eq(float(paper.call("fit_scale", sz, Vector2(1280, 720))), 1.0, "fits at scale 1: %s" % sz)
+	var b := _last(&"results_continue")
+	(b["solver"] as Callable).call()
+	await wait_frames(2)
+
+
 ## A misscore in the session's technique errors keeps which way it went (the paper's C subhead).
 func test_misscore_error_keeps_its_direction() -> void:
 	var s := SpeechSession.new(_mike(), 5)

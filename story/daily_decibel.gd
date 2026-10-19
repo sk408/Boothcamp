@@ -5,6 +5,7 @@ extends CanvasLayer
 ## a coin count-up and the one-item upgrade shop (comfy chair, saved in Game.progress).
 ## Keys: B buys, A plays again, Enter / Space continues to the title. Every control is clickable.
 ## Beat: results_continue. Left alone for IDLE_S (a booth display), it returns to the title.
+## A paper too tall for the window settles scaled down to fit it (fit_scale); one that fits keeps scale 1.
 ## (v3) Day-aware: headlines per chapter, "Vol. <day>", the shop item of that day (Game.SHOP_ITEMS)
 ## and a "Next day" button (key N, returns "next") once the next chapter is open.
 ## (Speech) On a speech day (audiometry results with "speech", CONTRACTS.md §9.5) column 2 is the
@@ -17,6 +18,10 @@ const NEWSPRINT := Color("#f5efdf")
 const CHAIR_ID := "comfy_chair"
 const CHAIR_COST := 40
 const IDLE_S := 90.0
+## The settled paper's tilt (radians).
+const TILT := -0.015
+## Kept clear above and below a paper too tall for the window, once scaled down (px, both together).
+const FIT_MARGIN := 16.0
 
 const HEADLINES: Dictionary = {
 	"S": "TRAINEE BEEPS PERFECTLY; OWL WEEPS WITH PRIDE",
@@ -140,9 +145,10 @@ func show_summary(summary: Dictionary) -> String:
 	_paper.pivot_offset = _paper.size * 0.5
 	_paper.rotation = -0.9
 	_paper.scale = Vector2(0.15, 0.15)
+	var fit := fit_scale(_paper.size, get_viewport().get_visible_rect().size)
 	var t := create_tween().set_parallel(true)
-	t.tween_property(_paper, "rotation", -0.015, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	t.tween_property(_paper, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(_paper, "rotation", TILT, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(_paper, "scale", Vector2(fit, fit), 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Sfx.play(&"whoosh")
 	await t.finished
 	Sfx.play(&"stamp")
@@ -156,6 +162,13 @@ func show_summary(summary: Dictionary) -> String:
 	_accepting = false
 	Events.input_resolved.emit(&"results_continue")
 	return _next
+
+
+## The settled paper's scale: exactly 1 whenever its tilted box fits the window's height (a paper
+## that fits is never touched), else small enough to fit with FIT_MARGIN to spare.
+static func fit_scale(paper: Vector2, window: Vector2) -> float:
+	var tall := paper.y * cos(TILT) + paper.x * sin(absf(TILT))
+	return 1.0 if tall <= window.y else (window.y - FIT_MARGIN) / tall
 
 
 func _continue() -> void:
@@ -805,10 +818,10 @@ static func recheck_note(sp: Dictionary) -> String:
 		(" (%s agreement)" % ag) if ag != "" else ""]
 
 
-## (Speech) The agreement legend, with which way a poor gap points.
+## (Speech) The agreement legend, with which way a gap points (two lines at the paper's width).
 static func agreement_legend() -> String:
-	return ("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor: recheck and refer. Words better than beeps point to a " \
-		+ "non-organic loss; words worse, to instructions, language, word recognition or a sloping loss.") \
+	return ("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor. Words better than beeps " \
+		+ "point to a non-organic loss; worse, to instructions, language, word recognition or a sloping loss.") \
 		% [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)]
 
 

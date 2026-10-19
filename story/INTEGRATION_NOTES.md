@@ -93,10 +93,23 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `clue_canals`, `referral_stamp`.
 - **Daily Decibel:** headlines, subheads and the medal row (Chat, Explain, Words, Case, Next) for
   `mike`; with `audiometry.speech.srt` present, column 2 is the word golf card (per ear stored SRT,
-  PTA, agreement chip with the gap, words vs par, golf; "no bracket" instead of the golf for an
-  unbracketed store) with half-words and Hoot's words in the facts line. A speech C grade's subhead
-  names the most frequent slip (`SPEECH_C_SUBHEADS`, `speech_c_subhead()`). Tone-only results keep the
-  beep golf card.
+  PTA, agreement chip with the gap, words vs par, golf) with half-words and Hoot's words in the facts line.
+  - Golf cell: "no bracket" for an unbracketed player store, and "N slip(s)" / "no golf" for a bracketed
+    player store with errors (`sheet.errors`, like the screen's "Oops!"). Hoot's rows and clean player
+    stores keep the golf name.
+  - C subhead: the most frequent slip (`SPEECH_C_SUBHEADS`, `speech_c_subhead()`). When misscoring tops
+    it, `misscore_way()` (from the errors' `scored`) picks the `SPEECH_C_MISSCORED` line, generous or
+    strict; a tie, or no direction on record, keeps the `SPEECH_C_SUBHEADS` line.
+  - Under the card, `recheck_note(sp)` prints "Hoot's recheck: SRT N dB on the right, by the book (X
+    agreement). Not graded." when `speech.recheck.srt.right` exists.
+  - The legend (`agreement_legend()`, two lines) gives the bands and the direction: words better than
+    beeps point to a non-organic loss; words worse, to instructions, language, word recognition or a
+    sloping loss.
+  - Tone-only results keep the beep golf card.
+- **Daily Decibel fit (any day):** `show_summary` settles the paper at `fit_scale(size, window)`: exactly
+  1 when its tilted box fits the window's height, else scaled down to fit with 8 px to spare above and
+  below. Papers that fit are unchanged; a tall one (masked golf rows plus three buttons, e.g. Days 2, 7
+  and 8 in autoplay) no longer runs off the window.
 - **Shared story bits:** Mike's portrait (`portraits.gd`), display name "Mike Lenders" (no joke
   nickname), a gruff voice (f0 105 Hz). Mike's day card uses his chapter entry's own `"face": "Mike"`
   and `"tint"` keys (no `title_screen.gd` change). The HUD tracker, the Hoot notes and the pause

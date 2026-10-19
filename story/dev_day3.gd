@@ -6,6 +6,7 @@ extends Node
 ##   tools/scene_shot.sh res://story/dev_day3.tscn /abs/dir "1" 40   (shots come from the script)
 ## Add -- --part=world (or board, paper, title) after the quit time to shoot one part (default: all).
 ## The paper part also shoots a C paper: a misscored right ear that Hoot rechecked (dev_day3_paper_c).
+## Both papers have a next day, like a real Day 3 visit, so they show all three buttons.
 
 const Hud := preload("res://story/hud.gd")
 const MikeBoard := preload("res://story/games/mike_board.gd")
@@ -135,7 +136,7 @@ func _paper() -> void:
 	var summary := {"patient_id": "mike", "score": 93.0, "grade": "A", "accuracy": 0.95, "technique": 0.97, "efficiency": 0.86,
 		"care": 1.0, "comfort": 3, "medals": {"history": "gold", "instructions": "silver", "familiarize": "gold", "evidence": "gold", "referral": "bronze"},
 		"coins_earned": 76, "coins_total": 140, "audiometry": res, "chapter_id": "mike", "day": 3, "patient_name": "Mike Lenders",
-		"next_chapter_id": ""}
+		"next_chapter_id": "rocco"}   # a real Day 3 visit always has a next day (Game._paper_next)
 	paper.call_deferred("show_summary", summary)
 	await _wait(2.5)
 	await _shot("dev_day3_paper")
