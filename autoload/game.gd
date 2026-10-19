@@ -21,6 +21,8 @@ const PHASES: Array[StringName] = [
 	&"familiarize", &"speech",
 	# cases (docs/CASES.md): the tympanometer and the fit / refer / doctor-today call
 	&"tymp", &"decision",
+	# Speech, Days 4-5 (CONTRACTS.md §9.21): talking the results through with the patient
+	&"counselling",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -37,6 +39,9 @@ const CHAPTERS: Array[Dictionary] = [
 	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
 	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech recognition threshold",
 		"scene": "res://story/level_mike.tscn", "requires": "bonnie", "face": "Mike", "tint": Color("#fff0a6")},
+	# (Day 4 marker) the nora entry replaces this line (CONTRACTS.md §9.21)
+	# Days 4-5: word recognition, then speech in noise. Keep this line between the two markers.
+	# (Day 5 marker) the marco entry replaces this line, merged after Day 4's (CONTRACTS.md §9.21)
 	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
 	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
 	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",
