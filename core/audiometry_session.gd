@@ -69,7 +69,7 @@ const TIPS: Dictionary[StringName, String] = {
 	&"plateau_not_reached": "No room left! More noise would cross back to this ear. Store it: plateau not reached.",
 	&"vibrotactile": "Loud low bone tones get FELT, not heard. A tickle is not a threshold!",
 	# clinical review E8: tinnitus confuses steady tones (ASHA 2005; the lesson itself is the cases' C8)
-	&"tinnitus_steady": "Steady beeps hide in {his} ringing! Click TONE on the screen: pulsed or warble stand out.",
+	&"tinnitus_steady": "Steady beeps hide in {his} ringing! Switch the beep type to PULSED or WARBLE.",
 }
 ## Positive kinds and the points they are worth (times the combo multiplier).
 const POINTS: Dictionary[StringName, int] = {&"good_start": 10, &"textbook_step": 10, &"store_ok": 50}

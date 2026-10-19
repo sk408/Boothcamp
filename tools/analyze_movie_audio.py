@@ -10,7 +10,7 @@ one-ear tone plays. Each logged tone is located in the side signal (the generato
 audio by a few frames), then:
   - channel attribution (silence test): in 2 ms blocks where no UI sound plays, the other ear must be
     digital zero while the test ear carries the tone (never the reverse);
-  - level: steady-state side RMS (which a leak into the other ear would lower) and peak vs AudioSafety (-75 dBFS RMS at 0 dB HL, +0.6 dB per dB,
+  - level: steady-state side RMS (which a leak into the other ear would lower) and peak vs AudioSafety (-71 dBFS RMS at 0 dB HL, +0.6 dB per dB,
     peak capped at -12 dBFS) minus the default Tones and Master bus volumes;
   - ceiling: no sample anywhere in the file above -12 dBFS.
 Exit 0 when every check passes, 1 otherwise.
@@ -24,8 +24,11 @@ import numpy as np
 BUS_DB = 2 * 20 * math.log10(0.8)  # Game defaults: tone_volume 0.8, master_volume 0.8
 
 
+TONE_BOOST_DB = 4.0  # AudioSafety.TONE_BOOST_DB (clinical review E7): tones only, never the masker
+
+
 def hl_rms_dbfs(hl):
-    return min(max(-75.0 + 0.6 * hl, -90.0), -12.0)
+    return min(max(-75.0 + TONE_BOOST_DB + 0.6 * hl, -90.0), -12.0)
 
 
 def hl_peak_dbfs(hl):
