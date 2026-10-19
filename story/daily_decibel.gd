@@ -74,8 +74,9 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 	"mike": [["history", "Chat"], ["instructions", "Explain"], ["familiarize", "Words"], ["evidence", "Case"], ["referral", "Next"]],
 }
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, label, ear].
-## (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >" row. (cases) The left-ear
-## masked rows for a case whose poorer ear is the left one (Marina).
+## (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >" row, shown only when that
+## ear has no masked-bone sheet. (cases) The left-ear masked rows for a case whose poorer ear is the left
+## one (Marina: "L  ]" and "L  □", no "L  >").
 const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "L  >", "left"], ["bc_masked", "R  [", "right"], ["ac_masked", "R  O+", "right"],
 	["bc_masked", "L  ]", "left"], ["ac_masked", "L  □", "left"]]
 const GOLF_COLORS: Dictionary = {
@@ -657,7 +658,10 @@ func _golf_card(res: Dictionary) -> Control:
 		grid.add_child(l)
 	var rows: Array[Array] = [["freqs", "R  O", "right"], ["freqs", "L  X", "left"]]
 	for extra: Array in GOLF_EXTRA_ROWS:
-		if not ((ears.get(String(extra[2]), {}) as Dictionary).get(String(extra[0]), {}) as Dictionary).is_empty():
+		var ear_sheets: Dictionary = ears.get(String(extra[2]), {})
+		if String(extra[0]) == "bc" and not (ear_sheets.get("bc_masked", {}) as Dictionary).is_empty():
+			continue
+		if not (ear_sheets.get(String(extra[0]), {}) as Dictionary).is_empty():
 			rows.append(extra)
 	for row: Array in rows:
 		var e := String(row[2])
