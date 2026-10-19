@@ -401,13 +401,17 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 	var steps := int(pl.get("steps", 0))
 	var needed := int(pl.get("needed", 3))
 	var found := bool(pl.get("found", false))
-	var badge := "STORE!" if found else ("%d/%d noise ups" % [mini(steps, needed), needed] if not narrow else "%d/%d ups" % [mini(steps, needed), needed])
+	# (E9) a full safe window: store the held level, no plateau
+	var full := not found and int(view.get("candidate", -1)) >= 0
+	var badge := "STORE!" if found else "STORE: no room" if full else ("%d/%d noise ups" % [mini(steps, needed), needed] if not narrow else "%d/%d ups" % [mini(steps, needed), needed])
 	var bw := AoDraw.text_size(badge, 12, AoDraw.FONT_BOLD).x + 14.0
 	var br := Rect2(Vector2(a.end.x - 4 - bw, head_y - 10), Vector2(bw, 20))
-	AoDraw.rbox(self, br, Palette.PRESS_LIME if found else Palette.SELECT_ORANGE, 10)
+	AoDraw.rbox(self, br, Palette.PRESS_LIME if found else (Color("#8e5cc4") if full else Palette.SELECT_ORANGE), 10)
 	AoDraw.text_c(self, br.get_center(), badge, 12, Palette.LCD_BG, AoDraw.FONT_BOLD)
 	var plot := Rect2(a.position + Vector2(30, 40), Vector2(a.size.x - 40, a.size.y - 62))
-	var m_lo := int(pl.get("initial", 0)) - 5
+	# (E9) the noise starts at the session's start: the initial masking, or the safe maximum in a dilemma
+	var start := int((view.get("mask", {}) as Dictionary).get("start", int(pl.get("initial", 0))))
+	var m_lo := start - 5
 	var m_hi := m_lo + 30
 	var lim0 := int((view.get("mask", {}) as Dictionary).get("limit", 0))
 	if lim0 > m_lo and lim0 <= m_lo + 40:
@@ -430,22 +434,22 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 		var y: float = to_y.call(float(lvl))
 		draw_line(Vector2(plot.position.x, y), Vector2(plot.end.x, y), Color(Palette.LCD_DIM, 0.45), 1.0)
 		AoDraw.text_r(self, Vector2(plot.position.x - 6, y), str(lvl), 11, Color(Palette.LCD_TEXT, 0.55), AoDraw.FONT_MED)
-	var init := int(pl.get("initial", 0))
-	var ix: float = to_x.call(float(init))
+	var ix: float = to_x.call(float(start))
 	# the safe masking window: from the starting level up to overmasking (mint), beyond it (coral)
 	var limit := int((view.get("mask", {}) as Dictionary).get("limit", 0))
 	var band_y := plot.end.y + 1.0
-	if limit > init:
+	if limit > 0:
 		var lx: float = clampf(to_x.call(float(limit)), plot.position.x, plot.end.x)
 		var sx: float = clampf(ix, plot.position.x, plot.end.x)
-		draw_rect(Rect2(Vector2(sx, plot.position.y), Vector2(maxf(0.0, lx - sx), plot.size.y)), Color(Palette.MINT, 0.07))
-		draw_rect(Rect2(Vector2(sx, band_y), Vector2(maxf(0.0, lx - sx), 4.0)), Color(Palette.MINT, 0.8))
+		if limit > start:
+			draw_rect(Rect2(Vector2(sx, plot.position.y), Vector2(maxf(0.0, lx - sx), plot.size.y)), Color(Palette.MINT, 0.07))
+			draw_rect(Rect2(Vector2(sx, band_y), Vector2(maxf(0.0, lx - sx), 4.0)), Color(Palette.MINT, 0.8))
 		if lx < plot.end.x:
 			draw_rect(Rect2(Vector2(lx, plot.position.y), Vector2(plot.end.x - lx, plot.size.y)), Color(Palette.CORAL, 0.1))
 			draw_rect(Rect2(Vector2(lx, band_y), Vector2(plot.end.x - lx, 4.0)), Color(Palette.CORAL, 0.85))
 			AoDraw.text_c(self, Vector2(minf(lx + 22.0, plot.end.x - 18.0), plot.position.y + 8.0), "too much", 9, Palette.CORAL, AoDraw.FONT_BOLD)
 	AoDraw.dashed(self, Vector2(ix, plot.position.y), Vector2(ix, plot.end.y), Color(Palette.PLUM.lightened(0.3), 0.8), 1.5, 4.0, 4.0)
-	AoDraw.text_c(self, Vector2(ix, plot.end.y + 12.0), "start %d" % init, 10, Palette.PLUM.lightened(0.4), AoDraw.FONT_BOLD)
+	AoDraw.text_c(self, Vector2(ix, plot.end.y + 12.0), "start %d" % start, 10, Palette.PLUM.lightened(0.4), AoDraw.FONT_BOLD)
 	AoDraw.text_r(self, Vector2(plot.end.x, plot.end.y + 12.0), "noise >", 10, Color(Palette.LCD_TEXT, 0.5), AoDraw.FONT_SEMI)
 	# the plateau run: same tone level, rising noise
 	var run_db := int(pl.get("db", -1))

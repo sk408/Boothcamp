@@ -434,7 +434,7 @@ func get_state() -> Dictionary:
 			"points": 0, "multiplier": 1, "trail": [], "strokes": 0, "par": 0, "candidate_db": -1, "stimulus": ToneGenerator.STIMULUS_NAMES[_stim],
 			"hoot_turn": false, "quick_visit": quick_visit,
 			"test": &"ac", "goal_test": &"ac", "transducer": &"phones", "air_transducer": &"phones", "masking_controls": false, "masking_deck": false,
-			"mask_on": false, "mask_db": 0, "mask_ear": "left", "mask_status": &"off", "initial_mask_db": 0, "overmask_limit_db": 0,
+			"mask_on": false, "mask_db": 0, "mask_ear": "left", "mask_status": &"off", "initial_mask_db": 0, "start_mask_db": 0, "overmask_limit_db": 0,
 			"plateau": {}, "stored_tests": {}, "demo": false}
 	var cand: Variant = session.store_candidate(session.ear, session.freq)
 	var trail := session.trail(session.ear, session.freq)
@@ -480,6 +480,7 @@ func get_state() -> Dictionary:
 		"mask_ear": session.masker_ear(),
 		"mask_status": session.mask_status() if _masking_ui else &"off",
 		"initial_mask_db": session.initial_mask_db() if _masking_ui else 0,
+		"start_mask_db": session.start_mask_db(session.ear, session.freq, session.recommended_start(session.ear, session.freq)) if _masking_ui else 0,
 		"overmask_limit_db": session.overmask_limit_db() if _masking_ui else 0,
 		"plateau": session.plateau_info() if masked_now else {},
 		"stored_tests": stored_tests,
@@ -1020,7 +1021,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 		&"short_gap":
 			Hoot.say_once("tip_short_gap", String(data.get("message", "")), Hoot.HIGH, "tone_button")
 		&"plateau_step":
-			if auto or not bool(data.get("found", false)) and int(data.get("steps", 0)) <= 0:
+			if auto or not bool(data.get("found", false)) and not bool(data.get("window_full", false)) and int(data.get("steps", 0)) <= 0:
 				return
 			var at2 := _lcd.last_dot_global() + Vector2(0, -26)
 			if bool(data.get("found", false)):
@@ -1030,6 +1031,10 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			else:
 				_fx.chip("%d/%d" % [int(data["steps"]), int(data["needed"])], at2, Palette.SUNNY, Palette.INK, 14, 0.8)
 			Sfx.play_note(392.0 * pow(2.0, int(data.get("steps", 0)) / 6.0), -12.0)
+		&"plateau_not_reached":
+			if auto or _coach_active:
+				return  # (E9) the coach already says "No room ... STORE, no plateau"; after the stamp Hoot explains the ?
+			_tip(kind, String(data.get("message", "")), "store_button")
 		&"plateau_found":
 			if auto:
 				return
@@ -1052,7 +1057,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var error := kind in ERROR_KINDS
 			if error and not _coach_active:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
-			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma", &"plateau_not_reached"]:
+			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma"]:
 				# (polish) a lesson during the coached steps waits for the coached stamp
 				_deferred_tips.append([kind, msg, _target_for(kind, data)])
 			elif msg != "" and not (_coach_active and error):
@@ -1781,6 +1786,9 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 				if steps >= 1 and steps < ClinicRules.PLATEAU_STEPS:
 					return ["Still heard! %d of %d noise raises. Noise UP 5 again: tap %s." % [steps, ClinicRules.PLATEAU_STEPS, key], btn, "mask_up%d_%d" % [recs.size(), session.mask_db]]
 				return ["Heard through the noise! Plateau dance: noise UP 5, same tone. Tap %s." % key, btn, "mask_up%d_%d" % [recs.size(), session.mask_db]]
+			if act == &"mask_softer" and tm < session.mask_db:
+				# (E9) the noise sits at or past overmasking for this tone
+				return ["Too much noise for this tone! Down to %d, the safe maximum: tap %s %s." % [tm, key, ntimes], btn, "mask_safe%d_%d" % [recs.size(), session.mask_db]]
 			return ["Noise to %d dB: tap %s %s." % [tm, key, ntimes], btn, "mask_to%d_%d" % [recs.size(), session.mask_db]]
 	if not masked:
 		return []
@@ -1927,7 +1935,8 @@ func _refresh() -> void:
 		"accepting": st["accepting_input"],
 		"transducer": String(st["transducer"]), "test": String(st["test"]), "plateau": st["plateau"],
 		"mask": {"enabled": bool(st["masking_controls"]) and _mask_deck, "on": bool(st["mask_on"]), "db": int(st["mask_db"]), "ear": String(st["mask_ear"]),
-			"status": String(st["mask_status"]), "limit": int(st["overmask_limit_db"]), "initial": int(st["initial_mask_db"])}})
+			"status": String(st["mask_status"]), "limit": int(st["overmask_limit_db"]), "initial": int(st["initial_mask_db"]),
+			"start": int(st["start_mask_db"])}})
 	for k: String in _cards:
 		var card: AoEarCard = _cards[k]
 		card.audiogram.cursor_test = StringName(st["test"])

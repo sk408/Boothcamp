@@ -26,6 +26,17 @@ class FixedSim extends PatientSim:
 		return true
 
 
+## A patient who never answers (a miss on every tone).
+class DeafSim extends FixedSim:
+	func on_tone_start(_ear: String, _freq: int, _db: int, _gap_s: float) -> Dictionary:
+		last_heard_by = &""
+		return {"heard": false, "press": false, "guess": false, "latency_s": 0.5}
+
+
+func _deaf_sim(p: PatientProfile) -> PatientSim:
+	return DeafSim.new(p)
+
+
 const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]
 var _n := 0
 
@@ -336,6 +347,18 @@ func test_masking_dilemma_stops_short_of_overmasking() -> void:
 	assert_eq((info["errors"] as Array).size(), 0, "storing the held level is the right call")
 	assert_eq(float(info["accuracy"]), 1.0)
 	assert_true(s.textbook_mask_presentations("right", 1000, 5, 40) <= 2, "par ends when the window is full")
+	# the next pitch is dialled to the safe start, never the overmasking textbook level
+	assert_true(s.freq != 1000, "moved on to the next masked bone pitch")
+	assert_eq(s.mask_db, s.start_mask_db("right", s.freq, s.db))
+	assert_true(s.mask_db < s.overmask_limit_db(), "the preset noise does not overmask")
+	assert_eq(s.recommended_action()["action"], &"present", "no noise fix needed first")
+	# a player who overmasks and misses: the coach brings the noise back under the limit
+	s.set_mask_level(s.overmask_limit_db() + 5)
+	var before := s.mask_db
+	s.sim = _deaf_sim(p)
+	_present(s)
+	var a2 := s.recommended_action()
+	assert_true(int(a2.get("target_mask", before)) < s.overmask_limit_db("right", s.freq, int(a2["target_db"])), "never recommends overmasking")
 
 func test_mask_status_light() -> void:
 	var s := _bonnie()

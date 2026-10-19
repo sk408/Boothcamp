@@ -151,7 +151,7 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Type of loss | "Conductive loss! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." |
 | Carhart | **(polish)** "See the bone dip at 2k? A Carhart notch: a stiff middle ear fakes a small bone dip. Her cochlea is fine!" |
 | Dilemma (mention only) | "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!" |
-| Tip `masking_dilemma` | **(E9)** "Masking dilemma! Even the starting noise could cross back. Inserts leak less. Else, use the safe maximum." |
+| Tip `masking_dilemma` | **(E9)** "Masking dilemma! Enough noise crosses back; safe noise is too weak. Inserts help. Else mark it ?" |
 | Tip `plateau_not_reached` | **(E9)** "No room left! More noise would cross back to this ear. Store it: plateau not reached." Then, after the stamp: "That purple ? means no plateau: the true threshold may be poorer. Note it on the report." |
 | Takeaway | "Conductive loss with normal bone: refer to ENT. Often very treatable! Stamp it!" |
 

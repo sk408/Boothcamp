@@ -65,7 +65,7 @@ const TIPS: Dictionary[StringName, String] = {
 	&"undermasked": "The Ghost answered! Not enough noise yet: heard means noise up 5.",
 	&"plateau_found": "Flat line! Same answer through 15 dB more noise: that's the true threshold. Store it!",
 	# clinical review E9: the masking dilemma and an unreached plateau (BSA 2018, 8.8 and 8.9)
-	&"masking_dilemma": "Masking dilemma! Even the starting noise could cross back. Inserts leak less. Else, use the safe maximum.",
+	&"masking_dilemma": "Masking dilemma! Enough noise crosses back; safe noise is too weak. Inserts help. Else mark it ?",
 	&"plateau_not_reached": "No room left! More noise would cross back to this ear. Store it: plateau not reached.",
 	&"vibrotactile": "Loud low bone tones get FELT, not heard. A tickle is not a threshold!",
 }
@@ -778,7 +778,8 @@ func _recommended_masked() -> Dictionary:
 
 
 ## Textbook (tone, masker) after these masked records: ClinicRules.next_mask_step(), with the
-## noise lifted to the initial level if it was below it (catching up is never a wrong step).
+## noise lifted to the initial level if it was below it (catching up is never a wrong step), and
+## (E9) never at or past the overmasking limit for the next tone.
 func _next_masked(recs: Array) -> Vector2i:
 	var last: Dictionary = recs[-1]
 	var m := int(last.get("mask_db", -1))
@@ -790,6 +791,10 @@ func _next_masked(recs: Array) -> Vector2i:
 		nxt = Vector2i(tone, maxi(m, mini(init, safe_mask_max_db(ear, freq, mini(tone, _top())))))
 	nxt.x = mini(nxt.x, _top())
 	nxt.y = mini(nxt.y, ClinicRules.MASK_MAX_DB)
+	# (E9) never recommend a presentation that overmasks: drop to one step under the limit. A heard
+	# tone whose next raise would overmask never gets here (window_full: store it instead).
+	if nxt.y >= overmask_limit_db(ear, freq, nxt.x):
+		nxt.y = safe_mask_max_db(ear, freq, nxt.x)
 	return nxt
 
 
@@ -1479,7 +1484,7 @@ func _check_mask_step(recs: Array) -> void:
 		if scoring and in_dilemma(ear, freq, db) and not _once.has("masking_dilemma"):
 			_once["masking_dilemma"] = true
 			_observe(&"masking_dilemma", {"initial_db": init, "limit_db": overmask_limit_db(ear, freq, db)})
-		if mask_db < mini(init, safe_mask_max_db(ear, freq, db)):
+		if mask_db < start_mask_db(ear, freq, db):
 			_error(&"mask_too_low", {"mask_db": mask_db, "initial_db": init}, true)
 		elif absi(db - start) > MASK_START_TOLERANCE_DB:
 			_error(&"mask_start", {"db": db, "start_db": start}, true)
@@ -1631,7 +1636,8 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 		# a textbook start for the next pitch (the retest starts just above the first 1 kHz)
 		set_level(recommended_start(e, rem[0]))
 		if mask_on and ClinicRules.test_is_masked(test):
-			set_mask_level(initial_mask_db(e, rem[0]))  # v3: and the noise at its starting level
+			# v3: and the noise at its starting level (E9: one step short of overmasking in a dilemma)
+			set_mask_level(start_mask_db(e, rem[0], db))
 
 
 func _clean(kind: StringName) -> void:

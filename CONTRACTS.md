@@ -639,6 +639,8 @@ After a store, the screen moves to the next remaining frequency (the rule is in 
   "mask_on": true, "mask_db": 25, "mask_ear": "left",  # masker dial (dB EM) and the ear it plays in
   "mask_status": &"ok",                                # ClinicRules.MASK_STATUSES (the NOISE box light)
   "initial_mask_db": 25,                               # the helper's starting level here (0 without masking UI)
+  "start_mask_db": 25,                                 # (E9) where the coach starts the noise: initial_mask_db, or one
+                                                       #   step under overmasking in a masking dilemma
   "overmask_limit_db": 50,                             # noise at or above this overmasks (bone: tone + 40; air: test-ear bone + 40)
   "plateau": {"db": 10, "steps": 2, "needed": 3, "found": false, "start_mask": 25, "initial": 25, "points": [...]},  # masked sheets only, else {}
   "stored_tests": {"ac": {"right": {...}, "left": {...}}, "bc": {...}, "bc_masked": {...}, "ac_masked": {...}},
