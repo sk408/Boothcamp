@@ -3,8 +3,8 @@ extends Node
 ## (FsData.next_case(), or --freestyle=<id>): the patient walks in and says why they came, then the
 ## player picks tools from the tray in any order (questions, otoscope, tympanometer, air, bone,
 ## masking), names the type of hearing in each ear and makes the call: FIT / REFER / DOCTOR TODAY /
-## NO AIDS NEEDED, and why. Hoot never coaches the tests (a wrong tympanogram or chart type gets a
-## one-line hint); the debrief compares the visit with the workup a pro would run (FsRules.workup). Every choice is shuffled or ordered with Game.rng only
+## NO AIDS NEEDED, and why. Hoot never coaches the tones (a wrong tympanogram or chart type gets a
+## one-line hint; short routine lines and, until Day 2's movie is seen, the masking recap card); the debrief compares the visit with the workup a pro would run (FsRules.workup). Every choice is shuffled or ordered with Game.rng only
 ## where the story's runners do; every blocking beat emits Events.awaiting_input with a solver.
 ##   world:  res://world/clinic.tscn with patient_id + patient_spec (the case's look)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn start_test(patient, ear, false, plan), one
@@ -850,11 +850,11 @@ func workup_report() -> Dictionary:
 				if not done.has(&"otoscopy"):
 					slips += 1
 					rows.append({"tool": "otoscopy", "text": "Look in the ears", "state": "miss"})
-					lines.append("Always look in the ears first. Wax or a hole changes every test.")
+					lines.append("Always look in the ears first. Wax or a hole can change the whole chart.")
 				elif tested_before_look:
 					slips += 1
 					rows.append({"tool": "otoscopy", "text": "Look in the ears (but only after a test began)", "state": "slip"})
-					lines.append("Look first: wax or a hole changes every test, bone included.")
+					lines.append("Look before any test, bone too: what you see explains the chart.")
 				else:
 					rows.append({"tool": "otoscopy", "text": "Look in the ears", "state": "ok"})
 			"tymp":

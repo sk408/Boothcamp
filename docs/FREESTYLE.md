@@ -1,7 +1,8 @@
 # Booth Camp: Freestyle (the walk-in clinic)
 
 Practice mode outside the story. The player runs their own clinic: a waiting room of walk-in patients, any test
-in any order, then the call. No script and no coaching of the tests: Hoot only gives a one-line hint after a wrong
+in any order, then the call. No script and no coaching during the tones: besides short routine lines and, until
+Day 2's masking movie is seen, the one-card masking recap (4.6), Hoot only gives a one-line hint after a wrong
 tympanogram or chart type, and debriefs at the end.
 Steve checks every clinical call (section 8 is his checklist).
 
@@ -12,7 +13,7 @@ simple rules a beginner can follow.
 
 | | |
 |---|---|
-| Teaches | choosing the workup yourself: which history questions matter, look before you insert, when bone is needed, when masking is needed, reading the chart (type of loss per ear) and the call |
+| Teaches | choosing the workup yourself: which history questions matter, look before any test, when bone is needed, when masking is needed, reading the chart (type of loss per ear) and the call |
 | Opens | the title's **Freestyle** button. Every walk-in is open; play any, any order, as often as you like, or press **Surprise me** |
 | Scenes | `res://story/freestyle/waiting_room.tscn` (the hub), `res://story/freestyle/level_freestyle.tscn` (one runner for every walk-in) |
 | Case data | `story/freestyle/cases/<id>.json` (the source of truth for every line that ships), patient truth in `core/patients/<id>.tres` |
@@ -51,7 +52,8 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
    the case's own line for that stamp, then another go. Then "Why?": pick a reason (some cases have more than
    one right reason).
 6. **Debrief.** The **workup card**: what a pro would have run, in order, ticked or crossed against what the
-   player did, with Hoot's line for each slip (section 4.5, up to four lines). Then Hoot's lines from the case.
+   player did, with Hoot's line for each slip (section 4.5, up to four lines). Then Hoot's lines from the case,
+   then the runner's extra lines (4.6).
 7. **Goodbye** (the case's lines; a FIT puts the hearing aids on) and the **Daily Decibel** with the
    freestyle medals: Chat, Workup, Chart, Call. Its buttons go back to the waiting room (**Waiting room**) or
    play the same patient again.
@@ -140,7 +142,7 @@ measured chart once it exists, so the list never asks for masking the player's o
 | Step | Needed when | Why |
 |---|---|---|
 | Ask questions | always: the case's `key_questions`, red flags and trouble spots always | history first; red flags decide referrals; trouble spots become the fitting goals |
-| Look in the ears | always, before any test | wax or a hole changes every test, bone conduction included (ASHA 2005; BSA 2018, 5.1) |
+| Look in the ears | always, before any test, bone conduction included (ASHA 2005; BSA 2018, 5.1) | what you see (wax, a hole, discharge) explains the chart, and can stop a test |
 | Tympanometer | either ear conductive or mixed, or either tympanogram not type A (or the case's `needs_tymp`) | it tells a stiff, floppy or fluid-filled middle ear apart |
 | Air tones | always | the chart |
 | Bone conduction | any air threshold poorer than 25 dB HL | with air this good, a gap big enough to matter is very unlikely, so bone is optional; anything poorer needs bone to type it |
@@ -200,7 +202,7 @@ flags the missing masked bone.
 - a needed step not run (each one);
 - a needed key question not asked (the chat medal; red flags count double);
 - any test before looking in the ears: the tympanometer's probe, air tones' earphones, bone conduction or a
-  masked test ("Look first: wax or a hole changes every test, bone included.");
+  masked test ("Look before any test, bone too: what you see explains the chart.");
 - the poorer ear first for air or bone when the ears differ by more than 5 dB.
 
 Extra tests are never slips (tymp on a normal ear is routine, "NOTHING TO MASK!" answers an unneeded masking
@@ -219,7 +221,8 @@ From the clinical review (A1, A2, FS-03, FS-13), short lines where the action al
   starts from unmasked bone. Bone tones first!", and nothing runs. While Day 2's masking movie is unseen, the
   visit's first masked test opens with the 12-second recap card, and Hoot says the full movie is under Hoot's
   Movies on the title screen (the pause menu will offer it once the engine's E19 lands).
-- Debrief: when the truth has a Carhart notch and the player's chart shows it (Hector), Hoot names it as on Day 2.
+- Debrief: when an ear with a middle-ear part (conductive or mixed) has a Carhart notch in its truth and the
+  player's masked bone shows it (Hector), Hoot names it as on Day 2.
   Every FIT ends with "A full fitting also checks words, in quiet and in noise." The real word tests join the
   tray when the speech screens are on main.
 
@@ -259,7 +262,7 @@ Speech tests: the tray has a **Speech tests** tool reserved (`FsRules.SPEECH_SCR
 word scores land (Day 4), so no walk-in needs speech yet. When the speech screens are on main, speech in noise
 joins every walk-in's workup (Steve, 2026-10-19, question 8: "we use speech in noise on every test now"), and
 every FIT needs a word test before the call (question 6). Until then Hoot names the speech-in-noise test in
-Penny's debrief.
+Penny's debrief, and every FIT's debrief says a full fitting also checks words, in quiet and in noise (4.6).
 
 ### 6.1 Commands
 
@@ -467,9 +470,11 @@ reminder that freestyle teaches methods and situations and does not replace trai
 - **14** (Claude's reading of 10; Steve to confirm on the decision card): Buck is now **FIT**, with earplugs under
   electronic earmuffs and a yearly recheck (a doctor if the left ear keeps slipping). NICE, the BAA and the FDA
   red-flag list would refer him; 7.5 has the details.
-- The rest keep their defaults: 1 keep 25 dB; 3 no; 4 wait for the doctor; 5 keep; 6 yes, once word scores are
-  in freestyle; 7 keep; 9 yes; 11 yes; 12 yes; 13 two weeks; 15 keep "ringing"; 16 yes; 17 yes; 18 no; 19 yes;
-  20 yes; 21 yes; 22 keep; 23 yes; 24 no.
+- The rest keep their defaults: 1 keep 25 dB; 3 no; 4 wait for the doctor; 5 keep (since the clinical review,
+  Buck's reply also names pulsing, changed or distressing ringing, FS-16); 6 yes, once word scores are in
+  freestyle; 7 keep; 9 yes; 11 yes; 12 yes; 13 two weeks; 15 keep "ringing"; 16 yes; 17 yes (the game's felt
+  line at 500 Hz is 55 dB HL, section 3); 18 no; 19 yes; 20 yes; 21 yes; 22 keep; 23 yes (people speak up, loud
+  enough for his slow ear, FS-11); 24 no.
 
 The questions as first asked:
 
@@ -511,13 +516,16 @@ does now); answer only where you disagree, by number. The first seven change the
 - **FS-04:** Hector's debrief no longer says aids can come "alongside" the referral.
 - **FS-05:** Skyler's left bone at 500 Hz is 10 (was 0), so the plateau fits under the overmasking line; a test
   keeps 20 dB of room at every masked frequency.
-- **FS-08:** bone before the otoscope is the look-first slip too (4.5).
+- **FS-08:** bone before the otoscope is the look-first slip too (4.5). Its line gives the reason without
+  claiming wax changes bone: "Look before any test, bone too: what you see explains the chart."
 - **FS-09, FS-15:** the wording in 4 and 4.4.
-- **FS-10:** Penny's reply calls 25 dB "a common adult normal" and gives WHO's stricter cut-off (under 20).
-- **FS-11:** Hoot adds the other half of Hector's puzzle: his stiff ear turns the clatter down too.
+- **FS-10:** Penny's reply calls 25 dB "a common adult normal" and gives WHO's: a better-ear average under 20.
+- **FS-11:** Hoot's answer to Hector's puzzle now says the raised voices are loud enough for his slow ear. The
+  other half of the classic explanation (a stiff ear also turns the background down) fits two stiff ears, and
+  Hector's right ear is normal, so the game leaves it out.
 - **FS-13, A4:** every FIT ends with "A full fitting also checks words, in quiet and in noise".
 - **FS-14:** Viola's left air (and so bone) at 500 Hz is 50 (was 55); a test keeps every walk-in under 55 there.
-- **FS-16:** Buck's ringing reply names the tinnitus flags: one-sided, pulsing or suddenly changed.
+- **FS-16:** Buck's ringing reply names NICE NG98's tinnitus flags: one-sided, pulsing, changed or distressing.
 - **A1, A2:** the routine lines and the masking recap (4.6).
 
 Not changed: FS-02 (already right), FS-06 (done with E5), FS-12 (question 24: no), FS-17 (NO AIDS NEEDED stays

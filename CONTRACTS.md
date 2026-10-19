@@ -1517,7 +1517,8 @@ flags, asymmetry, decisions), `ClinicRules` (types of loss, masking rules, PTA),
 `audiometry` (info `{ear, test}`), `freestyle_chart`, `decision`, `freestyle_debrief`, `results`. `Game.PHASES`
 gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief`.
 
-**Beats.** No new beat kinds: everything is `dialogue`, `choice` and the AudiOtron's own beats. The waiting room's
+**Beats.** No new beat kinds: everything is `dialogue`, `choice`, the AudiOtron's own beats and, for the masking
+recap, `explainer`. The waiting room's
 pick, the tool tray, the question board and every clinic choice (tip, tymp type, ear first, mastoid, masked test,
 chart type, the stamp) are `choice` beats whose `best` is the pro's pick (`FsRules.best_tool`). Buttons start
 with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique). While
@@ -1551,8 +1552,8 @@ difference between the ears that a known cause explains, with no other red flag,
 (the game's default; Buck is a working call until Steve answers question 14; docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
 Masked bone starts from unmasked bone stamped on either mastoid; with none yet the runner sends the player to bone
 first (no unmasked pre-run on the poorer side). Any test begun before the otoscope looked, bone included, is the
-"look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (the truth has the notch
-and the chart shows it) and, on every FIT, that a full fitting also checks words in quiet and in noise.
+"look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (an ear with a
+middle-ear part whose truth has the notch, shown by the chart's masked bone) and, on every FIT, that a full fitting also checks words in quiet and in noise.
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in

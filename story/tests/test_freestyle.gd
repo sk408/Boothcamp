@@ -370,7 +370,7 @@ func test_look_first_counts_any_test() -> void:
 	assert_eq(oto.call(), "ok")
 	lv.set("tested_before_look", true)
 	assert_eq(oto.call(), "slip", "a probe, earphone or bone oscillator before the look is the slip")
-	assert_has((lv.call("workup_report") as Dictionary)["lines"], "Look first: wax or a hole changes every test, bone included.")
+	assert_has((lv.call("workup_report") as Dictionary)["lines"], "Look before any test, bone too: what you see explains the chart.")
 	lv.free()
 
 

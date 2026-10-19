@@ -79,8 +79,8 @@
 		["Hoot", "Maybe, maybe not. The doctor decides that, not an owl."],
 		{"react": "nod"},
 		["Hector", "And my puzzle? Why do I hear better among the clocks?"],
-		["Hoot", "Over the ticking, people speak up, and your stiff ear turns the ticking down."],
-		["Hoot", "So their loud voices stand out. At home, your wife murmurs on your slow side."],
+		["Hoot", "Over the ticking, people speak up, loud enough for even your slow ear."],
+		["Hoot", "At home, your wife murmurs on your slow side."],
 		["Hoot", "So sit her on your right, and ask people to face you."],
 		["Hector", "Right side, face to face. I'll be back on the dot, Hoot."],
 		{"react": "wave"}
