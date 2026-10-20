@@ -81,7 +81,7 @@ Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
 - **Hoot:** Some clinics prefer warble for ringing ears. Either one beats a steady tone near his ring.
 
 ### Test plan
-- Right AC (player for 6 stamps, then Hoot): "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"
+- Right AC (player for 7 stamps, then Hoot): "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"
 - Left AC (Hoot at x8): "Left ear at Hoot speed. Same pattern?"
 - Right BC (Hoot at x8): "Bone check at Hoot speed: middle ear or inner ear?"
   - before:
@@ -209,7 +209,7 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
 
 ### Test plan
 - Right AC (Hoot at x8): "Better ear first, like the pros. I'll zip through the right!"
-- Left AC (player for 8 stamps, then Hoot): "Left ear's all yours. Keep an eye on the low pitches!"
+- Left AC (player for 10 stamps, then Hoot): "Left ear's all yours. Keep an eye on the low pitches!"
 - Right BC (Hoot at x8): "Right ear at Hoot speed: bone for her better cochlea."
   - before:
     - **Hoot:** Bone buzzer on her better ear first: the right. Unmasked bone answers for her better cochlea.
@@ -452,7 +452,7 @@ Question: **Is her middle ear the problem?**
 - **Ginger:** Beeps only. Got it.
 
 ### Test plan
-- Right AC (player for 8 stamps, then Hoot): "Right ear's yours. Watch the middle pitches!"
+- Right AC (player for 10 stamps, then Hoot): "Right ear's yours. Watch the middle pitches!"
   - after it, if the stamps asked for 750 Hz (and it is on the chart):
     - **Hoot:** Extra stop at 750! A 500-to-1k jump of 20 dB or more gets tested in between.
     - **Hoot:** Hearing aids care exactly where her loss begins. Now we know.

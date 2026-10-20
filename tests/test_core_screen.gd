@@ -123,11 +123,11 @@ func test_state_has_contract_and_extra_keys() -> void:
 	assert_eq(int(st["freq"]), 1000, "starts at 1 kHz")
 	assert_eq(int(st["db"]), 40, "starts at 40 dB HL")
 	assert_eq(String(st["stimulus"]), "PULSED", "E7: pulsed by default")
-	assert_eq(st["remaining"], [1000, 2000, 4000, 8000, 500, 250], "textbook order")
+	assert_eq(st["remaining"], [1000, 1500, 2000, 3000, 4000, 6000, 8000, 500, 250], "textbook order (E1)")
 	var labels := []
 	for it: Dictionary in screen._quest.items:
 		labels.append(String(it["label"]))
-	assert_eq(labels, ["1k", "2k", "4k", "8k", "1k R", "500", "250"], "test plan shows the 1k retest")
+	assert_eq(labels, ["1k", "1.5k", "2k", "3k", "4k", "6k", "8k", "1k R", "500", "250"], "test plan shows the 1k retest")
 	for id in AudiometerScreen.ANCHORS:
 		assert_true(Hoot.has_anchor(id), "anchor %s registered" % id)
 		assert_true(Hoot.anchor_screen_rect(id).size.x > 0.0, "anchor %s laid out" % id)

@@ -133,9 +133,9 @@ ear: that was the Ghost.
 - **Earphones:** glasses off, red on the right ear, blue on the left (his right is your left).
 - **Pure-tone audiometry (Hughson-Westlake, simplified):** start at 1000 Hz around 40 dB HL; climb
   10 dB until the first response; then down 10 after every "yes" and up 5 after every miss; the
-  threshold is the lowest level heard on at least two ascending runs. Order: 1k, 2k, 4k, 8k,
-  retest 1k (within 5 dB is clinic-grade; the better one counts), then 500 and 250 Hz, plus the
-  half-octave in between whenever neighbours differ by 20 dB or more. Beeps 1 to 2 s, varied
+  threshold is the lowest level heard on at least two ascending runs. Order: 1k, 1.5k, 2k, 3k,
+  4k, 6k, 8k, retest 1k on the first ear (within 5 dB is clinic-grade; the better one counts), then
+  500 and 250 Hz, plus 750 whenever 500 Hz and 1 kHz differ by 20 dB or more. Beeps 1 to 2 s, varied
   gaps (a steady rhythm makes patients guess), never start loud.
 - **Reading the audiogram:** lower on the chart means a louder sound was needed. Gus has a gradual,
   sloping high-frequency loss in both ears: low pitches near normal, high pitches moderately

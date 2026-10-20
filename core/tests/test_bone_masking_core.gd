@@ -308,14 +308,13 @@ func test_instant_measure_and_retest_waiver() -> void:
 	assert_false(info.is_empty())
 	assert_true(bool(info["by_hoot"]))
 	assert_between(int(info["stored_db"]), 0, 15)
-	s.instant_measure("left", 2000)
-	s.instant_measure("left", 4000)
-	s.instant_measure("left", 8000)
+	for f: int in [1500, 2000, 3000, 4000, 6000, 8000]:
+		s.instant_measure("left", f)
 	assert_eq(s.required_remaining("left")[0], 1000, "the retest is next")
 	s.retest_waived["left"] = true
 	assert_false(s.required_remaining("left").has(1000), "waived")
 	assert_eq(s.measurement_kind("left", 1000), &"redo")
-	assert_eq(s.ear_progress("left")[1], 6, "1k 2k 4k 8k 500 250, no retest")
+	assert_eq(s.ear_progress("left")[1], 9, "1k 1.5k 2k 3k 4k 6k 8k 500 250, no retest")
 
 
 ## The bone oscillator's outputs are lower than the earphones'; a miss at the bone maximum may be

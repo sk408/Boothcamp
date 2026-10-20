@@ -548,8 +548,9 @@ static func _check_plan(plan: Array, where: String, air_only: bool) -> PackedStr
 				out.append(where + ": if_tested is for the first visit's air steps: {\"750\": script}")
 			else:
 				for f: Variant in pd["if_tested"]:
-					if not ClinicRules.INTEROCTAVES.has(int(String(f))):
-						out.append("%s: if_tested %s is not a half-octave (750, 1500, 3000, 6000)" % [where, f])
+					# (E1) 1.5k, 3k and 6k are routine, so only 750 is ever added by the 20 dB rule
+					if not ClinicRules.INTEROCTAVES.has(int(String(f))) or ClinicRules.is_routine(int(String(f))):
+						out.append("%s: if_tested %s is not a half-octave the 20 dB rule adds (750)" % [where, f])
 	return out
 
 

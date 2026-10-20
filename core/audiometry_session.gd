@@ -10,8 +10,8 @@ extends RefCounted
 ##   - heard -> DOWN 10; missed -> UP 5
 ##   - threshold = the lowest level heard on at least 2 ascending runs, and on at least half of
 ##     them ("2 of 3"; the coached ear accepts 2 of 2, which the same rule already does)
-##   - order 1k, 2k, 4k, 8k, retest 1k (within 5 dB), 500, 250; the half-octave in between
-##     whenever neighbouring octaves differ by 20 dB or more. (E2) The retest is owed by the first air
+##   - (E1) order 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, retest 1k (within 5 dB), 500, 250; 750 in between
+##     whenever 500 Hz and 1 kHz differ by 20 dB or more. (E2) The retest is owed by the first air
 ##     ear of the visit only (or the second too when the first ear's retest was off by more than 5 dB),
 ##     before 500 Hz or after 250 Hz
 ##   - tones 1-2 s, varied gaps, never start above 70 dB, never blast far above threshold
@@ -1181,9 +1181,9 @@ static func expected_presentations(start_off: int, top_off: int, min_off: int, s
 	return median
 
 
-## Required measurements still missing for an ear, in textbook order: 1k, (1.5k), 2k, (3k), 4k,
-## (6k), 8k, 1k retest, (750), 500, 250. Half-octaves appear once both neighbours are stored
-## and differ by INTEROCTAVE_DIFF_DB or more. 1000 after the highs means "1 kHz retest".
+## Required measurements still missing for an ear, in textbook order: 1k, 1.5k, 2k, 3k, 4k, 6k,
+## 8k, 1k retest, (750), 500, 250 (E1: ClinicRules.ROUTINE_FREQS). 750 appears once 500 Hz and
+## 1 kHz are stored and differ by INTEROCTAVE_DIFF_DB or more. 1000 after the highs means "1 kHz retest".
 ## (v3) t = the sheet (default: the plan's goal sheet; Chapter 1: &"ac").
 func required_remaining(e: String, t: StringName = &"") -> Array[int]:
 	var g := goal_test if t == &"" else t
@@ -1198,12 +1198,12 @@ func required_remaining(e: String, t: StringName = &"") -> Array[int]:
 	var rt: Dictionary = (sh["retest"] as Dictionary)[e]
 	var need := ClinicRules.required_interoctaves(stored_thresholds(e, &"ac"))
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
-		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
+		if (ClinicRules.is_routine(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
 	if st.has(1000) and rt.is_empty() and retest_required(e):
 		rem.append(1000)
 	for f: int in [750, 500, 250]:
-		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
+		if (ClinicRules.is_routine(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
 	return rem
 
@@ -1709,7 +1709,7 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 		st[f] = info
 		var after := ClinicRules.required_interoctaves(stored_thresholds(e))
 		for io: int in after:
-			if not before.has(io) and not st.has(io):
+			if not before.has(io) and not st.has(io) and not ClinicRules.is_routine(io):
 				technique.emit(&"interoctave_needed", {"ear": e, "freq": io})
 	else:
 		st[f] = info

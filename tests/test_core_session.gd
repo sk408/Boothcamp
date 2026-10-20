@@ -369,17 +369,34 @@ func test_no_response_rules() -> void:
 	assert_eq(int(info["stored_db"]), ClinicRules.max_db(250))
 
 
-func test_required_order_with_interoctave() -> void:
+## (Clinical review E1) 1.5, 3 and 6 kHz are on every plan, in order.
+func test_required_order_routine_freqs() -> void:
 	var s := _session()
-	s.set_ear("left")  # Gus left: 1k 25, 2k 45 -> 1.5 kHz needed
-	assert_eq(s.required_remaining("left"), [1000, 2000, 4000, 8000, 500, 250] as Array[int])
+	s.set_ear("left")
+	assert_eq(s.required_remaining("left"), [1000, 1500, 2000, 3000, 4000, 6000, 8000, 500, 250] as Array[int])
 	_play_by_the_book(s, "left")
 	assert_true(s.is_ear_complete("left"), "left ear done by the book")
 	var order: Array = s.order["left"]
-	assert_eq(order.slice(0, 2), [1000, 2000])
-	assert_true(order.has(1500), "1.5 kHz tested")
-	assert_true(order.find(1500) < order.find(4000), "the half-octave comes right after its neighbours")
+	assert_eq(order.slice(0, 7), [1000, 1500, 2000, 3000, 4000, 6000, 8000], "the highs in textbook order")
 	assert_eq(order.count(1000), 2, "1 kHz retest")
+	assert_false(order.has(750), "Gus's 500 Hz and 1 kHz are 5 dB apart: no 750")
+
+
+## (E1) 750 Hz joins only when 500 Hz and 1 kHz differ by 20 dB or more, and only it announces
+## itself (Ginger's 2k-4k jump flags 3k, which is routine anyway).
+func test_750_joins_on_the_20_db_rule() -> void:
+	var s := AudiometrySession.new(Game.load_patient("ginger") as PatientProfile, 5)
+	s.scoring = false
+	var seen: Array[int] = []
+	s.technique.connect(func(k: StringName, d: Dictionary) -> void:
+		if k == &"interoctave_needed":
+			seen.append(int(d["freq"])))
+	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
+		s.instant_measure("right", f)
+	assert_false(s.required_remaining("right").has(750), "not before 500 Hz is stored")
+	s.instant_measure("right", 500)
+	assert_has(s.required_remaining("right"), 750, "500 Hz 20 vs 1 kHz 45")
+	assert_eq(seen, [750] as Array[int], "only 750 is announced")
 
 
 func test_textbook_play_scores_high() -> void:

@@ -217,7 +217,7 @@ answered by the left cochlea, `cross_heard`).
 ### §2.5 Shared static classes
 
 - **`ClinicRules`**: every clinical and scoring number, and the pure functions over them.
-  - `AC_FREQS`, `OCTAVE_FREQS`, `INTEROCTAVES`, `TEST_ORDER`.
+  - `AC_FREQS`, `OCTAVE_FREQS`, `INTEROCTAVES`, `TEST_ORDER`; **E1** `ROUTINE_FREQS` (the octaves plus 1500, 3000 and 6000: tested on every ear) and `is_routine(freq)`.
   - Hughson-Westlake steps: `START_DB` 40, down 10, up 5, `ASCENDING_HITS_NEEDED` 2.
   - `MAX_DB` per frequency, tone-timing limits, `RESPONSE_WINDOW_S`, `TOO_LOUD_SL_DB`.
   - `PAR_PER_MEASUREMENT` 7 (**v2**: only a fallback; the session computes par per measurement, §5.2), `MARATHON_FACTOR` 3.0, `SCORE_WEIGHTS`, `GRADE_BANDS`, `DEGREE_BANDS` (Goodman 1965; **E15** `DEGREE_SCALE_NOTE` "degrees: Goodman (1965)", printed under the audiogram's band names, which match), `SHAPES`, `SHAPE_TITLES`.
@@ -603,11 +603,12 @@ Events it emits:
 - `patient_reaction` (forwarded from the session);
 - `screen_shake` (the too-loud gag).
 
-Required measurements per ear, in the recommended order:
-1. 1000, 2000, 4000 and 8000 Hz;
-2. a 1000 Hz retest;
+Required measurements per ear, in the recommended order (**E1**, `ClinicRules.TEST_ORDER`):
+1. 1000, 1500, 2000, 3000, 4000, 6000 and 8000 Hz (`ROUTINE_FREQS`);
+2. a 1000 Hz retest (**E2**: the first air ear of the visit only);
 3. 500 and 250 Hz;
-4. the inter-octaves (750, 1500, 3000, 6000) wherever the neighbouring octaves differ by 20 dB or more.
+4. 750 Hz when 500 Hz and 1 kHz differ by 20 dB or more (`required_interoctaves` still flags any half-octave
+   whose octaves differ that much, but the others are routine).
 
 After a store, the screen moves to the next remaining frequency (the rule is in `required_remaining`).
 
@@ -722,7 +723,7 @@ it during the test.
 | `birdie` / `eagle` / `albatross` | (no extra fields) |
 | `missed` | db |
 | `false_alarm` | (no extra fields) |
-| `interoctave_needed` | freq = the half-octave that is now required |
+| `interoctave_needed` | freq = the half-octave that is now required (**E1**: only 750; 1.5k, 3k and 6k are routine) |
 | `not_instructed` **(v2)** | db (the patient guesses because nobody told him what to do) |
 | `phones_swapped` **(v2)** | db (he points at the other ear: the phones are on the wrong ears) |
 | `retest_why` **(E3)** | diff, better, lines (right after `retest_mismatch`, scored only: Hoot's lines from `retest_beat(ear)`; the screen says them the first time a visit has one, then the short tip) |
@@ -893,7 +894,7 @@ Only §4.2–§4.7 and §5.1 are contracts.
       "freqs": {1000: {...§4.4...}, 2000: {...}, ...},   # one entry per stored freq (retest not here)
       "complete": true,
       "retest_1k": {"stored_db": 25, "diff": 0, "strokes": 5},   # {} if not done
-      "order": [1000, 2000, 4000, 8000, 1000, 500, 250, 3000],  # store order (1000 twice = retest)
+      "order": [1000, 1500, 2000, 3000, 4000, 6000, 8000, 1000, 500, 250],  # store order (1000 twice = retest)
       "strokes": 41, "par": 56,            # tone presentations vs par, incl. retest
       "accuracy": 0.95,                    # mean of the freq accuracies
       "shape": &"sloping",                 # ClinicRules.classify_shape
@@ -1476,7 +1477,7 @@ Visit flags `movie_<id>` (watched to its `seen_at` scene).
 `tymp.<ear>.ecv_ml` (required: any type but B inside the adult band 0.6-2.0 mL; a B reads with it); `findings[].when`
 `symmetric` / `asymmetric` / `conductive` / `abg_flag`; `reveal.pattern` `gap` with `reveal.plug` `wax` / `fluid`;
 `audiometry[].montage` (Hoot's alone: `hoot_turn_after` 0) and `skip_hoot_retest`, passed to the AudiOtron's plan;
-`audiometry[].if_tested` `{"750": script}` on a first-visit air step (half-octaves only), said after that step once the
+`audiometry[].if_tested` `{"750": script}` on a first-visit air step (750 only: E1 made 1.5k, 3k and 6k routine), said after that step once the
 ear's stamps asked for that frequency and it is on the chart (Ginger's 750 Hz);
 `do` `wax_jar` / `plane`; `paper.wrong_first` `{fit / refer / today: {headline, subhead?}}` for each wrong first
 stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),

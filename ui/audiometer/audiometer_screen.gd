@@ -51,6 +51,8 @@ const TIP_COOLDOWN_LATE_S := 45.0
 const STORE_DEBOUNCE_S := 0.35
 ## Quick visit: the solo (left) ear is the player's for this many stamps, then Hoot finishes it.
 const QUICK_SOLO_HOLES := 3
+## (Clinical review E1) Hoot's line at the player's first 1.5 kHz stamp (18 words).
+const ROUTINE_TIP := "1.5k, 3k and 6k sit between the octaves. Fitting software uses them, so we test them every time."
 ## Reactions that zoom the booth camera in over the right ear card.
 ## Sub-lines for a stamp with a store-time slip.
 const STORE_ERROR_SUBS: Dictionary[StringName, String] = {
@@ -138,7 +140,7 @@ var _quip_order: Array[int] = []
 var _quips: Array = []                ## this patient's between-beep quips (PATIENT_QUIPS)
 var _punch_t := -100.0
 var _punch_tween: Tween
-var _told_3k6k := false
+var _told_routine := false
 var _dance_key := ""
 var _auto: AoAutoTester
 var _auto_running := false
@@ -1180,9 +1182,10 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 		for d: Array in _deferred_tips:
 			_tip(StringName(d[0]), String(d[1]), String(d[2]))
 		_deferred_tips.clear()
-	elif not by_hoot and freq == 4000 and not _told_3k6k and test == &"ac":
-		_told_3k6k = true
-		Hoot.say("Many clinics also test 3000 and 6000 Hz: fitting formulas use them.", Hoot.LOW, "", "tip_3k6k", 5.0)
+	elif not by_hoot and freq == 1500 and not _told_routine and test == &"ac":
+		# (E1) why the in-between pitches are on every plan
+		_told_routine = true
+		Hoot.say(ROUTINE_TIP, Hoot.LOW, "", "tip_routine_freqs", 5.0)
 	if no_plateau and not by_hoot:
 		# (E9) what the purple ? on the chart means (once per visit)
 		Hoot.say("That purple ? means no plateau: the true threshold may be poorer. Note it on the report.", Hoot.HIGH, "", "tip_no_plateau_mark", 6.0)
@@ -2145,13 +2148,13 @@ func _refresh_quest(st: Dictionary) -> void:
 	var cur_is_retest := cur_f == 1000 and st_e.has(1000)
 	var items: Array = []
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
-		if ClinicRules.is_octave(f) or need.has(f):
+		if ClinicRules.is_routine(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f and not cur_is_retest))
 	var rt: Dictionary = session.retest[e]
 	if session.retest_required(e) or not rt.is_empty():   # (E2) the first air ear's job (or a voluntary one)
 		items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
 	for f: int in [750, 500, 250]:
-		if ClinicRules.is_octave(f) or need.has(f):
+		if ClinicRules.is_routine(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f))
 	var pr := session.ear_progress(e)
 	_quest.set_plan(e, items, pr[0], pr[1])

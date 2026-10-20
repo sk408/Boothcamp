@@ -1,8 +1,8 @@
 class_name AoQuest
 extends Control
 ## AoQuest: the test plan for the current ear as a grid of tokens (ui/ only), in textbook order:
-## 1k, 2k, 4k, 8k, 1k retest, 500, 250, plus any half-octave the audiogram asks for. Done tokens
-## show the stored level; the current one glows; newly required half-octaves pop in with "NEW".
+## 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, 1k retest, 500, 250, plus 750 when the audiogram asks for it. Done
+## tokens show the stored level; the current one glows; a newly required 750 pops in with "NEW".
 ## Clicking a token jumps to that frequency.
 
 signal token_clicked(freq: int)

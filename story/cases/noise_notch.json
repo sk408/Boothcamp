@@ -93,7 +93,7 @@
 		["Hoot", "Some clinics prefer warble for ringing ears. Either one beats a steady tone near his ring."]
 	],
 	"audiometry": [
-		{"ear": "right", "test": "ac", "hoot_turn_after": 6, "intro": "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"},
+		{"ear": "right", "test": "ac", "hoot_turn_after": 7, "intro": "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"},
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed. Same pattern?"},
 		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
 			"before": [["Hoot", "Now the bone buzzer, on his right: is it the middle ear, or deeper?"]]}

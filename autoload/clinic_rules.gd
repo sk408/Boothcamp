@@ -12,12 +12,16 @@ const EARS: PackedStringArray = ["right", "left"]
 
 ## Every air-conduction frequency the AudiOtron can present (Hz).
 const AC_FREQS: Array[int] = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
-## The octave frequencies that are always required.
+## The octave frequencies.
 const OCTAVE_FREQS: Array[int] = [250, 500, 1000, 2000, 4000, 8000]
+## (Clinical review E1) The air frequencies every ear gets: the octaves plus 1.5, 3 and 6 kHz.
+## ASHA (2005) lists 3 and 6 kHz in the standard order; 1.5 kHz is the dispensing habit (fitting
+## software uses it). Only 750 Hz waits for the 20 dB rule (required_interoctaves()).
+const ROUTINE_FREQS: Array[int] = [250, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
 ## Inter-octave frequency -> the two octave neighbours that trigger it.
 const INTEROCTAVES: Dictionary[int, Array] = {750: [500, 1000], 1500: [1000, 2000], 3000: [2000, 4000], 6000: [4000, 8000]}
-## Recommended order per ear. 1000 appears twice: the second is the 1 kHz retest.
-const TEST_ORDER: Array[int] = [1000, 2000, 4000, 8000, 1000, 500, 250]
+## Recommended order per ear. 1000 appears twice: the second is the 1 kHz retest (first air ear only).
+const TEST_ORDER: Array[int] = [1000, 1500, 2000, 3000, 4000, 6000, 8000, 1000, 500, 250]
 
 const START_FREQ := 1000
 const START_DB := 40            ## "start at 1 kHz, about 40 dB HL"
@@ -93,6 +97,11 @@ static func max_db(freq: int) -> int:
 
 static func is_octave(freq: int) -> bool:
 	return OCTAVE_FREQS.has(freq)
+
+
+## (E1) Is this air frequency tested on every ear (an octave, 1.5k, 3k or 6k)?
+static func is_routine(freq: int) -> bool:
+	return ROUTINE_FREQS.has(freq)
 
 
 ## Snap any level to the 5 dB grid and the legal range for that frequency.
@@ -182,9 +191,9 @@ static func pta(thresholds: Dictionary) -> float:
 	return total / n if n > 0 else NAN
 
 
-## Which inter-octave frequencies are required, given the stored octave thresholds
-## (Dictionary freq -> dB). An inter-octave is required when both neighbours are stored and
-## differ by INTEROCTAVE_DIFF_DB or more.
+## Which inter-octave frequencies the 20 dB rule flags, given the stored octave thresholds
+## (Dictionary freq -> dB): both neighbours stored and differing by INTEROCTAVE_DIFF_DB or more.
+## (E1) 1.5, 3 and 6 kHz are routine anyway, so for the test plan only a flagged 750 adds a stop.
 static func required_interoctaves(thresholds: Dictionary) -> Array[int]:
 	var out: Array[int] = []
 	for f: int in INTEROCTAVES:

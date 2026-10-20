@@ -23,7 +23,7 @@ const EXPECTED: Dictionary = {
 ## The conductive cases: case id -> the ear with the gap.
 const CONDUCTIVE: Dictionary = {"wax": "right", "fluid": "left"}
 ## The octaves every case plan stamps in air (_stamped adds the half-octaves a chart asks for).
-const STAMPED: Array[int] = [250, 500, 1000, 2000, 4000, 8000]
+const STAMPED: Array[int] = ClinicRules.ROUTINE_FREQS
 const BOT_PREFIX := 18   # the mouse bot clicks an option by its first 18 characters
 
 var _saved_chapter := ""
@@ -246,11 +246,13 @@ func test_finding_sources_are_checked() -> void:
 
 # ---------------------------------------------------------------- batch 2: conductive cases, retest
 
-## The air frequencies a plan stamps on an ear: STAMPED, plus each half-octave whose neighbours in the
-## truth differ by ClinicRules.INTEROCTAVE_DIFF_DB or more (Rocco's 3k and 6k, Ginger's 750).
+## The air frequencies a plan stamps on an ear: STAMPED (E1: the routine ones), plus 750 when 500 Hz
+## and 1 kHz in the truth differ by ClinicRules.INTEROCTAVE_DIFF_DB or more (Ginger).
 func _stamped(p: PatientProfile, ear: String) -> Array[int]:
 	var out: Array[int] = STAMPED.duplicate()
-	out.append_array(ClinicRules.required_interoctaves(CaseData.truth(p, ear)))
+	for f: int in ClinicRules.required_interoctaves(CaseData.truth(p, ear)):
+		if not out.has(f):
+			out.append(f)
 	return out
 
 
@@ -470,6 +472,7 @@ func test_tymp_and_plug_rules_are_checked() -> void:
 		["a type A with a huge canal", func(c: Dictionary) -> void: c["tymp"]["left"]["ecv_ml"] = 2.5, "outside the adult band"],
 		["if_tested on a bone step", func(c: Dictionary) -> void: c["audiometry"][2]["if_tested"] = {"750": [["Hoot", "Hi."]]}, "if_tested is for"],
 		["if_tested at an octave", func(c: Dictionary) -> void: c["audiometry"][1]["if_tested"] = {"1000": [["Hoot", "Hi."]]}, "not a half-octave"],
+		["if_tested at a routine 3k (E1)", func(c: Dictionary) -> void: c["audiometry"][1]["if_tested"] = {"3000": [["Hoot", "Hi."]]}, "not a half-octave"],
 		["if_tested on the retest", func(c: Dictionary) -> void: c["retest"]["audiometry"][0]["if_tested"] = {"750": [["Hoot", "Hi."]]}, "if_tested is for"],
 		["a bad if_tested script", func(c: Dictionary) -> void: c["audiometry"][1]["if_tested"] = {"750": [["Nobody", "Hi."]]}, "if_tested.750"],
 		["a bad view", func(c: Dictionary) -> void: c["otoscopy"]["view"] = "foggy", "view must be"],

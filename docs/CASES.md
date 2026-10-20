@@ -235,10 +235,10 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
    in a few seconds), then the player tests the poorer ear. Symmetric cases (Rocco, Ginger): the player tests the right ear first and Hoot
    runs the left at x8.
 2. The player's ear: the player stamps the first N measurements, then Hoot finishes. The screen goes to the next
-   required frequency after each store, and a half-octave joins as soon as its neighbours differ by 20 dB, so N
-   counts those too. Rocco: right ear, N = 6 (1k, 2k, 4k, 3k, 8k, 6k: the 8k recovery stays the player's even if
-   1.5k is also needed). Marina: left ear, N = 8 (the whole ear: 1k, 2k, 1.5k, 4k, 8k, retest, 500, 250). Dash:
-   right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 8 (1k, 2k, 4k, 3k, 8k, retest, 500, 750: the bite's
+   required frequency after each store (clinical review E1: 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, the retest on the first
+   ear, 500, 250), and 750 joins as soon as 500 Hz and 1 kHz differ by 20 dB, so N counts it too. Rocco: right ear,
+   N = 7 (1k up to the 8k recovery). Marina: left ear, N = 10 (the whole ear, with room for a retest). Dash:
+   right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 10 (1k to 8k, retest, 500, 750: the bite's
    low edge is the player's, and once 750 is on her chart Hoot says why it was tested). Barnaby: right ear, N = 2 (1k and 2k); on the retest, N = 1 (1k, where he was 35 a week
    ago). Skye: left ear, N = 2.
 3. Unmasked bone (Hoot). One-sided cases: on the better ear only (Steve's convention, as on Day 2; x8 for Marina
