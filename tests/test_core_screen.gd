@@ -258,7 +258,7 @@ func test_completing_the_ear_emits_test_finished() -> void:
 	assert_has(r, "ears")
 	assert_has(r["ears"], "right")
 	assert_eq(String(r["grade"]), "S", "a by-the-book run earns S")
-	assert_eq((screen._cards["right"] as AoEarCard).audiogram.point_count("right"), 6, "six symbols on the card (the retest adds none)")
+	assert_eq((screen._cards["right"] as AoEarCard).audiogram.point_count("right"), 9, "nine symbols on the card (E1; the retest adds none)")
 	assert_false((r["ears"]["right"]["retest_1k"] as Dictionary).is_empty(), "retest recorded")
 
 
