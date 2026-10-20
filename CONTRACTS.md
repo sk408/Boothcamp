@@ -621,7 +621,7 @@ After a store, the screen moves to the next remaining frequency (the rule is in 
   "freqs_available": [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000],
   "min_db": -10, "max_db": 120,                       # for the current freq
   "stored": {"right": {1000: 25, ...}, "left": {}},   # freq -> stored dB (no-response = max_db)
-  "remaining": [2000, 4000, ...],                     # required, not yet stored, current ear
+  "remaining": [1500, 2000, 3000, ...],               # required, not yet stored, current ear
   "ear_complete": false, "combo": 0, "presentations": 0,
   # v2 extras (builder A):
   "points": 1200, "multiplier": 3,                    # arcade points and combo multiplier
@@ -895,7 +895,7 @@ Only §4.2–§4.7 and §5.1 are contracts.
       "complete": true,
       "retest_1k": {"stored_db": 25, "diff": 0, "strokes": 5},   # {} if not done
       "order": [1000, 1500, 2000, 3000, 4000, 6000, 8000, 1000, 500, 250],  # store order (1000 twice = retest)
-      "strokes": 41, "par": 56,            # tone presentations vs par, incl. retest
+      "strokes": 66, "par": 70,            # tone presentations vs par, incl. retest
       "accuracy": 0.95,                    # mean of the freq accuracies
       "shape": &"sloping",                 # ClinicRules.classify_shape
       "pta": 28.3,                         # 500/1k/2k average (NAN if missing)
@@ -904,7 +904,7 @@ Only §4.2–§4.7 and §5.1 are contracts.
     "left": {...}                          # present once the left ear was started
   },
   "technique_errors": [{"kind": "wrong_step", "ear": "right", "freq": 2000, "db": 35, "message": "..."}],
-  "presentations": 96, "false_alarms": 1, "max_combo": 23,
+  "presentations": 150, "false_alarms": 1, "max_combo": 23,
   "accuracy": 0.93,        # 0..1, mean over every stored freq of both ears
   "technique": 0.98,       # 0..1, clean checks / checks
   "efficiency": 0.71,      # 0..1, min(1, total par / total strokes)

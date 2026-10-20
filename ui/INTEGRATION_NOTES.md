@@ -144,7 +144,8 @@ The case runner uses the AudiOtron through its existing plan keys only (`test`, 
 optional and additive:
 
 - **Hand over at a named frequency.** `hoot_turn_after` counts stamps, so Marina's "watch the low pitches"
-  plan has to guess how many stamps reach 500 Hz (8 with TEST_ORDER and a half-octave or two). A plan key
+  plan has to guess how many stamps reach 500 Hz (since E1: 8 on a second ear, 1k to 8k then 500; 9 when
+  the ear owes the 1 kHz retest; Marina's case now uses 10, the whole ear). A plan key
   like `hoot_turn_at: 500` (Hoot takes over once that frequency is stored) would let a case hand the
   player exactly the frequencies it teaches.
 - **"Masked air: confirmed" sweep.** When the rules ask for masked air and Hoot runs it at speed, a short

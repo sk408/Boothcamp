@@ -77,6 +77,10 @@ What the player sees, derived from those numbers (all checked in `tests/test_mas
 | Overmasking starts at (air) | 50 | 50 | 50 | 65 | | test-ear masked bone + 40 (250 borrows the 500 bone) |
 | Masked right air | 55 | 55 | 50 | 50 | | same as unmasked: her real head did not cross over |
 
+**(Clinical review E1)** Air now covers 1.5k, 3k and 6k on both ears too (right 50 / 40 / 35, left 5 / 10 / 15).
+1.5k needs masked air as well (right 50 - 40 = 10, at or above her left 5; initial masking 15), so the masked air
+plan is 1k, 1.5k, 2k, 500, 250, and masked 1.5k comes out 50 like the unmasked one.
+
 Result the reveal shows: right ear **conductive** (gaps 45 / 40 / 25 / 25 at 500-4k, bone average 14),
 referral red flag (gap 15+ at 500, 1k and 2k), Carhart notch; left ear normal. ~~Bone is tested on the right
 only: the left air is normal, so the left can't have an air-bone gap.~~ **(v4)** Bone is tested on the LEFT

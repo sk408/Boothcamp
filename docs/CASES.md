@@ -239,7 +239,7 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
    ear, 500, 250), and 750 joins as soon as 500 Hz and 1 kHz differ by 20 dB, so N counts it too. Rocco: right ear,
    N = 7 (1k up to the 8k recovery). Marina: left ear, N = 10 (the whole ear, with room for a retest). Dash:
    right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 10 (1k to 8k, retest, 500, 750: the bite's
-   low edge is the player's, and once 750 is on her chart Hoot says why it was tested). Barnaby: right ear, N = 2 (1k and 2k); on the retest, N = 1 (1k, where he was 35 a week
+   low edge is the player's, and once 750 is on her chart Hoot says why it was tested). Barnaby: right ear, N = 2 (1k and 1.5k); on the retest, N = 1 (1k, where he was 35 a week
    ago). Skye: left ear, N = 2.
 3. Unmasked bone (Hoot). One-sided cases: on the better ear only (Steve's convention, as on Day 2; x8 for Marina
    and Dash, a montage for Barnaby and Skye), since it answers for the better cochlea wherever it sits;

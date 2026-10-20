@@ -282,8 +282,8 @@ func _sheet(p: PatientProfile, ear: String, freqs: Array, bone: bool, bump: int 
 
 func _results() -> Dictionary:
 	var p := Game.load_patient("bonnie") as PatientProfile
-	var ac := [250, 500, 1000, 2000, 4000, 8000]
-	var right := {"freqs": _sheet(p, "right", ac, false), "ac_masked": _sheet(p, "right", [250, 500, 1000, 2000], false),
+	var ac := ClinicRules.ROUTINE_FREQS   # (E1)
+	var right := {"freqs": _sheet(p, "right", ac, false), "ac_masked": _sheet(p, "right", [250, 500, 1000, 1500, 2000], false),
 		"bc": {}, "bc_masked": _sheet(p, "right", [500, 1000, 2000, 4000], true)}
 	# (v4) Unmasked bone is measured on the LEFT (better) mastoid ('>'); the right ear has masked bone only.
 	var left := {"freqs": _sheet(p, "left", ac, false), "bc": _sheet(p, "left", [500, 1000, 2000, 4000], true)}

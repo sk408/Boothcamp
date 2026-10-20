@@ -214,7 +214,7 @@ func _fake_results() -> Dictionary:
 	for ear: String in ["right", "left"]:
 		var freqs := {}
 		var i := 0
-		for f: int in [250, 500, 1000, 2000, 3000, 4000, 8000]:
+		for f: int in ClinicRules.ROUTINE_FREQS:   # (E1)
 			var db := p.get_threshold(ear, f)
 			var st: int = strokes[i % strokes.size()]
 			freqs[f] = {"ear": ear, "freq": f, "stored_db": db, "true_db": db, "error_db": 0.0, "no_response": false,

@@ -22,7 +22,7 @@ const EXPECTED: Dictionary = {
 }
 ## The conductive cases: case id -> the ear with the gap.
 const CONDUCTIVE: Dictionary = {"wax": "right", "fluid": "left"}
-## The octaves every case plan stamps in air (_stamped adds the half-octaves a chart asks for).
+## The air frequencies every case plan stamps (E1: the routine ones; _stamped adds 750 when a chart asks).
 const STAMPED: Array[int] = ClinicRules.ROUTINE_FREQS
 const BOT_PREFIX := 18   # the mouse bot clicks an option by its first 18 characters
 
@@ -623,7 +623,8 @@ func test_ginger_tests_750_in_both_ears() -> void:
 		assert_true(ClinicRules.required_interoctaves(t).has(750), ear)
 	var step: Dictionary = _case("cookie_bite")["audiometry"][0]
 	assert_true((step.get("if_tested", {}) as Dictionary).has("750"))
-	assert_true(int(step["hoot_turn_after"]) > 7, "the player gets the 750 stamp too")
+	# (E1) 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, the retest, 500, then 750: the 10th stamp
+	assert_true(int(step["hoot_turn_after"]) >= 10, "the player gets the 750 stamp too")
 
 
 func test_wrong_first_headlines() -> void:
