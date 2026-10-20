@@ -36,7 +36,10 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
      room is full), so ask what matters. Each answer can add a note to the clipboard.
    - **Look in the ears**: the otoscope, right then left, with the canal size (it picks the tymp tip).
    - **Tympanometer**: pick the tip that seals, sweep both ears, name the type of each.
-   - **Air tones**: pick which ear goes first, then air conduction on both ears.
+   - **Air tones**: pick which ear goes first, then air conduction on both ears. The first ear owes the 1 kHz
+     retest; the second owes it only when the first ear's retest was off by more than 5 dB (E2; ASHA 2005,
+     BSA 2018 6.4). Bone run first does not waive it. A retest of the player's own that is off by more than 5 dB
+     gets the screen's "why we retest" beat (E3); freestyle adds no line of its own.
    - **Bone conduction**: pick the mastoid, then unmasked bone (1k, 2k, 4k, 500).
    - **Masking**: pick a masked test (masked bone or masked air, right or left ear), or "No masking". Masking
      works from the air chart, so before air tones the player only gets "Air tones first!".
@@ -528,10 +531,13 @@ does now); answer only where you disagree, by number. The first seven change the
 - **FS-14:** Viola's left air (and so bone) at 500 Hz is 50 (was 55); a test keeps every walk-in under 55 there.
 - **FS-16:** Buck's ringing reply names NICE NG98's tinnitus flags: one-sided, pulsing, changed or distressing.
 - **A1, A2:** the routine lines and the masking recap (4.6).
+- **FS-07** (after the engine's E2): one session covers the visit, so only the first air ear owes the 1 kHz
+  retest, or the second too after a first-ear mismatch over 5 dB. The bone plan no longer sets
+  `skip_hoot_retest`: the screen waives the retest per ear, so a bone run before air used to cost that ear its
+  air retest, and the visit its only one when that ear also went first on air (the default pick for both).
 
 Steve's answer on the Buck decision card (2026-10-19, question 14: keep REFER) is in this change too: Buck is a
 REFER again, with his trouble spots kept as the goals for a fitting once a doctor clears him.
 
 Not changed: FS-02 (already right), FS-06 (done with E5), FS-12 (question 24: no), FS-17 (NO AIDS NEEDED stays
-for normal hearing only; a "not yet" stamp is a later choice). FS-07 (the second-ear 1 kHz retest) waits for the
-engine's E2.
+for normal hearing only; a "not yet" stamp is a later choice).

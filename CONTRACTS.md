@@ -553,7 +553,7 @@ How the screen behaves:
 | `intro`, `hoot_turn_text`, `done_title` | Hoot's opening tip, his take-over line, the quest panel's done title |
 | `intro_full` **(polish)** | the opening tip used instead of `intro` when quick visit is off (no "I'll run the rest") |
 | `montage` **(polish)** | with quick visit and `hoot_turn_after` 0: Hoot fills the ear as a stamp montage (`AudiometrySession.instant_measure`, no tones played, input locked, scoring off) instead of the x8 turn |
-| `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it. (E2) Only the first air ear of a visit owes the retest anyway |
+| `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it. (E2) Only the first air ear of a visit owes the retest anyway. (FS-07) The waiver lasts for that ear for the rest of the session: a later air run on it, whoever runs it, owes no retest, so a non-air plan never sets it |
 | `nothing_title` **(polish)** | the done title when the goal sheet needs nothing (default "NOTHING TO MASK!") |
 | `start_db` **(polish)** | the first level of a non-air plan instead of the textbook start (Day 2's optional 250 Hz bone "bonus hole" starts at 40, so the vibrotactile tickle lands) |
 | `demo_tone` **(v4)** | `{freq, db, title, max_tones := 3, idle_s := 6.0}`: the one-tone **Ghost demo**. The screen sits at `freq` / `db` with the masking deck hidden, scoring off and every control but TONE locked (keys and buttons); a sticky Hoot tip (`intro`) points at TONE. A heard tone (or the last try) ends it; a miss raises the tone 5 dB and asks again. **(polish)** The wait clock starts once Hoot's tip has typed out (plus 1 s); after `idle_s` TONE wiggles with a "Hold Space!" chip, after twice that Hoot presses TONE himself. A cross-heard answer flies the Ghost with `title` ("Bone 5, air 50? BOO!"); **(polish)** when she answered higher than `db` (a missed first beep), the shout names the level she really answered at and her air there ("Bone 10, air 50? BOO!"). Nothing is stored, no `ear_completed`; its open measurement is dropped (`AudiometrySession.discard_open(ear, freq)`, core-internal) so it never starts a bone search; after 2.4 s it emits `audiometry_finished` and `test_finished`. **(v4, builders) The look:** a lavender "GHOST DEMO: ONE BEEP" banner; TONE beckons, every other deck button and Ask Hoot is dimmed, and a locked key or click wiggles it with a quiet error blip and a "just TONE!" chip; the test ear's card says "GHOST TEST" with no pips; the quest panel shows one token, no bar, and a note ("ONE beep, buzzer on her RIGHT. Nothing gets stored.", then "Heard at N dB... but by WHICH cochlea?"); no par, dance card, combo flame or booth punch-in (integrator: the punch-in hid the Ghost's callout); Hoot's own press shows a "Hoot's wing!" chip, a too-short press "A blip! Hold ..."; the Ghost flies onto the better ear's `>` mark and lingers 3 s. The locks and labels come back when it ends |
@@ -1570,6 +1570,10 @@ paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit
 **The AudiOtron between tests.** One screen per visit. Between tests it stays in the tree (its Hoot anchors are
 registered once) but is hidden and `PROCESS_MODE_DISABLED`, unregistered from `Stage.audiometer`, with the booth
 view off and the music back; the next test re-registers it. It is freed when the patient walks to the desk.
+So one `AudiometrySession` covers the whole workup, and (E2) only the visit's first air ear owes the 1 kHz retest
+(the second too after a first-ear mismatch over 5 dB). `LevelFreestyle.air_plan()` and `bone_plan()` never set
+`skip_hoot_retest`: the screen waives the retest per ear, not per test, so a bone run before air would cost that
+ear its air retest (FS-07).
 
 **Hooks in other modules (all additive).**
 - `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`) after Days; Options and Quit share the last
@@ -1596,4 +1600,5 @@ asks where they have trouble hearing (and a FIT's debrief turns those places int
 matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
 screen, an unmasked gap is never an accepted chart type, the title's menu ends above the footer, every masked
 frequency leaves 20 dB between the starting noise and the overmasking line on headphones, no true bone reaches
-55 dB at 500 Hz, and the debrief's extra lines go where they belong.
+55 dB at 500 Hz, the debrief's extra lines go where they belong, a visit's pause menu offers the masking movie
+after a day with its own movie, and Hoot's bone montage before air leaves the first air ear its 1 kHz retest.
