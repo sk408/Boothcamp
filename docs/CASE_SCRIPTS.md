@@ -16,6 +16,9 @@ and the title's list. The movies' captions are in `story/explainers/movies/<id>.
 | Hoot's tympanometer movie (`tymp`) | before the tympanometer | New gadget: the Tymp-O-Matic! A quick cartoon on what it shows, then we test. | Hoot's tympanometer movie: what those curves mean. Watch it before the tymp? |
 | Hoot's audiogram movie (`shapes`) | before the chart | Chart time! A quick cartoon on audiogram shapes, then you name this one. | Hoot's audiogram movie: slopes, notches and cookie bites. Watch it before the chart? |
 
+Before a visit's first masked test, while Day 2's masking movie is unseen: the 12-second masking recap
+card (Esc skips it), then **Hoot:** The full masking movie is under Hoot's Movies, in the pause menu or on the title screen.
+
 ## Rocco Rimshot's Case (`noise_notch`)
 
 **The call:** FIT
@@ -69,7 +72,13 @@ Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
 - **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell him: press for every beep, even faint ones. Not for the cymbal in his head!
 - **Rocco:** Beeps yes, ringing no. Got it, boss.
-- **Hoot:** Tip: with ringing ears, pulsed beeps stand out from the ring. Most audiometers can pulse them.
+- **Hoot:** A steady beep near his ring's pitch can hide in the ring. He'd never know which!
+- **Choice:** Which beep stands out from Rocco's ringing?
+  - PULSED: beep, beep, beep (2 pts): Hoot: Yes! His ring never stops. A beep that blinks on and off pops right out.
+  - WARBLE: a wobbly pitch (2 pts): Hoot: Yes! A warble wobbles up and down in pitch, so it sounds nothing like his ring.
+  - TONE: one long steady beep (0 pts): Hoot: That's the one that hides! Steady beep, steady ring: he can't tell them apart.
+- **Hoot:** Our audiometer starts on PULSED. Click that chip on its screen for WARBLE or TONE.
+- **Hoot:** Some clinics prefer warble for ringing ears. Either one beats a steady tone near his ring.
 
 ### Test plan
 - Right AC (player for 6 stamps, then Hoot): "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"
@@ -196,7 +205,7 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
 - **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
 - **Hoot:** Tell her: press for every beep, even faint ones. Not for the roar!
 - **Marina:** Beeps yes, engine room no. Aye aye!
-- **Hoot:** Tip: with a roaring ear, pulsed beeps stand out better. Most audiometers can pulse them.
+- **Hoot:** Tip: a steady beep hides in a steady roar. Keep it PULSED, or click the chip for WARBLE.
 
 ### Test plan
 - Right AC (Hoot at x8): "Better ear first, like the pros. I'll zip through the right!"

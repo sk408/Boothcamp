@@ -67,6 +67,8 @@ def case_movies():
         t = re.search(r'"title": "([^"]*)"', mf.read_text(encoding="utf-8")) if mf.exists() else None
         title = f"{t.group(1)} (`{mid}`)" if t else f"`{mid}`"
         out.append(f"| {title} | {MOVIE_WHEN.get(mid, '')} | {lead} | {offer} |")
+    out += ["", "Before a visit's first masked test, while Day 2's masking movie is unseen: the 12-second masking recap",
+            f"card (Esc skips it), then **Hoot:** {runner_line('MASKING_HINT')}"]
     return out + [""]
 
 
