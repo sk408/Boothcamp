@@ -38,7 +38,8 @@ The game never diagnoses. Hoot says what a pattern "points to" and that a doctor
    - **Tympanometer**: pick the tip that seals, sweep both ears, name the type of each.
    - **Air tones**: pick which ear goes first, then air conduction on both ears. The first ear owes the 1 kHz
      retest; the second owes it only when the first ear's retest was off by more than 5 dB (E2; ASHA 2005,
-     BSA 2018 6.4). Bone run first does not waive it.
+     BSA 2018 6.4). Bone run first does not waive it. A retest of the player's own that is off by more than 5 dB
+     gets the screen's "why we retest" beat (E3); freestyle adds no line of its own.
    - **Bone conduction**: pick the mastoid, then unmasked bone (1k, 2k, 4k, 500).
    - **Masking**: pick a masked test (masked bone or masked air, right or left ear), or "No masking". Masking
      works from the air chart, so before air tones the player only gets "Air tones first!".
