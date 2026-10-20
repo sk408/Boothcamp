@@ -72,7 +72,9 @@ func test_textbook_run_finds_thresholds() -> void:
 		var e: Dictionary = r["ears"][ear]
 		for k in ["freqs", "complete", "retest_1k", "order", "strokes", "par", "accuracy", "shape"]:
 			assert_has(e, k, "ears.%s" % ear)
-		assert_false((e["retest_1k"] as Dictionary).is_empty(), "1k retest recorded")
+		# (E2) the first air ear owes the 1 kHz retest; the second only after a mismatch over 5 dB
+		var owed := ear == "right" or int((r["ears"]["right"]["retest_1k"] as Dictionary).get("diff", 0)) > ClinicRules.RETEST_TOLERANCE_DB
+		assert_eq(not (e["retest_1k"] as Dictionary).is_empty(), owed, "%s 1k retest recorded only where owed" % ear)
 		for f: int in e["freqs"]:
 			var info: Dictionary = e["freqs"][f]
 			for k in ["stored_db", "true_db", "no_response", "strokes", "par", "golf", "accuracy", "errors"]:

@@ -2132,7 +2132,8 @@ func _refresh_quest(st: Dictionary) -> void:
 		if ClinicRules.is_octave(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f and not cur_is_retest))
 	var rt: Dictionary = session.retest[e]
-	items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
+	if session.retest_required(e) or not rt.is_empty():   # (E2) the first air ear's job (or a voluntary one)
+		items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
 	for f: int in [750, 500, 250]:
 		if ClinicRules.is_octave(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f))

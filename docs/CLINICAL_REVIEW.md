@@ -26,13 +26,13 @@ Owners and when: **Engine**, **Day 1** and **Day 2** items go to the integrator 
 | Better ear first for bone | Yes, everywhere | Done for the cases (C1) |
 | Cross-hearing tip | Fix the misleading wording | E4 |
 | Failed 1 kHz retest | Hoot explains why the retest matters | E3 |
-| Masking dilemma | Explain it, and build a later, more advanced case that has one | E9, C9 |
+| Masking dilemma | Explain it, and build a later, more advanced case that has one | E9 done; C9 |
 | Masked air | Use it in a more advanced case | C10 |
-| 1 kHz retest in the first ear only | Steve is reading ASHA and BSA on it; default below | E2, question 2 |
+| 1 kHz retest in the first ear only | Steve is reading ASHA and BSA on it; default below | E2 done by default (question 2) |
 | Routine frequencies | 1.5, 3 and 6 kHz routine; 750 Hz only when 500 Hz and 1 kHz differ by 20 dB or more | E1 |
 | Case with a 750 Hz jump | Needed | Day 9 Ginger already has one (500 to 1k: 25 dB right, 20 dB left), see C11 |
-| Stimulus | Pulsed tones by default, and a bit louder for the player | E7 |
-| Tinnitus | Hoot explains pulsed and warble tones during the tinnitus case | E8, C8 |
+| Stimulus | Pulsed tones by default, and a bit louder for the player | E7 done |
+| Tinnitus | Hoot explains pulsed and warble tones during the tinnitus case | E8 done; C8 |
 | 125 Hz | Not added: rare in practice and hearing aids barely use it | none |
 | Short gaps between tones | Fine as a simplification, but a short gap should at least break the combo | E6 |
 | Bone masking flag | Taken from the best unmasked bone threshold anywhere | Already on `main` (`ClinicRules.unmasked_bone`); the 10 dB gap is done by default (E5) |
@@ -50,7 +50,7 @@ Where Steve has not answered, the default in the question list at the end applie
 **E1. Routine 1.5, 3 and 6 kHz; 750 Hz on the 20 dB rule.** [Choice: Steve decided]
 Today 750, 1500, 3000 and 6000 Hz are added only when the neighbouring octaves differ by 20 dB or more (`autoload/clinic_rules.gd:18-20`, `INTEROCTAVES` and `TEST_ORDER`; `core/audiometry_session.gd:1106-1126`, `required_remaining`). So Gus, the Day 1 hearing-aid candidate with a high-frequency loss, never gets 3 or 6 kHz. New air order per ear: 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, retest 1k, 500, 250, with 750 added only when 500 Hz and 1 kHz differ by 20 dB or more. Every patient file already holds values at all ten frequencies. Also update the order tips, Hoot's montages, par, the autoplay baselines and the docs that print the order. ASHA (2005) lists 3 and 6 kHz in the standard order; 1.5 kHz routine is a dispensing habit (fitting software uses it), which is fine.
 
-**E2. 1 kHz retest in the first ear only.** [Wrong; default pending Steve's reading]
+**E2. 1 kHz retest in the first ear only.** [Wrong; question 2's default] **Done** (e5e70d3)
 The retest is required, and missing it is graded as an error, in both ears (`core/audiometry_session.gd:493-494` raises `missed_retest`, `:1124` and `:1166` add it to the remaining list for every ear). Days 2 and 3, the cases and freestyle already waive it on Hoot's montage ears (`skip_hoot_retest`), so the second-ear requirement bites on Day 1 and on the freestyle ears the player tests. ASHA (2005): "A retest at 1000 Hz is not necessary when testing the second ear." BSA (2018, section 6.4): "Then, for the first ear only, retest at 1000 Hz" and "The retest at 1000 Hz is normally not required in the second ear unless tests in the first ear revealed significant variation." Change: require it on the first air ear of the visit; on the second ear accept a voluntary retest without requiring it, unless the first ear's retest was off by more than 5 dB. BSA puts the retest after 250 Hz rather than before 500 Hz, so accept either position and flag it only if the first ear is closed without one. Day 2's quick visit waives the retest on both ears (`story/level_bonnie.gd:354` and `:359`); keep the first ear's.
 
 **E3. A failed retest gets an explanation.** [Missing: Steve decided]
@@ -65,13 +65,13 @@ Masking now starts at an air-bone gap of 10 dB or more (`BC_MASK_GAP_DB`, `autol
 **E6. A short gap breaks the combo.** [Kept, with Steve's change]
 Gaps are penalised only when they fall into a regular rhythm (`core/audiometry_session.gd:1463-1478`). A gap shorter than a beep shows a one-time tip, and only when the patient guesses (`:1329-1331`); it never breaks the combo. Change: a gap shorter than the tone before it (or under about 1 s) breaks the combo with no other score change, the way the rhythm check does (`_error`, `:1613`), and shows the tip the first time.
 
-**E7. Pulsed tones by default, a little louder for the player.** [Choice: Steve decided]
+**E7. Pulsed tones by default, a little louder for the player.** [Choice: Steve decided] **Done** (eeda6b7: tones 4 dB louder, `AudioSafety.TONE_BOOST_DB`)
 The screen starts on a steady tone (`ui/audiometer/audiometer_screen.gd:125`, `_stim := 0`; `core/tone_generator.gd:33`). Make pulsed the default. For loudness, `autoload/audio_safety.gd` is the only place that maps dB HL to playback (0 dB HL at about -75 dBFS, 0.6 dB per dB HL, `:7`, `:15-16`): raise the tone mapping a few dB there and keep every peak and bus ceiling (`:19-22`) as it is. ASHA (2005) allows continuous or pulsed tones; BSA (2018) advises against pulsed tones for calibration reasons, which matters less for a game.
 
-**E8. Tinnitus changes the patient's answers.** [Missing]
+**E8. Tinnitus changes the patient's answers.** [Missing] **Done** (eeda6b7, 58bd586: within 0.6 octave, so the half-octave pitches count)
 `tinnitus_hz` is documented as "Near this frequency, steady tones are confused" (`core/patient_profile.gd:50-51`), but the patient simulator never reads it, and the stimulus never changes an answer. Change: within about half an octave of `tinnitus_hz`, steady tones give a few more misses and false alarms; pulsed or warble brings them back to normal. Rocco has `tinnitus_hz = 4000`, Marina 250. ASHA (2005): "Use a pulsed signal or a warble tone to help distinguish the test signal from the tinnitus." BSA (2018): "Subjects often find a warble tone easier to hear against their tinnitus than a pure-tone." Lentz et al. (2017): "the steady tone was rated as more difficult" "than the warble and pulsed tones." The lesson itself is C8.
 
-**E9. Masking dilemma and an unreached plateau.** [Missing: Steve decided]
+**E9. Masking dilemma and an unreached plateau.** [Missing: Steve decided] **Done** (7d23a7f: the purple ? on the audiogram)
 When one more 5 dB of noise would overmask, the player may store a masked threshold without a plateau (`core/audiometry_session.gd:602`, `window_full`; `ClinicRules.masking_dilemma`, `autoload/clinic_rules.gd:452`), but nothing explains it, and the chart has no "plateau not reached" mark. No current patient can reach it. Before the advanced case (C9) ships: a short explainer and Hoot line, the coach stops short of overmasking, and the stamp is recorded as "masked threshold not found" with a mark on the audiogram (BSA 2018, 8.8 step 5 and 8.9.4).
 
 **E10. Mask lamp says "good" too early.** [Misleading]
@@ -101,7 +101,7 @@ Once the player owns inserts, masking is scored with insert numbers (IA 55, no o
 **E18. Chart notes on the finished audiogram.** [Missing]
 The results already keep the transducer and the masker level for every stamp, but the end screens (`story/games/reveal.gd`, `story/games/day2_board.gd`, `story/games/case_board.gd`, `story/freestyle/fs_chart.gd`) show only symbols. Add a small strip under the chart: which earphones were used, which mastoid the bone sat on, and a reliability note ("good, fair or poor", from the 1 kHz retest, false alarms and, on Day 3, the SRT and PTA agreement). Masking levels beside masked marks are optional (ASHA 2005 record keeping; BSA 2018, 10.4 and 10.5).
 
-**E19. The masking movie from any level that masks.** [Missing]
+**E19. The masking movie from any level that masks.** [Missing] **Done** (eeda6b7)
 Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd`, `Movies.for_chapter`), so a case or freestyle visit cannot replay Day 2's masking movie. Let levels that mask fall back to the replayable movies (see A2).
 
 ### Day 1, Gus (Day 1)
@@ -146,17 +146,17 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **C1. Bone on the better ear first.** [Choice: Steve decided] **Done** (PR #5, 9dbead7): one-sided cases put unmasked bone on the better ear only, then masked bone on the case ear.
 
-**C2. "Flat B means fluid".** [Misleading] Days 7 and 9 say "A flat B would mean fluid" (`story/cases/menieres.json:86`, `story/cases/cookie_bite.json:86`, the option "Yes: flat, type B. Fluid.") before canal volume is taught, and any day can be played first. Say "A flat B with a normal canal volume would point to fluid" (flat with a small volume points to wax or the probe; flat with a large volume to a hole).
+**C2. "Flat B means fluid".** [Misleading] **Done** (PR #7) Days 7 and 9 say "A flat B would mean fluid" (`story/cases/menieres.json:86`, `story/cases/cookie_bite.json:86`, the option "Yes: flat, type B. Fluid.") before canal volume is taught, and any day can be played first. Say "A flat B with a normal canal volume would point to fluid" (flat with a small volume points to wax or the probe; flat with a large volume to a hole).
 
-**C3. Otoscopy and the drainage red flag.** [Misleading] "True: that clears wax, drainage and deformity." (`story/cases/noise_notch.json:138`, `story/cases/cookie_bite.json:158`). A clear canal today does not clear drainage in the last 90 days, which is the FDA red flag (21 CFR 801.422). Say "drainage today" and leave past drainage to the history question.
+**C3. Otoscopy and the drainage red flag.** [Misleading] **Done** (PR #7) "True: that clears wax, drainage and deformity." (`story/cases/noise_notch.json:138`, `story/cases/cookie_bite.json:158`). A clear canal today does not clear drainage in the last 90 days, which is the FDA red flag (21 CFR 801.422). Say "drainage today" and leave past drainage to the history question.
 
-**C4. What counts as sudden.** [Missing] Dash's day never says what sudden means or how recent means "doctor today", and `SUDDEN_REFER_TODAY_DAYS` (`core/cases/case_rules.gd:55`) is never read in play. One line: "Sudden means it came on over three days or less. Started in the last month? Doctor today." (NICE NG98, 1.1.2.)
+**C4. What counts as sudden.** [Missing] **Done** (PR #7) Dash's day never says what sudden means or how recent means "doctor today", and `SUDDEN_REFER_TODAY_DAYS` (`core/cases/case_rules.gd:55`) is never read in play. One line: "Sudden means it came on over three days or less. Started in the last month? Doctor today." (NICE NG98, 1.1.2.)
 
-**C5. Tympanometry into a packed canal.** [Choice; question 9] The probe seals on a canal "packed solid with wax" with no caveat (`story/cases/wax.json`). Keep the "flat and tiny volume means blocked" lesson, with Hoot saying many clinics skip the probe here and that it is a gentle seal at the entrance, never a push.
+**C5. Tympanometry into a packed canal.** [Choice; question 9] **Done** (PR #7) The probe seals on a canal "packed solid with wax" with no caveat (`story/cases/wax.json`). Keep the "flat and tiny volume means blocked" lesson, with Hoot saying many clinics skip the probe here and that it is a gentle seal at the entrance, never a push.
 
-**C6. Marina's 4 kHz now needs masked bone.** [Follows E5] With masking from a 10 dB gap, Marina's left 4 kHz (air 25, the right cochlea's bone 15) is masked. Add 4 kHz to her plan in `docs/CASES.md` (around line 101). Keep `BORROW_BONE_DB` (`story/level_case.gd:45`) at 10: at 5, Rocco's and Ginger's left ears would go untyped whenever one stamp is 5 dB off.
+**C6. Marina's 4 kHz now needs masked bone.** [Follows E5] **Done** (PR #7) With masking from a 10 dB gap, Marina's left 4 kHz (air 25, the right cochlea's bone 15) is masked. Add 4 kHz to her plan in `docs/CASES.md` (around line 101). Keep `BORROW_BONE_DB` (`story/level_case.gd:45`) at 10: at 5, Rocco's and Ginger's left ears would go untyped whenever one stamp is 5 dB off.
 
-**C7. Small wording fixes.** [Kept] "Wax out by a doctor" (`story/cases/wax.json:142`, `:168`) can become "by a doctor or a trained clinician" (question 8). The retest card "TWO DAYS LATER" (`story/cases/wax.json:183`) follows "softening drops for a few days": "A WEEK LATER" fits (BSA aural care guidance, 2025). The printed adult canal band of 0.9 to 2.0 mL (`core/cases/case_rules.gd:78`, printed at `story/games/case_tymp.gd:175`) is a male band; many women's canals are 0.7 to 0.9 mL (question 10). ("Bone mostly skips the middle ear" is **Done** in PR #5.)
+**C7. Small wording fixes.** [Kept] **Done** (PR #7, with a 0.6 to 2.0 mL band) "Wax out by a doctor" (`story/cases/wax.json:142`, `:168`) can become "by a doctor or a trained clinician" (question 8). The retest card "TWO DAYS LATER" (`story/cases/wax.json:183`) follows "softening drops for a few days": "A WEEK LATER" fits (BSA aural care guidance, 2025). The printed adult canal band of 0.9 to 2.0 mL (`core/cases/case_rules.gd:78`, printed at `story/games/case_tymp.gd:175`) is a male band; many women's canals are 0.7 to 0.9 mL (question 10). ("Bone mostly skips the middle ear" is **Done** in PR #5.)
 
 **C8. The tinnitus lesson.** [Steve decided] Hoot already says pulsed beeps stand out from a ringing or roaring ear (`story/cases/noise_notch.json:83`, `story/cases/menieres.json:99`), but nothing in play changes. With E7 (pulsed is the default) and E8 (tinnitus affects steady tones), Hoot can explain on Rocco's day why the beep pulses, and that some clinics use a warble tone instead (BSA prefers warble); Marina's day keeps a short version.
 
@@ -164,13 +164,13 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **C10. New advanced case: masked air.** [Steve decided] A case where masked air really changes the chart: one very poor or dead ear with a lower real interaural attenuation, so unmasked air shows a shadow of the good ear and masking reveals the true threshold. It can be the same patient as C9 or a second one.
 
-**C11. A 750 Hz case.** [Steve decided] Ginger (Day 9) already has the jump: 500 Hz to 1 kHz is 25 dB on the right and 20 on the left (`core/patients/ginger.tres`), so 750 Hz is required there today. Because stamps within 5 dB are accepted, her left ear triggers it only when the stamps are accurate; widening her left jump to 25 makes it reliable. Hoot should explain 750 the first time it is asked for.
+**C11. A 750 Hz case.** [Steve decided] **Done** (PR #9: Ginger's left jump is 25 dB, Hoot explains 750 Hz) Ginger (Day 9) already has the jump: 500 Hz to 1 kHz is 25 dB on the right and 20 on the left (`core/patients/ginger.tres`), so 750 Hz is required there today. Because stamps within 5 dB are accepted, her left ear triggers it only when the stamps are accurate; widening her left jump to 25 makes it reliable. Hoot should explain 750 the first time it is asked for.
 
 **C12. Explainers.** [Missing] The cases have no explainer movies: red flags and the three stamps, audiogram shapes, and the tympanometer. Since any day can be played first, gate them the way the briefing is gated. See also A2 for masking.
 
 **C13. Word scores before a FIT.** [Missing] The two FIT cases decide from history, otoscopy, tympanometry and tones, and only say "A full fitting also checks words in each ear" after the call (`story/cases/noise_notch.json`, `story/cases/cookie_bite.json`). Once Days 4 and 5 are in, have Hoot run a quick word score and speech in noise at Hoot speed before the call, as Steve does on every test (IHS 2020 best practice, section 2). Marina's red-flag payoff also needs one "why" line for a one-sided loss: "Now and then the hearing nerve is to blame. A doctor checks, sometimes with a scan." (AAO-HNSF Ménière's guideline 2020.)
 
-**C14. "Fit" versus "not yet".** [Missing] No case offers "no aids yet: counsel, protect, recheck" for a mild loss with no everyday trouble (NICE NG98, 1.6.1 and 1.7.5). Rocco stays FIT; one Hoot line in his payoff can say why: "We fit because his hearing trips him up at the pub. Same chart, no trouble yet? Counsel, earplugs, recheck in a year."
+**C14. "Fit" versus "not yet".** [Missing] **Done** (PR #9) No case offers "no aids yet: counsel, protect, recheck" for a mild loss with no everyday trouble (NICE NG98, 1.6.1 and 1.7.5). Rocco stays FIT; one Hoot line in his payoff can say why: "We fit because his hearing trips him up at the pub. Same chart, no trouble yet? Counsel, earplugs, recheck in a year."
 
 ### Day 3 and Days 4 and 5 (Speech)
 
@@ -192,29 +192,29 @@ The speech thread is folding these into its Day 4 and Day 5 work (`/mnt/project-
 
 These were checked against the freestyle code as merged (it has not changed on `main` since). The freestyle thread has Steve's checklist answers in a follow-up of its own; items that his answers already settle are marked.
 
-- **FS-01. Masked bone reruns unmasked bone on the poorer mastoid.** [Misleading] When the player picks masked bone for an ear with no bone of its own, the runner first runs unmasked bone on that poorer ear, "Unmasked bone on the %s side first" (`story/freestyle/level_freestyle.gd:551`, `:582-586`). An unmasked tone there only re-measures the better cochlea. `main` now reads unmasked bone from either mastoid, so delete the pre-run and its intro, and stop setting `bone_side` from a masked run.
+- **FS-01. Masked bone reruns unmasked bone on the poorer mastoid.** [Misleading] **Done** (PR #11) When the player picks masked bone for an ear with no bone of its own, the runner first runs unmasked bone on that poorer ear, "Unmasked bone on the %s side first" (`story/freestyle/level_freestyle.gd:551`, `:582-586`). An unmasked tone there only re-measures the better cochlea. `main` now reads unmasked bone from either mastoid, so delete the pre-run and its intro, and stop setting `bone_side` from a masked run.
 - **FS-02. Bone on the poorer side counts as a slip.** [Choice] Freestyle's "Bone goes on the better ear first." slip (`:844`) matches Steve's rule; with C1 done, the days now agree. No change.
-- **FS-03. Hector's Carhart-shaped dip.** [Kept] Hector's masked bone dips at 2 kHz (40 against 30 and 35, `core/patients/fs_hector.tres`), which the results flag as a Carhart notch, while Hoot gives only the plain mixed-loss rule (`story/freestyle/cases/fs_hector.json:70`). Have Hoot name the notch with Day 2's line, or flatten 2 kHz to 35.
-- **FS-04. "Aids can come later, or alongside".** [Misleading] Hector's debrief (`fs_hector.json:72`) contradicts the game's REFER rule (aids wait for the doctor's all-clear) and Hoot's own "Not yet! Aids can follow." Drop "or alongside" unless Steve chooses fitting while a referral is pending (freestyle checklist 4; BAA 2023 allows it).
-- **FS-05. Skyler's 500 Hz window.** [Misleading] Skyler's left bone at 500 Hz is 0 (`core/patients/fs_skyler.tres`), so with headphones the noise starts at 30 and the overmasking line is 40: a correct 15 dB plateau trips the overmasking warning. Raise that bone to 10 (window 20, gap still 40), and add a test that every masked frequency on phones leaves at least 20 dB between the starting noise and the limit.
+- **FS-03. Hector's Carhart-shaped dip.** [Kept] **Done** (PR #11: Hoot names the notch) Hector's masked bone dips at 2 kHz (40 against 30 and 35, `core/patients/fs_hector.tres`), which the results flag as a Carhart notch, while Hoot gives only the plain mixed-loss rule (`story/freestyle/cases/fs_hector.json:70`). Have Hoot name the notch with Day 2's line, or flatten 2 kHz to 35.
+- **FS-04. "Aids can come later, or alongside".** [Misleading] **Done** (PR #11) Hector's debrief (`fs_hector.json:72`) contradicts the game's REFER rule (aids wait for the doctor's all-clear) and Hoot's own "Not yet! Aids can follow." Drop "or alongside" unless Steve chooses fitting while a referral is pending (freestyle checklist 4; BAA 2023 allows it).
+- **FS-05. Skyler's 500 Hz window.** [Misleading] **Done** (PR #11) Skyler's left bone at 500 Hz is 0 (`core/patients/fs_skyler.tres`), so with headphones the noise starts at 30 and the overmasking line is 40: a correct 15 dB plateau trips the overmasking warning. Raise that bone to 10 (window 20, gap still 40), and add a test that every masked frequency on phones leaves at least 20 dB between the starting noise and the limit.
 - **FS-06. Bone masking at a 10 dB gap.** **Done** with E5 (Buck's left 1 kHz is now masked).
 - **FS-07. Second-ear retest.** [Follows E2] The freestyle air plan (`level_freestyle.gd:514`) never waives the second ear's retest.
-- **FS-08. Look before every test.** [Missing] Unmasked bone run before the otoscope escapes the "look first" slip, and `docs/FREESTYLE.md` gives the reason "bone conduction sits on the mastoid, so it does not count". ASHA (2005): "Visual inspection of the pinna and ear canal, including otoscopy, should precede audiometric testing"; BSA (2018, 5.1): "Audiometry shall be preceded by otoscopic examination." Count it, fix the doc, and reuse the line "Look first: wax or a hole changes every test."
-- **FS-09. "Normal air rules out a conductive part".** [Kept] Only the doc overstates it (`docs/FREESTYLE.md`); say "with air this good, a gap big enough to matter is very unlikely, so bone is optional". Grading is fine.
-- **FS-10. Normal is "25 dB or better".** [Choice; freestyle checklist 1] Penny's reply (`fs_penny.json:54`) can call it "a common adult normal; WHO's cut-off is lower" (WHO 2021: under 20 on a four-frequency better-ear average).
-- **FS-11 and FS-12. Hector's story.** [Kept; freestyle checklist 23 and 24] "Hears better in noise" gives only half of the classic explanation (the conductive loss also turns the background down), and a stiff middle ear starting at about 53 is late (average presentation is in the early 30s; Merck Manual). Both are wording.
-- **FS-13. Word tests before a FIT.** [Missing] The FIT walk-ins never mention word testing, which the days' FITs do. With Steve's routine, add "A full fitting also checks words, in quiet and in noise" now, and the real tests when the speech screens join freestyle (freestyle checklist 6; AAO-HNSF 2024, KAS 5).
-- **FS-14. Viola's bone on the felt line.** [Kept] Her true left bone at 500 Hz is 55, exactly the vibrotactile level, though no path in play reaches it. Keep every walk-in's true bone under 55 at 500 Hz, as the days do.
-- **FS-15. DOCTOR TODAY definition.** [Kept] `docs/FREESTYLE.md` drops "not explained by wax or the middle ear" from the sudden rule (NICE NG98, 1.1.2); the code has it.
-- **FS-16. Tinnitus flags.** [Kept] Buck's reply names only one-sided ringing; NICE NG98 (1.1.6) also flags pulsing, changed or distressing tinnitus. Optional 17-word version: "Both-ear ringing is common with noise. Flags: ONE-sided or pulsing ringing, or a lopsided chart like his."
+- **FS-08. Look before every test.** [Missing] **Done** (PR #11) Unmasked bone run before the otoscope escapes the "look first" slip, and `docs/FREESTYLE.md` gives the reason "bone conduction sits on the mastoid, so it does not count". ASHA (2005): "Visual inspection of the pinna and ear canal, including otoscopy, should precede audiometric testing"; BSA (2018, 5.1): "Audiometry shall be preceded by otoscopic examination." Count it, fix the doc, and reuse the line "Look first: wax or a hole changes every test."
+- **FS-09. "Normal air rules out a conductive part".** [Kept] **Done** (PR #11) Only the doc overstates it (`docs/FREESTYLE.md`); say "with air this good, a gap big enough to matter is very unlikely, so bone is optional". Grading is fine.
+- **FS-10. Normal is "25 dB or better".** [Choice; freestyle checklist 1] **Done** (PR #11) Penny's reply (`fs_penny.json:54`) can call it "a common adult normal; WHO's cut-off is lower" (WHO 2021: under 20 on a four-frequency better-ear average).
+- **FS-11 and FS-12. Hector's story.** [Kept; freestyle checklist 23 and 24] **Done** (PR #11: FS-11 reworded, FS-12 kept) "Hears better in noise" gives only half of the classic explanation (the conductive loss also turns the background down), and a stiff middle ear starting at about 53 is late (average presentation is in the early 30s; Merck Manual). Both are wording.
+- **FS-13. Word tests before a FIT.** [Missing] The line is **Done** (PR #11); the real tests wait for the speech screens. The FIT walk-ins never mention word testing, which the days' FITs do. With Steve's routine, add "A full fitting also checks words, in quiet and in noise" now, and the real tests when the speech screens join freestyle (freestyle checklist 6; AAO-HNSF 2024, KAS 5).
+- **FS-14. Viola's bone on the felt line.** [Kept] **Done** (PR #11: her left 500 Hz bone is 50, with a test) Her true left bone at 500 Hz is 55, exactly the vibrotactile level, though no path in play reaches it. Keep every walk-in's true bone under 55 at 500 Hz, as the days do.
+- **FS-15. DOCTOR TODAY definition.** [Kept] **Done** (PR #11) `docs/FREESTYLE.md` drops "not explained by wax or the middle ear" from the sudden rule (NICE NG98, 1.1.2); the code has it.
+- **FS-16. Tinnitus flags.** [Kept] **Done** (PR #11) Buck's reply names only one-sided ringing; NICE NG98 (1.1.6) also flags pulsing, changed or distressing tinnitus. Optional 17-word version: "Both-ear ringing is common with noise. Flags: ONE-sided or pulsing ringing, or a lopsided chart like his."
 - **FS-17. A "not yet" stamp.** [Choice] The NO AIDS NEEDED stamp is allowed only for normal hearing, so any loss with no red flag must be FIT. Broadening it to "not yet: counsel, protect, recheck" for a mild loss with no everyday trouble is the freestyle thread's call (see C14).
 
 ### All days (each owner for its own days)
 
-- **A1. The routine around the test.** [Missing] No day mentions the daily listening check of the audiometer and the button, a fresh speculum or cleaned cushions between patients, or keeping the dials out of the patient's view (BSA 2018, 4.1, 4.2 and 11.1; ASHA 2005). Short, ungraded Hoot lines where the action already happens, in every day that does it.
-- **A2. Explainers when a day is played first.** [Missing] Every day is open, so a player who starts on a case day meets masked bone and "the Ghost" without the masking movie. Before the first masked bone of a visit, if the masking movie is unseen, play the 12-second recap card and have Hoot point at the full movie in the pause menu (needs E19). Masking is the concept students find hardest (Skinner, Billingsly and Conley 2023).
+- **A1. The routine around the test.** [Missing] **Done** for the cases (PR #9) and Freestyle (PR #11). No day mentions the daily listening check of the audiometer and the button, a fresh speculum or cleaned cushions between patients, or keeping the dials out of the patient's view (BSA 2018, 4.1, 4.2 and 11.1; ASHA 2005). Short, ungraded Hoot lines where the action already happens, in every day that does it.
+- **A2. Explainers when a day is played first.** [Missing] **Done** for Freestyle (PR #11); E19 is on `main` for the cases. Every day is open, so a player who starts on a case day meets masked bone and "the Ghost" without the masking movie. Before the first masked bone of a visit, if the masking movie is unseen, play the 12-second recap card and have Hoot point at the full movie in the pause menu (needs E19). Masking is the concept students find hardest (Skinner, Billingsly and Conley 2023).
 - **A3. Explainers in general.** Days 1 and 3 and the cases have none yet (D1-8, S7, C12).
-- **A4. Speech in noise.** Steve runs it on every test. When Day 5 lands, the FIT calls in the cases and freestyle should include it (C13, FS-13).
+- **A4. Speech in noise.** Freestyle's FIT line is **Done** (PR #11). Steve runs it on every test. When Day 5 lands, the FIT calls in the cases and freestyle should include it (C13, FS-13).
 
 ## Kept as simplifications
 
@@ -251,7 +251,7 @@ Steve asked whether presenting at 30 or 40 dB HL at each new air frequency is su
 Reply with a number only where you disagree; the default applies otherwise.
 
 1. Mask bone from an air-bone gap of 10 dB or more (ASHA and BSA) instead of 15. Done on `main` by default; say if you want 15 back.
-2. Retest 1 kHz in the first ear only, and in the second ear only when the first ear's retest was off by more than 5 dB (ASHA and BSA). Default: yes.
+2. Retest 1 kHz in the first ear only, and in the second ear only when the first ear's retest was off by more than 5 dB (ASHA and BSA). Default: yes. Done on `main` by default; say if you want both ears back.
 3. Bone frequencies: keep 500, 1k, 2k and 4k, with no 3 kHz bone and no bone retest. Default: keep.
 4. Occlusion allowance: keep 15/15/10 dB with supra-aural phones (250/500/1k) and 0 with inserts. Default: keep.
 5. Degree scale: keep the current one (normal up to 25 dB HL on the 500/1k/2k average) and name it in a footnote. Default: keep.

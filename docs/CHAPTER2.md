@@ -371,8 +371,8 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 
 ## 15. Polish pass (after the fun, audiology and bug reviews)
 
-- **Pacing.** Right air: Hoot coaches one beep, then runs the rest with no 1 kHz retest
-  (`skip_hoot_retest`). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
+- **Pacing.** Right air: Hoot coaches one beep, then runs the rest, the 1 kHz retest included (clinical
+  review E2: the first ear keeps it). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
   visit off the player tests everything. The bone and masking sheets are always the player's.
 - **Masked air after masked bone.** Clinics often mask air first; the level says so in one line. With the
   insert earphones (55 dB rule IA) Bonnie's right air cannot reach her left cochlea, so the level skips

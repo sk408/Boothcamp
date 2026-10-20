@@ -409,6 +409,8 @@ func _run_audiometry(ear: String) -> void:
 	while i < plan.size() and not _ear_done.get(ear, false) and not _hoot_turn():
 		var f: int = plan[i]
 		i += 1
+		if f == ClinicRules.START_FREQ and found.has(f) and not (_state().get("remaining", []) as Array).has(f):
+			continue   # (E2) the 1 kHz retest is only owed by the first air ear of the visit
 		var start := ClinicRules.START_DB if last < 0 else clampi(last + 10, 20, ClinicRules.MAX_START_DB)
 		if found.has(f):
 			start = clampi(int(found[f]) + 10, ClinicRules.MIN_DB, ClinicRules.MAX_START_DB)  # retest

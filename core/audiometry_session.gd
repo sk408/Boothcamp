@@ -11,7 +11,9 @@ extends RefCounted
 ##   - threshold = the lowest level heard on at least 2 ascending runs, and on at least half of
 ##     them ("2 of 3"; the coached ear accepts 2 of 2, which the same rule already does)
 ##   - order 1k, 2k, 4k, 8k, retest 1k (within 5 dB), 500, 250; the half-octave in between
-##     whenever neighbouring octaves differ by 20 dB or more
+##     whenever neighbouring octaves differ by 20 dB or more. (E2) The retest is owed by the first air
+##     ear of the visit only (or the second too when the first ear's retest was off by more than 5 dB),
+##     before 500 Hz or after 250 Hz
 ##   - tones 1-2 s, varied gaps, never start above 70 dB, never blast far above threshold
 ## Golf: each measurement is a hole. Par = the presentations a textbook search needs from the
 ## measurement's start level, on average, for this patient (expected_presentations()).
@@ -178,6 +180,8 @@ var _bc_freqs: Array[int] = []      ## plan "bc_freqs": required unmasked bone f
 var _overmask_hit: Dictionary = {}  ## measurement key -> true once overmasking was flagged
 ## (Polish) Ears whose 1 kHz air retest is not required (Day 2: Hoot skips it, Day 1 taught it).
 var retest_waived: Dictionary = {}
+## (E2) The ears in the order they got their first air stamp this visit (retest_required()).
+var air_ear_order: Array[String] = []
 var _instant_n := 0
 
 
@@ -510,8 +514,8 @@ func store() -> Dictionary:
 	var st: Dictionary = stored[ear]
 	if test == &"ac" and kind == &"first" and st.is_empty() and freq != ClinicRules.START_FREQ:
 		errs.append(&"start_not_1k")
-	if test == &"ac" and kind == &"first" and (freq == 500 or freq == 250) and st.has(1000) and (retest[ear] as Dictionary).is_empty() and not retest_waived.has(ear):
-		errs.append(&"missed_retest")
+	# (E2) no "missed_retest" for the lows any more: BSA (2018, 6.4) retests after 250 Hz, ASHA (2005)
+	# before 500 Hz; either is fine, and the ear stays open until a required retest is done
 	if kind == &"retest":
 		var diff := absi(db - int(st[1000]["stored_db"]))
 		if diff > ClinicRules.RETEST_TOLERANCE_DB:
@@ -1172,12 +1176,26 @@ func required_remaining(e: String, t: StringName = &"") -> Array[int]:
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
-	if st.has(1000) and rt.is_empty() and not retest_waived.has(e):
+	if st.has(1000) and rt.is_empty() and retest_required(e):
 		rem.append(1000)
 	for f: int in [750, 500, 250]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
 	return rem
+
+
+## (E2) Does this ear owe the 1 kHz air retest? Only the first air ear of the visit does (ASHA 2005:
+## "A retest at 1000 Hz is not necessary when testing the second ear"; BSA 2018, 6.4: "for the first
+## ear only"), unless the first ear's retest was off by more than RETEST_TOLERANCE_DB. A waived ear
+## (Hoot's montage) never does; a voluntary retest on another ear still counts and is graded.
+func retest_required(e: String) -> bool:
+	if retest_waived.has(e):
+		return false
+	var first := air_ear_order[0] if not air_ear_order.is_empty() else e
+	if first == e:
+		return true
+	var rt_first: Dictionary = ((_sheets[&"ac"] as Dictionary)["retest"] as Dictionary)[first]
+	return not rt_first.is_empty() and int(rt_first["diff"]) > ClinicRules.RETEST_TOLERANCE_DB
 
 
 ## (v3) Every frequency a non-air sheet needs for an ear, in the recommended order: unmasked
@@ -1214,7 +1232,7 @@ func ear_progress(e: String, t: StringName = &"") -> Array[int]:
 		return [d, req.size()]
 	var rt: Dictionary = (sh["retest"] as Dictionary)[e]
 	var rem := required_remaining(e, g).size()
-	if not st.has(1000) and rt.is_empty() and not retest_waived.has(e):
+	if not st.has(1000) and rt.is_empty() and retest_required(e):
 		rem += 1  # the 1k retest is still ahead (required_remaining lists it once 1k is stored)
 	var done := st.size() + (0 if rt.is_empty() else 1)
 	return [done, done + rem]
@@ -1629,6 +1647,8 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 				info["better_db"] = db
 			technique.emit(&"retest_ok", {"ear": e, "freq": f, "diff": diff, "plotted_db": mini(db, first_db)})
 	elif test == &"ac":
+		if not air_ear_order.has(e):
+			air_ear_order.append(e)
 		var before := ClinicRules.required_interoctaves(stored_thresholds(e))
 		st[f] = info
 		var after := ClinicRules.required_interoctaves(stored_thresholds(e))
