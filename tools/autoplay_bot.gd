@@ -1111,6 +1111,12 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 	var case_id := String(Game.chapter(String(_summary.get("chapter_id", ""))).get("case", ""))
 	if case_id != "":
 		_check_conductive_case(case_id, res, report, problems)
+		# (cases, clinical review C12) Hoot's three case movies start on a fresh save (level_case.gd _movie)
+		report["movies"] = _movies
+		if not Game.cli_flag("keep-save"):
+			for id: String in ["case_files", "tymp", "shapes"]:
+				if not _movies.has(id):
+					problems.append("Hoot's %s movie never started on a fresh save" % id)
 
 
 ## (cases) A conductive case (Days 10 and 11): the case ear comes out conductive with the air-bone

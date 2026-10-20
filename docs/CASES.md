@@ -9,7 +9,7 @@ Contract additions are in `CONTRACTS.md` §11 (cases). Steve reviews every clini
 |---|---|
 | Teaches | reading clues; red flags; audiogram shapes; tympanogram types and canal volume; where a loss sits (canal, middle ear, inner ear); comparing with old charts; retesting after treatment; the fit / refer / doctor-today decision |
 | Length | target 8-9 minutes per case with "quick visit" on (the default); see the budget in section 4 |
-| Opens | from the chapter select, any order, every day open from the start (`requires` only picks the suggested "UP NEXT" day). The first case a player opens starts with Hoot's one-line Case Files briefing. |
+| Opens | from the chapter select, any order, every day open from the start (`requires` only picks the suggested "UP NEXT" day). The first case a player opens starts with Hoot's one-line Case Files briefing, and Hoot's three case movies play just before their steps (section 3.1). |
 | Level scene | `res://story/level_case.tscn` (`story/level_case.gd`), one runner for every case |
 | Case data | `story/cases/<case_id>.json`: **the source of truth for every line that ships**. `docs/CASE_SCRIPTS.md` is generated from it (`python3 tools/case_scripts.py`) so the full scripts can be read and signed off. Patient truth in `core/patients/<id>.tres`. |
 | Rules | `core/cases/case_rules.gd` (`CaseRules`): decisions, red flags, asymmetry, the sudden-loss definition, tympanogram types and curve |
@@ -208,6 +208,23 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 
 The stamp tray and the clue cards emit the standard `choice` beat (same info as `DialogueBox.choose`), and their
 buttons' text starts with the option text, so the autoplay bot plays them by keys and by mouse with no new route.
+
+### 3.1 Hoot's case movies (clinical review C12)
+
+Three in-engine cartoons (CONTRACTS.md §3.4), each played just before the step it explains, so any day can be
+played first. Gated like the briefing: on the player's first case (`LevelCase.first_case()`) each plays after its
+lead-in line; on a later case Hoot offers one that was never watched to its `seen_at` scene ("Roll the film!" /
+"Not now"); once watched, it is never forced again and lives in the pause menu (Hoot's Movies, on every case day
+through `also_chapters`) and the title's list, labelled "Days 6-11". Esc skips one ("Skipped! Rewatch it any time:
+pause menu, "Hoot's Movies"."). The lines are `LevelCase.CASE_MOVIES`; `docs/CASE_SCRIPTS.md` prints them.
+
+| Movie | Plays | Teaches |
+|---|---|---|
+| Hoot's case files movie (`case_files`): "Three Stamps and the Red Flags" | before the patient knocks (phase `explainer`, then `intro`) | a dispenser spots patterns and refers, doctors diagnose; FIT / REFER (soon) / DOCTOR TODAY (same day); the red flags; the proof card |
+| Hoot's tympanometer movie (`tymp`): "The Eardrum Trampoline" | before the tympanometer step | look first, a gentle seal; the 226 Hz probe and the pressure sweep; types A, As, Ad, C, B read with the canal volume |
+| Hoot's audiogram movie (`shapes`): "Slopes, Notches & Cookie Bites" | before the reveal | reading the chart (O right, X left, 25 dB or better is normal); sloping, rising, flat, the noise notch, the cookie bite; what bone adds (sensorineural, conductive, mixed) and the 15 dB gap red flag. Every chart it draws classifies as its scene says (test_cases.gd) |
+
+The data is `story/explainers/movies/<id>.gd`, the drawing `story/case_movies/<id>_sets.gd` (the movie's own sets).
 
 ## 4. The test plan
 
