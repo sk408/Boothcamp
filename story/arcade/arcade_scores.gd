@@ -7,6 +7,8 @@ extends RefCounted
 ##   ArcadeScores.qualifies("chart_chute", 4200)       # makes the top TABLE_SIZE
 ##   ArcadeScores.add_score("chart_chute", "ABC", 4200, 0.96)   # -> its place (0-based), saved
 ##   ArcadeScores.add_run("chart_chute", {"right": 21, "oops": 1, "score": 4200})
+## A mode can keep more than one board (Ears, Please! keeps one per shift): pass the board's key,
+## e.g. ArcadeScores.table("ears_please", "table_2"). The default board is "table".
 
 const TABLE_SIZE := 10
 const RUNS_KEPT := 12
@@ -16,6 +18,13 @@ const SEED_TABLE: Array[Dictionary] = [
 	{"initials": "GUS", "score": 3000, "accuracy": 0.95},
 	{"initials": "BON", "score": 1500, "accuracy": 0.92},
 ]
+## Boards with their own starting rows ("mode:board"), pitched at that board's scores.
+const BOARD_SEEDS: Dictionary = {
+	"ears_please:table": [{"initials": "HOO", "score": 24000, "accuracy": 1.0},
+		{"initials": "GUS", "score": 12000, "accuracy": 0.9}, {"initials": "BON", "score": 6000, "accuracy": 0.8}],
+	"ears_please:table_2": [{"initials": "HOO", "score": 24000, "accuracy": 1.0},
+		{"initials": "SID", "score": 12000, "accuracy": 0.9}, {"initials": "VIO", "score": 6000, "accuracy": 0.8}],
+}
 const LETTERS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
@@ -36,14 +45,15 @@ static func data(mode: String) -> Dictionary:
 
 
 ## Best first; the seed rows until the player beats them.
-static func table(mode: String) -> Array[Dictionary]:
+static func table(mode: String, board := "table") -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for row: Variant in data(mode)["table"]:
+	var rows: Variant = data(mode).get(board, [])
+	for row: Variant in (rows if rows is Array else []):
 		if row is Dictionary:
 			out.append({"initials": clean_initials(str((row as Dictionary).get("initials", "???"))),
 				"score": int((row as Dictionary).get("score", 0)), "accuracy": float((row as Dictionary).get("accuracy", 0.0)), "you": false})
 	if out.is_empty():
-		for row: Dictionary in SEED_TABLE:
+		for row: Dictionary in BOARD_SEEDS.get(mode + ":" + board, SEED_TABLE):
 			var r := row.duplicate()
 			r["you"] = false
 			out.append(r)
@@ -51,18 +61,18 @@ static func table(mode: String) -> Array[Dictionary]:
 	return out
 
 
-static func qualifies(mode: String, score: int) -> bool:
+static func qualifies(mode: String, score: int, board := "table") -> bool:
 	if score <= 0:
 		return false
-	var t := table(mode)
+	var t := table(mode, board)
 	return t.size() < TABLE_SIZE or score > int(t[-1]["score"])
 
 
 ## Add a row and save; returns its place (0 = top), or -1 when it didn't make the table.
-static func add_score(mode: String, initials: String, score: int, accuracy: float) -> int:
-	if not qualifies(mode, score):
+static func add_score(mode: String, initials: String, score: int, accuracy: float, board := "table") -> int:
+	if not qualifies(mode, score, board):
 		return -1
-	var t := table(mode)
+	var t := table(mode, board)
 	var row := {"initials": clean_initials(initials), "score": score, "accuracy": snappedf(accuracy, 0.001)}
 	t.append(row)
 	t.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["score"]) > int(b["score"]))
@@ -71,7 +81,7 @@ static func add_score(mode: String, initials: String, score: int, accuracy: floa
 	var keep: Array = []
 	for r: Dictionary in t:
 		keep.append({"initials": r["initials"], "score": int(r["score"]), "accuracy": float(r["accuracy"])})
-	d["table"] = keep
+	d[board] = keep
 	d["initials"] = row["initials"]
 	Game.save_game()
 	return t.find(row)
