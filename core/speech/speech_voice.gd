@@ -12,6 +12,12 @@ extends Node
 ##    every sample through AudioSafety.clamp_sample() / clamp_masker_sample(). Nothing is ever loud.
 ## render(frames) is pure DSP (no audio server), so tests can measure exactly what would play.
 ## Every word also lights the screen's TALK lamp: nothing depends on hearing it.
+## (Day 5) The party of the Party Noise Test (CONTRACTS.md §9.16): SpeechBabble's loop of four
+## murmuring talkers in the test ear(s), on the masker's safety path (babble_rms(): masker_to_rms(),
+## then clamp_masker_sample() on every babble sample and clamp_sample() on the mix). play_item("both")
+## writes both channels (the same mix in both ears, or the speakers); "right" and "left" are as
+## before, and Day 3 never passes "both". The PARTY mode times it (the party first, then the talker);
+## the babble stops on stop_babble(), when the voice leaves the tree, and when the game pauses.
 
 const MIX_RATE := 22050.0
 const SYLLABLE_S := 0.30
@@ -50,6 +56,21 @@ static var _noise_norm := 0.0
 const RETIRED_KEEP := 16
 static var _retired: Array[AudioStream] = []
 
+# ---------------------------------------------------------------- (Day 5) the party babble
+## Dial dB added before the masker mapping, so a 0 dB SNR plays the party at the words' RMS
+## (masker_to_rms(x) equals speech_to_rms(hl) at x = hl - 5).
+const BABBLE_TRIM_DB := -5.0
+## The party starts this long before the talker, and stops this long after the sentence.
+const BABBLE_LEAD_S := 0.6
+const BABBLE_TAIL_S := 0.3
+var babble_on: bool = false
+## "right", "left" or "both" (the same party in both ears, or the speakers).
+var babble_ear: String = "both"
+var babble_db: int = 0
+var _b_pos := 0
+var _b_ramp := 0.0
+var _b_gain := 0.0
+
 
 func _ready() -> void:
 	_player = AudioStreamPlayer.new()
@@ -64,6 +85,9 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
+	# (Day 5) the party never plays on under the pause menu, or after the voice has gone
+	if what == NOTIFICATION_PAUSED or what == NOTIFICATION_EXIT_TREE:
+		_cut_babble()
 	if what == NOTIFICATION_PREDELETE and _player != null and _player.stream != null:
 		_retired.append(_player.stream)
 		while _retired.size() > RETIRED_KEEP:
@@ -124,6 +148,48 @@ func set_noise(db_em: float) -> void:
 
 func stop_noise() -> void:
 	noise_on = false
+
+
+## (Day 5) The party starts in `p_ear` ("right", "left" or "both") at a party level (dial dB): it
+## fades in over NOISE_RAMP_S and loops until stop_babble(). The loop is built on first use.
+func start_babble(p_ear: String, p_babble_db: int) -> void:
+	SpeechBabble.loop()
+	if not babble_on and _b_ramp <= 0.0:
+		_b_gain = babble_rms(p_babble_db)
+	babble_ear = p_ear
+	babble_db = p_babble_db
+	babble_on = true
+
+
+## (Day 5) The party steps up (or down) to a new level; the change glides over a few ms.
+func set_babble(p_babble_db: int) -> void:
+	babble_db = p_babble_db
+
+
+## (Day 5) The party fades out (NOISE_RAMP_S).
+func stop_babble() -> void:
+	babble_on = false
+
+
+## (Day 5) The party is playing, or still fading out.
+func is_babbling() -> bool:
+	return babble_on or _b_ramp > 0.0
+
+
+## (Day 5) The babble loop is built, so the first party sentence needs no wait.
+func babble_ready() -> bool:
+	return SpeechBabble.is_built()
+
+
+## (Day 5) The babble's RMS (0..1) at a party level: the masker mapping, BABBLE_TRIM_DB down.
+static func babble_rms(p_babble_db: int) -> float:
+	return AudioSafety.masker_to_rms(float(p_babble_db) + BABBLE_TRIM_DB)
+
+
+## The party stops at once, with no fade (pause, leaving the tree).
+func _cut_babble() -> void:
+	babble_on = false
+	_b_ramp = 0.0
 
 
 ## Syllables of an item: the parts of a spondee, one for a single word, about 1.4 per word of a sentence.
@@ -299,19 +365,47 @@ func render(frames: int) -> PackedVector2Array:
 			var env := 0.5 - 0.5 * cos(PI * _n_ramp)
 			var v := AudioSafety.clamp_masker_sample(_lp2 * _n_gain * env)
 			out[i] = Vector2(out[i].x, v) if right else Vector2(v, out[i].y)
+	if babble_on or _b_ramp > 0.0:
+		_render_babble(out)
 	if _pos < _buf.size():
 		var g := AudioSafety.speech_to_rms(level_hl)
 		var right_w := ear == "right"
+		var both_w := ear == "both"   # (Day 5) the party test: the talker in both ears (or the speakers)
 		for i in frames:
 			if _pos >= _buf.size():
 				break
 			var v := _buf[_pos] * g
 			_pos += 1
-			if right_w:
+			if both_w:
+				out[i] = Vector2(AudioSafety.clamp_sample(out[i].x + v), AudioSafety.clamp_sample(out[i].y + v))
+			elif right_w:
 				out[i] = Vector2(out[i].x, AudioSafety.clamp_sample(out[i].y + v))
 			else:
 				out[i] = Vector2(AudioSafety.clamp_sample(out[i].x + v), out[i].y)
 	return out
+
+
+## (Day 5) The party into `out`, in babble_ear's channel(s): each babble sample through
+## clamp_masker_sample(), the channel through clamp_sample(). Advances the loop and the fade.
+func _render_babble(out: PackedVector2Array) -> void:
+	var loop := SpeechBabble.loop()
+	if loop.is_empty():
+		_b_ramp = 0.0
+		return
+	var target := babble_rms(babble_db) if babble_on else _b_gain
+	var ramp_step := 1.0 / (NOISE_RAMP_S * MIX_RATE)
+	var goal := 1.0 if babble_on else 0.0
+	var to_right := babble_ear != "left"
+	var to_left := babble_ear != "right"
+	var n := loop.size()
+	for i in out.size():
+		_b_ramp = move_toward(_b_ramp, goal, ramp_step)
+		_b_gain += (target - _b_gain) * 0.01
+		var env := 0.5 - 0.5 * cos(PI * _b_ramp)
+		var b := AudioSafety.clamp_masker_sample(loop[_b_pos] * _b_gain * env)
+		_b_pos = (_b_pos + 1) % n
+		var o := out[i]
+		out[i] = Vector2(AudioSafety.clamp_sample(o.x + b) if to_left else o.x, AudioSafety.clamp_sample(o.y + b) if to_right else o.y)
 
 
 func _process(_delta: float) -> void:
