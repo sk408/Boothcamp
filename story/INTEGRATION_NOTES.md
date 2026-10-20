@@ -214,7 +214,7 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Changes to sh
 - **New beats (CONTRACTS.md §3.2 table):**
   - `chute_sort`: chart_chute. Info {shape, options, best, mouse: {click: "chute_<shape>"}}. The solver sorts into the right chute.
   - `arcade_initials`: chart_chute's results. Info {mouse: {click: "arcade_initials_ok"}}. The solver enters BOT.
-  - `arcade_results`: chart_chute's results. Info {options, best, mouse: {text: "Back to the title"}}. The solver goes to the title.
+  - `arcade_results`: chart_chute's results. Info {options, best, mouse: {text: "Back to the arcade"}}. The solver goes to the arcade hall (it went to the title before the hall existed).
 - **Autoplay bot.** It is not used for the arcade, because its `_finish` expects a visit's `results_continue`. The
   arcade has its own harness, `story/tests/arcade_chute_check.tscn` (tools/README.md).
 - **Reused:**
@@ -233,4 +233,29 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Changes to sh
   The web build's `keep` aspect needs nothing extra.
 - **Engine gotcha.** A typed dictionary const such as `Dictionary[StringName, PackedStringArray]` keeps its array
   literals as plain Arrays. Indexing one through a `PackedStringArray` variable crashes Godot 4.7.2 (signal 11). For
-  such tables, use an untyped `Dictionary` and read the values as `Array`.
+  such tables, use an untyped `Dictionary` and read the values as `Array`. The same goes for a const
+  `Array[PackedStringArray]` of literals (Ears, Please!'s patient lines are a plain `const LINES: Array`).
+
+## Arcade: the hall and Ears, Please! (arcade branch; docs/ARCADE.md part 2)
+
+Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
+
+- **Title menu.** `title_screen.gd`'s `ARCADE_SCENE` now opens `story/arcade/arcade_hall.tscn` (was Chart Chute
+  directly); the button and its row are unchanged.
+- **Chart Chute** (arcade-owned) now ends on "Back to the arcade [T]", which opens the hall.
+- **ArcadeScores** gained an optional `board` argument on `table`, `qualifies` and `add_score` (default `"table"`,
+  so Chart Chute is unchanged) and `BOARD_SEEDS` for boards with their own starting rows. Ears, Please! keeps one
+  board per shift (`table`, `table_2`) plus `unlocked` and `warmed` in `Game.progress["arcade"]["ears_please"]`.
+- **New beats (CONTRACTS.md §3.2 table):**
+  - `arcade_hall`: the hall. Info {options, best, mouse: {click: "arcade_cabinet_<id>"}}. The solver opens Ears, Please!.
+  - `desk_shift`: the shift picker. Info {options, open, best, mouse: {click: "desk_shift_<n>"}}. The solver picks the newest open shift.
+  - `desk_stamp`: a file waits for a stamp. Info {file, options, best, decision, kind, boss, warmup, mouse: {click: "desk_stamp_<stamp>"}}. The solver stamps the right call.
+  - `desk_prove`: PROVE IT. Info {file, stamp, target, anchor, count, mouse: {click: <anchor>}}. The solver points at the best proof.
+  - `desk_note`: a feedback note holds the clock. Info {title, mouse: {click: "desk_note_ok"}}. The solver closes it.
+  - `arcade_initials` and `arcade_results` as for Chart Chute.
+- **Harness.** `story/tests/arcade_desk_check.tscn` (tools/README.md); `arcade_chute_check` now also walks through
+  the hall (`--via-title` picks cabinet 1, and the results' T must reach the hall).
+- **Reused:** `CaseRules` (`RED_FLAGS` ids, `is_asymmetric`, `SUDDEN_*`, `DECISION_STAMPS`), `ClinicRules`
+  (`abg_red_flag`, `ABG_RED_FLAG_DB`, `ac_masking_needed` and `bc_masking_needed` for charting, `combo_multiplier`, `required_interoctaves`),
+  the Audiogram (`show_gap` for the gap tell), `CasePortraits.register` and `Portraits.draw`.
+- **No new data files**, so the Web preset's include_filter needs nothing.
