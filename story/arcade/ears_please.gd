@@ -1834,12 +1834,11 @@ func _fill_board(board: VBoxContainer, placed: int, key: String) -> void:
 		board.add_child(UiKit.label("%d.  %s   %s" % [placed + 1, t[placed]["initials"], _thousands(int(t[placed]["score"]))], 20, Palette.SELECT_ORANGE, 700))
 
 
-## WHAT YOU MISSED: one row per kind of file met this shift, a mark per file (a tick clean, ~ wrong
+## WHAT YOU MISSED (EVERY FILE on a clean shift): one row per kind of file met this shift, a mark per file (a tick clean, ~ wrong
 ## proof, + extra referral, a cross missed, ? helped) and the row with the most trouble tinted,
 ## with its tip. The tick and cross are drawn, not typed: the game font has no such glyphs.
 func _draw_breakdown(c: Control) -> void:
 	var f := _font()
-	c.draw_string(f, Vector2(0, 18), "WHAT YOU MISSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
 	var y := 30.0
 	var worst := ""
 	var worst_n := 0
@@ -1851,6 +1850,7 @@ func _draw_breakdown(c: Control) -> void:
 		if bad > worst_n:
 			worst_n = bad
 			worst = row
+	c.draw_string(f, Vector2(0, 18), "WHAT YOU MISSED" if worst != "" else "EVERY FILE", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
 	for row: String in DeskRun.ROWS:
 		var marks: Array = _marks.get(row, [])
 		if marks.is_empty():

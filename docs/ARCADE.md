@@ -227,7 +227,7 @@ the dispenser's first habit: **catch the red flags before you fit**.
      ("Quick, I've a plane to catch!", an air-bone gap in both ears). The FIT stamp wobbles while a VIP is at the
      desk ("PICK ME?" with reduced motion).
 4. **CLOSING TIME!** The results card shows the rank and its line; files, clean (and %), red flags missed, extra
-   referrals, best combo, score; the promotion line; "WHAT YOU MISSED", a row per kind of file with a mark per file
+   referrals, best combo, score; the promotion line; "WHAT YOU MISSED" ("EVERY FILE" on a clean shift), a row per kind of file with a mark per file
    (tick: clean, ~: right stamp but wrong proof, +: extra referral, cross: missed, ?: helped) and the row with the most trouble tinted, with its tip; and the
    shift's own high-score board. **Enter** plays the same shift again, **S** opens the shift picker, **T** goes back
    to the arcade hall.
