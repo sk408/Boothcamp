@@ -493,7 +493,7 @@ func _ghost_demo() -> void:
 
 
 ## (polish) The optional 250 Hz bone "bonus hole": loud low bone tones are FELT before they are
-## heard (ClinicRules.VIBROTACTILE_DB 250: 30), so it starts at 40 and the first buzz tickles.
+## heard (ClinicRules.VIBROTACTILE_DB 250: 25), so it starts at 40 and the first buzz tickles.
 ## Skipping is fine (many clinics skip 250 Hz bone); the textbook answer (the bot's) plays it.
 func _bonus_hole(ear: String = "left") -> void:
 	var opts: Array[String] = ["Bonus hole! Bring on the tickle.", "Skip it: 500 to 4000 Hz is plenty."]

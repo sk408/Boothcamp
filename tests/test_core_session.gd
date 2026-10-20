@@ -547,6 +547,27 @@ func test_cross_hearing_tip_by_transducer() -> void:
 	assert_eq(kinds.count(&"cross_hearing_air"), 1)
 
 
+## (E11) The straining face shows on some tones within a few dB of threshold, never on every one
+## and never far above it, so it can't be read as a threshold meter. It never changes an answer.
+func test_straining_face_is_no_threshold_meter() -> void:
+	var counts := {}
+	for sl: int in [-8, 0, 8, 15]:
+		var s := _session(40 + sl)
+		var n := [0]
+		s.reaction.connect(func(k: StringName, _d: Dictionary) -> void:
+			if k == &"straining":
+				n[0] += 1)
+		var t := s.sim.effective_threshold("right", 1000)
+		s.set_level(t + sl)
+		for i in 200:
+			_present(s)
+		counts[sl] = n[0]
+	assert_eq(int(counts[-8]), 0, "well below threshold: no straining")
+	assert_eq(int(counts[15]), 0, "clearly heard: no straining")
+	assert_between(int(counts[0]) / 200.0, 0.2, 0.5, "at threshold: only some of the tones")
+	assert_between(int(counts[8]) / 200.0, 0.2, 0.5, "8 dB above: just as often, so the face can't pin it")
+
+
 func test_short_blip_is_thrown_away_and_the_level_kept() -> void:
 	var s := _session()
 	(s.sim as FixedSim).latency = 0.6

@@ -74,10 +74,10 @@ The screen starts on a steady tone (`ui/audiometer/audiometer_screen.gd:125`, `_
 **E9. Masking dilemma and an unreached plateau.** [Missing: Steve decided] **Done** (7d23a7f: the purple ? on the audiogram)
 When one more 5 dB of noise would overmask, the player may store a masked threshold without a plateau (`core/audiometry_session.gd:602`, `window_full`; `ClinicRules.masking_dilemma`, `autoload/clinic_rules.gd:452`), but nothing explains it, and the chart has no "plateau not reached" mark. No current patient can reach it. Before the advanced case (C9) ships: a short explainer and Hoot line, the coach stops short of overmasking, and the stamp is recorded as "masked threshold not found" with a mark on the audiogram (BSA 2018, 8.8 step 5 and 8.9.4).
 
-**E10. Mask lamp says "good" too early.** [Misleading]
+**E10. Mask lamp says "good" too early.** [Misleading] **Done** ("in range", then "good" once the plateau is found)
 The masking lamp shows "good" as soon as the noise is in the safe window, while the Ghost may still be answering (Bonnie's 2 kHz masked bone shows it). Call the green state "in range" and show "good" only once the plateau is found (BSA 2018, 8.8 step 6).
 
-**E11. The straining face gives the threshold away.** [Misleading]
+**E11. The straining face gives the threshold away.** [Misleading] **Done** (about a third of the tones from 5 dB below to 10 dB above threshold)
 The "straining" face shows only when the dial is exactly at the true threshold, so a player can read thresholds off the face. Make it probabilistic across a few dB around threshold, or tie it to a slow press (ASHA 2005 asks testers not to give cues).
 
 **E12. Audiogram proportions.** [Misleading]
@@ -86,13 +86,13 @@ The chart stretches to fill its card (`ui/audiogram/audiogram.gd:258`, `plot_rec
 **E13. Masked air never differs from unmasked air.** [Missing: see C10]
 Every patient uses the default real interaural attenuation of 60 dB (phones) and 75 dB (inserts) (`core/patient_profile.gd:28-30`), while the rules teach 40 and 55. So masked air always confirms unmasked air. The advanced case (C10) needs a lower real IA or a dead ear so a shadow curve appears and masked air drops.
 
-**E14. Masking source comments.** [Kept: comments only; question 4 for the values]
+**E14. Masking source comments.** [Kept: comments only; question 4 for the values] **Done** (comments only)
 The occlusion allowance, 15 dB at 250 and 500 Hz and 10 dB at 750 and 1000 Hz with phones and 0 with inserts (`autoload/clinic_rules.gd:257-260`), matches Goldstein and Newman, within published ranges. The credit at `:229-231` names Studebaker and Yacullo and "the two clinical programs' published masking rules" in `research/test-content.md`, a note kept outside the repo (also cited at `:580` and `core/patient_sim.gd:6`). Rewrite the credit to name the real sources (IA 40 and 55: BSA 2018, 8.1; +10 start, 5 dB steps, 15 dB plateau: Hood and Yacullo; occlusion: Goldstein and Newman) and point readers at `docs/CHAPTER2.md`. Behaviour does not change.
 
-**E15. Degree-of-loss scale.** [Choice: default keep, question 5]
+**E15. Degree-of-loss scale.** [Choice: default keep, question 5] **Done** ("moderately severe" everywhere; the chart says "degrees: Goodman (1965)")
 The scale is normal up to 25 dB HL on the 500/1k/2k average, without ASHA's "slight" band, and the chart says "mod-severe" where the chip says "moderately severe". Keep one name everywhere and add a small footnote naming the scale.
 
-**E16. Vibrotactile levels.** [Kept]
+**E16. Vibrotactile levels.** [Kept] **Done** (250: 25, 500: 55, 1000: 70; no chart note yet)
 Set 250 Hz to 25 and add 1000 Hz at 70 in `VIBROTACTILE_DB` (`autoload/clinic_rules.gd:248`) when convenient, and optionally mark a felt tone with a small note on the chart.
 
 **E17. Insert earphones are scored but never shown.** [Missing]

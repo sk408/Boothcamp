@@ -220,14 +220,14 @@ answered by the left cochlea, `cross_heard`).
   - `AC_FREQS`, `OCTAVE_FREQS`, `INTEROCTAVES`, `TEST_ORDER`.
   - Hughson-Westlake steps: `START_DB` 40, down 10, up 5, `ASCENDING_HITS_NEEDED` 2.
   - `MAX_DB` per frequency, tone-timing limits, `RESPONSE_WINDOW_S`, `TOO_LOUD_SL_DB`.
-  - `PAR_PER_MEASUREMENT` 7 (**v2**: only a fallback; the session computes par per measurement, §5.2), `MARATHON_FACTOR` 3.0, `SCORE_WEIGHTS`, `GRADE_BANDS`, `DEGREE_BANDS`, `SHAPES`, `SHAPE_TITLES`.
+  - `PAR_PER_MEASUREMENT` 7 (**v2**: only a fallback; the session computes par per measurement, §5.2), `MARATHON_FACTOR` 3.0, `SCORE_WEIGHTS`, `GRADE_BANDS`, `DEGREE_BANDS` (Goodman 1965; **E15** `DEGREE_SCALE_NOTE` "degrees: Goodman (1965)", printed under the audiogram's band names, which match), `SHAPES`, `SHAPE_TITLES`.
   - Functions: `clamp_db`, `accuracy_for_error`, `golf_name`, `grade_for_score`, `combo_multiplier`, `degree_name`, `pta`, `required_interoctaves`, `classify_shape`.
   - `accuracy_for_error`: 0 dB -> 1.0, 5 -> 0.8, 10 -> 0.3, more than 10 -> 0 (engine-and-fun.md scoring table).
   - `golf_name(strokes, par)` **(v2)** uses run-sized bands, because one extra ascending run costs 2-3 presentations:
     d = strokes - par: -6 or less albatross, -5..-4 eagle, -3..-2 birdie, -1..+1 par, +2..+3 bogey, +4..+5 double bogey, +6 or more triple bogey.
 
   **(v3) Bone conduction and masking** (all numbers in `docs/CHAPTER2.md` §7):
-  - `TESTS`, `TRANSDUCERS`, `BC_FREQS` (250-4k), `BC_REQUIRED` [1000, 2000, 4000, 500], `BC_MAX_DB` (250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65), `VIBROTACTILE_DB` (250: 30, 500: 55).
+  - `TESTS`, `TRANSDUCERS`, `BC_FREQS` (250-4k), `BC_REQUIRED` [1000, 2000, 4000, 500], `BC_MAX_DB` (250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65), `VIBROTACTILE_DB` (250: 25, 500: 55, 1000: 70: **E16**).
   - `IA_RULE_DB` (phones 40, inserts 55, bone 0), `MASK_SAFETY_DB` 10, `OCCLUSION_DB` (phones: 250 +15, 500 +15, 750 +10, 1k +10; inserts 0), `OCCLUSION_MAX_GAP_DB` 10, `MASK_STEP_DB` 5, `PLATEAU_STEPS` 3, `MASK_MIN_DB` 0, `MASK_MAX_DB` 100.
   - `ABG_CONDUCTIVE_DB` 10 (gap > 10 = conductive), `ABG_RED_FLAG_DB` 15 at `ABG_RED_FLAG_FREQS` [500, 1000, 2000], `CARHART_FREQ` 2000, `CARHART_MIN_DIP_DB` 10, `HEARING_TYPES`, `HEARING_TYPE_TITLES`, `MASK_STATUSES` (off, needed, under, ok, over, impossible).
   - Functions: `test_id`, `test_is_bone`, `test_is_masked`, `unmasked_test`, `test_freqs`, `max_db_for(freq, transducer)`, `clamp_db_for`, `clamp_mask_db`, `ia_rule`, `occlusion_effect`, `air_bone_gap`, `is_conductive_gap`, `abg_red_flag`, `hearing_type`, `has_carhart_notch`, `ac_masking_needed` (test AC - IA >= non-test BC), `bc_masking_needed` (gap >= `BC_MASK_GAP_DB`, 10: clinical review E5; `is_conductive_gap` stays > 10 for naming the loss), `initial_masking` (non-test AC + 10 + occlusion), `overmask_limit` / `is_overmasked` (masker - IA >= test cochlea), `masking_dilemma`, `mask_status`, `next_mask_step` (heard: noise +5; missed: tone +5), `plateau_run`, `sheet_thresholds`, `best_thresholds`, `nontest_bone_estimate`, `masked_freqs_needed`, `response_threshold` (the cross-hearing model: either cochlea answers).

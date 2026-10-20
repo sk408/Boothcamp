@@ -54,7 +54,8 @@ const OCTAVES := 6.0
 ## Speech banana [freq, top dB, bottom dB]: loud vowels low and wide, the soft high consonants
 ## (s, sh, f, th) up at 10-40 dB at 4-6 kHz, which is why a sloping loss scrambles them.
 const BANANA: Array = [[250, 24, 52], [500, 20, 56], [1000, 18, 56], [2000, 16, 52], [3000, 14, 46], [4000, 12, 38], [6000, 10, 32]]
-const DEGREES: Array = [[-10, 25, "normal"], [25, 40, "mild"], [40, 55, "moderate"], [55, 70, "mod-severe"], [70, 90, "severe"], [90, 120, "profound"]]
+## (E15) The degree bands, named as ClinicRules.DEGREE_BANDS names them (Goodman 1965).
+const DEGREES: Array = [[-10, 25, "normal"], [25, 40, "mild"], [40, 55, "moderate"], [55, 70, "moderately severe"], [70, 90, "severe"], [90, 120, "profound"]]
 const STAMP_IN_S := 0.09
 const HIT_STOP_S := 0.07
 const STAMP_SETTLE_S := 0.2
@@ -434,6 +435,8 @@ func _draw() -> void:
 		for d: Array in DEGREES:
 			var y := (db_to_y(float(d[0])) + db_to_y(float(d[1]))) * 0.5
 			AoDraw.text_r(self, Vector2(r.end.x - 4.0, y), String(d[2]), 11, Color(Palette.INK_SOFT, 0.55), AoDraw.FONT_MED)
+		# (E15) which scale those names are
+		AoDraw.text_r(self, Vector2(r.end.x - 4.0, db_to_y(116.0)), ClinicRules.DEGREE_SCALE_NOTE, 9, Color(Palette.INK_SOFT, 0.45), AoDraw.FONT_MED)
 	if _hover_freq > 0:
 		var hx := freq_to_x(_hover_freq)
 		draw_rect(Rect2(hx - 9.0, r.position.y, 18.0, r.size.y), Color(Palette.SELECT_ORANGE, 0.1))
