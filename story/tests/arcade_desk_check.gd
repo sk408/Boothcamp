@@ -157,6 +157,8 @@ class Driver extends Node:
 				await _wait(0.8)
 				await _open_arcade()
 			&"arcade_hall":
+				if desk != null:
+					return   # back at the hall after the results: the shift is over
 				await _wait(0.6)
 				if policy == "mouse":
 					await _click(_anchor("arcade_cabinet_ears_please"))

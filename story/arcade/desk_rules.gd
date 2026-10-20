@@ -40,7 +40,7 @@ const LOOKED: Array[String] = ["wax", "deformity"]
 const RULES: Dictionary[String, Dictionary] = {
 	"tick": {"title": "A TICKED BOX", "sub": "Any YES on the intake", "stamp": &"refer"},
 	"one_ear": {"title": "ONE EAR WORSE", "sub": "No known cause", "stamp": &"refer"},
-	"gap": {"title": "AIR-BONE GAP", "sub": "Bone 15+ above air at 500, 1k, 2k", "stamp": &"refer"},
+	"gap": {"title": "AIR-BONE GAP", "sub": "Gap 15+ at 500, 1k, 2k", "stamp": &"refer"},
 	"sudden": {"title": "SUDDEN + RECENT", "sub": "Came on in 3 days, this month", "stamp": &"today"},
 }
 const RED_FLAG_RULES: Array[String] = ["tick", "one_ear", "gap"]

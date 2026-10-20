@@ -141,16 +141,34 @@ static func stamp_icon(ci: CanvasItem, stamp: StringName, c: Vector2, s: float, 
 			ci.draw_circle(c + Vector2(s * 0.42, s * 0.25), s * 0.16, col)
 
 
-## A behind-the-ear hearing aid: the curved body, the hook and the tube.
-static func aid(ci: CanvasItem, c: Vector2, s: float, col: Color = INK) -> void:
-	var body := PackedVector2Array()
+## A behind-the-ear hearing aid: the curved shell, the hook over the ear, the thin tube and the
+## dome. flip mirrors it (the aid on the other ear).
+static func aid(ci: CanvasItem, c: Vector2, s: float, col: Color = INK, flip := false) -> void:
+	var sx := -1.0 if flip else 1.0
+	var at := func(v: Vector2) -> Vector2: return c + Vector2(v.x * sx, v.y) * s
+	# the shell: a thick banana-shaped arc with round ends (ink first, then the shell colour)
+	var shell := PackedVector2Array()
 	for i in 13:
-		var a := PI * 0.2 + i * PI * 1.1 / 12.0
-		body.append(c + Vector2(cos(a) * s * 0.3 + s * 0.1, sin(a) * s * 0.55))
-	ci.draw_colored_polygon(body, AID)
-	ci.draw_polyline(body, col, 3.0, true)
-	ci.draw_arc(c + Vector2(s * 0.25, -s * 0.5), s * 0.22, PI, TAU, 10, col, 3.0)
-	ci.draw_line(c + Vector2(s * 0.47, -s * 0.5), c + Vector2(s * 0.5, -s * 0.1), col, 3.0)
+		var a := PI * 0.65 + i * PI * 0.7 / 12.0
+		shell.append(at.call(Vector2(0.15, 0.05) + Vector2(cos(a), sin(a)) * 0.46))
+	var w := maxf(6.0, s * 0.3)
+	ci.draw_polyline(shell, col, w + 5.0, true)
+	for e: Vector2 in [shell[0], shell[shell.size() - 1]]:
+		ci.draw_circle(e, (w + 5.0) * 0.5, col)
+	ci.draw_polyline(shell, AID, w, true)
+	for e: Vector2 in [shell[0], shell[shell.size() - 1]]:
+		ci.draw_circle(e, w * 0.5, AID)
+	# the hook over the top of the ear, the tube down and the dome in the canal
+	var top: Vector2 = shell[shell.size() - 1]
+	var hook := PackedVector2Array()
+	for i in 9:
+		var a := PI + i * PI / 8.0
+		hook.append(top + Vector2(0.16 * sx + cos(a) * 0.16 * sx, sin(a) * 0.16) * s)
+	ci.draw_polyline(hook, col, maxf(2.5, s * 0.1), true)
+	var tube_end: Vector2 = at.call(Vector2(0.48, 0.18))
+	ci.draw_line(hook[hook.size() - 1], tube_end, col, maxf(2.0, s * 0.07), true)
+	ci.draw_circle(tube_end + Vector2(0, s * 0.06), s * 0.11, col)
+	ci.draw_circle(tube_end + Vector2(0, s * 0.06), s * 0.06, Color("#ffffff"))
 
 
 ## The red pushpin that marks the proof.

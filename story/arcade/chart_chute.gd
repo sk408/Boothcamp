@@ -6,13 +6,13 @@ extends Control
 ## sends the chart back three cards later; HOOT HELP shows the tell and sorts it for no points but
 ## keeps the streak. Every chart is labelled by ClinicRules.classify_shape (ChartDeck).
 ## Controls: keys 1-4 or click a chute; H or the HOOT HELP button; on the results, Enter or Space
-## plays again and T goes back to the title. A key pressed while a chart is still sliding in is
+## plays again and T goes back to the arcade hall. A key pressed while a chart is still sliding in is
 ## kept for a moment and used once it lands. Pausable game time throughout.
 ## The playfield is 1280x720, centred in wider or taller windows; the wall, floor and belt fill the
 ## rest. Story charts only ride the belt once their patient's Day is finished (ChartDeck.golden_pool).
 ## Beats (CONTRACTS.md §3.2): "chute_sort" (solver: the right chute; mouse: click "chute_<shape>"),
 ## "arcade_initials" (solver: enter BOT; mouse: click "arcade_initials_ok"), "arcade_results"
-## (solver: back to the title). Never a visit: no Game.begin_visit, finish_visit or medals.
+## (solver: back to the arcade hall). Never a visit: no Game.begin_visit, finish_visit or medals.
 ## Set seed_value (and autostart = false to drive it by hand) before adding it to the tree.
 
 signal _sorted(pick: StringName)
@@ -25,7 +25,7 @@ const ChuteRules := preload("res://story/arcade/chute_rules.gd")
 const ArcadeScores := preload("res://story/arcade/arcade_scores.gd")
 const ArcadeArt := preload("res://story/arcade/arcade_art.gd")
 const AUDIOGRAM_SCENE := "res://ui/audiogram/audiogram.tscn"
-const TITLE_SCENE := "res://story/title_screen.tscn"
+const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const MODE := "chart_chute"
 
 const FIELD := Vector2(1280, 720)
@@ -89,7 +89,7 @@ var _shots := {}
 var _shot_queue: PackedStringArray = []
 var _results_keys_at := -1.0   # Game.clock when the results buttons took keys (< 0: not yet)
 var _again_btn: Button
-var _title_btn: Button
+var _back_btn: Button
 
 var _bg: Control
 var _field: Control             # the 1280x720 playfield, centred in the window
@@ -440,7 +440,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif code == KEY_T:
 			_results_keys_at = -1.0
-			_title_btn.pressed.emit()
+			_back_btn.pressed.emit()
 			get_viewport().set_input_as_handled()
 		return
 	var digit := code
@@ -1074,13 +1074,13 @@ func _show_results() -> void:
 	col.add_child(buttons)
 	var hints := UiKit.show_key_hints()
 	_again_btn = UiKit.button("Play again  [Enter]" if hints else "Play again", &"AccentButton", Vector2(260, 56))
-	_title_btn = UiKit.button("Back to the title  [T]" if hints else "Back to the title", &"", Vector2(300, 56))
+	_back_btn = UiKit.button("Back to the arcade  [T]" if hints else "Back to the arcade", &"", Vector2(300, 56))
 	buttons.add_child(_again_btn)
-	buttons.add_child(_title_btn)
+	buttons.add_child(_back_btn)
 	_again_btn.pressed.connect(func() -> void: Events.goto_scene.emit(scene_file_path))
-	_title_btn.pressed.connect(func() -> void: Events.goto_scene.emit(TITLE_SCENE))
+	_back_btn.pressed.connect(func() -> void: Events.goto_scene.emit(HALL_SCENE))
 	_again_btn.visible = false
-	_title_btn.visible = false
+	_back_btn.visible = false
 	Juice.bounce_in(panel)
 	await get_tree().create_timer(0.6, false).timeout
 	_shot_once("chute_results")
@@ -1092,12 +1092,12 @@ func _show_results() -> void:
 		board.add_child(UiKit.label("The board takes runs %d%% accurate or better." % roundi(ChuteRules.BOARD_MIN_ACCURACY * 100.0), 17, Palette.CORAL, 600))
 	_fill_board(board, placed)
 	_again_btn.visible = true
-	_title_btn.visible = true
+	_back_btn.visible = true
 	_results_keys_at = Game.clock
 	await get_tree().create_timer(0.3, false).timeout
 	_shot_once("chute_board")
-	Events.awaiting_input.emit(&"arcade_results", {"options": ["Play again", "Back to the title"], "best": 1,
-		"mouse": {"text": "Back to the title"}}, func() -> void: Events.goto_scene.emit(TITLE_SCENE))
+	Events.awaiting_input.emit(&"arcade_results", {"options": ["Play again", "Back to the arcade"], "best": 1,
+		"mouse": {"text": "Back to the arcade"}}, func() -> void: Events.goto_scene.emit(HALL_SCENE))
 
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).

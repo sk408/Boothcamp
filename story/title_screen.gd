@@ -5,7 +5,7 @@ extends Control
 ## save, then the suggested day). Days -> the day picker (phase / beat &"chapter_select"): a
 ## scrolling grid with one card per chapter, any number of them. Every day is open (polish: no
 ## locks, any order); the suggested day wears an "UP NEXT" badge. Options opens the pause menu.
-## Freestyle -> the walk-in clinic; Arcade -> Chart Chute (docs/ARCADE.md).
+## Freestyle -> the walk-in clinic; Arcade -> the arcade hall (docs/ARCADE.md).
 ## Quit quits. Keyboard: Up/Down + Enter/Space (Days: arrows move in the grid, Esc = Back).
 ## Mouse: click, wheel scrolls the grid. The notice shows once per session; the footer
 ## "This is a game, not a hearing test." is always on screen.
@@ -16,8 +16,8 @@ const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const Movies := preload("res://story/explainers/movies.gd")
 const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
-## (arcade, docs/ARCADE.md) The arcade: Chart Chute for now.
-const ARCADE_SCENE := "res://story/arcade/chart_chute.tscn"
+## (arcade, docs/ARCADE.md) The arcade hall: a cabinet per game (Chart Chute, Ears, Please!).
+const ARCADE_SCENE := "res://story/arcade/arcade_hall.tscn"
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -406,7 +406,7 @@ func _on_freestyle() -> void:
 	Events.goto_scene.emit(FREESTYLE_SCENE)
 
 
-## (arcade, docs/ARCADE.md) Chart Chute: sort audiograms by shape against the clock.
+## (arcade, docs/ARCADE.md) The arcade hall, where the player picks a cabinet.
 func _on_arcade() -> void:
 	if _state != &"menu" or _starting:
 		return

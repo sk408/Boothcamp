@@ -7,21 +7,24 @@ extends Node
 ## Policies (--policy=):
 ##   careful  the beat's solver, after a short reading pause: every chart right, high-score board
 ##   keys     real key presses: 1-4 for the right chute, letters and Enter for the initials
-##   mouse    real clicks only: the chute, the initials' + button and OK, "Back to the title"
+##   mouse    real clicks only: the chute, the initials' + button and OK, "Back to the arcade"
 ##   guess    a random open chute every time (real keys): far fewer points, never on the board
 ##   help     HOOT HELP every time (the H key): no points, no slips, no board
 ##   slip     real keys; on each two-ear card, first the OTHER ear's shape (a JAM with the
 ##            "Other ear!" cue, shot chute_jam_tell), then the right one when it comes back
-## --via-title: start on the title and open the arcade from its Arcade button (a click with
-## --policy=mouse, Down arrows and Enter otherwise), as a player would.
+## --via-title: start on the title, open the arcade from its Arcade button and pick the Chart Chute
+## cabinet in the hall (a click with --policy=mouse, Down arrows, Enter and key 1 otherwise), as a
+## player would.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
-## The results are left with a click on "Back to the title" (mouse) or the T key (keys).
+## The results are left with a click on "Back to the arcade" (mouse) or the T key (keys); the arcade
+## hall must come up.
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
 
 const CHUTE_SCENE := "res://story/arcade/chart_chute.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
+const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 
 
@@ -66,7 +69,7 @@ class Driver extends Node:
 	var misses: PackedStringArray = []
 	var beats := {}
 	var chute: Node
-	var at_title := false
+	var at_hall := false
 	var _rng := RandomNumberGenerator.new()
 	var _last := 0.0
 	var _clock := 0.0
@@ -84,8 +87,8 @@ class Driver extends Node:
 			_last = _clock
 			if path == CHUTE_SCENE:
 				chute = node
-			elif path.ends_with("title_screen.tscn"):
-				at_title = true)
+			elif path == HALL_SCENE:
+				at_hall = true)
 		print("ArcadeChuteCheck: policy %s, speed x%s, seed %d" % [policy, str(Engine.time_scale), _rng.seed])
 
 	func _process(delta: float) -> void:
@@ -126,6 +129,21 @@ class Driver extends Node:
 			&"title_start":
 				await _wait(0.8)
 				await _open_arcade()
+			&"arcade_hall":
+				if chute != null:
+					return   # back at the hall after the results: the run is over
+				await _wait(0.6)
+				Events.screenshot_requested.emit("arcade_hall")
+				await _wait(0.2)
+				if policy == "mouse":
+					await _click(_anchor("arcade_cabinet_chart_chute"))
+				else:
+					await _key(KEY_1)
+				for i in 90:
+					if is_instance_valid(chute):
+						return
+					await _frames(1)
+				_finish(1, "the hall's Chart Chute cabinet never opened Chart Chute")
 
 	## The title's Arcade button, like a player: a click, or Down until it is highlighted and Enter.
 	func _open_arcade() -> void:
@@ -149,10 +167,10 @@ class Driver extends Node:
 			await _wait(0.2)
 			await _action(&"ui_accept")
 		for i in 90:
-			if is_instance_valid(chute):
+			if at_hall:
 				return
 			await _frames(1)
-		_finish(1, "the title's Arcade button never opened Chart Chute")
+		_finish(1, "the title's Arcade button never opened the arcade hall")
 
 	func _action(a: StringName) -> void:
 		for pressed: bool in [true, false]:
@@ -251,17 +269,17 @@ class Driver extends Node:
 		elif golden != "":
 			problems.append("story chart %s rode the belt before its Day was finished" % golden)
 		if policy == "mouse" or policy == "keys":
-			at_title = false
+			at_hall = false
 			if policy == "mouse":
-				await _click_text("Back to the title")
+				await _click_text("Back to the arcade")
 			else:
 				await _key(KEY_T)
 			for i in 90:
-				if at_title:
+				if at_hall:
 					break
 				await _frames(1)
-			if not at_title:
-				problems.append("%s did not reach the title" % ("Back to the title" if policy == "mouse" else "The T key"))
+			if not at_hall:
+				problems.append("%s did not reach the arcade hall" % ("Back to the arcade" if policy == "mouse" else "The T key"))
 		var code := 0
 		if not problems.is_empty():
 			code = 1

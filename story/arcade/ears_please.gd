@@ -180,7 +180,7 @@ class FileView extends Control:
 	const CARD := Rect2(14, 38, 228, 400)
 	const CHART := Rect2(256, 38, 476, 366)
 	const LEGEND := Rect2(256, 406, 476, 30)
-	const PRINT_AT := Vector2(560, 6)
+	const PRINT_AT := Vector2(470, -12)
 	var file: Dictionary = {}
 	var sh: Dictionary = {}
 	var ag: Audiogram
@@ -296,7 +296,8 @@ class FileView extends Control:
 	func _process(delta: float) -> void:
 		if not cursor.is_empty() or not tell.is_empty() or not ring.is_empty():
 			tell_t += delta
-			_over.queue_redraw()
+		if visible and not file.is_empty():
+			_over.queue_redraw()   # the marks change from many places (ink, pin, goal): redraw them every frame
 
 	func _draw() -> void:
 		if file.is_empty():
@@ -326,6 +327,8 @@ class FileView extends Control:
 		draw_string(UiKit.font(600), Vector2(CARD.position.x + 38, looked_y + 18), "LOOKED (otoscope)", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK_SOFT)
 		for id: String in DeskRules.ASKED + DeskRules.LOOKED:
 			var open := (sh.get("intake", []) as Array).has(id)
+			if not open and DeskRules.LOOKED.has(id):
+				continue   # under the "From Shift 2" cover
 			_draw_tile(id, tile_rect(id), open, bool((file.get("intake", {}) as Dictionary).get(id, false)))
 		if not looked_open:
 			var lr := Rect2(CARD.position + Vector2(6, 278), Vector2(CARD.size.x - 12, TILE.y))
@@ -359,7 +362,6 @@ class FileView extends Control:
 			UiDraw.audiogram_symbol(self, Vector2(x + 8, y - 4), String(it[0]), it[1], 13.0, 2.5)
 			draw_string(f, Vector2(x + 20, y + 2), String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK_SOFT)
 			x += 30 + f.get_string_size(String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
-		draw_string(f, Vector2(x + 4, y + 2), "lower = harder to hear", HORIZONTAL_ALIGNMENT_LEFT, LEGEND.end.x - x - 6, 15, Palette.INK_SOFT)
 
 	func _draw_marks() -> void:
 		if file.is_empty():
@@ -456,7 +458,6 @@ class StampView extends Control:
 		var lift := -4.0 if _hover and not locked else 0.0
 		var steady := bool(Game.settings.get("reduced_motion", false))
 		if wobble and not steady:
-			draw_set_transform(size * 0.5, sin(Game.clock * 1000.0 / 150.0) * 0.07, Vector2.ONE)
 			draw_set_transform(size * 0.5 + Vector2(-size.x * 0.5, -size.y * 0.5).rotated(sin(Game.clock * 1000.0 / 150.0) * 0.07), sin(Game.clock * 1000.0 / 150.0) * 0.07, Vector2.ONE)
 		# the knob and the block
 		UiDraw.rounded_rect(self, Rect2(size.x * 0.5 - 30, 4 + lift, 60, 30), Palette.WOOD, 14, 3, Palette.INK)
@@ -464,13 +465,14 @@ class StampView extends Control:
 		var face := Rect2(4, 50 + lift, size.x - 8, size.y - 56)
 		UiDraw.rounded_rect(self, Rect2(face.position + Vector2(0, 5), face.size), Color(Palette.INK, 0.3), 14)
 		UiDraw.rounded_rect(self, face, STAMP_FACE[stamp], 14, 4, Palette.INK)
-		DeskArt.stamp_icon(self, stamp, face.position + Vector2(30, face.size.y * 0.5 - 4), 22.0)
 		var word: String = CaseRules.DECISION_STAMPS[stamp]
-		var fs := 24 if word.length() <= 5 else 17
-		if word.length() > 5:
-			draw_multiline_string(f, face.position + Vector2(56, face.size.y * 0.5 - 8), word.replace(" ", "\n"), HORIZONTAL_ALIGNMENT_LEFT, face.size.x - 60, fs, 2, Palette.INK)
-		else:
-			draw_string(f, face.position + Vector2(56, face.size.y * 0.5 + 9), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.INK)
+		if not locked:   # a locked stamp shows only its cover
+			DeskArt.stamp_icon(self, stamp, face.position + Vector2(30, face.size.y * 0.5 - 4), 22.0)
+			var fs := 24 if word.length() <= 5 else 17
+			if word.length() > 5:
+				draw_multiline_string(f, face.position + Vector2(56, face.size.y * 0.5 - 8), word.replace(" ", "\n"), HORIZONTAL_ALIGNMENT_LEFT, face.size.x - 60, fs, 2, Palette.INK)
+			else:
+				draw_string(f, face.position + Vector2(56, face.size.y * 0.5 + 9), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.INK)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if UiKit.show_key_hints() and not locked:
 			UiDraw.rounded_rect(self, Rect2(4, 4 + lift, 32, 32), Palette.SUNNY, 9, 3, Palette.INK)
@@ -910,6 +912,7 @@ func _serve(f: Dictionary, warm: Array) -> void:
 		if not warm.is_empty():
 			if outcome == DeskRules.CLEAN:
 				await _clean_feedback(f, s, 0, true)
+				_slide_out(_view)
 				return
 			await _slip_feedback(f, s, target, outcome, 0, true)
 			_view.show_file(f, _sh, _on_hover, point)   # the ink wipes off: stamp it again
@@ -938,6 +941,7 @@ func _prove(f: Dictionary, s: StringName, warm_kind: String) -> Dictionary:
 	_cursor = 0
 	_view.cursor = _targets[0]
 	_step = "prove"
+	_show_right("prove")
 	var best := DeskRules.best_target(_v)
 	if warm_kind != "":
 		var lines: Array = DeskRun.WARMUP_LINES.get(warm_kind, ["", ""])
@@ -954,6 +958,7 @@ func _prove(f: Dictionary, s: StringName, warm_kind: String) -> Dictionary:
 	var t: Dictionary = await _pointed
 	_beat_serial += 1
 	Events.input_resolved.emit(&"desk_prove")
+	_show_right("stamps")
 	Hoot.dismiss_target(DeskRun.anchor(best))
 	_view.cursor = {}
 	if not t.is_empty():
@@ -1155,7 +1160,8 @@ func _shot_once(n: String) -> void:
 	if _shots.has(n):
 		return
 	_shots[n] = true
-	Events.screenshot_requested.emit(n)
+	# a frame later, so the marks set this frame (the ink, the goal) are drawn in the shot
+	get_tree().process_frame.connect(func() -> void: Events.screenshot_requested.emit(n), CONNECT_ONE_SHOT)
 
 
 func _register_file_anchors() -> void:
@@ -1558,7 +1564,7 @@ func _draw_wall() -> void:
 		if _window_fx.has("aids") or (_step == "busy" and _view != null and _view.goal != ""):
 			var k := clampf(float(_window_fx.get("aids", 1.0)) * 3.0, 0.0, 1.0)
 			for side in [-1.0, 1.0]:
-				DeskArt.aid(_wall, c + Vector2(side * r * 0.92, -r * 0.1), 18.0 * (k if not _reduced() else 1.0))
+				DeskArt.aid(_wall, c + Vector2(side * r * 0.92, -r * 0.1), 18.0 * (k if not _reduced() else 1.0), DeskArt.INK, side > 0.0)
 		if _window_fx.has("sparkle"):
 			var t := float(_window_fx["sparkle"])
 			var rr := r + 10.0 + (0.0 if _reduced() else 30.0 * t)
@@ -1715,7 +1721,8 @@ func _show_results() -> void:
 	mid.add_theme_constant_override("separation", 30)
 	col.add_child(mid)
 	var miss := Control.new()
-	miss.custom_minimum_size = Vector2(500, 200)
+	var rows := DeskRun.ROWS.keys().filter(func(r: String) -> bool: return _marks.has(r)).size()
+	miss.custom_minimum_size = Vector2(500, 30 + rows * 38 + 46)
 	miss.draw.connect(_draw_breakdown.bind(miss))
 	mid.add_child(miss)
 	var board := VBoxContainer.new()
@@ -1803,13 +1810,12 @@ func _draw_breakdown(c: Control) -> void:
 		UiDraw.rounded_rect(c, r, Color(Palette.CORAL, 0.14) if row == worst else Color("#ffffff"), 10, 2, Color(Palette.INK, 0.25))
 		c.draw_string(f, r.position + Vector2(10, 22), String(DeskRun.ROWS[row]), HORIZONTAL_ALIGNMENT_LEFT, 170, 15, Palette.INK)
 		var x := 186.0
-		var good := 0
-		for m: String in marks.slice(0, 14):
+		var good := marks.count("clean")
+		for m: String in marks.slice(0, 12):
 			var mc := Vector2(x, r.get_center().y)
 			match m:
 				"clean":
 					UiDraw.check(c, mc, 14.0, Palette.MINT, 3.5)
-					good += 1
 				"miss":
 					UiDraw.cross(c, mc, 12.0, Palette.CORAL, 3.5)
 				"help":
@@ -1817,6 +1823,8 @@ func _draw_breakdown(c: Control) -> void:
 				_:
 					c.draw_string(f, mc + Vector2(-6, 7), "~", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.SELECT_ORANGE)
 			x += 18.0
+		if marks.size() > 12:
+			c.draw_string(f, Vector2(x - 6, r.position.y + 22), "…", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Palette.INK_SOFT)
 		c.draw_string(f, Vector2(r.end.x - 70, r.position.y + 22), "%d of %d" % [good, marks.size()], HORIZONTAL_ALIGNMENT_RIGHT, 60, 15, Palette.INK_SOFT)
 		y += 38.0
 	if worst != "":
