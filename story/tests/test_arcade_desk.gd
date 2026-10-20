@@ -142,6 +142,7 @@ func test_the_desk_lists_match_the_engine() -> void:
 	for f: int in [1500, 3000, 6000]:
 		assert_has(DeskRules.FREQS, f, "Steve's E1: %d Hz is routine" % f)
 	assert_false(DeskRules.FREQS.has(750), "750 Hz only when 500 and 1k differ by 20 dB")
+	assert_eq(DeskRules.FREQS, ClinicRules.ROUTINE_FREQS, "the engine's routine list")
 	for id: String in DeskRules.ASKED + DeskRules.LOOKED:
 		assert_true(DeskRules.INTAKE_WORDS.has(id), id)
 	assert_eq((DeskRules.ASKED + DeskRules.LOOKED).size(), DeskRules.INTAKE_WORDS.size())

@@ -16,8 +16,8 @@ extends RefCounted
 ## see a doctor first, CaseRules.RED_FLAGS, and no stamp covers that).
 
 ## The chart's test frequencies. 1.5, 3 and 6 kHz are routine and 750 Hz is added only where
-## ClinicRules.required_interoctaves asks for it (Steve's E1 in docs/CLINICAL_REVIEW.md; the desk
-## follows that decision ahead of the engine, which still treats 1.5k as conditional).
+## ClinicRules.required_interoctaves asks for it (Steve's E1 in docs/CLINICAL_REVIEW.md; the same
+## list as the engine's ClinicRules.ROUTINE_FREQS).
 const FREQS: Array[int] = [250, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
 ## Bone is tested at these: ClinicRules.BC_REQUIRED in pitch order (a test checks they match).
 const BONE_FREQS: Array[int] = [500, 1000, 2000, 4000]
