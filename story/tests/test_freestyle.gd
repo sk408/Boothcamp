@@ -12,6 +12,7 @@ const FsClipboard := preload("res://story/freestyle/fs_clipboard.gd")
 const LevelFreestyle := preload("res://story/freestyle/level_freestyle.gd")
 const Movies := preload("res://story/explainers/movies.gd")
 const PAUSE_MENU := "res://story/pause_menu.tscn"
+const AUDIOMETER := "res://ui/audiometer/audiometer_screen.tscn"
 
 ## case id -> [the call, right ear type, left ear type, asymmetric?, needs bone?, needs tymp?]
 const EXPECTED: Dictionary = {
@@ -453,6 +454,28 @@ func test_a_visit_pauses_to_the_masking_movie() -> void:
 	assert_true(LevelFreestyle.MOVIE_HINT.contains("pause menu"), "Hoot's hint names the pause menu")
 	menu.call("close")
 	Movies.extra.clear()
+
+
+## (FS-07, E2) Bone before air keeps the visit's 1 kHz retest: the screen waives the retest per ear, not
+## per test, so the bone plan must not ask Hoot to skip it. With one screen (one session) per visit,
+## the first air ear then owes the retest and the second does not (E2).
+func test_bone_first_keeps_the_air_retest() -> void:
+	assert_false(bool(LevelFreestyle.bone_plan().get("skip_hoot_retest", false)), "the bone plan waives nothing")
+	assert_false(bool(LevelFreestyle.air_plan().get("skip_hoot_retest", false)), "the air plan waives nothing")
+	var screen: CanvasLayer = (load(AUDIOMETER) as PackedScene).instantiate()
+	add_node(screen)
+	Game.begin_visit("fs_mabel")
+	var plan := LevelFreestyle.bone_plan()
+	plan["air_transducer"] = &"phones"
+	screen.call("start_test", _patient("fs_mabel"), "right", false, plan)
+	await wait_frames(3)
+	var s: AudiometrySession = screen.get("session")
+	assert_true(s.retest_waived.is_empty(), "Hoot's bone montage waives no ear's air retest (%s)" % [s.retest_waived])
+	assert_true(s.retest_required("right"), "right air first, after right bone: it owes the retest")
+	s.air_ear_order = ["right"] as Array[String]
+	assert_false(s.retest_required("left"), "the second air ear does not")
+	Engine.time_scale = 1.0
+	Hoot.clear()
 
 
 ## A double-click on a tray card cannot also answer the next row (mouse presses wait out the arming).

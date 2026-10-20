@@ -1562,6 +1562,10 @@ paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit
 **The AudiOtron between tests.** One screen per visit. Between tests it stays in the tree (its Hoot anchors are
 registered once) but is hidden and `PROCESS_MODE_DISABLED`, unregistered from `Stage.audiometer`, with the booth
 view off and the music back; the next test re-registers it. It is freed when the patient walks to the desk.
+So one `AudiometrySession` covers the whole workup, and (E2) only the visit's first air ear owes the 1 kHz retest
+(the second too after a first-ear mismatch over 5 dB). `LevelFreestyle.air_plan()` and `bone_plan()` never set
+`skip_hoot_retest`: the screen waives the retest per ear, not per test, so a bone run before air would cost that
+ear its air retest (FS-07).
 
 **Hooks in other modules (all additive).**
 - `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`) after Days; Options and Quit share the last
@@ -1588,4 +1592,5 @@ asks where they have trouble hearing (and a FIT's debrief turns those places int
 matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
 screen, an unmasked gap is never an accepted chart type, the title's menu ends above the footer, every masked
 frequency leaves 20 dB between the starting noise and the overmasking line on headphones, no true bone reaches
-55 dB at 500 Hz, and the debrief's extra lines go where they belong.
+55 dB at 500 Hz, the debrief's extra lines go where they belong, a visit's pause menu offers the masking movie
+after a day with its own movie, and Hoot's bone montage before air leaves the first air ear its 1 kHz retest.

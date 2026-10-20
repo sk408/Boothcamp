@@ -542,7 +542,7 @@ func _air() -> void:
 	await _wait(0.5)
 	_open_screen()
 	for ear: String in [first, "left" if first == "right" else "right"]:
-		await _test(ear, {"test": "ac", "hoot_turn_after": AIR_SOLO})
+		await _test(ear, air_plan())
 	_close_screen()
 	clinic.call("take_off_earphones")
 	done[&"air"] = true
@@ -577,9 +577,22 @@ func _bone_on(ear: String) -> void:
 	clinic.call("put_on_bone_oscillator", ear)
 	await _wait(0.5)
 	_open_screen()
-	await _test(ear, {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true, "hoot_turn_after": 0,
-		"montage": true, "skip_hoot_retest": true})
+	await _test(ear, bone_plan())
 	_close_screen()
+
+
+## The air plan: the player stamps AIR_SOLO frequencies, then Hoot finishes the ear at 8x. (FS-07, E2)
+## The 1 kHz retest is owed by the visit's first air ear only, or the second too after a first-ear
+## mismatch over 5 dB: the session lives for the whole visit (one screen), so it knows which ear came first.
+static func air_plan() -> Dictionary:
+	return {"test": "ac", "hoot_turn_after": AIR_SOLO}
+
+
+## The bone plan: Hoot's montage on one mastoid. (FS-07) No "skip_hoot_retest": the screen waives the
+## retest per ear, not per test, so a bone run before air would cost that ear its air retest.
+static func bone_plan() -> Dictionary:
+	return {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true, "hoot_turn_after": 0,
+		"montage": true}
 
 
 func _masking() -> void:
