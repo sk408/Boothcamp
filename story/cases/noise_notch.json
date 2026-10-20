@@ -80,7 +80,17 @@
 	"instructions": [
 		["Hoot", "Tell him: press for every beep, even faint ones. Not for the cymbal in his head!"],
 		["Rocco", "Beeps yes, ringing no. Got it, boss."],
-		["Hoot", "Tip: with ringing ears, pulsed beeps stand out from the ring. Most audiometers can pulse them."]
+		["Hoot", "A steady beep near his ring's pitch can hide in the ring. He'd never know which!"],
+		{"choose": {
+			"prompt": "Which beep stands out from Rocco's ringing?",
+			"options": [
+				["PULSED: beep, beep, beep", 2, "Yes! His ring never stops. A beep that blinks on and off pops right out."],
+				["WARBLE: a wobbly pitch", 2, "Yes! A warble wobbles up and down in pitch, so it sounds nothing like his ring."],
+				["TONE: one long steady beep", 0, "That's the one that hides! Steady beep, steady ring: he can't tell them apart."]
+			]
+		}},
+		["Hoot", "Our audiometer starts on PULSED. Click that chip on its screen for WARBLE or TONE."],
+		["Hoot", "Some clinics prefer warble for ringing ears. Either one beats a steady tone near his ring."]
 	],
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 6, "intro": "Right ear's yours, up to 8k. Watch what happens between 4k and 8k!"},

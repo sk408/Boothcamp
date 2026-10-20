@@ -96,7 +96,7 @@
 	"instructions": [
 		["Hoot", "Tell her: press for every beep, even faint ones. Not for the roar!"],
 		["Marina", "Beeps yes, engine room no. Aye aye!"],
-		["Hoot", "Tip: with a roaring ear, pulsed beeps stand out better. Most audiometers can pulse them."]
+		["Hoot", "Tip: a steady beep hides in a steady roar. Keep it PULSED, or click the chip for WARBLE."]
 	],
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. I'll zip through the right!"},

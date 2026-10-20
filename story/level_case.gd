@@ -69,6 +69,12 @@ const CASE_MOVIES: Dictionary = {
 		"offer": "Hoot's audiogram movie: slopes, notches and cookie bites. Watch it before the chart?",
 	},
 }
+## (Clinical review A2) Every day is open, so a player can meet masking on a case day first. Before
+## the visit's first masked test, while Day 2's full movie is unseen: the one-card recap (about 12 s,
+## Esc skips it), then where the full movie lives, as Freestyle does.
+const MASKING_MOVIE := "masking"
+const MASKING_RECAP := "masking_recap"
+const MASKING_HINT := "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen."
 ## The runner's own lines (case_scripts.py prints them too: keep the two in step).
 ## The first look in every case: the other ear, before the case's own (both ears get a look before
 ## any probe or insert goes in), with a fresh speculum (clinical review A1). %s: the speaker, then the
@@ -102,6 +108,8 @@ var clues: Array[Dictionary] = []
 var _walk_done := true
 ## Wax fills the canal (the otoscope's "wax" view): air goes through headphones, never a foam insert.
 var _canal_blocked := false
+## (A2) The masking recap played this visit (once, before the first masked test).
+var _recapped := false
 ## The scored visit's summary when a retest follows it: Game.finish_visit runs before the retest, so
 ## quitting during the unscored victory lap keeps the day (chapters_done, coins, best grade).
 var _summary: Dictionary = {}
@@ -736,6 +744,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				oscillator_on = ear
 			clinic.call("focus_camera", &"face", 0.5)
 			clinic.call("put_on_masking_phone", other)
+			await _recap()
 			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
 				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
 			_open_screen()
@@ -752,6 +761,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				clinic.call("take_off_bone_oscillator")
 				oscillator_on = ""
 				clinic.call("put_on_earphones", true)
+				await _recap()
 				await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
 			_open_screen()
 			await _test(ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
@@ -780,6 +790,19 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 		await _play(case_data.get("after_audiometry", []))
 	else:
 		await _say("Hoot", "Bone's in. Let's lay it over the air and see what it says.")
+
+
+## (Clinical review A2) The masking recap card before the visit's first masked test, while Day 2's
+## full movie is unseen, then where the full movie lives (the pause menu lists it on every case day).
+func _recap() -> void:
+	if _recapped or Game.is_movie_seen(MASKING_MOVIE) or not Movies.has(MASKING_RECAP):
+		return
+	_recapped = true
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", MASKING_RECAP, "recap")
+	player.queue_free()
+	await _say("Hoot", MASKING_HINT)
 
 
 ## Quick visit (the default): Hoot runs the tests the plan gives him. Off: the player runs everything.
