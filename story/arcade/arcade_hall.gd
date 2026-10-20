@@ -73,6 +73,13 @@ class Cabinet extends Control:
 		if selected:
 			queue_redraw()
 
+	## The PLAY sign hangs below the cabinet: it clicks too.
+	func _has_point(p: Vector2) -> bool:
+		return Rect2(Vector2.ZERO, size).has_point(p) or (selected and _sign_rect().has_point(p))
+
+	func _sign_rect() -> Rect2:
+		return Rect2(size.x * 0.5 - 90, size.y - 22, 180, 40)
+
 	func _draw() -> void:
 		var f := UiKit.font(700)
 		var steady := bool(Game.settings.get("reduced_motion", false))
@@ -103,7 +110,7 @@ class Cabinet extends Control:
 		if extra != "":
 			draw_string(UiKit.font(600), Vector2(0, 436), extra, HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color(Palette.PAPER, 0.85))
 		if selected:
-			var sign := Rect2(size.x * 0.5 - 90, size.y - 22, 180, 40)
+			var sign := _sign_rect()
 			UiDraw.rounded_rect(self, sign, Palette.SUNNY, 14, 3, Palette.INK)
 			var tip := sign.position + Vector2(34, 20)
 			draw_colored_polygon(PackedVector2Array([tip + Vector2(-7, -10), tip + Vector2(10, 0), tip + Vector2(-7, 10)]), Palette.INK)

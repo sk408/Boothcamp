@@ -364,9 +364,15 @@ static func rank(stats: Dictionary) -> String:
 	if missed == 0 and acc >= SAFE_CLEAN:
 		return "Red Flag Radar"
 	if missed == 0:
-		if int(stats.get("over", 0)) >= int(stats.get("wrong_reason", 0)):
+		# not clean enough: name the most common reason (HOOT HELP, extra referrals, wrong proofs)
+		var over := int(stats.get("over", 0))
+		var wrong := int(stats.get("wrong_reason", 0))
+		var helps := int(stats.get("helps", 0))
+		if helps > 0 and helps >= over and helps >= wrong:
+			return "Learning the Ropes"
+		if over > 0 and over >= wrong:
 			return "Better Safe Than Sorry"
 		return "Show Your Working"
 	if missed == 1:
-		return "Safe Hands"
+		return "One Got Away"
 	return "Red Flags Got Through"

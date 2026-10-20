@@ -200,7 +200,8 @@ the dispenser's first habit: **catch the red flags before you fit**.
 1. **Pick a shift** (only once a second shift is open): 1 Trainee or 2 Dispenser. Shift 3, Clinic Lead, shows as
    "SOON".
 2. **Warm-up (no clock).** Three files with Hoot pointing at the right stamp, then at the proof. A wrong stamp or a
-   wrong proof is just tried again. Once you have warmed up on a shift, **S** skips it.
+   wrong proof is just tried again. Once you have warmed up on a shift, **S** or the **Skip**
+   button at the end of the top bar skips it, whatever the file in hand is waiting for.
    - Shift 1: a clear FIT, a ONE EAR WORSE, a ticked "Dizzy spells".
    - Shift 2: a two-ear air-bone gap (it looks like a FIT on air alone), a FIT whose masked bone [ ] sits on air
      ("the gap is the distance, not the bracket"), and a ticked "Lots of wax" (the new LOOKED boxes).
@@ -227,7 +228,7 @@ the dispenser's first habit: **catch the red flags before you fit**.
      desk ("PICK ME?" with reduced motion).
 4. **CLOSING TIME!** The results card shows the rank and its line; files, clean (and %), red flags missed, extra
    referrals, best combo, score; the promotion line; "WHAT YOU MISSED", a row per kind of file with a mark per file
-   (✓ clean, ~ half right, ✕ missed, ? helped) and the row with the most trouble tinted, with its tip; and the
+   (tick: clean, ~: right stamp but wrong proof, +: extra referral, cross: missed, ?: helped) and the row with the most trouble tinted, with its tip; and the
    shift's own high-score board. **Enter** plays the same shift again, **S** opens the shift picker, **T** goes back
    to the arcade hall.
 
@@ -243,9 +244,12 @@ masking is needed), then decided by `DeskRules.decide()`, which uses only `CaseR
   flat, gentle, cookie bite.
 - Outside the gap files, both ears are sensorineural: no conductive part a doctor should see.
 - One-ear files sit on a fittable loss 60% of the time, so "one line near the top" is never the tell; the split is.
-- A two-ear gap file has air like a FIT and bone 20 to 25 dB above it at 500, 1k and 2k (below the size where
-  masking both ears runs into the masking dilemma).
-- Every patient is an adult, nobody shows an emergency sign (no stamp covers those), and no patient's line names a
+- A two-ear gap file has air like a FIT and bone 20 dB above it at 500, 1k and 2k (at 25 dB, masking either ear's
+  bone could hit the masking dilemma).
+- Every masked point on the chart could really be measured: a file where `ClinicRules.masking_dilemma` would hold
+  for any masked air or bone point is rebuilt.
+- Every patient is an adult aged 50 to 88, whatever the call (age never gives the stamp away), nobody shows an
+  emergency sign (no stamp covers those), and no patient's line names a
   cause for their loss: the wall's "ONE EAR WORSE: no known cause" is never undercut by the file.
 - The chart: 250 to 8k with 1.5k, 3k and 6k routine, 750 Hz where `ClinicRules.required_interoctaves` asks for it;
   bone at 500, 1k, 2k and 4k. Symbols as on Day 2 (O X, < >, [ ], △), with a legend under the chart.
@@ -278,8 +282,9 @@ has more than one proof, Hoot points at a ticked box first, then the gap (a gap 
 - **Clean %** counts HOOT HELP as not clean. A shift is **safe** when no red flag was missed and 3 in 4 calls were
   clean.
 - **Promotion:** a safe shift of 8 files or more opens the next shift (the results say what is still missing).
-- **Ranks:** Desk Legend (safe, 90% clean, 10+ files), Red Flag Radar (safe), Better Safe Than Sorry (no flag
-  missed, but extra referrals), Show Your Working (no flag missed, but wrong proofs), Safe Hands (one flag missed),
+- **Ranks:** Desk Legend (safe, 90% clean, 10+ files), Red Flag Radar (safe), Learning the Ropes (no flag
+  missed, but mostly HOOT HELP), Better Safe Than Sorry (no flag missed, but extra referrals), Show Your Working (no
+  flag missed, but wrong proofs), One Got Away (one red flag missed),
   Red Flags Got Through, Coffee Break (nothing stamped).
 - **Boards:** one per shift, safe shifts only. Shift 1 starts with HOO 24,000, GUS 12,000, BON 6,000; shift 2 with
   HOO, SID, VIO. A careful human reads about 15 to 20 files a shift (around 20,000); the bots read 35 to 55.
@@ -342,8 +347,9 @@ Reply with a number only where you disagree. Each item says what the game does n
 4. **AIR-BONE GAP** is masked bone 15 dB or more better than air at 500, 1k **and** 2k in one ear
    (`ClinicRules.abg_red_flag`). The deck never shows a smaller gap, or a gap at only some of those three, so the
    question "does a conductive part short of the flag refer?" never comes up in the game. Tell me if it should.
-5. **Two-ear gaps** (shift 2, and its VIP): air like a FIT, masked bone 20 to 25 dB better on both sides at 500, 1k
-   and 2k. Kept small so masking both ears stays possible (no masking dilemma). The lesson: "the ears match on air,
+5. **Two-ear gaps** (shift 2, and its VIP): air like a FIT, masked bone 20 dB better on both sides at 500, 1k
+   and 2k. Kept at 20 so masking either ear's bone has a safe window (at 25 it could be a masking dilemma); any file
+   with a masking dilemma anywhere is rebuilt. The lesson: "the ears match on air,
    but bone sits way above air: a gap. REFER!"
 6. **Masked bone on air** (the shift 2 warm-up): brackets with no gap are a FIT ("the gap is the distance, not the
    bracket").

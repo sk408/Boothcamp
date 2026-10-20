@@ -5,7 +5,7 @@ extends RefCounted
 ##   const DeskRun := preload("res://story/arcade/desk_run.gd")
 ##   var t := DeskRun.targets(file, sh)            # [{kind: intake, id} | {kind: chart, freq}]
 ##   var j := DeskRun.step(centres, i, Vector2.RIGHT)
-##   var s := DeskRun.slip(v, outcome)             # {title, line}
+##   var s := DeskRun.slip(v, file, outcome, stamp)   # {title, line}
 
 const DeskRules := preload("res://story/arcade/desk_rules.gd")
 const DeskDeck := preload("res://story/arcade/desk_deck.gd")
@@ -52,7 +52,7 @@ const LESSONS: Dictionary = {
 	"dizziness": "Dizzy spells: a doctor first. Balance lives in the inner ear too.",
 	"wax": "Lots of wax: a doctor or nurse clears it first, then test again.",
 	"deformity": "An odd ear shape: a doctor first, before any fitting.",
-	"gap": "Bone hears better than air at 500, 1k and 2k: the middle ear. A doctor first.",
+	"gap": "Bone 15+ better than air at 500, 1k and 2k: the middle ear. A doctor first.",
 }
 const VIP_LINE := "A VIP! Very Insistent Patient. Read the file, not the pleading."
 
@@ -64,18 +64,19 @@ const ROWS: Dictionary = {
 	"gap": "AIR-BONE GAP",
 }
 const ROW_TIPS: Dictionary = {
-	"fit": "Nothing ticked, ears alike, no gap: aids can help.",
+	"fit": "No ticks, ears alike, no gap: aids can help.",
 	"tick": "Read every box: any YES means a doctor first.",
-	"one_ear": "Look for the red O and blue X splitting apart.",
+	"one_ear": "Watch for the red O and blue X splitting.",
 	"gap": "Bone 15+ above air at 500, 1k and 2k.",
 }
 
 const RANK_LINES: Dictionary = {
 	"Desk Legend": "Not a single red flag got past you.",
 	"Red Flag Radar": "Safe and sharp.",
+	"Learning the Ropes": "No flag got past, with Hoot's help. Next time, read them yourself!",
 	"Better Safe Than Sorry": "No flag got past you, but some patients who only needed aids were sent away.",
 	"Show Your Working": "Safe calls! Now point at what proves them.",
-	"Safe Hands": "One slipped past. So close!",
+	"One Got Away": "One red flag slipped past. Read every box before you stamp.",
 	"Red Flags Got Through": "Read every box and both lines before you stamp.",
 	"Incident Report": "A same-day patient went home.",
 	"Desk Closed": "Sudden loss can't wait.",
@@ -156,7 +157,8 @@ static func anchor(t: Dictionary) -> String:
 
 ## Keyboard steps: from target i, the nearest target in direction dir (arrows). Along the
 ## direction counts once and off to the side twice, so Right moves along a row and Down moves down
-## a column. Stays put at an edge.
+## a column; a target further off to the side than along is not in that direction at all (Up and
+## Down on a chart column stay put rather than jump to the intake card). Stays put at an edge.
 static func step(centres: Array[Vector2], i: int, dir: Vector2) -> int:
 	if i < 0 or i >= centres.size():
 		return 0
@@ -170,6 +172,8 @@ static func step(centres: Array[Vector2], i: int, dir: Vector2) -> int:
 		if along <= 4.0:
 			continue
 		var across := absf(d.cross(dir))
+		if across > along:
+			continue
 		var score := along + 2.0 * across
 		if score < best_score:
 			best_score = score

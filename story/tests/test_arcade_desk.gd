@@ -213,6 +213,53 @@ func test_every_gap_on_the_chart_is_masked_bone() -> void:
 							assert_true(bool(f["bc_masked"][ear].get(fr, false)), "shift %d seed %d %s %d Hz: a %d dB gap on unmasked bone" % [sh["id"], seed, ear, fr, gap])
 
 
+func test_age_never_gives_the_call_away() -> void:
+	# adults are never referred for their age, so every kind draws from the same ages
+	for sh: Dictionary in DeskRules.SHIFTS:
+		for kind: String in ["fit"] + (sh["refer_kinds"] as Dictionary).keys():
+			for seed in SEEDS:
+				var f := DeskDeck.make_kind(_rng(seed * 17 + int(sh["id"])), sh, kind, seed)
+				assert_between(int(f["age"]), 50, 88, "shift %d %s seed %d" % [sh["id"], kind, seed])
+
+
+func test_every_masked_point_could_really_be_measured() -> void:
+	# a made-up two-ear gap of 25 dB with the ears 5 dB apart is a masking dilemma: final_chart says so
+	var air := {"right": {}, "left": {}}
+	var gaps := {"right": {}, "left": {}}
+	for fr: int in DeskRules.FREQS:
+		air["right"][fr] = 45
+		air["left"][fr] = 50
+	for ear: String in ClinicRules.EARS:
+		for fr: int in [500, 1000, 2000]:
+			gaps[ear][fr] = 25
+	assert_true(bool(DeskDeck.final_chart(air, gaps)["dilemma"]), "a 25 dB gap in both ears, 5 dB apart")
+	for ear: String in ClinicRules.EARS:
+		for fr: int in [500, 1000, 2000]:
+			gaps[ear][fr] = DeskDeck.GAP_BOTH_DB.max()
+	assert_false(bool(DeskDeck.final_chart(air, gaps)["dilemma"]), "the deck's two-ear gap keeps a safe window")
+	# and the deck never deals one
+	for sh: Dictionary in DeskRules.SHIFTS:
+		for kind: String in ["fit"] + (sh["refer_kinds"] as Dictionary).keys():
+			for seed in SEEDS:
+				var f := DeskDeck.make_kind(_rng(seed * 19 + int(sh["id"])), sh, kind, seed)
+				assert_false(bool(f.get("dilemma", true)), "shift %d %s seed %d" % [sh["id"], kind, seed])
+
+
+func test_750_sits_between_its_neighbours_in_each_ear() -> void:
+	# the interoctave is filled in, never a dip or a peak the patient doesn't have
+	for sh: Dictionary in DeskRules.SHIFTS:
+		for kind: String in ["fit"] + (sh["refer_kinds"] as Dictionary).keys():
+			for seed in SEEDS:
+				var f := DeskDeck.make_kind(_rng(seed * 23 + int(sh["id"])), sh, kind, seed)
+				for ear: String in ClinicRules.EARS:
+					var a: Dictionary = f["ac"][ear]
+					if not a.has(750):
+						continue
+					var lo := mini(int(a[500]), int(a[1000])) - 5
+					var hi := maxi(int(a[500]), int(a[1000])) + 5
+					assert_between(int(a[750]), lo, hi, "shift %d %s seed %d %s: 500/750/1k = %d/%d/%d" % [sh["id"], kind, seed, ear, a[500], a[750], a[1000]])
+
+
 func test_fit_files_have_a_loss_aids_can_help() -> void:
 	for sh: Dictionary in DeskRules.SHIFTS:
 		for seed in SEEDS:
@@ -383,14 +430,17 @@ func test_accuracy_counts_hoot_help_and_gates_the_board() -> void:
 	assert_between(DeskRules.accuracy(helped), 0.499, 0.501)
 	assert_false(DeskRules.safe(helped))
 	assert_false(DeskRules.promoted(helped))
+	assert_eq(DeskRules.rank(helped), "Learning the Ropes", "helps, not extra referrals, made it unclean")
 	var few := {"files": 6, "clean": 6, "helps": 0, "missed_flag": 0, "missed_today": 0}
 	assert_true(DeskRules.safe(few))
 	assert_false(DeskRules.promoted(few), "promotion needs %d files" % DeskRules.PROMOTE_FILES)
 	var missed := {"files": 20, "clean": 19, "helps": 0, "missed_flag": 1, "missed_today": 0}
 	assert_false(DeskRules.safe(missed), "one missed red flag keeps a shift off the board")
-	assert_eq(DeskRules.rank(missed), "Safe Hands")
+	assert_eq(DeskRules.rank(missed), "One Got Away", "never praise a shift that let a red flag through")
 	var over := {"files": 12, "clean": 6, "helps": 0, "missed_flag": 0, "missed_today": 0, "over": 6, "wrong_reason": 0}
 	assert_eq(DeskRules.rank(over), "Better Safe Than Sorry")
+	var wrong := {"files": 12, "clean": 6, "helps": 0, "missed_flag": 0, "missed_today": 0, "over": 1, "wrong_reason": 5}
+	assert_eq(DeskRules.rank(wrong), "Show Your Working")
 	assert_eq(DeskRules.rank({"files": 0}), "Coffee Break")
 	assert_eq(DeskRules.rank({"files": 5, "clean": 3, "missed_today": 1}), "Incident Report")
 	assert_eq(DeskRules.rank({"files": 5, "clean": 3, "missed_today": 2, "closed": true}), "Desk Closed")

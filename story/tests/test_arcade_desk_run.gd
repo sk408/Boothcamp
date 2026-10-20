@@ -106,6 +106,10 @@ func test_the_arrow_keys_reach_every_target_on_the_desk() -> void:
 						seen[j] = true
 						todo.append(j)
 			assert_eq(seen.size(), t.size(), "shift %d %s: arrows from the first box reach all %d targets" % [shift_id, f["kind"], t.size()])
+			for i in t.size():
+				if t[i]["kind"] == "chart":
+					assert_eq(DeskRun.step(centres, i, Vector2.UP), i, "Up on a column stays put")
+					assert_eq(DeskRun.step(centres, i, Vector2.DOWN), i, "Down on a column stays put")
 	view.free()
 
 
@@ -146,7 +150,7 @@ func test_every_playable_kind_has_a_lesson_and_a_breakdown_row() -> void:
 			assert_true(DeskRun.LESSONS.has(DeskRun.lesson(f)), "%s: lesson %s" % [f["kind"], DeskRun.lesson(f)])
 			assert_true(DeskRun.ROWS.has(DeskRun.row(f)), "%s: row %s" % [f["kind"], DeskRun.row(f)])
 			assert_true(DeskRun.ROW_TIPS.has(DeskRun.row(f)))
-	for rank: String in ["Desk Legend", "Red Flag Radar", "Better Safe Than Sorry", "Show Your Working", "Safe Hands",
+	for rank: String in ["Desk Legend", "Red Flag Radar", "Learning the Ropes", "Better Safe Than Sorry", "Show Your Working", "One Got Away",
 			"Red Flags Got Through", "Incident Report", "Desk Closed", "Coffee Break"]:
 		assert_true(DeskRun.RANK_LINES.has(rank), "rank %s has its line" % rank)
 

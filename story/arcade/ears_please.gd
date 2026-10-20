@@ -135,6 +135,7 @@ var _stamps: Dictionary[StringName, StampView] = {}
 var _panel: Control
 var _note_btn: Button
 var _help_btn: Button
+var _skip_btn: Button           # the warm-up's Skip, once this shift has been warmed up on
 var _fx: Control
 var _banner: Label
 var _banner_tw: Tween
@@ -357,11 +358,16 @@ class FileView extends Control:
 		var f := UiKit.font(600)
 		var y := LEGEND.position.y + 16
 		var x := LEGEND.position.x + 10
-		var items := [["right", &"ac", "right"], ["left", &"ac", "left"], ["right", &"bc", "bone"], ["right", &"bc_masked", "masked bone"], ["right", &"ac_masked", "masked air"]]
+		# both ears' symbols for bone and masking, so a blue ] or a blue square is never a mystery
+		var items := [[["right"], &"ac", "right"], [["left"], &"ac", "left"], [["right", "left"], &"bc", "bone"],
+			[["right", "left"], &"bc_masked", "masked bone"], [["right", "left"], &"ac_masked", "masked air"]]
 		for it: Array in items:
-			UiDraw.audiogram_symbol(self, Vector2(x + 8, y - 4), String(it[0]), it[1], 13.0, 2.5)
-			draw_string(f, Vector2(x + 20, y + 2), String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK_SOFT)
-			x += 30 + f.get_string_size(String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+			var sx := x + 8
+			for ear: String in it[0]:
+				UiDraw.audiogram_symbol(self, Vector2(sx, y - 4), ear, it[1], 13.0, 2.5)
+				sx += 15
+			draw_string(f, Vector2(sx - 2, y + 2), String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.INK_SOFT)
+			x = sx + 6 + f.get_string_size(String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 
 	func _draw_marks() -> void:
 		if file.is_empty():
@@ -425,8 +431,14 @@ class StampView extends Control:
 	var key := 1
 	var locked := false
 	var lock_text := ""
-	var pulse := false
-	var wobble := false
+	var pulse := false:
+		set(v):
+			pulse = v
+			queue_redraw()   # _process only redraws while one is on: clear the last frame too
+	var wobble := false:
+		set(v):
+			wobble = v
+			queue_redraw()
 	var _hover := false
 
 	func _init(s: StringName, k: int) -> void:
@@ -553,6 +565,7 @@ func _layout() -> void:
 
 
 func _process(delta: float) -> void:
+	_skip_btn.visible = _phase == "warmup" and not _skip_warmup and _can_skip()
 	if _phase == "run" and not _held:
 		_t += delta
 		if _t >= DeskRules.SHIFT_S:
@@ -611,6 +624,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_picker_key(code, k.physical_keycode)
 		get_viewport().set_input_as_handled()
 		return
+	if code == KEY_S and _phase == "warmup" and _can_skip():
+		skip_warmup()
+		get_viewport().set_input_as_handled()
+		return
 	if _step == "note":
 		if enter:
 			close_note()
@@ -636,12 +653,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif _digit(k) > 0 or code == KEY_H:
 			_flash_right("Point first!")
 			get_viewport().set_input_as_handled()
-		return
-	if code == KEY_S and _phase == "warmup" and _can_skip():
-		_skip_warmup = true
-		if _step == "stamp":
-			_stamped.emit(&"")
-		get_viewport().set_input_as_handled()
 		return
 	var d := _digit(k)
 	if d >= 1 and d <= STAMP_ORDER.size():
@@ -704,7 +715,27 @@ func move_cursor(dir: Vector2) -> void:
 	Sfx.play(&"click", 1.3, -16.0)
 
 
+## S or the Skip button, once this shift's warm-up has been played: the file in hand is parked
+## whatever it is waiting for (a stamp, a proof or a note), and the countdown starts.
+func skip_warmup() -> void:
+	if _phase != "warmup" or _skip_warmup or not _can_skip():
+		return
+	_skip_warmup = true
+	match _step:
+		"stamp":
+			_stamped.emit(&"")
+		"prove":
+			_step = "busy"
+			_pointed.emit({})
+		"note":
+			_note_at = -INF
+			close_note()
+
+
 func press_help() -> void:
+	if _step == "prove":
+		_flash_right("Point first!")   # as the H key says
+		return
 	if _step != "stamp" or Game.clock < _stamp_ready_at:
 		return
 	_step = "busy"
@@ -769,13 +800,14 @@ func _can_skip() -> bool:
 
 func _run() -> void:
 	var open := mini(_unlocked(), DeskRun.PLAYABLE)
-	if again_shift >= 1 and again_shift <= open:
-		_shift_id = again_shift
+	var again := again_shift
+	again_shift = 0   # a one-shot request from Play again: the next visit from the hall picks afresh
+	if again >= 1 and again <= open:
+		_shift_id = again
 	elif open > 1:
 		_shift_id = await _picker(open)
 	else:
 		_shift_id = 1
-	again_shift = _shift_id
 	_sh = DeskRules.shift(_shift_id)
 	_setup_shift()
 	Sfx.music_start()
@@ -831,7 +863,7 @@ func _warmup() -> void:
 		await _serve(DeskRun.warmup_file(_rng, _sh, st, _next_serial()), st)
 	if not _skip_warmup:
 		var w: Array = ArcadeScores.data(MODE).get("warmed", []) if ArcadeScores.data(MODE).get("warmed", []) is Array else []
-		if not w.has(_shift_id):
+		if not _warmed(_shift_id):
 			w.append(_shift_id)
 		ArcadeScores.data(MODE)["warmed"] = w
 		Game.save_game()
@@ -900,6 +932,9 @@ func _serve(f: Dictionary, warm: Array) -> void:
 			await _help(f, boss)
 			return
 		await _stamp_down(s)
+		if _phase != "run" and _phase != "warmup":   # the bell rang under the stamp: parked, uncounted
+			_park(_view)
+			return
 		var target := {}
 		if DeskRules.needs_proof(s):
 			target = await _prove(f, s, warm_kind if not warm.is_empty() and s == want else "")
@@ -959,7 +994,8 @@ func _prove(f: Dictionary, s: StringName, warm_kind: String) -> Dictionary:
 	_beat_serial += 1
 	Events.input_resolved.emit(&"desk_prove")
 	_show_right("stamps")
-	Hoot.dismiss_target(DeskRun.anchor(best))
+	if not best.is_empty():
+		Hoot.dismiss_target(DeskRun.anchor(best))   # an empty anchor would clear every untargeted tip
 	_view.cursor = {}
 	if not t.is_empty():
 		_view.pin = t
@@ -1119,6 +1155,8 @@ func _mark(row: String, outcome: StringName) -> void:
 			m = "clean"
 		DeskRules.MISSED_FLAG, DeskRules.MISSED_TODAY:
 			m = "miss"
+		DeskRules.OVER, DeskRules.TOO_URGENT:
+			m = "extra"
 		&"help":
 			m = "help"
 	(_marks[row] as Array).append(m)
@@ -1200,7 +1238,7 @@ func _picker(open: int) -> int:
 		var best := ArcadeScores.table(MODE, DeskRun.board(id))
 		var mine := _best_score(id)
 		var text := "%d  %s\n%s\n%s" % [id, String(sh["title"]).to_upper(), _shift_blurb(id),
-			("Your best: %s" % _thousands(mine)) if mine > 0 else ("Top: %s %s" % [best[0]["initials"], _thousands(int(best[0]["score"]))])]
+			("Your best lately: %s" % _thousands(mine)) if mine > 0 else ("Top: %s %s" % [best[0]["initials"], _thousands(int(best[0]["score"]))])]
 		if not playable:
 			text = "%d  %s\n%s" % [id, String(sh["title"]).to_upper(), "Coming soon" if id > DeskRun.PLAYABLE else "Finish Shift %d safely (8+ files)" % (id - 1)]
 		var b := UiKit.button(text, &"AccentButton" if id == _picker_pick else &"", Vector2(300, 170))
@@ -1412,6 +1450,13 @@ func _build() -> void:
 	_help_btn.pressed.connect(press_help)
 	_field.add_child(_help_btn)
 	Hoot.register_anchor("desk_help", _help_btn)
+	_skip_btn = UiKit.button("Skip  [S]" if UiKit.show_key_hints() else "Skip warm-up", &"", Vector2(150, 34))
+	_skip_btn.add_theme_font_size_override("font_size", 16)
+	_skip_btn.position = Vector2(736, 24)
+	_skip_btn.size = Vector2(150, 34)
+	_skip_btn.visible = false
+	_skip_btn.pressed.connect(skip_warmup)
+	_field.add_child(_skip_btn)
 	_fx = UiKit.full_rect()
 	_field.add_child(_fx)
 	_banner = UiKit.label("", 84, Palette.SUNNY, 700, 18, Palette.INK)
@@ -1441,7 +1486,9 @@ func _build_right_panel() -> void:
 	ask.custom_minimum_size = Vector2(146, 0)
 	_prove_box.add_child(ask)
 	if UiKit.show_key_hints():
-		_prove_box.add_child(UiKit.hint_row([["←"], ["→"], ["↑"], ["↓"]], 15))
+		# arrow keys as words: the game font has no arrow glyphs (the web build can't fall back)
+		_prove_box.add_child(UiKit.hint_row([["Left"], ["Right"]], 15))
+		_prove_box.add_child(UiKit.hint_row([["Up"], ["Down"]], 15))
 		_prove_box.add_child(UiKit.label("move", 15, Palette.INK_SOFT, 500))
 		_prove_box.add_child(UiKit.hint_row([["Enter"]], 15))
 		_prove_box.add_child(UiKit.label("point (or click)", 15, Palette.INK_SOFT, 500))
@@ -1467,6 +1514,7 @@ func _build_right_panel() -> void:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_note_box.add_child(spacer)
 	_note_btn = UiKit.button("Next  [Enter]" if UiKit.show_key_hints() else "Next", &"AccentButton", Vector2(146, 50))
+	_note_btn.add_theme_font_size_override("font_size", 17)   # fits the 150 px column with its margins
 	_note_btn.pressed.connect(func() -> void:
 		_note_at = -INF
 		close_note())
@@ -1535,8 +1583,8 @@ func _draw_top() -> void:
 		_top.draw_string_outline(f, at, secs, HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 22, 6, Palette.INK)
 		_top.draw_string(f, at, secs, HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 22, Palette.PAPER)
 	else:
-		var w := "WARM-UP: THE DESK ISN'T OPEN YET" + ("  ·  [S] skip" if _phase == "warmup" and _can_skip() and UiKit.show_key_hints() else "")
-		_top.draw_string(f, bar.position + Vector2(0, 25), w, HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 19, Palette.PAPER)
+		var room := bar.size.x - (156.0 if _skip_btn.visible else 0.0)   # the Skip button sits at the bar's right end
+		_top.draw_string(f, bar.position + Vector2(0, 25), "WARM-UP: THE DESK ISN'T OPEN YET", HORIZONTAL_ALIGNMENT_CENTER, room, 19, Palette.PAPER)
 	_top.draw_string(UiKit.font(600), Vector2(906, 34), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(Palette.PAPER, 0.7))
 	_top.draw_string(f, Vector2(906, 68), _thousands(maxi(0, int(_shown_score))), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.PAPER)
 	var clean := int(_counts.get(DeskRules.CLEAN, 0))
@@ -1569,13 +1617,13 @@ func _draw_wall() -> void:
 			var t := float(_window_fx["sparkle"])
 			var rr := r + 10.0 + (0.0 if _reduced() else 30.0 * t)
 			for i in 8:
-				var a := i * TAU / 8.0 + t
+				var a := i * TAU / 8.0 + (0.0 if _reduced() else t)
 				UiDraw.star(_wall, c + Vector2(cos(a), sin(a)) * rr, 7.0, Color(Palette.SUNNY, 1.0 - t * 0.7))
 	# the rule cards
 	var open: Array = _sh.get("rules", ["tick", "one_ear"])
 	var hx := 330.0
 	UiDraw.rounded_rect(_wall, Rect2(hx, 88, CARD_SIZE.x * 3 + 22, 22), Palette.CORAL, 8, 2, Palette.INK)
-	_wall.draw_string(f, Vector2(hx, 105), "RED FLAGS: A DOCTOR FIRST  →  REFER", HORIZONTAL_ALIGNMENT_CENTER, CARD_SIZE.x * 3 + 22, 16, Palette.PAPER)
+	_wall.draw_string(f, Vector2(hx, 105), "RED FLAGS: A DOCTOR FIRST, SO REFER", HORIZONTAL_ALIGNMENT_CENTER, CARD_SIZE.x * 3 + 22, 16, Palette.PAPER)
 	for i in CARD_SLOTS.size():
 		var id := CARD_SLOTS[i]
 		var r := Rect2(Vector2(330 + i * (CARD_SIZE.x + 11), CARD_Y), CARD_SIZE)
@@ -1597,7 +1645,7 @@ func _draw_wall() -> void:
 		var stamp_id: StringName = info["stamp"]
 		var chip := Rect2(r.position + Vector2(r.size.x * 0.5 - 52, 116), Vector2(104, 20))
 		UiDraw.rounded_rect(_wall, chip, STAMP_FACE[stamp_id], 8, 2, Palette.INK)
-		_wall.draw_string(f, chip.position + Vector2(0, 16), "→ " + CaseRules.DECISION_STAMPS[stamp_id], HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 14, Palette.INK)
+		_wall.draw_string(f, chip.position + Vector2(0, 16), CaseRules.DECISION_STAMPS[stamp_id], HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 14, Palette.INK)
 		if String(fx.get("mark", "")) == "check":
 			UiDraw.check(_wall, r.position + Vector2(r.size.x - 22, 22), 22.0, Palette.MINT, 5.0)
 	# the wall clock: 9:00 to 11:00 over the shift (one second a clock minute)
@@ -1722,7 +1770,7 @@ func _show_results() -> void:
 	col.add_child(mid)
 	var miss := Control.new()
 	var rows := DeskRun.ROWS.keys().filter(func(r: String) -> bool: return _marks.has(r)).size()
-	miss.custom_minimum_size = Vector2(500, 30 + rows * 38 + 46)
+	miss.custom_minimum_size = Vector2(500, 30 + rows * 38 + 64)   # rows, a two-line tip, the legend
 	miss.draw.connect(_draw_breakdown.bind(miss))
 	mid.add_child(miss)
 	var board := VBoxContainer.new()
@@ -1786,8 +1834,9 @@ func _fill_board(board: VBoxContainer, placed: int, key: String) -> void:
 		board.add_child(UiKit.label("%d.  %s   %s" % [placed + 1, t[placed]["initials"], _thousands(int(t[placed]["score"]))], 20, Palette.SELECT_ORANGE, 700))
 
 
-## WHAT YOU MISSED: one row per kind of file met this shift, a mark per file (✓ clean, ~ half,
-## ✕ missed, ? helped) and the row with the most trouble tinted, with its tip.
+## WHAT YOU MISSED: one row per kind of file met this shift, a mark per file (a tick clean, ~ wrong
+## proof, + extra referral, a cross missed, ? helped) and the row with the most trouble tinted,
+## with its tip. The tick and cross are drawn, not typed: the game font has no such glyphs.
 func _draw_breakdown(c: Control) -> void:
 	var f := _font()
 	c.draw_string(f, Vector2(0, 18), "WHAT YOU MISSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
@@ -1812,26 +1861,39 @@ func _draw_breakdown(c: Control) -> void:
 		var x := 186.0
 		var good := marks.count("clean")
 		for m: String in marks.slice(0, 12):
-			var mc := Vector2(x, r.get_center().y)
-			match m:
-				"clean":
-					UiDraw.check(c, mc, 14.0, Palette.MINT, 3.5)
-				"miss":
-					UiDraw.cross(c, mc, 12.0, Palette.CORAL, 3.5)
-				"help":
-					c.draw_string(f, mc + Vector2(-5, 6), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Palette.INK_SOFT)
-				_:
-					c.draw_string(f, mc + Vector2(-6, 7), "~", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.SELECT_ORANGE)
+			_draw_mark(c, m, Vector2(x, r.get_center().y))
 			x += 18.0
 		if marks.size() > 12:
 			c.draw_string(f, Vector2(x - 6, r.position.y + 22), "…", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Palette.INK_SOFT)
 		c.draw_string(f, Vector2(r.end.x - 70, r.position.y + 22), "%d of %d" % [good, marks.size()], HORIZONTAL_ALIGNMENT_RIGHT, 60, 15, Palette.INK_SOFT)
 		y += 38.0
 	if worst != "":
-		c.draw_string(UiKit.font(600), Vector2(0, y + 16), "Blind spot: %s. %s" % [String(DeskRun.ROWS[worst]), String(DeskRun.ROW_TIPS[worst])], HORIZONTAL_ALIGNMENT_LEFT, c.size.x, 15, Palette.CORAL)
+		c.draw_multiline_string(UiKit.font(600), Vector2(0, y + 16), "Blind spot: %s. %s" % [String(DeskRun.ROWS[worst]), String(DeskRun.ROW_TIPS[worst])], HORIZONTAL_ALIGNMENT_LEFT, c.size.x, 15, 2, Palette.CORAL)
 	elif _files > 0:
 		c.draw_string(UiKit.font(600), Vector2(0, y + 16), "Every file by the book. Nice reading!", HORIZONTAL_ALIGNMENT_LEFT, c.size.x, 15, Palette.MINT)
-	c.draw_string(UiKit.font(500), Vector2(0, c.size.y - 4), "✓ clean   ~ half right   ✕ missed   ? helped", HORIZONTAL_ALIGNMENT_LEFT, c.size.x, 14, Palette.INK_SOFT)
+	var lx := 8.0
+	for it: Array in [["clean", "clean"], ["half", "wrong proof"], ["extra", "extra referral"], ["miss", "missed"], ["help", "helped"]]:
+		_draw_mark(c, String(it[0]), Vector2(lx, c.size.y - 9), 0.8)
+		var w := String(it[1])
+		c.draw_string(UiKit.font(500), Vector2(lx + 10, c.size.y - 4), w, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Palette.INK_SOFT)
+		lx += 30.0 + UiKit.font(500).get_string_size(w, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+
+
+## One breakdown mark: a tick (clean), ~ (right stamp, wrong proof), + (extra referral), a cross
+## (a missed red flag) or ? (Hoot helped).
+func _draw_mark(c: Control, m: String, at: Vector2, k := 1.0) -> void:
+	var f := _font()
+	match m:
+		"clean":
+			UiDraw.check(c, at, 14.0 * k, Palette.MINT, 3.5 * k)
+		"miss":
+			UiDraw.cross(c, at, 12.0 * k, Palette.CORAL, 3.5 * k)
+		"help":
+			c.draw_string(f, at + Vector2(-5, 6) * k, "?", HORIZONTAL_ALIGNMENT_LEFT, -1, int(17 * k), Palette.INK_SOFT)
+		"extra":
+			c.draw_string(f, at + Vector2(-6, 7) * k, "+", HORIZONTAL_ALIGNMENT_LEFT, -1, int(22 * k), Palette.SELECT_ORANGE)
+		_:
+			c.draw_string(f, at + Vector2(-6, 7) * k, "~", HORIZONTAL_ALIGNMENT_LEFT, -1, int(22 * k), Palette.SELECT_ORANGE)
 
 
 ## (coroutine) Three letters: type them, or click the arrows; Enter or OK. Returns the initials.

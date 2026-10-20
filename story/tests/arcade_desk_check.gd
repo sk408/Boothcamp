@@ -300,7 +300,7 @@ class Driver extends Node:
 			problems.append("%d stamp beats after the clock ran out" % _after_end)
 		if _bosses.size() > 1:
 			problems.append("%d VIP files in one shift" % _bosses.size())
-		if int(beats.get("desk_prove", 0)) > files + int(beats.get("desk_stamp", 0)):
+		if int(beats.get("desk_prove", 0)) > int(beats.get("desk_stamp", 0)):
 			problems.append("more proofs than stamps")
 		match policy:
 			"careful", "keys", "mouse":

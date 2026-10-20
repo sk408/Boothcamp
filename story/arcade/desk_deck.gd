@@ -9,7 +9,9 @@ extends RefCounted
 ##   - a FIT file's ears both have a pure-tone average of 30 to 65 dB HL (a loss aids can help)
 ##   - a same-day file's poorer ear is at least CaseRules.SUDDEN_MIN_DB worse at
 ##     CaseRules.SUDDEN_MIN_FREQS or more neighbouring frequencies
-##   - every patient is an adult; nobody gets an emergency-room sign (no stamp covers those)
+##   - every patient is an adult, 50 to 88 whatever the call (age never gives the stamp away);
+##     nobody gets an emergency-room sign (no stamp covers those)
+##   - every masked point on the chart could really be measured: no masking dilemma
 ##   - outside the gap kinds, both ears are sensorineural (no conductive part a doctor should see)
 ##   - nobody's line names a cause for their loss (noise, an injury): "one ear worse" on the wall
 ##     means "no known cause", and a file never gives one
@@ -42,8 +44,9 @@ const MILD_SHAPES: Dictionary[String, Array] = {
 }
 const ONE_EAR_ON_FIT := 0.6
 ## A two-ear air-bone gap (gap_both): air like a FIT file, bone this far above it at 500, 1k and 2k.
-## Kept at 20 to 25 dB, below the size where masking both ears runs into the masking dilemma.
-const GAP_BOTH_DB: Array[int] = [20, 25]
+## Kept at 20 dB: with the ears 5 dB apart or less, masking either ear's bone still has a safe
+## window (initial = other air + 10 < this ear's bone + 40). At 25 dB it could be a masking dilemma.
+const GAP_BOTH_DB: Array[int] = [20]
 ## Where a one-sided band of poorer hearing may start (it then runs upward in pitch).
 const BAND_STARTS: Array[int] = [1000, 2000, 3000, 4000]
 
@@ -136,7 +139,7 @@ static func make_boss(rng: RandomNumberGenerator, sh: Dictionary, serial: int) -
 
 ## Does a built file make the call it was built for, with every margin clear?
 static func valid(f: Dictionary, sh: Dictionary, kind: String) -> bool:
-	if f.is_empty():
+	if f.is_empty() or bool(f.get("dilemma", false)):
 		return false
 	var v := DeskRules.decide(f)
 	var want: StringName = f["want"]
@@ -272,10 +275,11 @@ static func _build(rng: RandomNumberGenerator, sh: Dictionary, kind: String, ser
 	var said: Array = LINES[rng.randi() % LINES.size()]
 	var f := {
 		"serial": serial, "who": "desk_%d" % serial, "name": "%s %s" % [first, last],
-		"age": rng.randi_range(50, 88) if want == &"fit" else rng.randi_range(34, 86),
+		"age": rng.randi_range(50, 88),
 		"line": said[0], "goal": said[1], "look": _look(rng, face), "want": want, "kind": kind, "boss": "",
 		"ac": chart["ac"], "ac_masked": chart["ac_masked"], "bc": chart["bc"], "bc_masked": chart["bc_masked"],
 		"intake": intake, "sudden": sudden, "poorer": poorer if kind in ["one_ear", "today", "sudden_late", "gap"] else "",
+		"dilemma": bool(chart["dilemma"]),
 	}
 	return f
 
@@ -347,8 +351,14 @@ static func _fill_interoctaves(air: Dictionary) -> void:
 			v[ear] = int(round((int(a[pair[0]]) + int(a[pair[1]])) / 10.0)) * 5
 		var d := int(v["right"]) - int(v["left"])
 		if absi(d) > MARGIN_DB and absi(d) < CLEAR_DB:
-			# keep the lower neighbour's difference between the ears (clear one way or the other)
-			v["right"] = int(v["left"]) + int(air["right"][pair[0]]) - int(air["left"][pair[0]])
+			# keep the lower neighbour's difference between the ears (clear one way or the other),
+			# moving the ear that jumps across the pair: the steady ear keeps its own smooth line
+			var jump := {}
+			for ear: String in ClinicRules.EARS:
+				jump[ear] = absi(int(air[ear][pair[1]]) - int(air[ear][pair[0]]))
+			var mover := "right" if int(jump["right"]) >= int(jump["left"]) else "left"
+			var keep := "left" if mover == "right" else "right"
+			v[mover] = int(v[keep]) + int(air[mover][pair[0]]) - int(air[keep][pair[0]])
 		for ear: String in ClinicRules.EARS:
 			air[ear][fr] = ClinicRules.clamp_db(int(v[ear]), fr)
 
@@ -356,14 +366,15 @@ static func _fill_interoctaves(air: Dictionary) -> void:
 ## The chart a clinician records from the true air and bone (bone IA 0, phones IA 40):
 ## air is masked where ClinicRules.ac_masking_needed; bone is masked where the unmasked response
 ## (the better cochlea) leaves a gap of ClinicRules.BC_MASK_GAP_DB (10 dB) or more
-## (ClinicRules.bc_masking_needed), and then shows the ear's own bone.
+## (ClinicRules.bc_masking_needed), and then shows the ear's own bone. "dilemma" is true when any
+## masked point could not really be measured (ClinicRules.masking_dilemma); valid() rejects those.
 static func final_chart(air: Dictionary, bone_gap: Dictionary) -> Dictionary:
 	var true_bc := {"right": {}, "left": {}}
 	for ear: String in ClinicRules.EARS:
 		for fr: int in air[ear]:
 			true_bc[ear][fr] = int(air[ear][fr]) - int(bone_gap[ear].get(fr, 0))
 	var out := {"ac": {"right": {}, "left": {}}, "ac_masked": {"right": {}, "left": {}},
-		"bc": {"right": {}, "left": {}}, "bc_masked": {"right": {}, "left": {}}}
+		"bc": {"right": {}, "left": {}}, "bc_masked": {"right": {}, "left": {}}, "dilemma": false}
 	for ear: String in ClinicRules.EARS:
 		var other := "left" if ear == "right" else "right"
 		var keys: Array = (air[ear] as Dictionary).keys()
@@ -373,12 +384,20 @@ static func final_chart(air: Dictionary, bone_gap: Dictionary) -> Dictionary:
 			out["ac"][ear][fr] = a
 			if ClinicRules.ac_masking_needed(a, int(true_bc[other].get(fr, a)), &"phones", fr):
 				out["ac_masked"][ear][fr] = true
+				var o := int(air[other].get(fr, a))
+				var start := ClinicRules.initial_masking(o, fr, &"ac_masked")
+				if ClinicRules.masking_dilemma(start, ClinicRules.overmask_limit(a, &"ac_masked", a - int(true_bc[ear][fr]))):
+					out["dilemma"] = true
 		for fr: int in DeskRules.BONE_FREQS:
 			var own := int(true_bc[ear][fr])
 			var unmasked := mini(own, int(true_bc[other][fr]))
 			if ClinicRules.bc_masking_needed(int(air[ear][fr]), unmasked):
 				out["bc"][ear][fr] = own
 				out["bc_masked"][ear][fr] = true
+				var o := int(air[other][fr])
+				var start := ClinicRules.initial_masking(o, fr, &"bc_masked", o - int(true_bc[other][fr]))
+				if ClinicRules.masking_dilemma(start, ClinicRules.overmask_limit(own, &"bc_masked")):
+					out["dilemma"] = true
 			else:
 				out["bc"][ear][fr] = unmasked
 	return out
