@@ -14,7 +14,7 @@ signal finished
 
 const SPEED := 8.0
 ## Gaps and tone lengths vary like a careful clinician's (never a steady rhythm).
-const GAPS: Array[float] = [0.9, 1.6, 1.2, 2.0, 1.0, 1.8, 1.4, 2.2]
+const GAPS: Array[float] = [1.1, 1.6, 1.2, 2.0, 1.05, 1.8, 1.4, 2.2]  ## (E6) never shorter than a beep
 const DURATIONS: Array[float] = [1.3, 1.6, 1.2, 1.5, 1.7, 1.4]
 
 var running := false
