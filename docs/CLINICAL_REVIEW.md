@@ -29,7 +29,7 @@ Owners and when: **Engine**, **Day 1** and **Day 2** items go to the integrator 
 | Masking dilemma | Explain it, and build a later, more advanced case that has one | E9 done; C9 |
 | Masked air | Use it in a more advanced case | C10 |
 | 1 kHz retest in the first ear only | Steve is reading ASHA and BSA on it; default below | E2 done by default (question 2) |
-| Routine frequencies | 1.5, 3 and 6 kHz routine; 750 Hz only when 500 Hz and 1 kHz differ by 20 dB or more | E1 |
+| Routine frequencies | 1.5, 3 and 6 kHz routine; 750 Hz only when 500 Hz and 1 kHz differ by 20 dB or more | E1 done |
 | Case with a 750 Hz jump | Needed | Day 9 Ginger already has one (500 to 1k: 25 dB right, 20 dB left), see C11 |
 | Stimulus | Pulsed tones by default, and a bit louder for the player | E7 done |
 | Tinnitus | Hoot explains pulsed and warble tones during the tinnitus case | E8 and C8 done |
@@ -47,7 +47,7 @@ Where Steve has not answered, the default in the question list at the end applie
 
 ### Engine and audiometer screen (Engine)
 
-**E1. Routine 1.5, 3 and 6 kHz; 750 Hz on the 20 dB rule.** [Choice: Steve decided]
+**E1. Routine 1.5, 3 and 6 kHz; 750 Hz on the 20 dB rule.** [Choice: Steve decided] **Done** (`ClinicRules.ROUTINE_FREQS`; Hoot explains the in-between pitches at the first 1.5 kHz stamp)
 Today 750, 1500, 3000 and 6000 Hz are added only when the neighbouring octaves differ by 20 dB or more (`autoload/clinic_rules.gd:18-20`, `INTEROCTAVES` and `TEST_ORDER`; `core/audiometry_session.gd:1106-1126`, `required_remaining`). So Gus, the Day 1 hearing-aid candidate with a high-frequency loss, never gets 3 or 6 kHz. New air order per ear: 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, retest 1k, 500, 250, with 750 added only when 500 Hz and 1 kHz differ by 20 dB or more. Every patient file already holds values at all ten frequencies. Also update the order tips, Hoot's montages, par, the autoplay baselines and the docs that print the order. ASHA (2005) lists 3 and 6 kHz in the standard order; 1.5 kHz routine is a dispensing habit (fitting software uses it), which is fine.
 
 **E2. 1 kHz retest in the first ear only.** [Wrong; question 2's default] **Done** (e5e70d3)
