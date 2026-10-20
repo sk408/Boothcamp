@@ -32,7 +32,7 @@ Owners and when: **Engine**, **Day 1** and **Day 2** items go to the integrator 
 | Routine frequencies | 1.5, 3 and 6 kHz routine; 750 Hz only when 500 Hz and 1 kHz differ by 20 dB or more | E1 |
 | Case with a 750 Hz jump | Needed | Day 9 Ginger already has one (500 to 1k: 25 dB right, 20 dB left), see C11 |
 | Stimulus | Pulsed tones by default, and a bit louder for the player | E7 done |
-| Tinnitus | Hoot explains pulsed and warble tones during the tinnitus case | E8 done; C8 |
+| Tinnitus | Hoot explains pulsed and warble tones during the tinnitus case | E8 and C8 done |
 | 125 Hz | Not added: rare in practice and hearing aids barely use it | none |
 | Short gaps between tones | Fine as a simplification, but a short gap should at least break the combo | E6 done |
 | Bone masking flag | Taken from the best unmasked bone threshold anywhere | Already on `main` (`ClinicRules.unmasked_bone`); the 10 dB gap is done by default (E5) |
@@ -158,7 +158,7 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **C7. Small wording fixes.** [Kept] **Done** (PR #7, with a 0.6 to 2.0 mL band) "Wax out by a doctor" (`story/cases/wax.json:142`, `:168`) can become "by a doctor or a trained clinician" (question 8). The retest card "TWO DAYS LATER" (`story/cases/wax.json:183`) follows "softening drops for a few days": "A WEEK LATER" fits (BSA aural care guidance, 2025). The printed adult canal band of 0.9 to 2.0 mL (`core/cases/case_rules.gd:78`, printed at `story/games/case_tymp.gd:175`) is a male band; many women's canals are 0.7 to 0.9 mL (question 10). ("Bone mostly skips the middle ear" is **Done** in PR #5.)
 
-**C8. The tinnitus lesson.** [Steve decided] Hoot already says pulsed beeps stand out from a ringing or roaring ear (`story/cases/noise_notch.json:83`, `story/cases/menieres.json:99`), but nothing in play changes. With E7 (pulsed is the default) and E8 (tinnitus affects steady tones), Hoot can explain on Rocco's day why the beep pulses, and that some clinics use a warble tone instead (BSA prefers warble); Marina's day keeps a short version.
+**C8. The tinnitus lesson.** [Steve decided] **Done** (PR #16) Hoot already says pulsed beeps stand out from a ringing or roaring ear (`story/cases/noise_notch.json:83`, `story/cases/menieres.json:99`), but nothing in play changes. With E7 (pulsed is the default) and E8 (tinnitus affects steady tones), Hoot can explain on Rocco's day why the beep pulses, and that some clinics use a warble tone instead (BSA prefers warble); Marina's day keeps a short version.
 
 **C9. New advanced case: a masking dilemma.** [Steve decided] A case near the end of the days with a large conductive loss in both ears, where the starting noise already risks overmasking. It needs E9 first.
 
@@ -212,7 +212,7 @@ These were checked against the freestyle code as merged (it has not changed on `
 ### All days (each owner for its own days)
 
 - **A1. The routine around the test.** [Missing] **Done** for the cases (PR #9) and Freestyle (PR #11). No day mentions the daily listening check of the audiometer and the button, a fresh speculum or cleaned cushions between patients, or keeping the dials out of the patient's view (BSA 2018, 4.1, 4.2 and 11.1; ASHA 2005). Short, ungraded Hoot lines where the action already happens, in every day that does it.
-- **A2. Explainers when a day is played first.** [Missing] **Done** for Freestyle (PR #11); E19 is on `main` for the cases. Every day is open, so a player who starts on a case day meets masked bone and "the Ghost" without the masking movie. Before the first masked bone of a visit, if the masking movie is unseen, play the 12-second recap card and have Hoot point at the full movie in the pause menu (needs E19). Masking is the concept students find hardest (Skinner, Billingsly and Conley 2023).
+- **A2. Explainers when a day is played first.** [Missing] **Done** for Freestyle (PR #11) and the cases (PR #16). Every day is open, so a player who starts on a case day meets masked bone and "the Ghost" without the masking movie. Before the first masked bone of a visit, if the masking movie is unseen, play the 12-second recap card and have Hoot point at the full movie in the pause menu (needs E19). Masking is the concept students find hardest (Skinner, Billingsly and Conley 2023).
 - **A3. Explainers in general.** The cases' movies are **Done** (PR #15); Days 1 and 3 have none yet (D1-8, S7).
 - **A4. Speech in noise.** Freestyle's FIT line is **Done** (PR #11). Steve runs it on every test. When Day 5 lands, the FIT calls in the cases and freestyle should include it (C13, FS-13).
 
