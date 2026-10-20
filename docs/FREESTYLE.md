@@ -533,7 +533,7 @@ does now); answer only where you disagree, by number. The first seven change the
 - **FS-07** (after the engine's E2): one session covers the visit, so only the first air ear owes the 1 kHz
   retest, or the second too after a first-ear mismatch over 5 dB. The bone plan no longer sets
   `skip_hoot_retest`: the screen waives the retest per ear, so a bone run before air used to cost that ear its
-  air retest, and with it the visit's only one.
+  air retest, and the visit its only one when that ear also went first on air (the default pick for both).
 
 Steve's answer on the Buck decision card (2026-10-19, question 14: keep REFER) is in this change too: Buck is a
 REFER again, with his trouble spots kept as the goals for a fitting once a doctor clears him.
