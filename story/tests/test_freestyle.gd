@@ -434,7 +434,8 @@ func test_a_visit_pauses_to_the_masking_movie() -> void:
 	m.erase("seen_at")
 	Movies.extra["fake_day_movie"] = m
 	Game.current_chapter_id = "rocco"   # the day played last, with a movie of its own
-	assert_false(Movies.for_level(Game.current_chapter_id, true).has("masking"), "a day's own movie would win")
+	# (cases) a level that can mask offers every replay movie, even beside a day's own movies
+	assert_true(Movies.for_level(Game.current_chapter_id, true).has("masking"), "the masking movie stays beside a day's own")
 	var room: Control = (load("res://story/freestyle/waiting_room.tscn") as PackedScene).instantiate()
 	add_node(room)
 	await wait_frames(1)

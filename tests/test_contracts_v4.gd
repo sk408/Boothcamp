@@ -565,12 +565,25 @@ func test_title_movies_button() -> void:
 	assert_true(b.visible, "shown in the menu state")
 	b.pressed.emit()
 	await wait_frames(3)
+	# (cases, C12) with several movies (the case days add three) the list opens over the title:
+	# play its first row, then Back closes the whole menu
+	var several := Movies.replay_ids().size() > 1
+	if several:
+		assert_true(bool(menu.call("is_movie_list_open")), "several movies: the list opens over the title")
+		var rows: Array = menu.call("movie_list_rows")
+		assert_eq(rows.size(), Movies.replay_ids().size(), "one row per movie")
+		menu.call("play_movie", String(rows[0]["id"]))
+		await wait_frames(3)
 	var p := tree.get_first_node_in_group("explainer_player")
 	assert_true(p != null and bool(p.call("is_playing")), "the movie plays from the title")
 	assert_eq(sources, ["title"], "source title")
 	assert_true(tree.paused, "the title waits paused")
 	p.call("skip_all")
 	await wait_frames(6)
+	if several:
+		assert_true(bool(menu.call("is_movie_list_open")), "the list comes back after the movie")
+		menu.call("close_movie_list")
+		await wait_frames(2)
 	assert_false(bool(menu.call("is_open")), "back on the title, the menu closed")
 	assert_false(tree.paused)
 	assert_eq(title.get("_state"), &"menu")

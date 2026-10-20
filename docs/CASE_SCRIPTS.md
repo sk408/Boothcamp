@@ -4,6 +4,18 @@ Generated from `story/cases/*.json` by `python3 tools/case_scripts.py`. Do not e
 JSON and run the tool again. Every Hoot line is 18 words or fewer (`story/tests/test_cases.gd`). Choices
 are shown in file order; the game shuffles them.
 
+## Hoot's case movies (every case day)
+
+Each plays just before its step on the player's first case, after Hoot's lead-in. On a later case Hoot
+offers one that was never watched to the end; once watched, it lives in the pause menu (Hoot's Movies)
+and the title's list. The movies' captions are in `story/explainers/movies/<id>.gd`.
+
+| Movie | When | Lead-in (first case) | Offer (later case) |
+|---|---|---|---|
+| Hoot's case files movie (`case_files`) | before the patient knocks | New today: CASE FILES! A quick cartoon on the three stamps, then our patient. | Hoot's case files movie: the three stamps and the red flags. Watch it first? |
+| Hoot's tympanometer movie (`tymp`) | before the tympanometer | New gadget: the Tymp-O-Matic! A quick cartoon on what it shows, then we test. | Hoot's tympanometer movie: what those curves mean. Watch it before the tymp? |
+| Hoot's audiogram movie (`shapes`) | before the chart | Chart time! A quick cartoon on audiogram shapes, then you name this one. | Hoot's audiogram movie: slopes, notches and cookie bites. Watch it before the chart? |
+
 ## Rocco Rimshot's Case (`noise_notch`)
 
 **The call:** FIT

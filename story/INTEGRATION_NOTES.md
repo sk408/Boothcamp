@@ -154,6 +154,21 @@ Requests for the integrator and the title owner:
   0.9, already NORMAL under the old `< 0.9` check), so no freestyle reading changes.
 - **Otoscopy on both ears.** A case's first look shows the other ear first (`OTHER_EAR_CAPTION`), then the
   case's ear, so both ears are looked at before any probe or insert goes in (about two seconds longer).
+- **Hoot's case movies (clinical review C12).** Three movies (`case_files`, `tymp`, `shapes`) for every case day.
+  Additive changes to shared files: `story/explainers/movies.gd` registers them, gains an optional movie key
+  `also_chapters` (`for_chapter` lists a movie on those chapters too; new `chapters_of(movie)`), and `day_label`
+  reads "Days 6-11" for a movie on several days (one-day movies still read "Day 2"). `tools/autoplay_bot.gd` checks
+  that a fresh save's case day starts all three (they play through the existing `explainer` beat, keys and mouse).
+  Their sets live in `story/case_movies/`, so the stage is untouched. The title now has more than one movie, so
+  its button opens the movie list (the existing `title_screen._on_movies` path): `tests/test_contracts_v4.gd`
+  `test_title_movies_button` plays the list's first row when there are several (Days 4 and 5 hit the same thing).
+  With E19, `Movies.for_level` now returns every replay movie whenever the level can mask (it used to only when the
+  chapter had none of its own); otherwise the case days, which now have three of their own, would have lost the
+  masking movie from their pause menu. `story/tests/test_freestyle.gd` `test_a_visit_pauses_to_the_masking_movie`
+  asserted the old behaviour ("a day's own movie would win"); that line now checks the new one.
+  `story/explainers/explainer_stage.gd` (two lines, via a new `_card_scene()`): a movie's own opening set with
+  `params.card_hold` is entered like Day 2's "meet" (no iris over the curtains; the scene chip waits for the card).
+  Only scenes with `card_hold` change, so the masking movie looks exactly as before.
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
@@ -166,7 +181,7 @@ Requests for the integrator and the title owner:
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
   Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (37 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Tests:** `story/tests/test_cases.gd` (40 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
   a warning without python3).
 
