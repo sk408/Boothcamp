@@ -26,6 +26,16 @@ class FixedSim extends PatientSim:
 		return true
 
 
+## (E4) Every tone is heard, and by the other cochlea: the Cross-Hearing Ghost on demand.
+class CrossSim extends FixedSim:
+	func on_tone_start(ear: String, freq: int, db: int, gap_s: float) -> Dictionary:
+		var d := super(ear, freq, db, gap_s)
+		last_heard_by = &"cross"
+		d["heard"] = true
+		d["press"] = true
+		return d
+
+
 const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]
 var _n := 0
 
@@ -341,6 +351,7 @@ func test_retest_ok_and_mismatch() -> void:
 	var info := s.store()
 	assert_true(bool(info["retest"]))
 	assert_has(kinds, &"retest_ok")
+	assert_false(kinds.has(&"retest_why"), "a retest that agrees needs no explaining")
 	assert_eq(int((s.retest["right"] as Dictionary)["diff"]), 0)
 	assert_eq(int(s.stored["right"][1000]["stored_db"]), 25, "first 1 kHz result kept")
 
@@ -429,6 +440,111 @@ func test_timing_and_rhythm_errors() -> void:
 		_tick(s, 1.2)
 		s.tone_up()
 	assert_has(kinds, &"rhythmic")
+
+
+## (E3) A retest more than 5 dB off: the retest_mismatch error, then Hoot's beat on why it
+## matters (worse: tired or a lucky first stamp), re-instruct, recheck, and the second ear's retest.
+func test_failed_retest_explains_why() -> void:
+	var s := _session()
+	var kinds := _kinds(s)
+	var why: Array = []
+	s.technique.connect(func(k: StringName, d: Dictionary) -> void:
+		if k == &"retest_why":
+			why.append(d))
+	for lvl: int in [40, 30, 20, 25, 15, 20, 25]:
+		s.set_level(lvl)
+		_present(s)
+	s.store()
+	s.set_freq(2000)
+	for lvl: int in [50, 40, 30, 35, 40, 30, 35, 40]:
+		s.set_level(lvl)
+		_present(s)
+	s.store()
+	s.set_freq(1000)
+	(s.sim as FixedSim).force = {25: false, 30: false}   # he drifts: 35 is his answer now
+	for lvl: int in [35, 25, 30, 35, 25, 30, 35]:
+		s.set_level(lvl)
+		_present(s)
+	var info := s.store()
+	assert_true(bool(info["retest"]))
+	assert_eq(int((s.retest["right"] as Dictionary)["diff"]), 10)
+	assert_has(kinds, &"retest_mismatch")
+	assert_eq(kinds.find(&"retest_why"), kinds.find(&"retest_mismatch") + 1, "the beat follows the error")
+	assert_eq(why.size(), 1)
+	var lines: Array = why[0]["lines"]
+	assert_eq(lines, s.retest_beat("right"))
+	assert_false(bool(why[0]["better"]))
+	assert_eq(lines.size(), 3)
+	assert_true(String(lines[0]).begins_with("Worse by over 5 dB! He may be tired"), String(lines[0]))
+	assert_true(String(lines[1]).begins_with("Re-instruct him, then recheck"), String(lines[1]))
+	assert_eq(lines[2], AudiometrySession.RETEST_OTHER_EAR, "the first ear's mismatch: the second ear owes one")
+	assert_true(s.retest_required("left"))
+	# better on the retest: the patient warmed up, so the first stamps may sit too high
+	(s.retest["right"] as Dictionary).merge({"stored_db": 10, "diff": 15}, true)
+	assert_true(String(s.retest_beat("right")[0]).begins_with("Better by over 5 dB!"))
+	(s.retest["right"] as Dictionary).merge({"stored_db": 30, "diff": 5}, true)
+	assert_eq(s.retest_beat("right"), [] as Array[String], "within 5 dB: nothing to explain")
+	s.retest_waived["left"] = true
+	(s.retest["right"] as Dictionary).merge({"stored_db": 40, "diff": 15}, true)
+	assert_eq(s.retest_beat("right").size(), 2, "a waived second ear is not told to retest")
+	for t: String in AudiometrySession.RETEST_WHY_BETTER + AudiometrySession.RETEST_WHY_WORSE + [AudiometrySession.RETEST_OTHER_EAR]:
+		assert_true(t.split(" ", false).size() <= Hoot.MAX_WORDS, t)
+
+
+## (E6) A gap shorter than the beep before it (under ClinicRules.SHORT_GAP_S) breaks the combo,
+## with no error and no technique cost; the tip shows once. A gap as long as the beep is fine.
+func test_short_gap_breaks_the_combo() -> void:
+	var s := _session()
+	var kinds := _kinds(s)
+	s.set_level(40)
+	_present(s)
+	s.set_level(30)
+	_present(s)
+	s.set_level(20)
+	s.tone_down()
+	_tick(s, 1.5)
+	s.tone_up()
+	_tick(s, 0.5)
+	assert_eq(s.combo, 3, "three textbook steps")
+	var errs := s.errors.size()
+	var checks := s.checks
+	s.set_level(25)
+	s.tone_down()   # 0.5 s after a 1.5 s beep
+	assert_eq(s.combo, 0, "a rushed beep breaks the combo")
+	assert_eq(s.errors.size(), errs, "no error")
+	assert_eq(s.checks, checks + 1, "only the step itself was checked")
+	assert_eq(kinds.count(&"short_gap"), 1, "the tip once")
+	_tick(s, 1.5)
+	s.tone_up()
+	_tick(s, 0.5)
+	s.set_level(15)
+	s.tone_down()
+	assert_eq(kinds.count(&"short_gap"), 1, "and only once per visit")
+	_tick(s, 0.6)
+	s.tone_up()
+	_tick(s, 0.8)   # longer than that 0.6 s beep: fine
+	s.set_level(20)
+	var before := s.combo
+	s.tone_down()
+	assert_eq(s.combo, before + 1, "a gap as long as the beep keeps the combo")
+
+
+## (E4) The Ghost's lesson names the route: air crosses when it is loud, bone has almost no IA.
+func test_cross_hearing_tip_by_transducer() -> void:
+	var s := AudiometrySession.new(Game.load_patient("gus") as PatientProfile, 5)
+	s.sim = CrossSim.new(s.patient)
+	var kinds := _kinds(s)
+	s.set_level(40)
+	_present(s)
+	assert_has(kinds, &"cross_hearing_air")
+	assert_false(kinds.has(&"cross_hearing"))
+	assert_true(s.tip_text(&"cross_hearing_air").ends_with("Time to mask."))
+	s.configure({"test": &"bc"})
+	s.set_freq(1000)
+	s.set_level(20)
+	_present(s)
+	assert_has(kinds, &"cross_hearing")
+	assert_eq(kinds.count(&"cross_hearing_air"), 1)
 
 
 func test_short_blip_is_thrown_away_and_the_level_kept() -> void:

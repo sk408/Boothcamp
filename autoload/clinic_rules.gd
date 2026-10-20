@@ -39,6 +39,9 @@ const TONE_TOO_SHORT_S := 0.5
 const TONE_IDEAL_MIN_S := 1.0
 const TONE_IDEAL_MAX_S := 2.0
 const TONE_TOO_LONG_S := 3.0
+## (Clinical review E6) A gap shorter than the beep before it, and under this, breaks the combo
+## (ASHA 2005: the interval between tones is "not shorter than the test tone").
+const SHORT_GAP_S := 1.0
 ## A press up to this long after the tone ends still counts as a response to it.
 ## (Gus answers 0.4-1.2 s after tone onset, and tones last 1-2 s, so 1.5 s after the end is plenty.)
 const RESPONSE_WINDOW_S := 1.5

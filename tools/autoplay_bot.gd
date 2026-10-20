@@ -27,7 +27,7 @@ const CaseData := preload("res://story/case_data.gd")
 const BEAT_DELAY_S := 0.6       ## game seconds before solving a beat (lets things settle)
 const STALL_TIMEOUT_S := 120.0  ## game seconds without progress -> exit 2
 const MAX_RUN_S := 3000.0       ## game seconds overall -> exit 3
-const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]  ## varied gaps: no rhythm
+const GAPS: Array[float] = [1.1, 1.6, 1.05, 2.1, 1.2, 1.8, 1.3, 2.4]  ## varied gaps: no rhythm, never shorter than a beep (E6)
 const DURATIONS: Array[float] = [1.3, 1.6, 1.2, 1.5, 1.7, 1.4]
 
 

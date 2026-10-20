@@ -701,7 +701,7 @@ it during the test.
 | `store_wrong_level` | stored a level that is not the lowest one heard twice ascending | db |
 | `start_not_1k` | the first store of an ear isn't 1000 Hz | db |
 | `missed_retest` | **(E2) no longer raised**: the lows may come before the retest (BSA 2018 retests after 250 Hz); the retest stays required on the ear that owes it | db |
-| `retest_mismatch` | the 1 kHz retest differs by more than 5 dB | db |
+| `retest_mismatch` | the 1 kHz retest differs by more than 5 dB (**E3**: a `retest_why` observation follows) | db |
 | `nr_too_early` | "no response" stored without a miss at the maximum level | db |
 | `tone_too_short` / `tone_too_long` | tone under 0.5 s / over 3 s | duration_s |
 | `rhythmic` | the last 4 gaps between tones vary by less than 0.3 s | spread_s |
@@ -725,6 +725,8 @@ it during the test.
 | `interoctave_needed` | freq = the half-octave that is now required |
 | `not_instructed` **(v2)** | db (the patient guesses because nobody told him what to do) |
 | `phones_swapped` **(v2)** | db (he points at the other ear: the phones are on the wrong ears) |
+| `retest_why` **(E3)** | diff, better, lines (right after `retest_mismatch`, scored only: Hoot's lines from `retest_beat(ear)`; the screen says them the first time a visit has one, then the short tip) |
+| `short_gap` **(E6)** | gap_s (a gap shorter than the beep before it and under `ClinicRules.SHORT_GAP_S` 1.0 s, or a guess after a short gap; the tip once per visit). The rushed gap breaks the combo with no error and no technique cost |
 
 **(v3) Masking errors** (masked sheets only):
 
@@ -738,8 +740,8 @@ it during the test.
 
 On non-`ac` sheets `start_not_1k`, `missed_retest` and the inter-octave rule do not apply.
 
-**(v3) Observations:** `cross_hearing` (unmasked: the other cochlea answered), `undermasked` (masked: it still
-did), `plateau_step` {steps, needed, db, mask_db, found, window_full, auto} after every masked verdict, `plateau_found`
+**(v3) Observations:** `cross_hearing` (unmasked bone: the other cochlea answered; **E4** `cross_hearing_air` for an
+unmasked air tone, "Time to mask."), `undermasked` (masked: it still did), `plateau_step` {steps, needed, db, mask_db, found, window_full, auto} after every masked verdict, `plateau_found`
 {db, start_mask, end_mask}, `vibrotactile` {db} (a felt low bone tone). **(E9)** `masking_dilemma` {initial_db,
 limit_db} (the first scored masked tone where the initial masking already overmasks) and `plateau_not_reached`
 {db, mask_db, limit_db} (the safe window filled before a plateau), each once per visit. **(E8)** `tinnitus_steady`
@@ -850,7 +852,9 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); **(E2)** `retest_required(ear)`
   (only the first air ear of the visit, `air_ear_order[0]`, owes the 1 kHz retest, or the second too when the first ear's
   retest was off by more than 5 dB; a waived ear never; a voluntary retest on another ear is still graded) and
-  `air_ear_order: Array[String]`; `instant_measure(ear, freq)
+  `air_ear_order: Array[String]`; **(E3)** `retest_beat(ear) -> Array[String]` (after a retest more than 5 dB off: why we
+  retest, from `RETEST_WHY_BETTER` or `RETEST_WHY_WORSE`, re-instruct and recheck, plus `RETEST_OTHER_EAR` on the first
+  air ear; [] when it agreed); **(E6)** `last_tone_dur` (the last beep's length); `instant_measure(ear, freq)
   -> Dictionary` runs one whole textbook measurement at once through the public controls with simulated time (Hoot's
   montage; returns {} while a tone is on or while scoring is on). The unmasked air truth (`response_truth(&"ac")`) is
   the shadow curve: the better of the test ear and the other cochlea through the air IA, so an unmasked stamp that

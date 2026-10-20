@@ -64,6 +64,8 @@ const TIPS: Dictionary[StringName, String] = {
 	&"overmasked": "Past the safe limit! This much noise could cross back and mask the test ear too.",
 	&"store_no_plateau": "No plateau yet! Store once the answer survives three noise raises in a row.",
 	&"cross_hearing": "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!",
+	# clinical review E4: an air tone that crosses (louder than the interaural attenuation, BSA 2018, 8.1)
+	&"cross_hearing_air": "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask.",
 	&"undermasked": "The Ghost answered! Not enough noise yet: heard means noise up 5.",
 	&"plateau_found": "Flat line! Same answer through 15 dB more noise: that's the true threshold. Store it!",
 	# clinical review E9: the masking dilemma and an unreached plateau (BSA 2018, 8.8 and 8.9)
@@ -73,6 +75,17 @@ const TIPS: Dictionary[StringName, String] = {
 	# clinical review E8: tinnitus confuses steady tones (ASHA 2005; the lesson itself is the cases' C8)
 	&"tinnitus_steady": "Steady beeps hide in {his} ringing! Switch the beep type to PULSED or WARBLE.",
 }
+## (Clinical review E3) Hoot's beat after a 1 kHz retest more than 5 dB off: why we retest,
+## re-instruct, recheck (BSA 2018, 6.4: more than 5 dB apart, investigate). retest_beat() picks them.
+const RETEST_WHY_BETTER: Array[String] = [
+	"Better by over 5 dB! Patients often improve at this in their first few minutes.",
+	"So the first stamps may sit too high. Re-instruct {him}, then recheck an earlier pitch like 2k.",
+]
+const RETEST_WHY_WORSE: Array[String] = [
+	"Worse by over 5 dB! {He} may be tired, or the first stamp was a lucky guess.",
+	"Re-instruct {him}, then recheck an earlier pitch like 2k. Agreeing answers make a chart you can trust.",
+]
+const RETEST_OTHER_EAR := "And this visit, the other ear owes a 1k retest too."
 ## Positive kinds and the points they are worth (times the combo multiplier).
 const POINTS: Dictionary[StringName, int] = {&"good_start": 10, &"textbook_step": 10, &"store_ok": 50}
 const GOLF_POINTS: Dictionary[StringName, int] = {&"albatross": 300, &"eagle": 200, &"birdie": 100, &"par": 50, &"bogey": 20}
@@ -113,6 +126,8 @@ var time: float = 0.0
 var tone_on: bool = false
 var tone_start_t: float = 0.0
 var last_tone_end_t: float = -100.0
+## (E6) how long the last beep was held (the next gap should be at least this long)
+var last_tone_dur: float = 0.0
 var window_end_t: float = -100.0
 
 ## ear -> freq -> stored info (§4.4) of the measurement that counts (first or redo)
@@ -377,6 +392,8 @@ func tone_down() -> void:
 		_check_mask_step(recs)
 	else:
 		_check_step(recs)
+	if scoring and gap >= 0.0 and gap < minf(last_tone_dur, ClinicRules.SHORT_GAP_S):
+		_short_gap(gap)
 	_check_rhythm(gap)
 	tone_on = true
 	tone_start_t = time
@@ -456,6 +473,7 @@ func tone_up() -> void:
 	var dur := time - tone_start_t
 	_cur["duration"] = dur
 	last_tone_end_t = time
+	last_tone_dur = dur
 	window_end_t = time + ClinicRules.RESPONSE_WINDOW_S
 	if _pending_rec == _cur and _pending_press_t > time and not bool(_cur["guess"]):
 		if not sim.keeps_press_after_short_tone(_cur_ear, _cur_freq, int(_cur["db"]), dur):
@@ -1198,6 +1216,22 @@ func retest_required(e: String) -> bool:
 	return not rt_first.is_empty() and int(rt_first["diff"]) > ClinicRules.RETEST_TOLERANCE_DB
 
 
+## (E3) What Hoot says after this ear's 1 kHz retest came out more than 5 dB off, pronouns filled:
+## why we retest (better: the patient warmed up; worse: tired or a lucky first stamp), re-instruct,
+## recheck an earlier pitch, and on the first air ear that the other ear now owes a retest. [] if it agreed.
+func retest_beat(e: String) -> Array[String]:
+	var out: Array[String] = []
+	var rt: Dictionary = retest[e]
+	if rt.is_empty() or int(rt["diff"]) <= ClinicRules.RETEST_TOLERANCE_DB:
+		return out
+	var lines := RETEST_WHY_BETTER if int(rt["stored_db"]) < int(rt["first_db"]) else RETEST_WHY_WORSE
+	for t: String in lines:
+		out.append(patient.say(t) if patient != null else PatientProfile.pronouns(t, "he"))
+	if not air_ear_order.is_empty() and air_ear_order[0] == e and not retest_waived.has(other_ear(e)):
+		out.append(RETEST_OTHER_EAR)
+	return out
+
+
 ## (v3) Every frequency a non-air sheet needs for an ear, in the recommended order: unmasked
 ## bone = the plan's bc_freqs; masked sheets = where the rules call for masking (from the stamps).
 func sheet_required(e: String, t: StringName) -> Array[int]:
@@ -1413,7 +1447,9 @@ func _press(kind: StringName) -> void:
 		if not again and bool(_cur["heard"]) and StringName(_cur.get("by", &"")) == &"cross":
 			# v3: the Cross-Hearing Ghost: the OTHER cochlea answered this one
 			reaction.emit(&"cross_heard", {"ear": _cur_ear, "via": other_ear(_cur_ear), "db": int(_cur["db"]), "masked": int(_cur.get("mask_db", -1)) >= 0})
-			var lesson := &"undermasked" if int(_cur.get("mask_db", -1)) >= 0 else &"cross_hearing"
+			# (E4) the bone and the air wording differ: bone has almost no IA, air crosses when it is loud
+			var bone := ClinicRules.test_is_bone(StringName(_cur.get("test", test)))
+			var lesson := &"undermasked" if int(_cur.get("mask_db", -1)) >= 0 else (&"cross_hearing" if bone else &"cross_hearing_air")
 			if not _once.has(String(lesson)):
 				_once[String(lesson)] = true
 				_observe(lesson, {"db": int(_cur["db"])})
@@ -1543,6 +1579,17 @@ func _check_mask_step(recs: Array) -> void:
 			"prev_db": int(prev["db"]), "prev_heard": bool(prev["responded"])}, true)
 
 
+## (E6) A gap shorter than the beep before it (and under ClinicRules.SHORT_GAP_S): the patient may
+## guess. It breaks the combo and nothing else (no error, no technique cost); the tip shows once.
+func _short_gap(gap: float) -> void:
+	if combo > 0:
+		combo = 0
+		combo_changed.emit(0, 1)
+	if not _once.has("short_gap"):
+		_once["short_gap"] = true
+		_observe(&"short_gap", {"gap_s": gap})
+
+
 func _check_rhythm(gap: float) -> void:
 	if gap < 0.0:
 		return
@@ -1646,6 +1693,9 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 				k["retest_better"] = true
 				info["better_db"] = db
 			technique.emit(&"retest_ok", {"ear": e, "freq": f, "diff": diff, "plotted_db": mini(db, first_db)})
+		elif scoring:
+			# (E3) after the retest_mismatch error: Hoot's lines on why it matters (the screen says them)
+			_observe(&"retest_why", {"diff": diff, "better": db < first_db, "lines": retest_beat(e)})
 	elif test == &"ac":
 		if not air_ear_order.has(e):
 			air_ear_order.append(e)
