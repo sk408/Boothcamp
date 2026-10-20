@@ -27,7 +27,7 @@ const CaseData := preload("res://story/case_data.gd")
 const BEAT_DELAY_S := 0.6       ## game seconds before solving a beat (lets things settle)
 const STALL_TIMEOUT_S := 120.0  ## game seconds without progress -> exit 2
 const MAX_RUN_S := 3000.0       ## game seconds overall -> exit 3
-const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]  ## varied gaps: no rhythm
+const GAPS: Array[float] = [1.1, 1.6, 1.05, 2.1, 1.2, 1.8, 1.3, 2.4]  ## varied gaps: no rhythm, never shorter than a beep (E6)
 const DURATIONS: Array[float] = [1.3, 1.6, 1.2, 1.5, 1.7, 1.4]
 
 
@@ -409,6 +409,8 @@ func _run_audiometry(ear: String) -> void:
 	while i < plan.size() and not _ear_done.get(ear, false) and not _hoot_turn():
 		var f: int = plan[i]
 		i += 1
+		if f == ClinicRules.START_FREQ and found.has(f) and not (_state().get("remaining", []) as Array).has(f):
+			continue   # (E2) the 1 kHz retest is only owed by the first air ear of the visit
 		var start := ClinicRules.START_DB if last < 0 else clampi(last + 10, 20, ClinicRules.MAX_START_DB)
 		if found.has(f):
 			start = clampi(int(found[f]) + 10, ClinicRules.MIN_DB, ClinicRules.MAX_START_DB)  # retest
@@ -1109,6 +1111,12 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 	var case_id := String(Game.chapter(String(_summary.get("chapter_id", ""))).get("case", ""))
 	if case_id != "":
 		_check_conductive_case(case_id, res, report, problems)
+		# (cases, clinical review C12) Hoot's three case movies start on a fresh save (level_case.gd _movie)
+		report["movies"] = _movies
+		if not Game.cli_flag("keep-save"):
+			for id: String in ["case_files", "tymp", "shapes"]:
+				if not _movies.has(id):
+					problems.append("Hoot's %s movie never started on a fresh save" % id)
 
 
 ## (cases) A conductive case (Days 10 and 11): the case ear comes out conductive with the air-bone

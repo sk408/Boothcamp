@@ -8,6 +8,8 @@ const LevelCase := preload("res://story/level_case.gd")
 const Voice := preload("res://story/voice.gd")
 const CaseOtoscopy := preload("res://story/games/case_otoscopy.gd")
 const CaseProps := preload("res://story/games/case_props.gd")
+const Movies := preload("res://story/explainers/movies.gd")
+const Stage2D := preload("res://story/explainers/explainer_stage.gd")
 
 ## case id -> [the call, the truth shape per ear (right, left), asymmetric?, the case ear's type]
 const EXPECTED: Dictionary = {
@@ -697,7 +699,8 @@ func test_hoot_lines_cover_the_retest_and_runner() -> void:
 		wheres[String(pair[0])] = true
 	for w: String in ["retest.intro", "retest.otoscopy.lines", "retest.tymp.after", "retest.before.choose", "retest.payoff"]:
 		assert_true(wheres.has(w), "Hoot's %s lines are counted" % w)
-	for line: String in [LevelCase.NO_MASKED_AIR, LevelCase.MISMATCH, LevelCase.RETEST_NEUTRAL, LevelCase.BRIEFING]:
+	for line: String in [LevelCase.NO_MASKED_AIR, LevelCase.MISMATCH, LevelCase.RETEST_NEUTRAL, LevelCase.BRIEFING,
+			LevelCase.MASKING_HINT]:
 		assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
 
 
@@ -731,3 +734,128 @@ func test_new_gadgets_draw_every_view() -> void:
 	await props.call("play", "wax_jar")
 	await props.call("play", "plane")
 	await wait_frames(1)
+
+
+## (Clinical review C12) Hoot's case movies: registered and valid, quiet, on the replay lists and in
+## every case day's pause menu (also_chapters), each with a short lead-in and offer line.
+func test_case_movies_registered_everywhere() -> void:
+	assert_eq(LevelCase.CASE_MOVIES.keys(), ["case_files", "tymp", "shapes"], "in the order a case meets them")
+	var player_script: GDScript = load("res://story/explainers/explainer_player.gd")
+	var cue_max := float(player_script.get_script_constant_map()["CUE_MAX_DB"])
+	for id: String in LevelCase.CASE_MOVIES:
+		assert_true(Movies.has(id), "%s is registered" % id)
+		var bad := Movies.validate(id, Stage2D.SETS)
+		assert_true(bad.is_empty(), "%s: %s" % [id, ", ".join(bad)])
+		assert_false(Movies.is_short(id), "%s is a full movie" % id)
+		assert_has(Movies.replay_ids(), id, "%s on the title's list" % id)
+		assert_eq(Movies.day_label(id), "Days 6-11", id)
+		var m := Movies.movie(id)
+		assert_true(float((m["scenes"][0] as Dictionary).get("duration", 0.0)) >= 7.0, "%s: the lead-in card holds" % id)
+		for sc: Dictionary in m["scenes"]:
+			assert_true(String(sc["teaches"]) != "", "%s/%s teaches one idea" % [id, sc["id"]])
+			for cue: Dictionary in sc.get("cues", []):
+				assert_has(Sfx.SOUNDS, StringName(String(cue["sfx"])), "%s/%s: a known Sfx" % [id, sc["id"]])
+				assert_true(float(cue.get("vol_db", 0.0)) <= cue_max, "%s/%s: %s is quiet" % [id, sc["id"], cue["sfx"]])
+		for key: String in ["lead_in", "offer"]:
+			var line := String((LevelCase.CASE_MOVIES[id] as Dictionary)[key])
+			assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
+	for c: Dictionary in Game.chapters():
+		if String(c.get("case", "")) == "":
+			continue
+		var here := Movies.for_chapter(String(c["id"]))
+		for id: String in LevelCase.CASE_MOVIES:
+			assert_has(here, id, "%s's pause menu lists %s" % [c["id"], id])
+	assert_eq(Movies.for_chapter("bonnie"), ["masking"] as Array[String], "Day 2's list is unchanged")
+	assert_true(Movies.for_chapter("gus").is_empty(), "Day 1 has no movie")
+
+
+## Every scene of every case movie draws at its start, middle and end without a script error.
+## Hoot's audiogram movie teaches the same shapes and types the game names: every chart it draws
+## classifies as its scene says (ClinicRules.classify_shape, hearing_type, abg_red_flag).
+func test_shapes_movie_charts_match_the_rules() -> void:
+	var sets := preload("res://story/case_movies/shapes_sets.gd")
+	var as_dict := func(curve: Array[Vector2]) -> Dictionary:
+		var out: Dictionary = {}
+		for p: Vector2 in curve:
+			out[int(p.x)] = int(p.y)
+		return out
+	var shapes: Array = [[sets.GRID_RIGHT, &"sloping"], [sets.SLOPING, &"sloping"], [sets.RISING, &"rising"],
+		[sets.FLAT, &"flat"], [sets.NOTCH_FROM, &"normal"], [sets.NOTCH, &"notch"], [sets.COOKIE_FROM, &"normal"],
+		[sets.COOKIE, &"cookie_bite"]]
+	for pair: Array in shapes:
+		var d: Dictionary = as_dict.call(pair[0])
+		assert_eq(ClinicRules.classify_shape(d), pair[1], "movie chart %s" % [d])
+	var types: Array = [[sets.SNHL_AIR, sets.SNHL_BONE, &"sensorineural", false],
+		[sets.CONDUCTIVE_AIR, sets.CONDUCTIVE_BONE, &"conductive", true], [sets.MIXED_AIR, sets.MIXED_BONE, &"mixed", true]]
+	for ty: Array in types:
+		var ac: Dictionary = as_dict.call(ty[0])
+		var bc: Dictionary = as_dict.call(ty[1])
+		assert_eq(ClinicRules.hearing_type(ac, bc), ty[2], "movie %s chart" % ty[2])
+		assert_eq(ClinicRules.abg_red_flag(ac, bc), ty[3], "movie %s chart's red flag" % ty[2])
+
+
+func test_case_movies_draw_every_scene() -> void:
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	for id: String in LevelCase.CASE_MOVIES:
+		var m := Movies.movie(id)
+		st.call("use_movie", m)
+		for sc: Dictionary in m["scenes"]:
+			st.call("show_scene", sc)
+			var d := float(sc["duration"])
+			for tt: float in [0.0, d * 0.35, d * 0.7, d]:
+				st.set("t", tt)
+				st.queue_redraw()
+				await wait_frames(1)
+			assert_eq(String(st.get("scene_title")), String(sc.get("title", "")), "%s/%s title chip" % [id, sc["id"]])
+			# the opening marquee is entered like Day 2's: curtains, no iris, the chip after the card
+			assert_eq(bool(st.call("_card_scene")), sc == m["scenes"][0], "%s/%s opens with a title card" % [id, sc["id"]])
+	st.queue_free()
+
+
+## (Clinical review C8) Rocco's ringing: before the booth, Hoot asks which beep stands out (pulsed and
+## warble both win, the steady tone hides) and shows the chip; Marina's roar keeps a short tip.
+func test_tinnitus_lesson() -> void:
+	for cid: String in ["noise_notch", "menieres"]:
+		var c := _case(cid)
+		var p := Game.load_patient(String(c["patient_id"])) as PatientProfile
+		assert_true(p.tinnitus_hz > 0, "%s rings, so steady tones confuse (E8)" % cid)
+	var picks := {}
+	var lines := ""
+	for e: Variant in _case("noise_notch")["instructions"]:
+		if e is Dictionary and (e as Dictionary).has("choose"):
+			for o: Array in (e as Dictionary)["choose"]["options"]:
+				picks[String(o[0]).get_slice(":", 0)] = int(o[1])
+		elif CaseData.is_line(e):
+			lines += String((e as Array)[1]) + " "
+	assert_eq(picks, {"PULSED": 2, "WARBLE": 2, "TONE": 0}, "pulsed and warble stand out; the steady tone hides")
+	for word: String in ["PULSED", "WARBLE", "chip", "clinics prefer warble"]:
+		assert_has(lines, word, "Rocco's lesson")
+	for stim: String in ToneGenerator.STIMULUS_NAMES:
+		assert_has(picks, stim, "every beep type on the chip is a choice")
+	var tip := ""
+	for e: Variant in _case("menieres")["instructions"]:
+		if CaseData.is_line(e):
+			tip += String((e as Array)[1])
+	assert_has(tip, "PULSED", "Marina's tip")
+	assert_has(tip, "WARBLE", "Marina's tip")
+
+
+## (Clinical review A2) Case days can come first: the masking recap is ready, and it never plays once
+## Day 2's full movie has been watched.
+func test_masking_recap_on_case_days() -> void:
+	assert_true(Movies.has(LevelCase.MASKING_RECAP) and Movies.is_short(LevelCase.MASKING_RECAP), "the one-card recap")
+	assert_true(Movies.has(LevelCase.MASKING_MOVIE), "the full movie it points at")
+	var had := Game.is_movie_seen(LevelCase.MASKING_MOVIE)
+	if not had:
+		if not Game.progress.get("movies_seen") is Array:
+			Game.progress["movies_seen"] = []
+		(Game.progress["movies_seen"] as Array).append(LevelCase.MASKING_MOVIE)
+	var lc: Node = LevelCase.new()
+	await lc.call("_recap")
+	assert_false(bool(lc.get("_recapped")), "watched the full movie: no recap")
+	assert_eq(lc.get_child_count(), 0, "no player made")
+	lc.free()
+	if not had:
+		(Game.progress["movies_seen"] as Array).erase(LevelCase.MASKING_MOVIE)

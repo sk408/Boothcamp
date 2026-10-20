@@ -11,7 +11,9 @@ extends RefCounted
 ##   - threshold = the lowest level heard on at least 2 ascending runs, and on at least half of
 ##     them ("2 of 3"; the coached ear accepts 2 of 2, which the same rule already does)
 ##   - order 1k, 2k, 4k, 8k, retest 1k (within 5 dB), 500, 250; the half-octave in between
-##     whenever neighbouring octaves differ by 20 dB or more
+##     whenever neighbouring octaves differ by 20 dB or more. (E2) The retest is owed by the first air
+##     ear of the visit only (or the second too when the first ear's retest was off by more than 5 dB),
+##     before 500 Hz or after 250 Hz
 ##   - tones 1-2 s, varied gaps, never start above 70 dB, never blast far above threshold
 ## Golf: each measurement is a hole. Par = the presentations a textbook search needs from the
 ## measurement's start level, on average, for this patient (expected_presentations()).
@@ -62,13 +64,28 @@ const TIPS: Dictionary[StringName, String] = {
 	&"overmasked": "Past the safe limit! This much noise could cross back and mask the test ear too.",
 	&"store_no_plateau": "No plateau yet! Store once the answer survives three noise raises in a row.",
 	&"cross_hearing": "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!",
+	# clinical review E4: an air tone that crosses (louder than the interaural attenuation, BSA 2018, 8.1)
+	&"cross_hearing_air": "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask.",
 	&"undermasked": "The Ghost answered! Not enough noise yet: heard means noise up 5.",
 	&"plateau_found": "Flat line! Same answer through 15 dB more noise: that's the true threshold. Store it!",
 	# clinical review E9: the masking dilemma and an unreached plateau (BSA 2018, 8.8 and 8.9)
 	&"masking_dilemma": "Masking dilemma! Enough noise crosses back; safe noise is too weak. Inserts help. Else mark it ?",
 	&"plateau_not_reached": "No room left! More noise would cross back to this ear. Store it: plateau not reached.",
 	&"vibrotactile": "Loud low bone tones get FELT, not heard. A tickle is not a threshold!",
+	# clinical review E8: tinnitus confuses steady tones (ASHA 2005; the lesson itself is the cases' C8)
+	&"tinnitus_steady": "Steady beeps hide in {his} ringing! Switch the beep type to PULSED or WARBLE.",
 }
+## (Clinical review E3) Hoot's beat after a 1 kHz retest more than 5 dB off: why we retest,
+## re-instruct, recheck (BSA 2018, 6.4: more than 5 dB apart, investigate). retest_beat() picks them.
+const RETEST_WHY_BETTER: Array[String] = [
+	"Better by over 5 dB! Patients often improve at this in their first few minutes.",
+	"So the first stamps may sit too high. Re-instruct {him}, then recheck an earlier pitch like 2k.",
+]
+const RETEST_WHY_WORSE: Array[String] = [
+	"Worse by over 5 dB! {He} may be tired, or the first stamp was a lucky guess.",
+	"Re-instruct {him}, then recheck an earlier pitch like 2k. Agreeing answers make a chart you can trust.",
+]
+const RETEST_OTHER_EAR := "And this visit, the other ear owes a 1k retest too."
 ## Positive kinds and the points they are worth (times the combo multiplier).
 const POINTS: Dictionary[StringName, int] = {&"good_start": 10, &"textbook_step": 10, &"store_ok": 50}
 const GOLF_POINTS: Dictionary[StringName, int] = {&"albatross": 300, &"eagle": 200, &"birdie": 100, &"par": 50, &"bogey": 20}
@@ -79,9 +96,12 @@ const PAR_RUNS := 400
 ## "Above 90 dB for nothing": a tone above this level, at least TOO_LOUD_HIGH_SL above threshold.
 const TOO_LOUD_HIGH_DB := 90
 const TOO_LOUD_HIGH_SL := 25
-## Inside this many dB of threshold the patient visibly strains (reaction only).
-const STRAIN_BELOW_DB := 3
-const STRAIN_ABOVE_DB := 4
+## (Clinical review E11) Within this window around threshold the patient visibly strains now and
+## then (STRAIN_P of the tones), never only at it, so the face is no threshold meter (ASHA 2005:
+## give the patient no cues, and read none from them either). Reaction only.
+const STRAIN_BELOW_DB := 5
+const STRAIN_ABOVE_DB := 10
+const STRAIN_P := 0.35
 ## (v3) The masker dial's level when a session starts (dB EM): low on purpose, the player sets it.
 const MASK_DIAL_START_DB := 10
 ## (v3) Masked par = the textbook plateau dance on a consistent patient + this (real patients
@@ -109,6 +129,8 @@ var time: float = 0.0
 var tone_on: bool = false
 var tone_start_t: float = 0.0
 var last_tone_end_t: float = -100.0
+## (E6) how long the last beep was held (the next gap should be at least this long)
+var last_tone_dur: float = 0.0
 var window_end_t: float = -100.0
 
 ## ear -> freq -> stored info (§4.4) of the measurement that counts (first or redo)
@@ -162,6 +184,9 @@ var goal_test: StringName = &"ac"
 var air_transducer: StringName = &"phones"
 ## The transducer the tone goes through: air_transducer or &"bone".
 var transducer: StringName = &"phones"
+## (E8) The tone is steady, not pulsed or warble (set_steady_tone(); E7: the screen starts pulsed).
+## Near the patient's tinnitus pitch a steady tone is harder to hear (PatientSim.tinnitus_confuses).
+var steady_tone: bool = false
 ## Masking noise (narrow band at the test frequency) in the NON-test ear.
 var mask_on: bool = false
 ## The masker dial (dB EM). Kept while masking is off (it can be preset).
@@ -173,12 +198,17 @@ var _bc_freqs: Array[int] = []      ## plan "bc_freqs": required unmasked bone f
 var _overmask_hit: Dictionary = {}  ## measurement key -> true once overmasking was flagged
 ## (Polish) Ears whose 1 kHz air retest is not required (Day 2: Hoot skips it, Day 1 taught it).
 var retest_waived: Dictionary = {}
+## (E2) The ears in the order they got their first air stamp this visit (retest_required()).
+var air_ear_order: Array[String] = []
 var _instant_n := 0
+## (E11) its own dice, so the straining face never shifts the patient's answers
+var _strain_rng := RandomNumberGenerator.new()
 
 
 func _init(p: PatientProfile, seed_value: int = 0) -> void:
 	patient = p
 	sim = PatientSim.new(p, seed_value)
+	_strain_rng.seed = hash([seed_value, "strain"])
 	_bc_freqs = ClinicRules.BC_REQUIRED.duplicate()
 	for t: StringName in ClinicRules.TESTS:
 		_sheets[t] = {"stored": {"right": {}, "left": {}}, "retest": {"right": {}, "left": {}},
@@ -368,6 +398,8 @@ func tone_down() -> void:
 		_check_mask_step(recs)
 	else:
 		_check_step(recs)
+	if scoring and gap >= 0.0 and gap < minf(last_tone_dur, ClinicRules.SHORT_GAP_S):
+		_short_gap(gap)
 	_check_rhythm(gap)
 	tone_on = true
 	tone_start_t = time
@@ -376,6 +408,9 @@ func tone_down() -> void:
 	else:
 		auto_presentations += 1
 	_apply_condition()
+	if scoring and sim.tinnitus_confuses(freq) and not _once.has("tinnitus_steady"):
+		_once["tinnitus_steady"] = true
+		_observe(&"tinnitus_steady", {"tinnitus_hz": patient.tinnitus_hz})
 	var decision := sim.on_tone_start(ear, freq, db, gap)
 	var rec := {
 		"i": recs.size(), "db": db, "t": time, "duration": 0.0, "responded": false, "closed": false,
@@ -401,7 +436,7 @@ func tone_down() -> void:
 		_loud_hit[key] = true
 		_error(&"too_loud", {"db": db, "sl": sl, "comfort_loss": 1 if first and scoring else 0}, false)
 		reaction.emit(&"too_loud_blast", {"ear": ear, "db": db, "intensity": clampf(float(sl) / 80.0, 0.3, 1.0)})
-	elif sl >= -STRAIN_BELOW_DB and sl <= STRAIN_ABOVE_DB:
+	elif sl >= -STRAIN_BELOW_DB and sl <= STRAIN_ABOVE_DB and _strain_rng.randf() < STRAIN_P:
 		reaction.emit(&"straining", {"ear": ear, "db": db, "intensity": 0.6})
 	var strokes := recs.size()
 	var marathon_at := int(ceil(par_for(ear, freq) * ClinicRules.MARATHON_FACTOR)) + 1
@@ -427,6 +462,14 @@ func _apply_condition() -> void:
 	sim.transducer = transducer
 	sim.masker_db = mask_db if mask_on else -1
 	sim.masker_transducer = air_transducer
+	sim.steady_tone = steady_tone
+
+
+## (E8) The screen's tone type: steady (true) or pulsed / warble (false, the E7 default).
+func set_steady_tone(on: bool) -> void:
+	steady_tone = on
+	if sim != null:
+		sim.steady_tone = on
 
 
 func tone_up() -> void:
@@ -436,6 +479,7 @@ func tone_up() -> void:
 	var dur := time - tone_start_t
 	_cur["duration"] = dur
 	last_tone_end_t = time
+	last_tone_dur = dur
 	window_end_t = time + ClinicRules.RESPONSE_WINDOW_S
 	if _pending_rec == _cur and _pending_press_t > time and not bool(_cur["guess"]):
 		if not sim.keeps_press_after_short_tone(_cur_ear, _cur_freq, int(_cur["db"]), dur):
@@ -472,6 +516,7 @@ func advance(delta: float) -> void:
 		_press(&"anticipated")
 	if not _cur.is_empty() and not bool(_cur["closed"]) and not tone_on and time > window_end_t and _pending_press_t < 0.0:
 		_close_current()
+	sim.dialled_freq = freq   # (E8) a steady tone near the tinnitus pitch: more presses for nothing
 	if not tone_on and time > window_end_t and sim.false_alarm_tick(delta):
 		_press(&"false_alarm")
 
@@ -493,8 +538,8 @@ func store() -> Dictionary:
 	var st: Dictionary = stored[ear]
 	if test == &"ac" and kind == &"first" and st.is_empty() and freq != ClinicRules.START_FREQ:
 		errs.append(&"start_not_1k")
-	if test == &"ac" and kind == &"first" and (freq == 500 or freq == 250) and st.has(1000) and (retest[ear] as Dictionary).is_empty() and not retest_waived.has(ear):
-		errs.append(&"missed_retest")
+	# (E2) no "missed_retest" for the lows any more: BSA (2018, 6.4) retests after 250 Hz, ASHA (2005)
+	# before 500 Hz; either is fine, and the ear stays open until a required retest is done
 	if kind == &"retest":
 		var diff := absi(db - int(st[1000]["stored_db"]))
 		if diff > ClinicRules.RETEST_TOLERANCE_DB:
@@ -1155,12 +1200,42 @@ func required_remaining(e: String, t: StringName = &"") -> Array[int]:
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
-	if st.has(1000) and rt.is_empty() and not retest_waived.has(e):
+	if st.has(1000) and rt.is_empty() and retest_required(e):
 		rem.append(1000)
 	for f: int in [750, 500, 250]:
 		if (ClinicRules.is_octave(f) or need.has(f)) and not st.has(f):
 			rem.append(f)
 	return rem
+
+
+## (E2) Does this ear owe the 1 kHz air retest? Only the first air ear of the visit does (ASHA 2005:
+## "A retest at 1000 Hz is not necessary when testing the second ear"; BSA 2018, 6.4: "for the first
+## ear only"), unless the first ear's retest was off by more than RETEST_TOLERANCE_DB. A waived ear
+## (Hoot's montage) never does; a voluntary retest on another ear still counts and is graded.
+func retest_required(e: String) -> bool:
+	if retest_waived.has(e):
+		return false
+	var first := air_ear_order[0] if not air_ear_order.is_empty() else e
+	if first == e:
+		return true
+	var rt_first: Dictionary = ((_sheets[&"ac"] as Dictionary)["retest"] as Dictionary)[first]
+	return not rt_first.is_empty() and int(rt_first["diff"]) > ClinicRules.RETEST_TOLERANCE_DB
+
+
+## (E3) What Hoot says after this ear's 1 kHz retest came out more than 5 dB off, pronouns filled:
+## why we retest (better: the patient warmed up; worse: tired or a lucky first stamp), re-instruct,
+## recheck an earlier pitch, and on the first air ear that the other ear now owes a retest. [] if it agreed.
+func retest_beat(e: String) -> Array[String]:
+	var out: Array[String] = []
+	var rt: Dictionary = retest[e]
+	if rt.is_empty() or int(rt["diff"]) <= ClinicRules.RETEST_TOLERANCE_DB:
+		return out
+	var lines := RETEST_WHY_BETTER if int(rt["stored_db"]) < int(rt["first_db"]) else RETEST_WHY_WORSE
+	for t: String in lines:
+		out.append(patient.say(t) if patient != null else PatientProfile.pronouns(t, "he"))
+	if not air_ear_order.is_empty() and air_ear_order[0] == e and not retest_waived.has(other_ear(e)):
+		out.append(RETEST_OTHER_EAR)
+	return out
 
 
 ## (v3) Every frequency a non-air sheet needs for an ear, in the recommended order: unmasked
@@ -1197,7 +1272,7 @@ func ear_progress(e: String, t: StringName = &"") -> Array[int]:
 		return [d, req.size()]
 	var rt: Dictionary = (sh["retest"] as Dictionary)[e]
 	var rem := required_remaining(e, g).size()
-	if not st.has(1000) and rt.is_empty() and not retest_waived.has(e):
+	if not st.has(1000) and rt.is_empty() and retest_required(e):
 		rem += 1  # the 1k retest is still ahead (required_remaining lists it once 1k is stored)
 	var done := st.size() + (0 if rt.is_empty() else 1)
 	return [done, done + rem]
@@ -1378,7 +1453,9 @@ func _press(kind: StringName) -> void:
 		if not again and bool(_cur["heard"]) and StringName(_cur.get("by", &"")) == &"cross":
 			# v3: the Cross-Hearing Ghost: the OTHER cochlea answered this one
 			reaction.emit(&"cross_heard", {"ear": _cur_ear, "via": other_ear(_cur_ear), "db": int(_cur["db"]), "masked": int(_cur.get("mask_db", -1)) >= 0})
-			var lesson := &"undermasked" if int(_cur.get("mask_db", -1)) >= 0 else &"cross_hearing"
+			# (E4) the bone and the air wording differ: bone has almost no IA, air crosses when it is loud
+			var bone := ClinicRules.test_is_bone(StringName(_cur.get("test", test)))
+			var lesson := &"undermasked" if int(_cur.get("mask_db", -1)) >= 0 else (&"cross_hearing" if bone else &"cross_hearing_air")
 			if not _once.has(String(lesson)):
 				_once[String(lesson)] = true
 				_observe(lesson, {"db": int(_cur["db"])})
@@ -1508,6 +1585,17 @@ func _check_mask_step(recs: Array) -> void:
 			"prev_db": int(prev["db"]), "prev_heard": bool(prev["responded"])}, true)
 
 
+## (E6) A gap shorter than the beep before it (and under ClinicRules.SHORT_GAP_S): the patient may
+## guess. It breaks the combo and nothing else (no error, no technique cost); the tip shows once.
+func _short_gap(gap: float) -> void:
+	if combo > 0:
+		combo = 0
+		combo_changed.emit(0, 1)
+	if not _once.has("short_gap"):
+		_once["short_gap"] = true
+		_observe(&"short_gap", {"gap_s": gap})
+
+
 func _check_rhythm(gap: float) -> void:
 	if gap < 0.0:
 		return
@@ -1611,7 +1699,12 @@ func _finish_store(info: Dictionary, errs: Array[StringName]) -> void:
 				k["retest_better"] = true
 				info["better_db"] = db
 			technique.emit(&"retest_ok", {"ear": e, "freq": f, "diff": diff, "plotted_db": mini(db, first_db)})
+		elif scoring:
+			# (E3) after the retest_mismatch error: Hoot's lines on why it matters (the screen says them)
+			_observe(&"retest_why", {"diff": diff, "better": db < first_db, "lines": retest_beat(e)})
 	elif test == &"ac":
+		if not air_ear_order.has(e):
+			air_ear_order.append(e)
 		var before := ClinicRules.required_interoctaves(stored_thresholds(e))
 		st[f] = info
 		var after := ClinicRules.required_interoctaves(stored_thresholds(e))

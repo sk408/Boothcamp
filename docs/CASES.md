@@ -9,7 +9,7 @@ Contract additions are in `CONTRACTS.md` §11 (cases). Steve reviews every clini
 |---|---|
 | Teaches | reading clues; red flags; audiogram shapes; tympanogram types and canal volume; where a loss sits (canal, middle ear, inner ear); comparing with old charts; retesting after treatment; the fit / refer / doctor-today decision |
 | Length | target 8-9 minutes per case with "quick visit" on (the default); see the budget in section 4 |
-| Opens | from the chapter select, any order, every day open from the start (`requires` only picks the suggested "UP NEXT" day). The first case a player opens starts with Hoot's one-line Case Files briefing. |
+| Opens | from the chapter select, any order, every day open from the start (`requires` only picks the suggested "UP NEXT" day). The first case a player opens starts with Hoot's one-line Case Files briefing, and Hoot's three case movies play just before their steps (section 3.1). |
 | Level scene | `res://story/level_case.tscn` (`story/level_case.gd`), one runner for every case |
 | Case data | `story/cases/<case_id>.json`: **the source of truth for every line that ships**. `docs/CASE_SCRIPTS.md` is generated from it (`python3 tools/case_scripts.py`) so the full scripts can be read and signed off. Patient truth in `core/patients/<id>.tres`. |
 | Rules | `core/cases/case_rules.gd` (`CaseRules`): decisions, red flags, asymmetry, the sudden-loss definition, tympanogram types and curve |
@@ -197,8 +197,8 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 | 2 | `history` | Two rounds of three questions (2 / 1 / 0 points). The red-flag sweep always happens: if the player skipped it, Hoot asks it. Red-flag card, plus any extra cards the sweep reveals. Medal `history` (4 points gold, 2 silver). | choice |
 | 3 | `otoscopy` | A quick look at the other ear ("Fresh speculum. <name>'s <OTHER EAR> ear first: a clear canal, a healthy eardrum.": both ears are looked at before any probe or insert goes in), then the case's ear (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); its caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
-| 5 | `instructions` | Hoot's routine line first, every case ("This morning's listening check: every beep clean, the button works. Dials stay out of view.", clinical review A1), then one line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. | dialogue |
-| 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. | the AudiOtron's tone beats |
+| 5 | `instructions` | Hoot's routine line first, every case ("This morning's listening check: every beep clean, the button works. Dials stay out of view.", clinical review A1), then one line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. Rocco's ringing gets Hoot's tinnitus lesson here (clinical review C8): a steady beep near his ring's pitch hides in it; "Which beep stands out from Rocco's ringing?" (PULSED and WARBLE both right, TONE hides; repeats until right); the audiometer starts on PULSED and the chip switches to WARBLE or TONE; some clinics prefer warble. Marina keeps a one-line tip. | dialogue, choice (Rocco) |
+| 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. Before the visit's first masked test, while Day 2's masking movie is unseen, the 12-second masking recap card plays, then Hoot says where the full movie lives (clinical review A2, as Freestyle does). | the AudiOtron's tone beats, explainer (recap) |
 | 7 | `reveal` | The case board: the audiogram stamps in. Hoot: "What shape do you see?" | dialogue |
 | 8 | `evidence` | The shape question (for Dash and Barnaby, the type of loss; for Skye, where the sound is stuck). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file: a card with a `when` shows only when the measured chart says so (symmetric, asymmetric, conductive, or the air-bone-gap flag), and if any of them read differently on the truth tables Hoot says once: "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!" Medal `evidence`. | choice |
 | 9 | `decision` | Three rubber stamps: FIT / REFER / DOCTOR TODAY. A wrong stamp gets Hoot's reason and another try. Then "present the clue that proves it" from up to nine shuffled cards; each wrong card can have its own reply. Medal `decision`. | choice (stamp tray), choice (clue cards) |
@@ -208,6 +208,23 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 
 The stamp tray and the clue cards emit the standard `choice` beat (same info as `DialogueBox.choose`), and their
 buttons' text starts with the option text, so the autoplay bot plays them by keys and by mouse with no new route.
+
+### 3.1 Hoot's case movies (clinical review C12)
+
+Three in-engine cartoons (CONTRACTS.md §3.4), each played just before the step it explains, so any day can be
+played first. Gated like the briefing: on the player's first case (`LevelCase.first_case()`) each plays after its
+lead-in line; on a later case Hoot offers one that was never watched to its `seen_at` scene ("Roll the film!" /
+"Not now"); once watched, it is never forced again and lives in the pause menu (Hoot's Movies, on every case day
+through `also_chapters`) and the title's list, labelled "Days 6-11". Esc skips one ("Skipped! Rewatch it any time:
+pause menu, "Hoot's Movies"."). The lines are `LevelCase.CASE_MOVIES`; `docs/CASE_SCRIPTS.md` prints them.
+
+| Movie | Plays | Teaches |
+|---|---|---|
+| Hoot's case files movie (`case_files`): "Three Stamps and the Red Flags" | before the patient knocks (phase `explainer`, then `intro`) | a dispenser spots patterns and refers, doctors diagnose; FIT / REFER (soon) / DOCTOR TODAY (same day); the red flags; the proof card |
+| Hoot's tympanometer movie (`tymp`): "The Eardrum Trampoline" | before the tympanometer step | look first, a gentle seal; the 226 Hz probe and the pressure sweep; types A, As, Ad, C, B read with the canal volume |
+| Hoot's audiogram movie (`shapes`): "Slopes, Notches & Cookie Bites" | before the reveal | reading the chart (O right, X left, 25 dB or better is normal); sloping, rising, flat, the noise notch, the cookie bite; what bone adds (sensorineural, conductive, mixed) and the 15 dB gap red flag. Every chart it draws classifies as its scene says (test_cases.gd) |
+
+The data is `story/explainers/movies/<id>.gd`, the drawing `story/case_movies/<id>_sets.gd` (the movie's own sets).
 
 ## 4. The test plan
 
@@ -324,8 +341,8 @@ C14). Every FIT, "A full fitting also checks words in each ear" (word scores per
 once the speech days are on main). Rocco, aids help though noisy pubs stay tricky; aids often make ringing less
 noticeable; the damage so far is permanent, more is
 preventable; earplugs at every gig and rehearsal; filtered musicians' earplugs (a filter turns pitches down more
-evenly than foam); on stage aids out, earplugs in; a yearly test; and a tip in the instructions: pulsed beeps stand
-out from ringing ears (Marina's roar too). Marina, an ear doctor appointment this week, not someday; the safety net ("Hearing drops and doesn't come
+evenly than foam); on stage aids out, earplugs in; a yearly test; and Hoot's tinnitus lesson in the instructions (pulsed or warble
+beeps stand out from a ringing ear, a steady tone hides; clinical review C8), with a short tip for Marina's roar. Marina, an ear doctor appointment this week, not someday; the safety net ("Hearing drops and doesn't come
 back? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!"); aids may help between spells once a doctor has looked; her first mate takes the wheel
 until a doctor clears her. Dash, same day to an ENT, audiogram sent ahead ("No ear doctor free today? Then the
 emergency department. Same day, either way."); face droop, numbness, slurred speech or double vision mean the ER now; "Sooner is better. Doctors still treat after three days, but today beats tomorrow." Ginger,
@@ -415,6 +432,6 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
 18. Masking: unmasked bone on the better ear only, then masked bone on the case ear at 500-4k with full plateaus
     and no masked air (phones; inserts for Skye). Red cards: the 15+ gap card and "one ear only" in both cases, and wax at otoscopy: worth it,
     or too many red cards?
-19. Follow-up wording for Days 6-9: the pulsed-tone tip for Rocco and Marina ("pulsed beeps stand out from the ring.
-    Most audiometers can pulse them"), "Filtered musicians' earplugs" with "A filter turns pitches down more evenly
+19. Follow-up wording for Days 6-9: Hoot's tinnitus lesson for Rocco and Marina's tip (pulsed or warble, never a
+    steady tone near the ring; some clinics prefer warble; section 3, row 5), "Filtered musicians' earplugs" with "A filter turns pitches down more evenly
     than foam", and the wrong-first-stamp headlines for all six cases (`docs/CASE_SCRIPTS.md`, The Daily Decibel).

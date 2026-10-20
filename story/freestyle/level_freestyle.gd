@@ -3,8 +3,8 @@ extends Node
 ## (FsData.next_case(), or --freestyle=<id>): the patient walks in and says why they came, then the
 ## player picks tools from the tray in any order (questions, otoscope, tympanometer, air, bone,
 ## masking), names the type of hearing in each ear and makes the call: FIT / REFER / DOCTOR TODAY /
-## NO AIDS NEEDED, and why. Hoot never coaches the tests (a wrong tympanogram or chart type gets a
-## one-line hint); the debrief compares the visit with the workup a pro would run (FsRules.workup). Every choice is shuffled or ordered with Game.rng only
+## NO AIDS NEEDED, and why. Hoot never coaches the tones (a wrong tympanogram or chart type gets a
+## one-line hint; short routine lines and, until Day 2's movie is seen, the masking recap card); the debrief compares the visit with the workup a pro would run (FsRules.workup). Every choice is shuffled or ordered with Game.rng only
 ## where the story's runners do; every blocking beat emits Events.awaiting_input with a solver.
 ##   world:  res://world/clinic.tscn with patient_id + patient_spec (the case's look)
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn start_test(patient, ear, false, plan), one
@@ -22,6 +22,7 @@ const FsQuestions := preload("res://story/freestyle/fs_questions.gd")
 const FsClipboard := preload("res://story/freestyle/fs_clipboard.gd")
 const FsChart := preload("res://story/freestyle/fs_chart.gd")
 const FsDebrief := preload("res://story/freestyle/fs_debrief.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -44,6 +45,25 @@ const TYMP_HINT := "Type %s would be %s. Look where the peak sits, and how tall.
 const WANDER_LINE := "That's what your chart shows. Underneath, the %s ear is %s: a few stamps wandered."
 const GAP_LINE := "The %s ear's bone was never masked: the other cochlea may have answered. Underneath, it's %s."
 const TEXTBOOK_LINE := "A textbook workup: every step a pro would take, in the right order."
+## (Clinical review A1) The routine around the tests, ungraded: a clean speculum tip every visit,
+## the patient told how to answer (BSA 2018, 6.1), and once per session Hoot's daily listening check
+## and the dials kept out of the patient's view (BSA 2018, 4.1 and 11.1; ASHA 2005), in the cases'
+## own words (story/level_case.gd ROUTINE_LINE).
+const SPECULUM_LINE := "A fresh speculum tip, then a quick look in each ear."
+const INSTRUCT_LINE := "Press the button as soon as you hear a beep, in either ear, even a very faint one. Let go when it stops."
+const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
+## (FS-01) Masked bone starts from unmasked bone (either mastoid): nothing to start from yet.
+const BONE_FIRST_LINE := "Masked bone starts from unmasked bone. Bone tones first!"
+## (A2) Before the visit's first masked test, when Day 2's masking movie is still unseen: the
+## one-card recap, then where the full movie lives (the pause menu offers it once E19 is in).
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
+const MOVIE_ID := "masking"
+const RECAP_ID := "masking_recap"
+const MOVIE_HINT := "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen."
+## (FS-03) A Carhart notch the truth has and the chart shows: named, as on Day 2.
+const CARHART_LINE := "See the bone dip at 2k on the %s? A Carhart notch: a stiff middle ear fakes it."
+## (FS-13, with the cases' C13) Every FIT: word tests come with a full fitting.
+const WORDS_LINE := "A full fitting also checks words, in quiet and in noise."
 const TIP_OPTIONS: Array[String] = ["Small tip", "Medium tip", "Large tip"]
 const EAR_OPTIONS: Array[String] = ["Right ear first", "Left ear first"]
 const MASTOID_OPTIONS: Array[String] = ["Right mastoid", "Left mastoid"]
@@ -91,15 +111,21 @@ var chart_slips := 0
 var call_slips := 0
 ## Wrong tympanogram types named (Hoot explains each; not a Chart slip, see FREESTYLE.md §5).
 var tymp_misreads := 0
-## True once a probe or earphone went in before the otoscope looked (the "look first" slip).
-var probe_before_look := false
+## True once any test began before the otoscope looked: the tymp probe, earphones, the bone
+## oscillator or a masking earphone (the "look first" slip; FS-08).
+var tested_before_look := false
 var props: Control
 var _cam: Camera3D
 var _seated := false
 var _instructed := false
+var _recapped := false
+## (A1) Hoot's once-per-session routine line (the listening check, the dials) has been said.
+static var _routine_said := false
 
 
 func _ready() -> void:
+	add_to_group(&"masking_level")  # (E19) the pause menu offers the masking movie (Movies.MASKING_LEVEL_GROUP)
+	Game.current_chapter_id = FsData.NOT_A_DAY
 	case_id = FsData.next_case()
 	case_data = FsData.load_case(case_id)
 	var problems := FsData.validate(case_data) if not case_data.is_empty() else PackedStringArray(["no case file"])
@@ -337,6 +363,7 @@ func _otoscopy() -> void:
 	_hide_overlays()
 	await _stand_if_seated()
 	await clinic.call("focus_camera", &"otoscope", 0.8)
+	await _say("You", SPECULUM_LINE)
 	var oto: Dictionary = case_data["otoscopy"]
 	var g := Otoscopy.new()
 	hud.call("add_game", g)
@@ -382,7 +409,7 @@ func _tymp() -> void:
 		sizes.remove_at(ch)
 		opts.remove_at(ch)
 	Game.set_visit_flag("freestyle_tip_tries", tries)
-	_probe_in()
+	_test_begins()
 	_react(&"nod")
 	_shot("tymp_sweep", 1.0)
 	await g.call("measure", "right", ty["right"])
@@ -462,9 +489,12 @@ func _to_booth() -> void:
 		await clinic.call("sit")
 		_seated = true
 	await clinic.call("focus_camera", &"face", 0.6)
+	if not _routine_said:
+		_routine_said = true
+		await _say("Hoot", ROUTINE_LINE)
 	if not _instructed:
 		_instructed = true
-		await _say("You", "Press the button every time you hear a beep, even the very faint ones.")
+		await _say("You", INSTRUCT_LINE)
 		_react(&"nod")
 		Game.set_visit_flag("instructed", true)
 
@@ -477,10 +507,11 @@ func _stand_if_seated() -> void:
 		_seated = false
 
 
-## Something goes in an ear (tymp probe, earphones, a masking earphone): before the otoscope looked?
-func _probe_in() -> void:
+## A test begins (tymp probe, earphones, bone oscillator, a masking earphone): before the otoscope
+## looked? (FS-08: ASHA 2005 and BSA 2018 put otoscopy before every test, bone included.)
+func _test_begins() -> void:
 	if not done.has(&"otoscopy"):
-		probe_before_look = true
+		tested_before_look = true
 
 
 func _walk_to_desk() -> void:
@@ -505,13 +536,13 @@ func _air() -> void:
 	if air_first == "":
 		air_first = first
 	await _to_booth()
-	_probe_in()
+	_test_begins()
 	clinic.call("take_off_bone_oscillator")
 	clinic.call("put_on_earphones", true)
 	await _wait(0.5)
 	_open_screen()
 	for ear: String in [first, "left" if first == "right" else "right"]:
-		await _test(ear, {"test": "ac", "hoot_turn_after": AIR_SOLO})
+		await _test(ear, air_plan())
 	_close_screen()
 	clinic.call("take_off_earphones")
 	done[&"air"] = true
@@ -524,7 +555,8 @@ func _bone() -> void:
 	if bone_side == "":
 		bone_side = ear
 	await _to_booth()
-	await _bone_on(ear, false)
+	_test_begins()
+	await _bone_on(ear)
 	clinic.call("take_off_bone_oscillator")
 	done[&"bone"] = true
 
@@ -539,18 +571,28 @@ func _better_ear_measured() -> String:
 
 
 ## Unmasked bone on one mastoid (Hoot's montage on a quick visit).
-func _bone_on(ear: String, quiet: bool) -> void:
+func _bone_on(ear: String) -> void:
 	clinic.call("take_off_earphones")
 	clinic.call("focus_camera", StringName("ear_" + ear), 0.5)
 	clinic.call("put_on_bone_oscillator", ear)
 	await _wait(0.5)
 	_open_screen()
-	var plan := {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true, "hoot_turn_after": 0,
-		"montage": true, "skip_hoot_retest": true}
-	if quiet:
-		plan["intro"] = ("Unmasked bone on the %s side first, at Hoot speed." if _quick() else "Unmasked bone on the %s side first.") % ear
-	await _test(ear, plan)
+	await _test(ear, bone_plan())
 	_close_screen()
+
+
+## The air plan: the player stamps AIR_SOLO frequencies, then Hoot finishes the ear at 8x. (FS-07, E2)
+## The 1 kHz retest is owed by the visit's first air ear only, or the second too after a first-ear
+## mismatch over 5 dB: the session lives for the whole visit (one screen), so it knows which ear came first.
+static func air_plan() -> Dictionary:
+	return {"test": "ac", "hoot_turn_after": AIR_SOLO}
+
+
+## The bone plan: Hoot's montage on one mastoid. (FS-07) No "skip_hoot_retest": the screen waives the
+## retest per ear, not per test, so a bone run before air would cost that ear its air retest.
+static func bone_plan() -> Dictionary:
+	return {"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED, "masking_controls": true, "hoot_turn_after": 0,
+		"montage": true}
 
 
 func _masking() -> void:
@@ -561,6 +603,8 @@ func _masking() -> void:
 	var best := MASK_STEPS.size() - 1
 	for step: Dictionary in FsRules.workup(case_data, patient, results, _air_transducer()):
 		var id := String(step["id"])
+		if id == "bc_masked" and not FsRules.bone_done(results):
+			continue   # (FS-01) masked bone waits for unmasked bone: not the pro's pick yet
 		if (id == "bc_masked" or id == "ac_masked") and not FsRules.step_done(step, done, results):
 			for i in MASK_STEPS.size():
 				if MASK_STEPS[i][0] == id and MASK_STEPS[i][1] == String(step["ear"]):
@@ -570,26 +614,27 @@ func _masking() -> void:
 	var test := String(MASK_STEPS[ch][0])
 	if test == "":
 		return
+	if test == "bc_masked" and not FsRules.bone_done(results):
+		# (FS-01) the masked search starts at the unmasked bone (from either mastoid): none yet
+		await _say("You", BONE_FIRST_LINE)
+		return
 	var ear := String(MASK_STEPS[ch][1])
 	var other := "left" if ear == "right" else "right"
 	await _to_booth()
-	_probe_in()
+	_test_begins()
 	var run := "%s:%s" % [test, ear]
 	if not masked_runs.has(run):
 		masked_runs.append(run)
 	# air is on the chart, so the AudiOtron's own rule decides; "nothing to mask" still counts as run
 	done[StringName(run)] = true
 	if test == "bc_masked":
-		if not FsRules.has_sheet(results, ear, &"bc"):
-			if bone_side == "":
-				bone_side = ear   # this unmasked bone counts for "bone on the better ear first"
-			await _bone_on(ear, true)
 		clinic.call("take_off_earphones")
 		clinic.call("put_on_bone_oscillator", ear)
 		clinic.call("put_on_masking_phone", other)
 	else:
 		clinic.call("take_off_bone_oscillator")
 		clinic.call("put_on_earphones", true)
+	await _recap()
 	await _wait(0.5)
 	_open_screen()
 	var what := "bone" if test == "bc_masked" else "air"
@@ -599,6 +644,19 @@ func _masking() -> void:
 	clinic.call("take_off_bone_oscillator")
 	clinic.call("take_off_earphones")
 	done[&"masking"] = true
+
+
+## (A2) The masking recap card before the visit's first masked test, while Day 2's full movie is
+## unseen (a player who starts in freestyle has never met masking), as Day 2's _recap() plays it.
+func _recap() -> void:
+	if _recapped or Game.is_movie_seen(MOVIE_ID) or not Movies.has(RECAP_ID):
+		return
+	_recapped = true
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", RECAP_ID, "recap")
+	player.queue_free()
+	await _say("Hoot", MOVIE_HINT)
 
 
 ## The clipboard's chart lines: each ear's air (PTA and degree), bone and masked sheets run.
@@ -808,11 +866,11 @@ func workup_report() -> Dictionary:
 				if not done.has(&"otoscopy"):
 					slips += 1
 					rows.append({"tool": "otoscopy", "text": "Look in the ears", "state": "miss"})
-					lines.append("Always look in the ears first. Wax or a hole changes every test.")
-				elif probe_before_look:
+					lines.append("Always look in the ears first. Wax or a hole can change the whole chart.")
+				elif tested_before_look:
 					slips += 1
-					rows.append({"tool": "otoscopy", "text": "Look in the ears (but only after a probe went in)", "state": "slip"})
-					lines.append("Look before you put anything in an ear: tymp probe and earphones too.")
+					rows.append({"tool": "otoscopy", "text": "Look in the ears (but only after a test began)", "state": "slip"})
+					lines.append("Look before any test, bone too: what you see explains the chart.")
 				else:
 					rows.append({"tool": "otoscopy", "text": "Look in the ears", "state": "ok"})
 			"tymp":
@@ -895,6 +953,23 @@ func _debrief() -> void:
 			await _say("Hoot", String(l))
 	await debrief_card.call("hide_card")
 	await _play(case_data["debrief"])
+	for l: String in debrief_extras():
+		await _say("Hoot", l)
+
+
+## Hoot's lines after the case's own debrief: a Carhart notch the chart shows on an ear whose truth
+## has one, with a middle-ear part (FS-03), and the word tests every FIT still needs (FS-13). Public
+## and pure, for the tests.
+func debrief_extras() -> Array[String]:
+	var out: Array[String] = []
+	for ear: String in ClinicRules.EARS:
+		var shown := bool(((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("carhart_notch", false))
+		var stiff := FsRules.truth_type(patient, ear) in [&"conductive", &"mixed"]
+		if shown and stiff and ClinicRules.has_carhart_notch(FsRules.truth_bone(patient, ear)):
+			out.append(CARHART_LINE % ear)
+	if StringName(String(case_data.get("decision", ""))) == &"fit":
+		out.append(WORDS_LINE)
+	return out
 
 
 # ---------------------------------------------------------------- 6. goodbye and the paper

@@ -122,7 +122,7 @@ var _coach_tip := -1
 var _coach_key := ""
 var _familiar_note_done := false
 var _tone: ToneGenerator
-var _stim := 0
+var _stim: int = ToneGenerator.Stimulus.PULSED   ## (E7) pulsed beeps by default; the stim key cycles
 var _hold: Dictionary = {}
 var _tone_glow := 0.0
 var _feathers := HINT_FEATHERS
@@ -578,6 +578,7 @@ func _hold_remove(src: String) -> void:
 func _tone_down() -> void:
 	if not _accepting or session == null or session.tone_on:
 		return
+	session.set_steady_tone(_stim == ToneGenerator.Stimulus.PURE)   # (E8) tinnitus confuses steady tones
 	session.tone_down()
 	_demo_idle = 0.0
 	_demo_nudged = false
@@ -778,6 +779,8 @@ func _store(no_response: bool) -> void:
 func _cycle_stimulus() -> void:
 	_stim = (_stim + 1) % ToneGenerator.STIMULUS_NAMES.size()
 	_tone.set_stimulus(_stim)
+	if session != null:
+		session.set_steady_tone(_stim == ToneGenerator.Stimulus.PURE)
 	Sfx.play(&"click", 1.3, -4.0)
 	_refresh()
 
@@ -1020,6 +1023,22 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			Hoot.say_once("tip_marathon", String(data.get("message", "")), Hoot.HIGH, "store_button")
 		&"short_gap":
 			Hoot.say_once("tip_short_gap", String(data.get("message", "")), Hoot.HIGH, "tone_button")
+		&"retest_mismatch":
+			if auto:
+				return
+			if not _coach_active:
+				Sfx.play(&"sad_trombone", 1.0, -12.0)
+			# (E3) the words come with retest_why, right after this
+		&"retest_why":
+			if auto:
+				return
+			# (E3) the first failed retest of a visit: why it matters; later ones get the short tip
+			var lines: Array = data.get("lines", [])
+			if lines.is_empty() or not Hoot.say_once("tip_retest_why", String(lines[0]), Hoot.HIGH, "freq_down_button"):
+				_tip(&"retest_mismatch", session.tip_text(&"retest_mismatch"), "freq_down_button")
+				return
+			for i in range(1, lines.size()):
+				Hoot.say(String(lines[i]), Hoot.HIGH)
 		&"plateau_step":
 			if auto or not bool(data.get("found", false)) and not bool(data.get("window_full", false)) and int(data.get("steps", 0)) <= 0:
 				return
@@ -1057,7 +1076,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var error := kind in ERROR_KINDS
 			if error and not _coach_active:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
-			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma"]:
+			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"cross_hearing_air", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma"]:
 				# (polish) a lesson during the coached steps waits for the coached stamp
 				_deferred_tips.append([kind, msg, _target_for(kind, data)])
 			elif msg != "" and not (_coach_active and error):
@@ -1095,7 +1114,7 @@ func _target_for(kind: StringName, data: Dictionary) -> String:
 			return "mask_softer_button"
 		&"plateau_not_reached":
 			return "store_button"
-		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"vibrotactile":
+		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"cross_hearing_air", &"vibrotactile":
 			return "tone_button"
 	return ""
 
@@ -2129,7 +2148,8 @@ func _refresh_quest(st: Dictionary) -> void:
 		if ClinicRules.is_octave(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f and not cur_is_retest))
 	var rt: Dictionary = session.retest[e]
-	items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
+	if session.retest_required(e) or not rt.is_empty():   # (E2) the first air ear's job (or a voluntary one)
+		items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
 	for f: int in [750, 500, 250]:
 		if ClinicRules.is_octave(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f))

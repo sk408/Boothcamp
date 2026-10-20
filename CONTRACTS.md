@@ -92,7 +92,9 @@ masked bone on the case ear (§11).
   - Every tone is synthesized.
   - Displayed dB HL is **simulated**.
   - All tone levels go through `AudioSafety.hl_to_peak()` and `AudioSafety.clamp_sample()`. The mapping is about -75 dBFS at 0 dB HL, plus 0.6 dB per dB HL,
-    and the peak never goes above **-12 dBFS**.
+    and the peak never goes above **-12 dBFS**. Tones get `TONE_BOOST_DB` (4 dB) on top, about -71 dBFS at 0 dB HL (clinical
+    review E7); masking noise and words keep the base mapping.
+  - (E7) The audiometer screen starts on **pulsed** tones; the stimulus key cycles pulsed, warble and steady.
   - Bus limiters back this up: Tones -12 dB, Master -6 dB (`default_bus_layout.tres`).
   - Sfx are normalized to a -18 dBFS peak.
 - **(v3) Masking noise:** synthesized narrow-band noise (white noise through a 1/3-octave band-pass at the
@@ -218,14 +220,14 @@ answered by the left cochlea, `cross_heard`).
   - `AC_FREQS`, `OCTAVE_FREQS`, `INTEROCTAVES`, `TEST_ORDER`.
   - Hughson-Westlake steps: `START_DB` 40, down 10, up 5, `ASCENDING_HITS_NEEDED` 2.
   - `MAX_DB` per frequency, tone-timing limits, `RESPONSE_WINDOW_S`, `TOO_LOUD_SL_DB`.
-  - `PAR_PER_MEASUREMENT` 7 (**v2**: only a fallback; the session computes par per measurement, §5.2), `MARATHON_FACTOR` 3.0, `SCORE_WEIGHTS`, `GRADE_BANDS`, `DEGREE_BANDS`, `SHAPES`, `SHAPE_TITLES`.
+  - `PAR_PER_MEASUREMENT` 7 (**v2**: only a fallback; the session computes par per measurement, §5.2), `MARATHON_FACTOR` 3.0, `SCORE_WEIGHTS`, `GRADE_BANDS`, `DEGREE_BANDS` (Goodman 1965; **E15** `DEGREE_SCALE_NOTE` "degrees: Goodman (1965)", printed under the audiogram's band names, which match), `SHAPES`, `SHAPE_TITLES`.
   - Functions: `clamp_db`, `accuracy_for_error`, `golf_name`, `grade_for_score`, `combo_multiplier`, `degree_name`, `pta`, `required_interoctaves`, `classify_shape`.
   - `accuracy_for_error`: 0 dB -> 1.0, 5 -> 0.8, 10 -> 0.3, more than 10 -> 0 (engine-and-fun.md scoring table).
   - `golf_name(strokes, par)` **(v2)** uses run-sized bands, because one extra ascending run costs 2-3 presentations:
     d = strokes - par: -6 or less albatross, -5..-4 eagle, -3..-2 birdie, -1..+1 par, +2..+3 bogey, +4..+5 double bogey, +6 or more triple bogey.
 
   **(v3) Bone conduction and masking** (all numbers in `docs/CHAPTER2.md` §7):
-  - `TESTS`, `TRANSDUCERS`, `BC_FREQS` (250-4k), `BC_REQUIRED` [1000, 2000, 4000, 500], `BC_MAX_DB` (250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65), `VIBROTACTILE_DB` (250: 30, 500: 55).
+  - `TESTS`, `TRANSDUCERS`, `BC_FREQS` (250-4k), `BC_REQUIRED` [1000, 2000, 4000, 500], `BC_MAX_DB` (250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65), `VIBROTACTILE_DB` (250: 25, 500: 55, 1000: 70: **E16**).
   - `IA_RULE_DB` (phones 40, inserts 55, bone 0), `MASK_SAFETY_DB` 10, `OCCLUSION_DB` (phones: 250 +15, 500 +15, 750 +10, 1k +10; inserts 0), `OCCLUSION_MAX_GAP_DB` 10, `MASK_STEP_DB` 5, `PLATEAU_STEPS` 3, `MASK_MIN_DB` 0, `MASK_MAX_DB` 100.
   - `ABG_CONDUCTIVE_DB` 10 (gap > 10 = conductive), `ABG_RED_FLAG_DB` 15 at `ABG_RED_FLAG_FREQS` [500, 1000, 2000], `CARHART_FREQ` 2000, `CARHART_MIN_DIP_DB` 10, `HEARING_TYPES`, `HEARING_TYPE_TITLES`, `MASK_STATUSES` (off, needed, under, ok, over, impossible).
   - Functions: `test_id`, `test_is_bone`, `test_is_masked`, `unmasked_test`, `test_freqs`, `max_db_for(freq, transducer)`, `clamp_db_for`, `clamp_mask_db`, `ia_rule`, `occlusion_effect`, `air_bone_gap`, `is_conductive_gap`, `abg_red_flag`, `hearing_type`, `has_carhart_notch`, `ac_masking_needed` (test AC - IA >= non-test BC), `bc_masking_needed` (gap >= `BC_MASK_GAP_DB`, 10: clinical review E5; `is_conductive_gap` stays > 10 for naming the loss), `initial_masking` (non-test AC + 10 + occlusion), `overmask_limit` / `is_overmasked` (masker - IA >= test cochlea), `masking_dilemma`, `mask_status`, `next_mask_step` (heard: noise +5; missed: tone +5), `plateau_run`, `sheet_thresholds`, `best_thresholds`, `nontest_bone_estimate`, `masked_freqs_needed`, `response_threshold` (the cross-hearing model: either cochlea answers).
@@ -383,8 +385,8 @@ recap "The short version". How to add one: `docs/ADDING_A_CHAPTER.md`, "Hoot's m
 
 | Part | File | What it is |
 |---|---|---|
-| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies), `replay_ids()` (every movie but the recaps), `is_short(id)`, `day_label(id)` ("Day 2"), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
-| Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list) and `stage` (the movie's own sets script, below) |
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-11" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
+| Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list), `stage` (the movie's own sets script, below) and **(cases)** `also_chapters` (more Game.CHAPTERS ids whose pause menu lists it: the case movies belong to `rocco` and also to Days 7 to 11) |
 | Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
 | Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | Fully animated: `SETS` (the built-in set ids: the ten masking sets of `docs/CHAPTER2.md` §16 and `card`), `use_movie(movie)` (the player calls it: loads `MOVIE.stage`), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes, a screenshot repeats and a skipped scene leaves nothing behind. `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. **Fallback:** a `set` nobody knows (neither the stage nor the movie's sets script) draws a card with the scene's title (never an error, never a blank screen) |
 | **(polish) Sets hook** | `story/explainers/explainer_sets.gd` (RefCounted base) | A movie may bring its OWN sets, so a later chapter never edits the stage: `MOVIE.stage = "res://<your folder>/<id>_sets.gd"`, a script that `extends "res://story/explainers/explainer_sets.gd"`, declares `const SETS: Array[StringName]` and one `func _set_<id>() -> void` per set. The stage draws its built-in sets itself and hands any other set to that script (`draw_set(stage, id)`), so it draws in the stage's `_draw()` with the same inputs, refreshed per frame: `t`, `duration`, `params`, `scene_id`, `scene_title`; `s` is the stage (every helper: `s._snail()`, `s._chip()`, `s._text()`, `s._cloud()`, `s._head_open()`, `s.draw_*()`...), `Stage2D.<COLOR>` its palette, and `_k()`, `_pop()`, `_ring()` are on the base. Same rules: a pure function of `t`, sounds only in the cues. `Movies.validate(id, Stage2D.SETS)` accepts a set from either list and reports a missing script, one that is not an explainer_sets.gd with SETS, or a SETS id without its `_set_<id>()`. Working example: `tests/fixtures/fake_movie.gd` + `fake_movie_sets.gd` (test `test_movie_sets_hook`) |
@@ -551,7 +553,7 @@ How the screen behaves:
 | `intro`, `hoot_turn_text`, `done_title` | Hoot's opening tip, his take-over line, the quest panel's done title |
 | `intro_full` **(polish)** | the opening tip used instead of `intro` when quick visit is off (no "I'll run the rest") |
 | `montage` **(polish)** | with quick visit and `hoot_turn_after` 0: Hoot fills the ear as a stamp montage (`AudiometrySession.instant_measure`, no tones played, input locked, scoring off) instead of the x8 turn |
-| `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it |
+| `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it. (E2) Only the first air ear of a visit owes the retest anyway. (FS-07) The waiver lasts for that ear for the rest of the session: a later air run on it, whoever runs it, owes no retest, so a non-air plan never sets it |
 | `nothing_title` **(polish)** | the done title when the goal sheet needs nothing (default "NOTHING TO MASK!") |
 | `start_db` **(polish)** | the first level of a non-air plan instead of the textbook start (Day 2's optional 250 Hz bone "bonus hole" starts at 40, so the vibrotactile tickle lands) |
 | `demo_tone` **(v4)** | `{freq, db, title, max_tones := 3, idle_s := 6.0}`: the one-tone **Ghost demo**. The screen sits at `freq` / `db` with the masking deck hidden, scoring off and every control but TONE locked (keys and buttons); a sticky Hoot tip (`intro`) points at TONE. A heard tone (or the last try) ends it; a miss raises the tone 5 dB and asks again. **(polish)** The wait clock starts once Hoot's tip has typed out (plus 1 s); after `idle_s` TONE wiggles with a "Hold Space!" chip, after twice that Hoot presses TONE himself. A cross-heard answer flies the Ghost with `title` ("Bone 5, air 50? BOO!"); **(polish)** when she answered higher than `db` (a missed first beep), the shout names the level she really answered at and her air there ("Bone 10, air 50? BOO!"). Nothing is stored, no `ear_completed`; its open measurement is dropped (`AudiometrySession.discard_open(ear, freq)`, core-internal) so it never starts a bone search; after 2.4 s it emits `audiometry_finished` and `test_finished`. **(v4, builders) The look:** a lavender "GHOST DEMO: ONE BEEP" banner; TONE beckons, every other deck button and Ask Hoot is dimmed, and a locked key or click wiggles it with a quiet error blip and a "just TONE!" chip; the test ear's card says "GHOST TEST" with no pips; the quest panel shows one token, no bar, and a note ("ONE beep, buzzer on her RIGHT. Nothing gets stored.", then "Heard at N dB... but by WHICH cochlea?"); no par, dance card, combo flame or booth punch-in (integrator: the punch-in hid the Ghost's callout); Hoot's own press shows a "Hoot's wing!" chip, a too-short press "A blip! Hold ..."; the Ghost flies onto the better ear's `>` mark and lingers 3 s. The locks and labels come back when it ends |
@@ -698,8 +700,8 @@ it during the test.
 | `store_without_bracket` | stored with no level heard twice on ascending runs | db |
 | `store_wrong_level` | stored a level that is not the lowest one heard twice ascending | db |
 | `start_not_1k` | the first store of an ear isn't 1000 Hz | db |
-| `missed_retest` | 500 or 250 Hz stored before the 1 kHz retest | db |
-| `retest_mismatch` | the 1 kHz retest differs by more than 5 dB | db |
+| `missed_retest` | **(E2) no longer raised**: the lows may come before the retest (BSA 2018 retests after 250 Hz); the retest stays required on the ear that owes it | db |
+| `retest_mismatch` | the 1 kHz retest differs by more than 5 dB (**E3**: a `retest_why` observation follows) | db |
 | `nr_too_early` | "no response" stored without a miss at the maximum level | db |
 | `tone_too_short` / `tone_too_long` | tone under 0.5 s / over 3 s | duration_s |
 | `rhythmic` | the last 4 gaps between tones vary by less than 0.3 s | spread_s |
@@ -723,6 +725,8 @@ it during the test.
 | `interoctave_needed` | freq = the half-octave that is now required |
 | `not_instructed` **(v2)** | db (the patient guesses because nobody told him what to do) |
 | `phones_swapped` **(v2)** | db (he points at the other ear: the phones are on the wrong ears) |
+| `retest_why` **(E3)** | diff, better, lines (right after `retest_mismatch`, scored only: Hoot's lines from `retest_beat(ear)`; the screen says them the first time a visit has one, then the short tip) |
+| `short_gap` **(E6)** | gap_s (a gap shorter than the beep before it and under `ClinicRules.SHORT_GAP_S` 1.0 s, or a guess after a short gap; the tip once per visit). The rushed gap breaks the combo with no error and no technique cost |
 
 **(v3) Masking errors** (masked sheets only):
 
@@ -736,11 +740,12 @@ it during the test.
 
 On non-`ac` sheets `start_not_1k`, `missed_retest` and the inter-octave rule do not apply.
 
-**(v3) Observations:** `cross_hearing` (unmasked: the other cochlea answered), `undermasked` (masked: it still
-did), `plateau_step` {steps, needed, db, mask_db, found, window_full, auto} after every masked verdict, `plateau_found`
+**(v3) Observations:** `cross_hearing` (unmasked bone: the other cochlea answered; **E4** `cross_hearing_air` for an
+unmasked air tone, "Time to mask."), `undermasked` (masked: it still did), `plateau_step` {steps, needed, db, mask_db, found, window_full, auto} after every masked verdict, `plateau_found`
 {db, start_mask, end_mask}, `vibrotactile` {db} (a felt low bone tone). **(E9)** `masking_dilemma` {initial_db,
 limit_db} (the first scored masked tone where the initial masking already overmasks) and `plateau_not_reached`
-{db, mask_db, limit_db} (the safe window filled before a plateau), each once per visit.
+{db, mask_db, limit_db} (the safe window filled before a plateau), each once per visit. **(E8)** `tinnitus_steady`
+{tinnitus_hz} (the first scored steady tone near the patient's tinnitus pitch; once per visit).
 
 Combo multiplier (`combo_changed`): x1, x2 at 3, x3 at 6, x5 at 10 consecutive clean checks.
 
@@ -844,7 +849,12 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
   **(Clinical review E9)** `safe_mask_max_db(e, f, tone_db)` (one step under the overmasking limit), `start_mask_db`
   (the initial masking, or the safe maximum in a dilemma: where the coach starts the noise), `in_dilemma`.
 - **(polish)** `AudiometrySession`: `MASKED_GRACE_DB` 0 (a masked stamp is scored like any other: the simulator is
-  calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); `instant_measure(ear, freq)
+  calibrated instead); `retest_waived: Dictionary` (ear -> true: no 1 kHz retest needed); **(E2)** `retest_required(ear)`
+  (only the first air ear of the visit, `air_ear_order[0]`, owes the 1 kHz retest, or the second too when the first ear's
+  retest was off by more than 5 dB; a waived ear never; a voluntary retest on another ear is still graded) and
+  `air_ear_order: Array[String]`; **(E3)** `retest_beat(ear) -> Array[String]` (after a retest more than 5 dB off: why we
+  retest, from `RETEST_WHY_BETTER` or `RETEST_WHY_WORSE`, re-instruct and recheck, plus `RETEST_OTHER_EAR` on the first
+  air ear; [] when it agreed); **(E6)** `last_tone_dur` (the last beep's length); `instant_measure(ear, freq)
   -> Dictionary` runs one whole textbook measurement at once through the public controls with simulated time (Hoot's
   montage; returns {} while a tone is on or while scoring is on). The unmasked air truth (`response_truth(&"ac")`) is
   the shadow curve: the better of the test ear and the other cochlea through the air IA, so an unmasked stamp that
@@ -855,6 +865,10 @@ The key chips are on by default (`settings.show_key_hints`). First-time players 
 - **(polish)** `ToneGenerator.render()`: the masker keeps playing when a tone ramps out (it never drops with the tone).
 - **(v3)** `PatientSim`: `transducer`, `masker_db`, `masker_transducer`, `condition()`, `condition_for(ear, freq, tr,
   mask, mask_tr)` (via `ClinicRules.response_threshold`), `last_heard_by` (&"test" / &"cross", reactions only).
+- **(E8)** `PatientSim.steady_tone` (false = pulsed or warble, the E7 default) and `tinnitus_confuses(freq)`: within
+  `TINNITUS_OCTAVES` (0.6: the half-octave pitches either side) of `profile.tinnitus_hz` a steady tone near threshold is missed `TINNITUS_MISS_P` (35 %) more
+  often, and `false_alarm_tick(delta)` presses `TINNITUS_FA_FACTOR` (3) times as often while `dialled_freq` is in range. The
+  session sets it (`set_steady_tone(on)`, `steady_tone`); the AudiOtron passes its stimulus before every tone.
 - `ToneGenerator` (Node): `AudioStreamGenerator` at 44.1 kHz on the Tones bus.
   - **(v3)** masker: `start_masker(ear, freq, db_em)`, `set_masker(freq, db_em)`, `stop_masker()`, through `AudioSafety` (§1.3).
   - **(v3, builders)** `bone: bool` (set by the AudiOtron when the route is bone) and `BONE_CROSS_DB` -10: a bone tone also
@@ -1451,7 +1465,11 @@ else the first registered case.
 test, info `{ear, test}`), `reveal`, `evidence`, `decision`, then `retest` for a case with a retest block, and
 `results`. Inside the retest, `otoscopy`, `tymp`, `instructions`, `audiometry` and `reveal` repeat with
 `info.retest = true` (the bot suffixes those phase shots `_retest`). `Game.PHASES` gained `tymp`, `decision` and
-`retest`.
+`retest`. **(Clinical review C12)** An `explainer` phase `{movie, source: "case", first_case}` comes before
+`intro`, `tymp` and `reveal` when Hoot's case movie for that step (`LevelCase.CASE_MOVIES`: `case_files`, `tymp`,
+`shapes`) has not been watched yet: on the first case it plays after Hoot's lead-in; on a later case Hoot offers it
+(a `choice` beat, best = watch). The movie itself is the standard `explainer` beat (§3.4); the retest has none.
+Visit flags `movie_<id>` (watched to its `seen_at` scene).
 
 **Optional case keys (batch 2; all default to the Days 6-9 behaviour).** `otoscopy.view` `clear` / `wax` / `fluid`
 (a wax view keeps the first visit's air on headphones); `otoscopy.kind` and `findings[].kind` `clue` / `flag`;
@@ -1520,6 +1538,8 @@ every walk-in), `fs_tray.gd`, `fs_questions.gd`, `fs_clipboard.gd`, `fs_chart.gd
 `cases/<id>.json`. Truth tables: `core/patients/fs_<id>.tres` (same conventions as §11). Ids start with `fs_`.
 
 **Not chapters.** Walk-ins are never in `Game.CHAPTERS`, never on the Days grid and never in `chapters_done`.
+The waiting room and the runner set `Game.current_chapter_id` to `FsData.NOT_A_DAY` (`"freestyle"`), so the pause
+menu (E19, `Movies.for_level`) offers the replay movies, the masking movie among them, never a leftover day's own.
 The waiting room hands its pick to the runner in the Engine meta `freestyle_next_case`; `--freestyle=<id>` wins.
 The best result per walk-in is stored inside the save's patient record: `progress.patients[<id>].fs_best_grade`
 and `fs_best_score`.
@@ -1532,10 +1552,13 @@ flags, asymmetry, decisions), `ClinicRules` (types of loss, masking rules, PTA),
 `audiometry` (info `{ear, test}`), `freestyle_chart`, `decision`, `freestyle_debrief`, `results`. `Game.PHASES`
 gained `freestyle_room`, `freestyle_tray`, `freestyle_chart`, `freestyle_debrief`.
 
-**Beats.** No new beat kinds: everything is `dialogue`, `choice` and the AudiOtron's own beats. The waiting room's
+**Beats.** No new beat kinds: everything is `dialogue`, `choice`, the AudiOtron's own beats and, for the masking
+recap, `explainer`. The waiting room's
 pick, the tool tray, the question board and every clinic choice (tip, tymp type, ear first, mastoid, masked test,
 chart type, the stamp) are `choice` beats whose `best` is the pro's pick (`FsRules.best_tool`). Buttons start
-with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique).
+with their option text, so the mouse bot clicks them by their first 18 characters (tests keep them unique). While
+Day 2's masking movie is unseen, the visit's first masked test plays the one-card `masking_recap` first (the
+`explainer` beat, as on Day 2; clinical review A2).
 
 **Visit and medals.** Medals `fs_chat` (Chat), `fs_workup` (Workup), `fs_chart` (Chart), `fs_call` (Call). The
 paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit's own score. Summary keys:
@@ -1547,6 +1570,10 @@ paper's score is 60 % medals (gold 100, silver 70, bronze 40) and 40 % the visit
 **The AudiOtron between tests.** One screen per visit. Between tests it stays in the tree (its Hoot anchors are
 registered once) but is hidden and `PROCESS_MODE_DISABLED`, unregistered from `Stage.audiometer`, with the booth
 view off and the music back; the next test re-registers it. It is freed when the patient walks to the desk.
+So one `AudiometrySession` covers the whole workup, and (E2) only the visit's first air ear owes the 1 kHz retest
+(the second too after a first-ear mismatch over 5 dB). `LevelFreestyle.air_plan()` and `bone_plan()` never set
+`skip_hoot_retest`: the screen waives the retest per ear, not per test, so a bone run before air would cost that
+ear its air retest (FS-07).
 
 **Hooks in other modules (all additive).**
 - `story/title_screen.gd`: the **Freestyle** button (`FREESTYLE_SCENE`) after Days; Options and Quit share the last
@@ -1559,12 +1586,19 @@ view off and the music back; the next test re-registers it. It is freed when the
 
 **Anchors.** `freestyle_chart` (the chart card).
 
-**Rules.** Freestyle's one departure from the `CaseRules` fit rule (Steve's question 10 rule, 2026-10-19): a clear
-difference between the ears that a known cause explains, with no other red flag, may be fitted, with a yearly recheck
-(the game's default; Buck is a working call until Steve answers question 14; docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
+**Rules.** The calls follow `CaseRules` (red flags, including a clear difference between the ears); Steve,
+2026-10-19: refer for red flags or an asymmetry with no known cause, and a likely cause (Buck's shooting) still
+sees a doctor first (docs/FREESTYLE.md 4.4). Every walk-in asks where the patient has trouble hearing (`FsRules.TROUBLE_QUESTION`).
+Masked bone starts from unmasked bone stamped on either mastoid; with none yet the runner sends the player to bone
+first (no unmasked pre-run on the poorer side). Any test begun before the otoscope looked, bone included, is the
+"look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (an ear with a
+middle-ear part whose truth has the notch, shown by the chart's masked bone) and, on every FIT, that a full fitting also checks words in quiet and in noise.
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in
 asks where they have trouble hearing (and a FIT's debrief turns those places into goals), the tymp tip
 matches the canal, speakers are unique game-wide, button prefixes are unique, every tray row and teaser fits the
-screen, an unmasked gap is never an accepted chart type, and the title's menu ends above the footer.
+screen, an unmasked gap is never an accepted chart type, the title's menu ends above the footer, every masked
+frequency leaves 20 dB between the starting noise and the overmasking line on headphones, no true bone reaches
+55 dB at 500 Hz, the debrief's extra lines go where they belong, a visit's pause menu offers the masking movie
+after a day with its own movie, and Hoot's bone montage before air leaves the first air ear its 1 kHz retest.

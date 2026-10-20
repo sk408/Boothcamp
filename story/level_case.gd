@@ -22,12 +22,14 @@ const CaseTymp := preload("res://story/games/case_tymp.gd")
 const CaseClock := preload("res://story/games/case_clock.gd")
 const CaseProps := preload("res://story/games/case_props.gd")
 const Voice := preload("res://story/voice.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
 const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_case.tscn"
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"tymp", &"beeps", &"reveal", &"pattern", &"call"]
 const STEP_LABELS: Dictionary = {
@@ -48,6 +50,31 @@ const TYPE_ANSWERS: Dictionary = {&"sensorineural": 0, &"conductive": 1, &"mixed
 const BORROW_BONE_DB := 10
 ## Hoot's one-time briefing, the first time a player opens any case.
 const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
+## (Clinical review C12) Hoot's case movies (story/explainers/movies/<id>.gd), each just before its
+## step: the stamps and red flags before the first patient knocks, the tympanometer before its step,
+## the chart shapes before the reveal. Gated like BRIEFING: on a player's first case each plays after
+## its lead-in line; on a later case, an unwatched one is offered (offer); once watched, it lives in
+## the pause menu (Hoot's Movies) and the title's list.
+const CASE_MOVIES: Dictionary = {
+	"case_files": {
+		"lead_in": "New today: CASE FILES! A quick cartoon on the three stamps, then our patient.",
+		"offer": "Hoot's case files movie: the three stamps and the red flags. Watch it first?",
+	},
+	"tymp": {
+		"lead_in": "New gadget: the Tymp-O-Matic! A quick cartoon on what it shows, then we test.",
+		"offer": "Hoot's tympanometer movie: what those curves mean. Watch it before the tymp?",
+	},
+	"shapes": {
+		"lead_in": "Chart time! A quick cartoon on audiogram shapes, then you name this one.",
+		"offer": "Hoot's audiogram movie: slopes, notches and cookie bites. Watch it before the chart?",
+	},
+}
+## (Clinical review A2) Every day is open, so a player can meet masking on a case day first. Before
+## the visit's first masked test, while Day 2's full movie is unseen: the one-card recap (about 12 s,
+## Esc skips it), then where the full movie lives, as Freestyle does.
+const MASKING_MOVIE := "masking"
+const MASKING_RECAP := "masking_recap"
+const MASKING_HINT := "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen."
 ## The runner's own lines (case_scripts.py prints them too: keep the two in step).
 ## The first look in every case: the other ear, before the case's own (both ears get a look before
 ## any probe or insert goes in), with a fresh speculum (clinical review A1). %s: the speaker, then the
@@ -81,6 +108,8 @@ var clues: Array[Dictionary] = []
 var _walk_done := true
 ## Wax fills the canal (the otoscope's "wax" view): air goes through headphones, never a foam insert.
 var _canal_blocked := false
+## (A2) The masking recap played this visit (once, before the first masked test).
+var _recapped := false
 ## The scored visit's summary when a retest follows it: Game.finish_visit runs before the retest, so
 ## quitting during the unscored victory lap keeps the day (chapters_done, coins, best grade).
 var _summary: Dictionary = {}
@@ -98,6 +127,7 @@ static func pick_case_id() -> String:
 
 
 func _ready() -> void:
+	add_to_group(&"masking_level")  # (E19) the pause menu offers the masking movie (Movies.MASKING_LEVEL_GROUP)
 	case_id = pick_case_id()
 	case_data = CaseData.load_case(case_id)
 	var problems := CaseData.validate(case_data) if not case_data.is_empty() else PackedStringArray(["no case file"])
@@ -295,9 +325,10 @@ func _run() -> void:
 # ---------------------------------------------------------------- 1. intro
 
 func _intro() -> void:
+	clinic.call("focus_camera", &"door", 0.0)
+	await _movie("case_files")
 	_phase(&"intro")
 	hud.call("set_step", &"chat")
-	clinic.call("focus_camera", &"door", 0.0)
 	await _wait(0.5)
 	get_tree().create_timer(1.4, false).timeout.connect(func() -> void: clinic.call("focus_camera", &"desk", 2.2))
 	await clinic.call("walk_in")
@@ -311,6 +342,31 @@ func _intro() -> void:
 		var d: Dictionary = cl
 		hud.call("add_clue", String(d["text"]), String(d.get("kind", "clue")))
 		_add_clue(String(d.get("tag", "")), String(d["text"]), String(d.get("kind", "clue")), "note")
+
+
+## (Clinical review C12) One of Hoot's case movies (CASE_MOVIES), unless it was watched before. The
+## player's first case: Hoot's lead-in, then it plays; a later case: Hoot offers it. Esc skips it
+## (it comes back on the next case until watched to its seen_at scene).
+func _movie(id: String) -> void:
+	if not Movies.has(id) or Game.is_movie_seen(id):
+		return
+	var lines: Dictionary = CASE_MOVIES[id]
+	var first := first_case()
+	_phase(&"explainer", {"movie": id, "source": "case", "first_case": first})
+	if first:
+		await _say("Hoot", String(lines["lead_in"]))
+	else:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(id) / 10.0) * 10.0), "Not now: on with the case."]
+		var c: int = await dialogue.choose(String(lines["offer"]), opts, 0)
+		if c != 0:
+			return
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", id, "day_start" if id == "case_files" else "case")
+	player.queue_free()
+	Game.set_visit_flag("movie_" + id, bool(r.get("watched", false)))
+	if bool(r.get("skipped", false)):
+		await _say("Hoot", "Skipped! Rewatch it any time: pause menu, \"Hoot's Movies\".")
 
 
 # ---------------------------------------------------------------- 2. case history
@@ -404,6 +460,7 @@ func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
 # ---------------------------------------------------------------- 4. the tympanometer
 
 func _tymp() -> void:
+	await _movie("tymp")
 	_phase(&"tymp")
 	hud.call("set_step", &"tymp")
 	var ty: Dictionary = case_data["tymp"]
@@ -687,6 +744,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				oscillator_on = ear
 			clinic.call("focus_camera", &"face", 0.5)
 			clinic.call("put_on_masking_phone", other)
+			await _recap()
 			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
 				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
 			_open_screen()
@@ -703,6 +761,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				clinic.call("take_off_bone_oscillator")
 				oscillator_on = ""
 				clinic.call("put_on_earphones", true)
+				await _recap()
 				await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
 			_open_screen()
 			await _test(ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
@@ -731,6 +790,19 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 		await _play(case_data.get("after_audiometry", []))
 	else:
 		await _say("Hoot", "Bone's in. Let's lay it over the air and see what it says.")
+
+
+## (Clinical review A2) The masking recap card before the visit's first masked test, while Day 2's
+## full movie is unseen, then where the full movie lives (the pause menu lists it on every case day).
+func _recap() -> void:
+	if _recapped or Game.is_movie_seen(MASKING_MOVIE) or not Movies.has(MASKING_RECAP):
+		return
+	_recapped = true
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", MASKING_RECAP, "recap")
+	player.queue_free()
+	await _say("Hoot", MASKING_HINT)
 
 
 ## Quick visit (the default): Hoot runs the tests the plan gives him. Off: the player runs everything.
@@ -775,6 +847,7 @@ static func borrowed_type(air: Dictionary, bone: Dictionary) -> StringName:
 # ---------------------------------------------------------------- 7. reveal: the chart
 
 func _reveal() -> Control:
+	await _movie("shapes")
 	_phase(&"reveal")
 	hud.call("set_step", &"reveal")
 	var b := CaseBoard.new()

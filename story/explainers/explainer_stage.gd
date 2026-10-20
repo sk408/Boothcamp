@@ -184,7 +184,7 @@ func _draw() -> void:
 	_xf_stack.clear()
 	_xf = Transform2D.IDENTITY
 	draw_set_transform_matrix(_xf)
-	if set_id != &"meet":
+	if not _card_scene():
 		_iris()
 	_scene_chip()
 	_frame()
@@ -1666,11 +1666,18 @@ func _title_card(k: float, rot: float) -> void:
 	_pop_xf()
 
 
+## An opening that holds a title card (Day 2's "meet", or a movie's own set with params.card_hold,
+## like the case movies' marquee): the curtains are its entrance (no iris), and the scene chip
+## waits until the card has gone.
+func _card_scene() -> bool:
+	return set_id == &"meet" or params.has("card_hold")
+
+
 func _scene_chip() -> void:
 	var card_end := float(params.get("card_hold", 2.0)) + 0.4
-	if scene_title == "" or (set_id == &"meet" and t < card_end):
+	if scene_title == "" or (_card_scene() and t < card_end):
 		return
-	var k := _pop(0.35 if set_id != &"meet" else card_end, 0.4)
+	var k := _pop(0.35 if not _card_scene() else card_end, 0.4)
 	if k <= 0.01:
 		return
 	var f := UiKit.font(700)

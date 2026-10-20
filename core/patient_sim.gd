@@ -3,7 +3,7 @@ extends RefCounted
 ## PatientSim: the patient's "brain" (builder A). Decides whether a tone is heard, when the
 ## patient presses, and when they press for nothing. It never uses the player's ears.
 ##
-## Model (test-content.md §3.1, air conduction only, no masking in this slice):
+## Model (the hearing curve; cross-hearing and masking are ClinicRules.response_threshold):
 ##   P(heard) = logistic((level - threshold) / slope) * (1 - lapse)
 ##   with slope ~1.7 dB and the 50 % point THRESHOLD_BIAS_DB (2 dB) below the profile threshold:
 ##   ~76 % at threshold, ~98 % at +5 dB, ~15 % at -5 dB (attentive patient).
@@ -12,7 +12,9 @@ extends RefCounted
 ##   - false alarms in silence (profile rate; x6 when nobody told them what to do),
 ##   - "groove": a steady rhythm of gaps makes them press on the beat (anticipation),
 ##   - very short gaps make them trigger-happy (a guess press without hearing anything),
-##   - very short tones are often lost (temporal integration).
+##   - very short tones are often lost (temporal integration),
+##   - (E8) near their tinnitus pitch a STEADY tone hides in the ringing: more misses near threshold
+##     and more presses for nothing; pulsed or warble tones are back to normal.
 ## (v3) Cross-hearing and masking: a tone is heard when EITHER cochlea hears it
 ## (ClinicRules.response_threshold). The session sets the test condition before each tone:
 ## transducer (phones / inserts / bone) and the masker in the other ear. Bone has ~0 dB of
@@ -58,6 +60,15 @@ const NOT_INSTRUCTED_FA_FACTOR := 6.0
 const NEAR_THRESHOLD_EXTRA_S := 0.25
 ## Temporal integration: a tone this much shorter than min_tone_s loses up to this many dB.
 const SHORT_TONE_PENALTY_DB := 12.0
+## (E8) A steady tone within this many octaves of profile.tinnitus_hz is confused with the ringing:
+## about half an octave, so the half-octave test pitches either side count (3 and 6 kHz around 4 kHz)
+## (ASHA 2005: "Use a pulsed signal or a warble tone to help distinguish the test signal from the
+## tinnitus"; Lentz et al. 2017: steady tones rated harder than warble and pulsed).
+const TINNITUS_OCTAVES := 0.6
+## Near threshold this share of those steady tones is lost in the ring (none well above threshold).
+const TINNITUS_MISS_P := 0.35
+## And presses for nothing come this many times as often while that pitch is dialled in.
+const TINNITUS_FA_FACTOR := 3.0
 
 var profile: PatientProfile
 var rng := RandomNumberGenerator.new()
@@ -78,6 +89,11 @@ var transducer: StringName = &"phones"
 ## Narrow-band masker in the non-test ear (dB EM); -1 = off.
 var masker_db: int = -1
 var masker_transducer: StringName = &"phones"
+## (E8) The tone is steady (not pulsed or warble); the session sets it. Off by default (E7: the
+## AudiOtron starts on pulsed).
+var steady_tone: bool = false
+## (E8) The pitch dialled in while the booth is quiet (the session sets it before false_alarm_tick).
+var dialled_freq: int = 0
 ## Which cochlea heard the last tone (on_tone_start): &"test", &"cross" (the Cross-Hearing
 ## Ghost) or &"" when it was not heard. Truth: for reactions only, never for the player or bot.
 var last_heard_by: StringName = &""
@@ -137,9 +153,18 @@ func hear_probability(ear: String, freq: int, db: int, penalty_db: float = 0.0) 
 	var near := clampf(1.0 - (level - thr) / NEAR_RANGE_DB, 0.0, 1.0)
 	var lapse := (1.0 - attention) * (masked_lapse_scale if masked else LAPSE_SCALE) * near
 	p *= 1.0 - lapse
+	if tinnitus_confuses(freq):
+		p *= 1.0 - TINNITUS_MISS_P * near
 	if cross_hearing.is_valid():
 		p = maxf(p, float(cross_hearing.call(ear, freq, db)))
 	return clampf(p, 0.0, 1.0)
+
+
+## (E8) True when a tone at this pitch is steady and within TINNITUS_OCTAVES of the patient's tinnitus.
+func tinnitus_confuses(freq: int) -> bool:
+	if not steady_tone or profile == null or profile.tinnitus_hz <= 0 or freq <= 0:
+		return false
+	return absf(log(float(freq) / float(profile.tinnitus_hz)) / log(2.0)) <= TINNITUS_OCTAVES + 0.001
 
 
 ## How far above (+) or below (-) threshold a level is, for reactions (straining, blast).
@@ -182,10 +207,13 @@ func reaction_time(ear: String = "", freq: int = 0, db: int = 0) -> float:
 
 
 ## Call every frame of silence (outside any response window). True = a press for nothing.
+## (E8) With a steady tone dialled in near the tinnitus pitch (dialled_freq), the ring sounds like a beep.
 func false_alarm_tick(delta: float) -> bool:
 	var rate := profile.false_alarms_per_minute / 60.0 * (1.0 + 3.0 * groove)
 	if not instructed:
 		rate *= NOT_INSTRUCTED_FA_FACTOR
+	if tinnitus_confuses(dialled_freq):
+		rate *= TINNITUS_FA_FACTOR
 	return rng.randf() < rate * delta
 
 

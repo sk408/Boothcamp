@@ -351,7 +351,8 @@ func _air() -> void:
 	hud.call("set_step", &"air")
 	# a career-fair player may start here (Unlock all days): no "like yesterday"
 	var veteran := Game.is_chapter_done("gus")
-	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "skip_hoot_retest": true, "done_title": "RIGHT AIR DONE!",
+	# (E2) the first ear keeps its 1 kHz retest (Hoot does it in his turn); the left, second, owes none
+	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "done_title": "RIGHT AIR DONE!",
 		"intro": "Air first, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
 			else "New trainee? Air first: I'll coach your first beep, then whizz through the rest!",
 		"intro_full": "Air first: her whole right ear is yours. I'll coach the first beep."})
@@ -492,7 +493,7 @@ func _ghost_demo() -> void:
 
 
 ## (polish) The optional 250 Hz bone "bonus hole": loud low bone tones are FELT before they are
-## heard (ClinicRules.VIBROTACTILE_DB 250: 30), so it starts at 40 and the first buzz tickles.
+## heard (ClinicRules.VIBROTACTILE_DB 250: 25), so it starts at 40 and the first buzz tickles.
 ## Skipping is fine (many clinics skip 250 Hz bone); the textbook answer (the bot's) plays it.
 func _bonus_hole(ear: String = "left") -> void:
 	var opts: Array[String] = ["Bonus hole! Bring on the tickle.", "Skip it: 500 to 4000 Hz is plenty."]

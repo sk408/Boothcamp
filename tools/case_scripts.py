@@ -47,6 +47,31 @@ def runner_line(name):
     return m.group(1)
 
 
+MOVIE_WHEN = {"case_files": "before the patient knocks", "tymp": "before the tympanometer",
+              "shapes": "before the chart"}
+
+
+def case_movies():
+    """level_case.gd's CASE_MOVIES: Hoot's case movies with their lead-in and offer lines (clinical review C12)."""
+    src = RUNNER.read_text(encoding="utf-8")
+    found = re.findall(r'"(\w+)": \{\s*"lead_in": "([^"]*)",\s*"offer": "([^"]*)",\s*\}', src)
+    if not found:
+        sys.exit(f"case_scripts.py: CASE_MOVIES not found in {RUNNER}")
+    out = ["## Hoot's case movies (every case day)", "",
+           "Each plays just before its step on the player's first case, after Hoot's lead-in. On a later case Hoot",
+           "offers one that was never watched to the end; once watched, it lives in the pause menu (Hoot's Movies)",
+           "and the title's list. The movies' captions are in `story/explainers/movies/<id>.gd`.", "",
+           "| Movie | When | Lead-in (first case) | Offer (later case) |", "|---|---|---|---|"]
+    for mid, lead, offer in found:
+        mf = ROOT / "story" / "explainers" / "movies" / f"{mid}.gd"
+        t = re.search(r'"title": "([^"]*)"', mf.read_text(encoding="utf-8")) if mf.exists() else None
+        title = f"{t.group(1)} (`{mid}`)" if t else f"`{mid}`"
+        out.append(f"| {title} | {MOVIE_WHEN.get(mid, '')} | {lead} | {offer} |")
+    out += ["", "Before a visit's first masked test, while Day 2's masking movie is unseen: the 12-second masking recap",
+            f"card (Esc skips it), then **Hoot:** {runner_line('MASKING_HINT')}"]
+    return out + [""]
+
+
 def tymp_desc(t):
     if t.get("type") == "B":
         ecv = t.get("ecv_ml", "?")
@@ -288,6 +313,7 @@ def main():
              "Generated from `story/cases/*.json` by `python3 tools/case_scripts.py`. Do not edit by hand: change the",
              "JSON and run the tool again. Every Hoot line is 18 words or fewer (`story/tests/test_cases.gd`). Choices",
              "are shown in file order; the game shuffles them.", ""]
+    lines += case_movies()
     for cid in case_order():
         p = CASES / f"{cid}.json"
         if p.exists():

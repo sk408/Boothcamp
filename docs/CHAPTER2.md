@@ -138,6 +138,7 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Placement | **(polish)** "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up." |
 | ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
+| Tip `cross_hearing_air` **(E4)** | "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." (an air tone; no Day 2 air tone is loud enough) |
 | Why mask | "To hear the right cochlea alone, keep the left one busy with noise. Masking!" **(v4)** ends "Masking, like the movie!" when the movie played to the end |
 | Wrong ear | "Noise in the test ear just hides the beep. Busy the OTHER ear." |
 | Starting level | "Start noise: her left air threshold plus 10, plus extra for occlusion on low tones." |
@@ -249,7 +250,7 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 |---|---|---|
 | Bone frequencies | 250-4000 Hz; required 1000, 2000, 4000, 500 (250 optional) | `BC_FREQS`, `BC_REQUIRED` |
 | Bone maximum output | 250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65 dB HL | `BC_MAX_DB` |
-| Felt, not heard | 250 Hz at 30+, 500 Hz at 55+ | `VIBROTACTILE_DB` |
+| Felt, not heard | 250 Hz at 25+, 500 Hz at 55+, 1000 Hz at 70+ (E16) | `VIBROTACTILE_DB` |
 | Oscillator position | mastoid, not touching the pinna | mini-game |
 | Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is never joined by lines; masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
 | Interaural attenuation (rules) | phones 40, inserts 55, bone 0 | `IA_RULE_DB` |
@@ -371,8 +372,8 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 
 ## 15. Polish pass (after the fun, audiology and bug reviews)
 
-- **Pacing.** Right air: Hoot coaches one beep, then runs the rest with no 1 kHz retest
-  (`skip_hoot_retest`). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
+- **Pacing.** Right air: Hoot coaches one beep, then runs the rest, the 1 kHz retest included (clinical
+  review E2: the first ear keeps it). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
   visit off the player tests everything. The bone and masking sheets are always the player's.
 - **Masked air after masked bone.** Clinics often mask air first; the level says so in one line. With the
   insert earphones (55 dB rule IA) Bonnie's right air cannot reach her left cochlea, so the level skips

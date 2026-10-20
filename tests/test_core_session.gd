@@ -26,6 +26,16 @@ class FixedSim extends PatientSim:
 		return true
 
 
+## (E4) Every tone is heard, and by the other cochlea: the Cross-Hearing Ghost on demand.
+class CrossSim extends FixedSim:
+	func on_tone_start(ear: String, freq: int, db: int, gap_s: float) -> Dictionary:
+		var d := super(ear, freq, db, gap_s)
+		last_heard_by = &"cross"
+		d["heard"] = true
+		d["press"] = true
+		return d
+
+
 const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]
 var _n := 0
 
@@ -262,7 +272,7 @@ func test_store_rules() -> void:
 	assert_false(bool(info["technique_ok"]))
 
 
-func test_start_not_1k_and_missed_retest() -> void:
+func test_start_not_1k_and_lows_before_the_retest() -> void:
 	var s := _session()
 	var kinds := _kinds(s)
 	s.set_freq(2000)
@@ -282,7 +292,43 @@ func test_start_not_1k_and_missed_retest() -> void:
 		s.set_level(lvl)
 		_present(s)
 	s.store()
-	assert_has(kinds, &"missed_retest")
+	# (E2) BSA retests after 250 Hz, ASHA before 500: either is fine, and the retest is still owed
+	assert_false(kinds.has(&"missed_retest"), "lows before the retest are not an error")
+	assert_has(s.required_remaining("right"), 1000, "the first ear still owes its retest")
+
+
+## (E2) The 1 kHz retest is owed by the first air ear of the visit only (ASHA 2005; BSA 2018, 6.4).
+func test_retest_first_ear_only() -> void:
+	var s := _session()
+	_play_by_the_book(s, "right")
+	assert_false((s.retest["right"] as Dictionary).is_empty(), "the first ear retested 1 kHz")
+	assert_eq(s.air_ear_order, ["right"] as Array[String])
+	assert_true(s.retest_required("right"))
+	assert_false(s.retest_required("left"), "the second ear does not owe it")
+	_play_by_the_book(s, "left")
+	assert_true(s.is_ear_complete("left"), "the left ear closes without a retest")
+	assert_true((s.retest["left"] as Dictionary).is_empty())
+	assert_eq((s.order["left"] as Array).count(1000), 1, "1 kHz once on the second ear")
+
+
+## (E2) The second ear owes a retest when the first ear's was off by more than 5 dB; a waived first
+## ear (Hoot's montage) passes nothing on; the left-first visit makes the left ear the one.
+func test_retest_second_ear_after_a_mismatch() -> void:
+	var s := _session()
+	s.air_ear_order = ["right"] as Array[String]
+	(s.sheet(&"ac")["retest"] as Dictionary)["right"] = {"stored_db": 40, "diff": 15, "strokes": 6, "par": 6, "first_db": 25}
+	assert_true(s.retest_required("left"), "a 15 dB mismatch on the first ear: retest the second too")
+	(s.sheet(&"ac")["retest"] as Dictionary)["right"] = {"stored_db": 30, "diff": 5, "strokes": 6, "par": 6, "first_db": 25}
+	assert_false(s.retest_required("left"), "within 5 dB: the second ear is free")
+	var s2 := _session()
+	s2.retest_waived["left"] = true
+	s2.air_ear_order = ["left"] as Array[String]
+	assert_false(s2.retest_required("left"), "a waived ear never owes it")
+	assert_false(s2.retest_required("right"), "and the next ear is a second ear")
+	var s3 := _session()
+	s3.set_ear("left")
+	assert_true(s3.retest_required("left"), "nothing stored yet: whichever ear comes first owes it")
+	assert_true(s3.retest_required("right"))
 
 
 func test_retest_ok_and_mismatch() -> void:
@@ -305,6 +351,7 @@ func test_retest_ok_and_mismatch() -> void:
 	var info := s.store()
 	assert_true(bool(info["retest"]))
 	assert_has(kinds, &"retest_ok")
+	assert_false(kinds.has(&"retest_why"), "a retest that agrees needs no explaining")
 	assert_eq(int((s.retest["right"] as Dictionary)["diff"]), 0)
 	assert_eq(int(s.stored["right"][1000]["stored_db"]), 25, "first 1 kHz result kept")
 
@@ -393,6 +440,132 @@ func test_timing_and_rhythm_errors() -> void:
 		_tick(s, 1.2)
 		s.tone_up()
 	assert_has(kinds, &"rhythmic")
+
+
+## (E3) A retest more than 5 dB off: the retest_mismatch error, then Hoot's beat on why it
+## matters (worse: tired or a lucky first stamp), re-instruct, recheck, and the second ear's retest.
+func test_failed_retest_explains_why() -> void:
+	var s := _session()
+	var kinds := _kinds(s)
+	var why: Array = []
+	s.technique.connect(func(k: StringName, d: Dictionary) -> void:
+		if k == &"retest_why":
+			why.append(d))
+	for lvl: int in [40, 30, 20, 25, 15, 20, 25]:
+		s.set_level(lvl)
+		_present(s)
+	s.store()
+	s.set_freq(2000)
+	for lvl: int in [50, 40, 30, 35, 40, 30, 35, 40]:
+		s.set_level(lvl)
+		_present(s)
+	s.store()
+	s.set_freq(1000)
+	(s.sim as FixedSim).force = {25: false, 30: false}   # he drifts: 35 is his answer now
+	for lvl: int in [35, 25, 30, 35, 25, 30, 35]:
+		s.set_level(lvl)
+		_present(s)
+	var info := s.store()
+	assert_true(bool(info["retest"]))
+	assert_eq(int((s.retest["right"] as Dictionary)["diff"]), 10)
+	assert_has(kinds, &"retest_mismatch")
+	assert_eq(kinds.find(&"retest_why"), kinds.find(&"retest_mismatch") + 1, "the beat follows the error")
+	assert_eq(why.size(), 1)
+	var lines: Array = why[0]["lines"]
+	assert_eq(lines, s.retest_beat("right"))
+	assert_false(bool(why[0]["better"]))
+	assert_eq(lines.size(), 3)
+	assert_true(String(lines[0]).begins_with("Worse by over 5 dB! He may be tired"), String(lines[0]))
+	assert_true(String(lines[1]).begins_with("Re-instruct him, then recheck"), String(lines[1]))
+	assert_eq(lines[2], AudiometrySession.RETEST_OTHER_EAR, "the first ear's mismatch: the second ear owes one")
+	assert_true(s.retest_required("left"))
+	# better on the retest: the patient warmed up, so the first stamps may sit too high
+	(s.retest["right"] as Dictionary).merge({"stored_db": 10, "diff": 15}, true)
+	assert_true(String(s.retest_beat("right")[0]).begins_with("Better by over 5 dB!"))
+	(s.retest["right"] as Dictionary).merge({"stored_db": 30, "diff": 5}, true)
+	assert_eq(s.retest_beat("right"), [] as Array[String], "within 5 dB: nothing to explain")
+	s.retest_waived["left"] = true
+	(s.retest["right"] as Dictionary).merge({"stored_db": 40, "diff": 15}, true)
+	assert_eq(s.retest_beat("right").size(), 2, "a waived second ear is not told to retest")
+	for t: String in AudiometrySession.RETEST_WHY_BETTER + AudiometrySession.RETEST_WHY_WORSE + [AudiometrySession.RETEST_OTHER_EAR]:
+		assert_true(t.split(" ", false).size() <= Hoot.MAX_WORDS, t)
+
+
+## (E6) A gap shorter than the beep before it (under ClinicRules.SHORT_GAP_S) breaks the combo,
+## with no error and no technique cost; the tip shows once. A gap as long as the beep is fine.
+func test_short_gap_breaks_the_combo() -> void:
+	var s := _session()
+	var kinds := _kinds(s)
+	s.set_level(40)
+	_present(s)
+	s.set_level(30)
+	_present(s)
+	s.set_level(20)
+	s.tone_down()
+	_tick(s, 1.5)
+	s.tone_up()
+	_tick(s, 0.5)
+	assert_eq(s.combo, 3, "three textbook steps")
+	var errs := s.errors.size()
+	var checks := s.checks
+	s.set_level(25)
+	s.tone_down()   # 0.5 s after a 1.5 s beep
+	assert_eq(s.combo, 0, "a rushed beep breaks the combo")
+	assert_eq(s.errors.size(), errs, "no error")
+	assert_eq(s.checks, checks + 1, "only the step itself was checked")
+	assert_eq(kinds.count(&"short_gap"), 1, "the tip once")
+	_tick(s, 1.5)
+	s.tone_up()
+	_tick(s, 0.5)
+	s.set_level(15)
+	s.tone_down()
+	assert_eq(kinds.count(&"short_gap"), 1, "and only once per visit")
+	_tick(s, 0.6)
+	s.tone_up()
+	_tick(s, 0.8)   # longer than that 0.6 s beep: fine
+	s.set_level(20)
+	var before := s.combo
+	s.tone_down()
+	assert_eq(s.combo, before + 1, "a gap as long as the beep keeps the combo")
+
+
+## (E4) The Ghost's lesson names the route: air crosses when it is loud, bone has almost no IA.
+func test_cross_hearing_tip_by_transducer() -> void:
+	var s := AudiometrySession.new(Game.load_patient("gus") as PatientProfile, 5)
+	s.sim = CrossSim.new(s.patient)
+	var kinds := _kinds(s)
+	s.set_level(40)
+	_present(s)
+	assert_has(kinds, &"cross_hearing_air")
+	assert_false(kinds.has(&"cross_hearing"))
+	assert_true(s.tip_text(&"cross_hearing_air").ends_with("Time to mask."))
+	s.configure({"test": &"bc"})
+	s.set_freq(1000)
+	s.set_level(20)
+	_present(s)
+	assert_has(kinds, &"cross_hearing")
+	assert_eq(kinds.count(&"cross_hearing_air"), 1)
+
+
+## (E11) The straining face shows on some tones within a few dB of threshold, never on every one
+## and never far above it, so it can't be read as a threshold meter. It never changes an answer.
+func test_straining_face_is_no_threshold_meter() -> void:
+	var counts := {}
+	for sl: int in [-8, 0, 8, 15]:
+		var s := _session(40 + sl)
+		var n := [0]
+		s.reaction.connect(func(k: StringName, _d: Dictionary) -> void:
+			if k == &"straining":
+				n[0] += 1)
+		var t := s.sim.effective_threshold("right", 1000)
+		s.set_level(t + sl)
+		for i in 200:
+			_present(s)
+		counts[sl] = n[0]
+	assert_eq(int(counts[-8]), 0, "well below threshold: no straining")
+	assert_eq(int(counts[15]), 0, "clearly heard: no straining")
+	assert_between(int(counts[0]) / 200.0, 0.2, 0.5, "at threshold: only some of the tones")
+	assert_between(int(counts[8]) / 200.0, 0.2, 0.5, "8 dB above: just as often, so the face can't pin it")
 
 
 func test_short_blip_is_thrown_away_and_the_level_kept() -> void:
@@ -572,3 +745,28 @@ func test_real_patient_textbook_play_lands_near_truth() -> void:
 					off += 1
 	assert_true(off <= 3, "%d of %d thresholds more than 5 dB off" % [off, total])
 	assert_between(float(strokes) / par, 0.8, 1.35, "par is fair for a careful player (strokes %d, par %d)" % [strokes, par])
+
+
+## (E8) A steady tone near the patient's tinnitus pitch: the session tells the simulator, and Hoot's
+## tip about pulsed or warble beeps fires once; pulsed tones (the E7 default) never trigger it.
+func test_tinnitus_tip_on_steady_tones() -> void:
+	var p := Game.load_patient("rocco") as PatientProfile
+	assert_eq(p.tinnitus_hz, 4000, "Rocco rings at 4 kHz")
+	var s := AudiometrySession.new(p, 5)
+	var kinds := []
+	s.technique.connect(func(k: StringName, _d: Dictionary) -> void: kinds.append(k))
+	s.set_freq(4000)
+	s.tone_down()
+	s.tone_up()
+	assert_false(kinds.has(&"tinnitus_steady"), "pulsed by default: no tip")
+	assert_false(s.sim.steady_tone)
+	s.set_steady_tone(true)
+	assert_true(s.sim.steady_tone, "the simulator hears a steady tone")
+	s.advance(2.0)
+	s.tone_down()
+	s.tone_up()
+	assert_eq(kinds.count(&"tinnitus_steady"), 1, "the tip fires")
+	s.advance(2.0)
+	s.tone_down()
+	s.tone_up()
+	assert_eq(kinds.count(&"tinnitus_steady"), 1, "once per visit")

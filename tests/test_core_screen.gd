@@ -122,7 +122,7 @@ func test_state_has_contract_and_extra_keys() -> void:
 		assert_has(st, k, "state")
 	assert_eq(int(st["freq"]), 1000, "starts at 1 kHz")
 	assert_eq(int(st["db"]), 40, "starts at 40 dB HL")
-	assert_eq(String(st["stimulus"]), "TONE")
+	assert_eq(String(st["stimulus"]), "PULSED", "E7: pulsed by default")
 	assert_eq(st["remaining"], [1000, 2000, 4000, 8000, 500, 250], "textbook order")
 	var labels := []
 	for it: Dictionary in screen._quest.items:
@@ -260,3 +260,21 @@ func test_completing_the_ear_emits_test_finished() -> void:
 	assert_eq(String(r["grade"]), "S", "a by-the-book run earns S")
 	assert_eq((screen._cards["right"] as AoEarCard).audiogram.point_count("right"), 6, "six symbols on the card (the retest adds none)")
 	assert_false((r["ears"]["right"]["retest_1k"] as Dictionary).is_empty(), "retest recorded")
+
+
+## (E10) The mask lamp's green state reads "in range" until the plateau is found, then "good".
+## (E15) The audiogram's degree bands use the rules' names, and the chart names the scale.
+func test_mask_lamp_words_and_degree_names() -> void:
+	assert_eq(AoLcd.MASK_WORDS[&"ok"], "in range")
+	assert_eq(AoLcd.MASK_WORD_FOUND, "good")
+	var names: Array = []
+	for band: Array in ClinicRules.DEGREE_BANDS:
+		names.append(String(band[1]))
+	names.append(ClinicRules.DEGREE_TOP)
+	var chart: Array = []
+	for d: Array in Audiogram.DEGREES:
+		chart.append(String(d[2]))
+	assert_eq(chart, names, "one name for each degree everywhere")
+	for i in ClinicRules.DEGREE_BANDS.size():
+		assert_eq(int(Audiogram.DEGREES[i][1]), int(ClinicRules.DEGREE_BANDS[i][0]), "same band edges")
+	assert_true(ClinicRules.DEGREE_SCALE_NOTE.contains("Goodman"))

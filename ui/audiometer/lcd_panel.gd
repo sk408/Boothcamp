@@ -8,8 +8,9 @@ extends Control
 ## (v3) Mode chips follow the transducer (PHONE / INSERT / BONE) and the test (AC / BC). With the
 ## masking controls live the display becomes two channels, like a clinical audiometer: the tone
 ## (test ear) on the left, the masker on the right, its level in [brackets] with "NBN" and the
-## masked ear, plus the masking-help TRAFFIC LIGHT (top amber = too much, middle green = good,
-## bottom amber = too little / masking needed; all purple = masking dilemma). On a masked test the
+## masked ear, plus the masking-help TRAFFIC LIGHT (top amber = too much, middle green = in range, which reads
+## "good" once the plateau is found (clinical review E10), bottom amber = too little / masking needed; all purple =
+## masking dilemma). On a masked test the
 ## trail becomes the PLATEAU graph: tone level against noise level, the safe masking window shaded
 ## between the starting level and overmasking, and a flat line of heard dots = the plateau.
 const MASK_COLORS: Dictionary[StringName, Color] = {
@@ -17,9 +18,11 @@ const MASK_COLORS: Dictionary[StringName, Color] = {
 	&"ok": Color("#9ee34b"), &"over": Color("#ff6f59"), &"impossible": Color("#8e5cc4"),
 }
 const MASK_WORDS: Dictionary[StringName, String] = {
-	&"off": "off", &"needed": "MASK!", &"under": "too little", &"ok": "good", &"over": "too much", &"impossible": "dilemma",
+	&"off": "off", &"needed": "MASK!", &"under": "too little", &"ok": "in range", &"over": "too much", &"impossible": "dilemma",
 }
-## Traffic-light lamp per status: 0 = top (too much), 1 = middle (good), 2 = bottom (too little).
+## (E10) The green state's word once the plateau is found: "in range" alone doesn't mean the Ghost is quiet.
+const MASK_WORD_FOUND := "good"
+## Traffic-light lamp per status: 0 = top (too much), 1 = middle (in range), 2 = bottom (too little).
 const MASK_LAMP: Dictionary[StringName, int] = {&"needed": 2, &"under": 2, &"ok": 1, &"over": 0}
 
 signal freq_step(direction: int)
@@ -246,8 +249,10 @@ func _draw_masker(r: Rect2, m: Dictionary) -> void:
 			var xx := hx + 48.0 + i * 5.0
 			var hh := 4.0 + 5.0 * absf(sin(_t * 17.0 + i * 1.3))
 			draw_line(Vector2(xx, r.position.y + 68.0 - hh * 0.5), Vector2(xx, r.position.y + 68.0 + hh * 0.5), Color(Palette.PLUM.lightened(0.4), 0.9), 2.0)
-	# status word
+	# status word ((E10) "in range" until the plateau is found, then "good")
 	var word := String(MASK_WORDS.get(status, ""))
+	if status == &"ok" and bool((view.get("plateau", {}) as Dictionary).get("found", false)):
+		word = MASK_WORD_FOUND
 	if word != "":
 		var flash := status in [&"needed", &"under", &"over"]
 		AoDraw.text_l(self, Vector2(hx, r.end.y - 11.0), word, 12, Color(light, 1.0 if not flash else 0.55 + 0.45 * blink), AoDraw.FONT_BOLD)

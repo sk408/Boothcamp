@@ -37,7 +37,7 @@ clues on the OBJECTION! board, never accuse him, and stamp a recheck with object
 his doctor told about the sudden loss.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
-> on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
+> on purpose (about -71 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
 > The "too loud" gags are visual only; the game never plays a loud sound.
 > Worried about your own hearing? Please see a licensed hearing professional.
