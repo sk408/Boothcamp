@@ -67,9 +67,12 @@ const MAX_COMFORT := 3
 const GRADE_BANDS: Array = [["S", 95.0], ["A", 85.0], ["B", 70.0], ["C", 55.0]]
 const GRADE_FAIL := "Do-over"
 
-## Degree of loss (adult, dB HL): upper bound inclusive -> name.
+## Degree of loss (adult, dB HL, on the 500/1k/2k average): upper bound inclusive -> name. The
+## scale is Goodman (1965): normal up to 25, without ASHA's "slight" band (clinical review E15).
+## The audiogram's band labels use the same names and print DEGREE_SCALE_NOTE.
 const DEGREE_BANDS: Array = [[25, "normal"], [40, "mild"], [55, "moderate"], [70, "moderately severe"], [90, "severe"]]
 const DEGREE_TOP := "profound"
+const DEGREE_SCALE_NOTE := "degrees: Goodman (1965)"
 
 ## Audiogram shapes recognised by classify_shape(). Each gets a reveal mascot (design notes §2.9).
 const SHAPES: Array[StringName] = [&"normal", &"flat", &"sloping", &"rising", &"cookie_bite", &"notch", &"unknown"]
@@ -229,10 +232,11 @@ static func classify_shape(thresholds: Dictionary) -> StringName:
 
 
 # ================================================================ v3: bone conduction + masking
-# Chapter 2 (docs/CHAPTER2.md). Sources: ASHA (2005) manual pure-tone guidelines; Hood (1960)
-# plateau masking; Studebaker (1964) / Yacullo occlusion-effect corrections; the two clinical
-# programs' published masking rules (paraphrased in research/test-content.md §1.5 and §2.3-2.4).
-# Teaching defaults: Steve reviews every number here.
+# Chapter 2 (docs/CHAPTER2.md section 7 lists every number). Sources (clinical review E14): ASHA
+# (2005) manual pure-tone guidelines; BSA (2018) recommended procedure, 8.1 (interaural attenuation
+# 40 dB with supra-aural phones, 55 dB with inserts) and 8.6 (when to mask); Hood (1960) and
+# Yacullo (1996) plateau masking (start at the non-test ear's air + 10 dB, 5 dB steps, a 15 dB
+# plateau); Goldstein and Newman (1985) occlusion effect. Teaching defaults: Steve reviews them.
 
 ## Tests: the conduction route plus the masked flag. Each one is its own results "sheet".
 const TESTS: Array[StringName] = [&"ac", &"ac_masked", &"bc", &"bc_masked"]
@@ -247,8 +251,9 @@ const BC_FREQS: Array[int] = [250, 500, 750, 1000, 1500, 2000, 3000, 4000]
 const BC_REQUIRED: Array[int] = [1000, 2000, 4000, 500]
 ## Bone oscillator maximum output (dB HL). It runs out much sooner than headphones.
 const BC_MAX_DB: Dictionary[int, int] = {250: 45, 500: 60, 750: 65, 1000: 70, 1500: 70, 2000: 70, 3000: 70, 4000: 65}
-## Loud low bone tones are FELT (vibrotactile), not heard. Reference for later patients.
-const VIBROTACTILE_DB: Dictionary[int, int] = {250: 30, 500: 55}
+## Loud low bone tones are FELT (vibrotactile), not heard (clinical review E16: about 25 dB at
+## 250 Hz, 55 at 500 and 70 at 1000 Hz). The tickle reaction and lesson only.
+const VIBROTACTILE_DB: Dictionary[int, int] = {250: 25, 500: 55, 1000: 70}
 
 ## Minimum interaural attenuation the masking RULES assume (conservative, flat). The patient
 ## simulator uses each patient's own, larger, real IA (PatientProfile.ia_*_db).
@@ -580,7 +585,7 @@ static func masked_freqs_needed(results: Dictionary, ear: String, test: StringNa
 
 
 ## The patient's response threshold (dial dB) for one tone, from the cross-hearing model
-## (research/test-content.md §3.1). Inputs are TRUE thresholds (the simulator's business only):
+## (docs/CHAPTER2.md section 7). Inputs are TRUE thresholds (the simulator's business only):
 ##   t_ac / t_bc   test ear air / bone (cochlea) thresholds
 ##   n_ac / n_bc   non-test ear air / bone thresholds
 ##   bone          tone through the bone oscillator (else through the air transducer)

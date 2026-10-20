@@ -250,7 +250,7 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 |---|---|---|
 | Bone frequencies | 250-4000 Hz; required 1000, 2000, 4000, 500 (250 optional) | `BC_FREQS`, `BC_REQUIRED` |
 | Bone maximum output | 250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65 dB HL | `BC_MAX_DB` |
-| Felt, not heard | 250 Hz at 30+, 500 Hz at 55+ | `VIBROTACTILE_DB` |
+| Felt, not heard | 250 Hz at 25+, 500 Hz at 55+, 1000 Hz at 70+ (E16) | `VIBROTACTILE_DB` |
 | Oscillator position | mastoid, not touching the pinna | mini-game |
 | Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is never joined by lines; masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
 | Interaural attenuation (rules) | phones 40, inserts 55, bone 0 | `IA_RULE_DB` |

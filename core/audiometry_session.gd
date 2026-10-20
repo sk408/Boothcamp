@@ -96,9 +96,12 @@ const PAR_RUNS := 400
 ## "Above 90 dB for nothing": a tone above this level, at least TOO_LOUD_HIGH_SL above threshold.
 const TOO_LOUD_HIGH_DB := 90
 const TOO_LOUD_HIGH_SL := 25
-## Inside this many dB of threshold the patient visibly strains (reaction only).
-const STRAIN_BELOW_DB := 3
-const STRAIN_ABOVE_DB := 4
+## (Clinical review E11) Within this window around threshold the patient visibly strains now and
+## then (STRAIN_P of the tones), never only at it, so the face is no threshold meter (ASHA 2005:
+## give the patient no cues, and read none from them either). Reaction only.
+const STRAIN_BELOW_DB := 5
+const STRAIN_ABOVE_DB := 10
+const STRAIN_P := 0.35
 ## (v3) The masker dial's level when a session starts (dB EM): low on purpose, the player sets it.
 const MASK_DIAL_START_DB := 10
 ## (v3) Masked par = the textbook plateau dance on a consistent patient + this (real patients
@@ -198,11 +201,14 @@ var retest_waived: Dictionary = {}
 ## (E2) The ears in the order they got their first air stamp this visit (retest_required()).
 var air_ear_order: Array[String] = []
 var _instant_n := 0
+## (E11) its own dice, so the straining face never shifts the patient's answers
+var _strain_rng := RandomNumberGenerator.new()
 
 
 func _init(p: PatientProfile, seed_value: int = 0) -> void:
 	patient = p
 	sim = PatientSim.new(p, seed_value)
+	_strain_rng.seed = hash([seed_value, "strain"])
 	_bc_freqs = ClinicRules.BC_REQUIRED.duplicate()
 	for t: StringName in ClinicRules.TESTS:
 		_sheets[t] = {"stored": {"right": {}, "left": {}}, "retest": {"right": {}, "left": {}},
@@ -430,7 +436,7 @@ func tone_down() -> void:
 		_loud_hit[key] = true
 		_error(&"too_loud", {"db": db, "sl": sl, "comfort_loss": 1 if first and scoring else 0}, false)
 		reaction.emit(&"too_loud_blast", {"ear": ear, "db": db, "intensity": clampf(float(sl) / 80.0, 0.3, 1.0)})
-	elif sl >= -STRAIN_BELOW_DB and sl <= STRAIN_ABOVE_DB:
+	elif sl >= -STRAIN_BELOW_DB and sl <= STRAIN_ABOVE_DB and _strain_rng.randf() < STRAIN_P:
 		reaction.emit(&"straining", {"ear": ear, "db": db, "intensity": 0.6})
 	var strokes := recs.size()
 	var marathon_at := int(ceil(par_for(ear, freq) * ClinicRules.MARATHON_FACTOR)) + 1

@@ -74,10 +74,10 @@ The screen starts on a steady tone (`ui/audiometer/audiometer_screen.gd:125`, `_
 **E9. Masking dilemma and an unreached plateau.** [Missing: Steve decided] **Done** (7d23a7f: the purple ? on the audiogram)
 When one more 5 dB of noise would overmask, the player may store a masked threshold without a plateau (`core/audiometry_session.gd:602`, `window_full`; `ClinicRules.masking_dilemma`, `autoload/clinic_rules.gd:452`), but nothing explains it, and the chart has no "plateau not reached" mark. No current patient can reach it. Before the advanced case (C9) ships: a short explainer and Hoot line, the coach stops short of overmasking, and the stamp is recorded as "masked threshold not found" with a mark on the audiogram (BSA 2018, 8.8 step 5 and 8.9.4).
 
-**E10. Mask lamp says "good" too early.** [Misleading]
+**E10. Mask lamp says "good" too early.** [Misleading] **Done** ("in range", then "good" once the plateau is found)
 The masking lamp shows "good" as soon as the noise is in the safe window, while the Ghost may still be answering (Bonnie's 2 kHz masked bone shows it). Call the green state "in range" and show "good" only once the plateau is found (BSA 2018, 8.8 step 6).
 
-**E11. The straining face gives the threshold away.** [Misleading]
+**E11. The straining face gives the threshold away.** [Misleading] **Done** (about a third of the tones from 5 dB below to 10 dB above threshold)
 The "straining" face shows only when the dial is exactly at the true threshold, so a player can read thresholds off the face. Make it probabilistic across a few dB around threshold, or tie it to a slow press (ASHA 2005 asks testers not to give cues).
 
 **E12. Audiogram proportions.** [Misleading]
@@ -86,13 +86,13 @@ The chart stretches to fill its card (`ui/audiogram/audiogram.gd:258`, `plot_rec
 **E13. Masked air never differs from unmasked air.** [Missing: see C10]
 Every patient uses the default real interaural attenuation of 60 dB (phones) and 75 dB (inserts) (`core/patient_profile.gd:28-30`), while the rules teach 40 and 55. So masked air always confirms unmasked air. The advanced case (C10) needs a lower real IA or a dead ear so a shadow curve appears and masked air drops.
 
-**E14. Masking source comments.** [Kept: comments only; question 4 for the values]
+**E14. Masking source comments.** [Kept: comments only; question 4 for the values] **Done** (comments only)
 The occlusion allowance, 15 dB at 250 and 500 Hz and 10 dB at 750 and 1000 Hz with phones and 0 with inserts (`autoload/clinic_rules.gd:257-260`), matches Goldstein and Newman, within published ranges. The credit at `:229-231` names Studebaker and Yacullo and "the two clinical programs' published masking rules" in `research/test-content.md`, a note kept outside the repo (also cited at `:580` and `core/patient_sim.gd:6`). Rewrite the credit to name the real sources (IA 40 and 55: BSA 2018, 8.1; +10 start, 5 dB steps, 15 dB plateau: Hood and Yacullo; occlusion: Goldstein and Newman) and point readers at `docs/CHAPTER2.md`. Behaviour does not change.
 
-**E15. Degree-of-loss scale.** [Choice: default keep, question 5]
+**E15. Degree-of-loss scale.** [Choice: default keep, question 5] **Done** ("moderately severe" everywhere; the chart says "degrees: Goodman (1965)")
 The scale is normal up to 25 dB HL on the 500/1k/2k average, without ASHA's "slight" band, and the chart says "mod-severe" where the chip says "moderately severe". Keep one name everywhere and add a small footnote naming the scale.
 
-**E16. Vibrotactile levels.** [Kept]
+**E16. Vibrotactile levels.** [Kept] **Done** (250: 25, 500: 55, 1000: 70; no chart note yet)
 Set 250 Hz to 25 and add 1000 Hz at 70 in `VIBROTACTILE_DB` (`autoload/clinic_rules.gd:248`) when convenient, and optionally mark a felt tone with a small note on the chart.
 
 **E17. Insert earphones are scored but never shown.** [Missing]
@@ -166,7 +166,7 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **C11. A 750 Hz case.** [Steve decided] **Done** (PR #9: Ginger's left jump is 25 dB, Hoot explains 750 Hz) Ginger (Day 9) already has the jump: 500 Hz to 1 kHz is 25 dB on the right and 20 on the left (`core/patients/ginger.tres`), so 750 Hz is required there today. Because stamps within 5 dB are accepted, her left ear triggers it only when the stamps are accurate; widening her left jump to 25 makes it reliable. Hoot should explain 750 the first time it is asked for.
 
-**C12. Explainers.** [Missing] The cases have no explainer movies: red flags and the three stamps, audiogram shapes, and the tympanometer. Since any day can be played first, gate them the way the briefing is gated. See also A2 for masking.
+**C12. Explainers.** [Missing] **Done** (PR #15: case files and red flags, the tympanometer, audiogram shapes) The cases have no explainer movies: red flags and the three stamps, audiogram shapes, and the tympanometer. Since any day can be played first, gate them the way the briefing is gated. See also A2 for masking.
 
 **C13. Word scores before a FIT.** [Missing] The two FIT cases decide from history, otoscopy, tympanometry and tones, and only say "A full fitting also checks words in each ear" after the call (`story/cases/noise_notch.json`, `story/cases/cookie_bite.json`). Once Days 4 and 5 are in, have Hoot run a quick word score and speech in noise at Hoot speed before the call, as Steve does on every test (IHS 2020 best practice, section 2). Marina's red-flag payoff also needs one "why" line for a one-sided loss: "Now and then the hearing nerve is to blame. A doctor checks, sometimes with a scan." (AAO-HNSF Ménière's guideline 2020.)
 
@@ -198,7 +198,7 @@ These were checked against the freestyle code as merged (it has not changed on `
 - **FS-04. "Aids can come later, or alongside".** [Misleading] **Done** (PR #11) Hector's debrief (`fs_hector.json:72`) contradicts the game's REFER rule (aids wait for the doctor's all-clear) and Hoot's own "Not yet! Aids can follow." Drop "or alongside" unless Steve chooses fitting while a referral is pending (freestyle checklist 4; BAA 2023 allows it).
 - **FS-05. Skyler's 500 Hz window.** [Misleading] **Done** (PR #11) Skyler's left bone at 500 Hz is 0 (`core/patients/fs_skyler.tres`), so with headphones the noise starts at 30 and the overmasking line is 40: a correct 15 dB plateau trips the overmasking warning. Raise that bone to 10 (window 20, gap still 40), and add a test that every masked frequency on phones leaves at least 20 dB between the starting noise and the limit.
 - **FS-06. Bone masking at a 10 dB gap.** **Done** with E5 (Buck's left 1 kHz is now masked).
-- **FS-07. Second-ear retest.** [Follows E2] The freestyle air plan (`level_freestyle.gd:514`) never waives the second ear's retest.
+- **FS-07. Second-ear retest.** [Follows E2] **Done** (E2 and PR #14: one retest per visit, and a bone run first no longer waives it) The freestyle air plan (`level_freestyle.gd:514`) never waives the second ear's retest.
 - **FS-08. Look before every test.** [Missing] **Done** (PR #11) Unmasked bone run before the otoscope escapes the "look first" slip, and `docs/FREESTYLE.md` gives the reason "bone conduction sits on the mastoid, so it does not count". ASHA (2005): "Visual inspection of the pinna and ear canal, including otoscopy, should precede audiometric testing"; BSA (2018, 5.1): "Audiometry shall be preceded by otoscopic examination." Count it, fix the doc, and reuse the line "Look first: wax or a hole changes every test."
 - **FS-09. "Normal air rules out a conductive part".** [Kept] **Done** (PR #11) Only the doc overstates it (`docs/FREESTYLE.md`); say "with air this good, a gap big enough to matter is very unlikely, so bone is optional". Grading is fine.
 - **FS-10. Normal is "25 dB or better".** [Choice; freestyle checklist 1] **Done** (PR #11) Penny's reply (`fs_penny.json:54`) can call it "a common adult normal; WHO's cut-off is lower" (WHO 2021: under 20 on a four-frequency better-ear average).
@@ -213,7 +213,7 @@ These were checked against the freestyle code as merged (it has not changed on `
 
 - **A1. The routine around the test.** [Missing] **Done** for the cases (PR #9) and Freestyle (PR #11). No day mentions the daily listening check of the audiometer and the button, a fresh speculum or cleaned cushions between patients, or keeping the dials out of the patient's view (BSA 2018, 4.1, 4.2 and 11.1; ASHA 2005). Short, ungraded Hoot lines where the action already happens, in every day that does it.
 - **A2. Explainers when a day is played first.** [Missing] **Done** for Freestyle (PR #11); E19 is on `main` for the cases. Every day is open, so a player who starts on a case day meets masked bone and "the Ghost" without the masking movie. Before the first masked bone of a visit, if the masking movie is unseen, play the 12-second recap card and have Hoot point at the full movie in the pause menu (needs E19). Masking is the concept students find hardest (Skinner, Billingsly and Conley 2023).
-- **A3. Explainers in general.** Days 1 and 3 and the cases have none yet (D1-8, S7, C12).
+- **A3. Explainers in general.** The cases' movies are **Done** (PR #15); Days 1 and 3 have none yet (D1-8, S7).
 - **A4. Speech in noise.** Freestyle's FIT line is **Done** (PR #11). Steve runs it on every test. When Day 5 lands, the FIT calls in the cases and freestyle should include it (C13, FS-13).
 
 ## Kept as simplifications

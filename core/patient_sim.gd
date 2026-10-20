@@ -3,7 +3,7 @@ extends RefCounted
 ## PatientSim: the patient's "brain" (builder A). Decides whether a tone is heard, when the
 ## patient presses, and when they press for nothing. It never uses the player's ears.
 ##
-## Model (test-content.md §3.1, air conduction only, no masking in this slice):
+## Model (the hearing curve; cross-hearing and masking are ClinicRules.response_threshold):
 ##   P(heard) = logistic((level - threshold) / slope) * (1 - lapse)
 ##   with slope ~1.7 dB and the 50 % point THRESHOLD_BIAS_DB (2 dB) below the profile threshold:
 ##   ~76 % at threshold, ~98 % at +5 dB, ~15 % at -5 dB (attentive patient).
