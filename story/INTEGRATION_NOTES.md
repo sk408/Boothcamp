@@ -164,7 +164,8 @@ Requests for the integrator and the title owner:
   `test_title_movies_button` plays the list's first row when there are several (Days 4 and 5 hit the same thing).
   With E19, `Movies.for_level` now returns every replay movie whenever the level can mask (it used to only when the
   chapter had none of its own); otherwise the case days, which now have three of their own, would have lost the
-  masking movie from their pause menu.
+  masking movie from their pause menu. `story/tests/test_freestyle.gd` `test_a_visit_pauses_to_the_masking_movie`
+  asserted the old behaviour ("a day's own movie would win"); that line now checks the new one.
   `story/explainers/explainer_stage.gd` (two lines, via a new `_card_scene()`): a movie's own opening set with
   `params.card_hold` is entered like Day 2's "meet" (no iris over the curtains; the scene chip waits for the card).
   Only scenes with `card_hold` change, so the masking movie looks exactly as before.
