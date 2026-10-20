@@ -1398,8 +1398,8 @@ func test_hoot_words() -> void:
 	assert_eq(int(res["scored_sheets"]), 0)
 
 
-## C23: run_by_textbook reaches a stored sheet for every Day 4 plan (§9.21) and both of Day 5's
-## hidden word lists, with no screen.
+## C23: run_by_textbook reaches a stored sheet for every Day 4 plan (§9.21: with quick visit, Hoot's
+## two SRTs first on the same session) and both of Day 5's hidden word lists, with no screen.
 func test_run_by_textbook_every_plan() -> void:
 	var chatter := ["Like a good downbeat.", "Lovely and clear."]
 	var silences := ["Sorry?", "Mm?", "(hums uncertainly)"]
@@ -1417,19 +1417,34 @@ func test_run_by_textbook_every_plan() -> void:
 			["left", {"test": "wrs", "tones": t, "list": "words_4", "louder_than": 3, "mask_on": true, "lock_noise": true,
 				"loud_bubble": true, "aside_by": 5, "chatter": chatter, "silences": silences}],
 		]
+		if quick:
+			# quick visit: Hoot's SRTs first, on the same session, as screen.run_hidden runs them
+			for e: String in ["right", "left"]:
+				s.configure({"test": "srt", "tones": t})
+				assert_true(s.mode == null and not s.mode_missing, "an SRT has no mode")
+				var srt := s.run_by_textbook(e)
+				assert_true(not srt.is_empty() and bool(srt["by_hoot"]), "Nora's %s SRT, Hoot's" % e)
 		for pl: Array in plans:
 			var plan: Dictionary = pl[1]
 			if quick:
-				plan["hoot_turn_after"] = 8
+				plan["hoot_turn_after"] = 8 if plan["list"] in ["words_1", "words_2"] else 5
 			s.configure(plan)
 			var sheet := s.run_by_textbook(String(pl[0]))
 			assert_false(sheet.is_empty(), "%s: a stored sheet" % plan["list"])
 			assert_eq(String(sheet["list_id"]), String(plan["list"]))
+		var res := s.build_results()
+		var tests: Array[String] = ["wrs"]
+		if quick:
+			tests.push_front("srt")
+		assert_eq(res["tests"], tests, "the SRT sheets stay beside the lists")
+		if quick:
+			for e: String in ["right", "left"]:
+				assert_false(((s.sheets[&"srt"] as Dictionary).get(e, {}) as Dictionary).is_empty(), "the %s SRT is kept" % e)
 		var left: Dictionary = s.sheets[&"wrs"]["left"]
 		var lists: Array = left["lists"]
 		assert_eq(lists.map(func(l: Dictionary) -> Array: return [l["n"], l["level_db"], l["mask_db"], l["counts"]]),
 			[[2, 75, 55, false], [3, 75, 55, true], [4, 95, 70, true]], "the redo replaced list 2; the louder list built on it")
-		assert_eq((s.build_results()["wrs_summary"] as Dictionary)["referral"], &"refer", "Nora's truth refers")
+		assert_eq((res["wrs_summary"] as Dictionary)["referral"], &"refer", "Nora's truth refers")
 	# Day 5: Hoot's two hidden lists on Marco (air-only tones), then nothing to refer
 	var m := SpeechSession.new(_marco(), 17)
 	var mt := SpeechSession.tone_results_from(_marco())
