@@ -24,8 +24,8 @@ Owners and when: **Engine**, **Day 1** and **Day 2** items go to the integrator 
 | Topic | Decision | What changes |
 |---|---|---|
 | Better ear first for bone | Yes, everywhere | Done for the cases (C1) |
-| Cross-hearing tip | Fix the misleading wording | E4 |
-| Failed 1 kHz retest | Hoot explains why the retest matters | E3 |
+| Cross-hearing tip | Fix the misleading wording | E4 done |
+| Failed 1 kHz retest | Hoot explains why the retest matters | E3 done |
 | Masking dilemma | Explain it, and build a later, more advanced case that has one | E9 done; C9 |
 | Masked air | Use it in a more advanced case | C10 |
 | 1 kHz retest in the first ear only | Steve is reading ASHA and BSA on it; default below | E2 done by default (question 2) |
@@ -34,7 +34,7 @@ Owners and when: **Engine**, **Day 1** and **Day 2** items go to the integrator 
 | Stimulus | Pulsed tones by default, and a bit louder for the player | E7 done |
 | Tinnitus | Hoot explains pulsed and warble tones during the tinnitus case | E8 done; C8 |
 | 125 Hz | Not added: rare in practice and hearing aids barely use it | none |
-| Short gaps between tones | Fine as a simplification, but a short gap should at least break the combo | E6 |
+| Short gaps between tones | Fine as a simplification, but a short gap should at least break the combo | E6 done |
 | Bone masking flag | Taken from the best unmasked bone threshold anywhere | Already on `main` (`ClinicRules.unmasked_bone`); the 10 dB gap is done by default (E5) |
 | Forehead bone | Worth a mention | D2-6 |
 | Plateau | Keep 5 dB steps and a 15 dB plateau | none |
@@ -53,16 +53,16 @@ Today 750, 1500, 3000 and 6000 Hz are added only when the neighbouring octaves d
 **E2. 1 kHz retest in the first ear only.** [Wrong; question 2's default] **Done** (e5e70d3)
 The retest is required, and missing it is graded as an error, in both ears (`core/audiometry_session.gd:493-494` raises `missed_retest`, `:1124` and `:1166` add it to the remaining list for every ear). Days 2 and 3, the cases and freestyle already waive it on Hoot's montage ears (`skip_hoot_retest`), so the second-ear requirement bites on Day 1 and on the freestyle ears the player tests. ASHA (2005): "A retest at 1000 Hz is not necessary when testing the second ear." BSA (2018, section 6.4): "Then, for the first ear only, retest at 1000 Hz" and "The retest at 1000 Hz is normally not required in the second ear unless tests in the first ear revealed significant variation." Change: require it on the first air ear of the visit; on the second ear accept a voluntary retest without requiring it, unless the first ear's retest was off by more than 5 dB. BSA puts the retest after 250 Hz rather than before 500 Hz, so accept either position and flag it only if the first ear is closed without one. Day 2's quick visit waives the retest on both ears (`story/level_bonnie.gd:354` and `:359`); keep the first ear's.
 
-**E3. A failed retest gets an explanation.** [Missing: Steve decided]
+**E3. A failed retest gets an explanation.** [Missing: Steve decided] **Done** (Hoot's beat after the first failed retest of a visit; recheck is a suggestion, not a required step)
 A retest more than 5 dB off is a technique error with a one-line tip (`core/audiometry_session.gd:49`, `:497-498`), and nothing else happens. Add a short Hoot beat: why we retest (patients get better at the task in the first minutes, so a retest that comes out better says the first thresholds may be too high), re-instruct the patient, and recheck one earlier frequency. BSA (2018, 6.4): if the two values are within 5 dB keep the more sensitive one; if more than 5 dB apart, investigate.
 
-**E4. Cross-hearing tip wording.** [Misleading: Steve decided]
+**E4. Cross-hearing tip wording.** [Misleading: Steve decided] **Done** (`cross_hearing_air` for air)
 The tip says "Bone has zero IA: that beep may have crossed to the OTHER cochlea" (`core/audiometry_session.gd:64`), but the same tip fires when an air tone crosses over. Split it by transducer. For air, something like "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." Air crosses once the level beats the interaural attenuation, about 40 dB with supra-aural phones and 55 with inserts (BSA 2018, 8.1). Today no patient's air is loud enough over the other ear's bone to cross (every real IA is 60 dB, E13), so this starts to matter with the advanced case (C10).
 
 **E5. Mask bone from a 10 dB gap.** [Choice] **Done** (8231167)
 Masking now starts at an air-bone gap of 10 dB or more (`BC_MASK_GAP_DB`, `autoload/clinic_rules.gd:275`), and naming a conductive loss still needs more than 10. The legend, Day 2's lines, freestyle's debrief line and the docs say so. ASHA (2005), bone conduction, Masking: "If the unmasked bone-conduction threshold is 10 dB better than the air-conduction threshold at that frequency in either ear, masking must be used." BSA (2018, 8.6.2, Rule 2): "Masking is needed at any frequency where the not-masked b-c threshold is better than the air-conduction threshold of either ear by 10 dB or more." Question 1 lets Steve put 15 back.
 
-**E6. A short gap breaks the combo.** [Kept, with Steve's change]
+**E6. A short gap breaks the combo.** [Kept, with Steve's change] **Done** (a gap shorter than the beep before it and under 1 s)
 Gaps are penalised only when they fall into a regular rhythm (`core/audiometry_session.gd:1463-1478`). A gap shorter than a beep shows a one-time tip, and only when the patient guesses (`:1329-1331`); it never breaks the combo. Change: a gap shorter than the tone before it (or under about 1 s) breaks the combo with no other score change, the way the rhythm check does (`_error`, `:1613`), and shows the tip the first time.
 
 **E7. Pulsed tones by default, a little louder for the player.** [Choice: Steve decided] **Done** (eeda6b7: tones 4 dB louder, `AudioSafety.TONE_BOOST_DB`)

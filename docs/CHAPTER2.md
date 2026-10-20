@@ -138,6 +138,7 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Placement | **(polish)** "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up." |
 | ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
+| Tip `cross_hearing_air` **(E4)** | "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." (an air tone; no Day 2 air tone is loud enough) |
 | Why mask | "To hear the right cochlea alone, keep the left one busy with noise. Masking!" **(v4)** ends "Masking, like the movie!" when the movie played to the end |
 | Wrong ear | "Noise in the test ear just hides the beep. Busy the OTHER ear." |
 | Starting level | "Start noise: her left air threshold plus 10, plus extra for occlusion on low tones." |

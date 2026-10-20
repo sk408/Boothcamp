@@ -1023,6 +1023,22 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			Hoot.say_once("tip_marathon", String(data.get("message", "")), Hoot.HIGH, "store_button")
 		&"short_gap":
 			Hoot.say_once("tip_short_gap", String(data.get("message", "")), Hoot.HIGH, "tone_button")
+		&"retest_mismatch":
+			if auto:
+				return
+			if not _coach_active:
+				Sfx.play(&"sad_trombone", 1.0, -12.0)
+			# (E3) the words come with retest_why, right after this
+		&"retest_why":
+			if auto:
+				return
+			# (E3) the first failed retest of a visit: why it matters; later ones get the short tip
+			var lines: Array = data.get("lines", [])
+			if lines.is_empty() or not Hoot.say_once("tip_retest_why", String(lines[0]), Hoot.HIGH, "freq_down_button"):
+				_tip(&"retest_mismatch", session.tip_text(&"retest_mismatch"), "freq_down_button")
+				return
+			for i in range(1, lines.size()):
+				Hoot.say(String(lines[i]), Hoot.HIGH)
 		&"plateau_step":
 			if auto or not bool(data.get("found", false)) and not bool(data.get("window_full", false)) and int(data.get("steps", 0)) <= 0:
 				return
@@ -1060,7 +1076,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var error := kind in ERROR_KINDS
 			if error and not _coach_active:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
-			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma"]:
+			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"cross_hearing_air", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma"]:
 				# (polish) a lesson during the coached steps waits for the coached stamp
 				_deferred_tips.append([kind, msg, _target_for(kind, data)])
 			elif msg != "" and not (_coach_active and error):
@@ -1098,7 +1114,7 @@ func _target_for(kind: StringName, data: Dictionary) -> String:
 			return "mask_softer_button"
 		&"plateau_not_reached":
 			return "store_button"
-		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"vibrotactile":
+		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"cross_hearing_air", &"vibrotactile":
 			return "tone_button"
 	return ""
 
