@@ -184,7 +184,7 @@ func validate() -> PackedStringArray:
 		for f: int in ClinicRules.AC_FREQS:
 			if not t.has(f):
 				out.append("%s ear missing %d Hz" % [ear, f])
-			elif t[f] < ClinicRules.MIN_DB or t[f] > 120:
+			elif t[f] < ClinicRules.MIN_DB or t[f] > ClinicRules.max_db(f) + 30:   # past the dial: no response (Day 12)
 				out.append("%s ear %d Hz out of range: %d" % [ear, f, t[f]])
 	for ear: String in ["right", "left"]:
 		var b := get_bc_thresholds(ear)

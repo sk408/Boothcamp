@@ -40,9 +40,10 @@ so branches don't collide.
   red flags, correct decision and why) in `story/cases/<case_id>.json`, and one shared case runner
   `story/level_case.gd` that plays any case from its JSON.
 - Conductive cases (Day 10 wax, Day 11 fluid) carry `bc_right` / `bc_left` (the v3 bone-conduction fields from
-  chapter 2); otosclerosis stays Bonnie's (Day 2).
+  chapter 2); otosclerosis stays Bonnie's (Day 2). A deaf ear (Day 12) puts its air past the dial (up to
+  `ClinicRules.max_db(f) + 30`): masked tests then store no response.
 - Optional case keys pick the look in the ear (`otoscopy.view`: clear, wax, fluid), cards that show only when the
-  chart says so (`findings[].when`: symmetric, asymmetric, conductive, abg_flag), and a `retest` block that brings the
+  chart says so (`findings[].when`: symmetric, asymmetric, conductive, abg_flag, shadow, no_response), and a `retest` block that brings the
   patient back after treatment with their own `<id>_after.tres` truth (Day 10). `CONTRACTS.md` §11 lists every key.
 - Clinical wording for every case is reviewed by Steve before release.
 

@@ -158,3 +158,8 @@ optional and additive:
 - **Skip the bone tickle lesson in Hoot's turns.** In a case, Hoot runs bone conduction at speed; the
   tickle tip still shows once per run. A plan key `tips: false` (or skipping the tip when the current
   turn is Hoot's) would keep the case moving.
+- **(Day 12, done, small) No pen line through a masked no-response mark.** `audiogram.gd` `_refresh_segments`
+  already skipped unmasked no-response points; where a frequency has a masked air mark, that mark now decides.
+  Morgan's deaf ear answered unmasked (the shadow) but gave no response masked, and the line was joining the
+  arrows. Only a masked no-response mark changes anything, so Days 1-11 and Freestyle draw as before. The shadow
+  itself is drawn by the case board, not the audiogram (the audiogram still hides an unmasked O under a masked mark).

@@ -29,7 +29,7 @@ const WOOD := Color("#d9a066")
 ## ("top" is where her reading glasses are perched.)
 const ZONES: Array = [
 	["nose", Vector2(-166, 8), 24.0, "Boop! A nose is cartilage, not bone. Find the bony bump behind her ear.", "BOOP!"],
-	["forehead", Vector2(-112, -62), 30.0, "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her {side} ear.", "UNICORN!"],
+	["forehead", Vector2(-112, -62), 30.0, "Unicorn! The forehead sits steadier but needs more power. Today: the mastoid, behind her {side} ear.", "UNICORN!"],
 	["jaw", Vector2(-62, 112), 28.0, "She'd hear her teeth chatter! Higher and further back: the mastoid.", "Chatter chatter!"],
 	["top", Vector2(-14, -146), 32.0, "Her lost glasses! Mystery solved. Glasses off before the headband; the buzzer goes behind the ear.", "My glasses!"],
 	["pinna", Vector2(36, 6), 30.0, "Off the ear flap! Touching the pinna leaks buzz into the canal. Behind it, on bone.", "SQUEEEE!"],

@@ -70,6 +70,18 @@ func test_every_day_open_from_the_start() -> void:
 	assert_false(Game.start_chapter("nope"), "an unknown chapter does not start")
 
 
+## (Clinical review D1-7) A safety slip (the paperclip, or ignoring the seed) keeps a perfect visit off S.
+func test_safety_slip_keeps_the_visit_off_s() -> void:
+	Game.reset_save()
+	Game.begin_visit("gus")
+	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
+	assert_eq(String(Game.finish_visit()["grade"]), "S", "a clean perfect visit")
+	Game.begin_visit("gus")
+	Game.set_audiometry_results({"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0})
+	Game.set_visit_flag(Game.NO_S_FLAG, true)
+	assert_eq(String(Game.finish_visit()["grade"]), "A", "the slip keeps it off S")
+
+
 func test_finishing_day1_suggests_day2() -> void:
 	Game.reset_save()
 	var got := []

@@ -16,15 +16,17 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"id", "patient_id", "speaker", "case_title", "look", "intro", "history", "red_flags", "otoscopy", "tymp",
 	"instructions", "audiometry", "reveal", "evidence", "findings", "decision", "clue_pick", "payoff", "paper",
 ]
-const PATTERNS: PackedStringArray = ["notch", "rising", "flat_one", "cookie", "gap"]   # each has a CaseBoard animation
+const PATTERNS: PackedStringArray = ["notch", "rising", "flat_one", "cookie", "gap", "shadow"]   # each has a CaseBoard animation
 ## What fills a "gap" pattern's air-bone gap on the board: a waxy cork, or water and a rubber duck.
 const PLUGS: PackedStringArray = ["wax", "fluid"]
 const BURSTS: PackedStringArray = ["", "firework", "cymbal"]
 const ACTIONS: PackedStringArray = ["react", "hoot", "do", "choose"]
 const DOS: PackedStringArray = ["hearing_aids", "letter", "boat", "phone", "wax_jar", "plane"]
 ## A finding's "when": always, or only when the chart (the truth when unmeasured) is symmetric,
-## asymmetric, conductive on the case ear, or shows the air-bone-gap red flag there.
-const WHENS: PackedStringArray = ["", "symmetric", "asymmetric", "conductive", "abg_flag"]
+## asymmetric, conductive on the case ear, or shows the air-bone-gap red flag there; "shadow" when
+## the case ear answered unmasked but not masked (the other ear heard it across the head), and
+## "no_response" when its masked bone and masked air found nothing at the audiometer's limits.
+const WHENS: PackedStringArray = ["", "symmetric", "asymmetric", "conductive", "abg_flag", "shadow", "no_response"]
 ## The otoscope's look (CaseOtoscopy): a healthy drum, a wax plug, or fluid behind the drum.
 const VIEWS: PackedStringArray = ["clear", "wax", "fluid"]
 ## A clue card's colour: a plain clue or a red flag.
@@ -142,6 +144,96 @@ static func truth_type(patient: PatientProfile, ear: String) -> StringName:
 	for f: int in air:
 		bone[f] = patient.get_bc_threshold(ear, f)
 	return ClinicRules.hearing_type(air, bone)
+
+
+## An ear's bone as the chart shows it (masked replaces unmasked), without its no-response stamps:
+## a stamp at the limit only says bone sits there or past it, so it cannot show a gap.
+static func answered_bone(res: Dictionary, ear: String) -> Dictionary:
+	var e: Dictionary = (res.get("ears", {}) as Dictionary).get(ear, {})
+	var un: Dictionary = e.get("bc", {})
+	var masked: Dictionary = e.get("bc_masked", {})
+	var bone := {}
+	for f: int in un:
+		if not masked.has(f) and not bool((un[f] as Dictionary).get("no_response", false)):
+			bone[f] = int((un[f] as Dictionary).get("stored_db", 0))
+	for f: int in masked:
+		if not bool((masked[f] as Dictionary).get("no_response", false)):
+			bone[f] = int((masked[f] as Dictionary).get("stored_db", 0))
+	return bone
+
+
+## The ear's type as the chart shows it (results ears[ear].hearing_type), except that no-response
+## bone drops out (answered_bone). With no bone left and air outside normal the ear is
+## sensorineural: Morgan's deaf ear, whose raw stamps fake a 50 dB "gap" between the air and bone
+## limits.
+static func measured_type(res: Dictionary, ear: String) -> StringName:
+	var e: Dictionary = (res.get("ears", {}) as Dictionary).get(ear, {})
+	var kind: StringName = e.get("hearing_type", &"unknown")
+	var bone := answered_bone(res, ear)
+	if bone.size() == ClinicRules.best_thresholds(res, ear, true).size():
+		return kind
+	var air := ClinicRules.best_thresholds(res, ear, false)
+	var typed := ClinicRules.hearing_type(air, bone)
+	if typed == &"unknown" and not air.is_empty():
+		return &"sensorineural"
+	return typed
+
+
+## True when an ear's sheet (&"ac_masked", &"bc_masked") has stamps and every one is no response.
+static func all_no_response(res: Dictionary, ear: String, sheet: StringName) -> bool:
+	var e: Dictionary = (res.get("ears", {}) as Dictionary).get(ear, {})
+	var t: Dictionary = e.get(String(sheet), {})
+	if t.is_empty():
+		return false
+	for f: int in t:
+		if not bool((t[f] as Dictionary).get("no_response", false)):
+			return false
+	return true
+
+
+## True when the ear hears nothing the audiometer can reach: air and bone past their limits at every
+## bone frequency (the truth Morgan's right ear holds).
+static func dead_truth(p: PatientProfile, ear: String) -> bool:
+	if p == null:
+		return false
+	for f: int in ClinicRules.BC_REQUIRED:
+		if p.get_threshold(ear, f) <= ClinicRules.max_db(f) or p.get_bc_threshold(ear, f) <= ClinicRules.max_db_for(f, &"bone"):
+			return false
+	return true
+
+
+## The finding "shadow": the case ear answered unmasked, yet its masked air found nothing, at most of
+## its masked frequencies (the other ear heard those beeps across the head). res = {} reads the
+## truth: a dead ear whose other ear's bone plus the real phones IA stays on the dial.
+static func shadow_shows(res: Dictionary, p: PatientProfile, ear: String) -> bool:
+	if not res.has("ears"):
+		if not dead_truth(p, ear):
+			return false
+		var other := "left" if ear == "right" else "right"
+		for f: int in ClinicRules.BC_REQUIRED:
+			if p.get_bc_threshold(other, f) + p.get_ia(&"phones") > ClinicRules.max_db(f):
+				return false
+		return true
+	var e: Dictionary = (res.get("ears", {}) as Dictionary).get(ear, {})
+	var masked: Dictionary = e.get("ac_masked", {})
+	var un: Dictionary = e.get("freqs", {})
+	var hits := 0
+	for f: int in masked:
+		if bool((masked[f] as Dictionary).get("no_response", false)) and un.has(f) \
+				and not bool((un[f] as Dictionary).get("no_response", false)):
+			hits += 1
+	return not masked.is_empty() and hits * 2 > masked.size()
+
+
+## The finding "no_response": masked bone (when run) and masked air found nothing on the case ear.
+## res = {} reads the truth (dead_truth).
+static func no_response_shows(res: Dictionary, p: PatientProfile, ear: String) -> bool:
+	if not res.has("ears"):
+		return dead_truth(p, ear)
+	var e: Dictionary = (res.get("ears", {}) as Dictionary).get(ear, {})
+	if not (e.get("bc_masked", {}) as Dictionary).is_empty() and not all_no_response(res, ear, &"bc_masked"):
+		return false
+	return all_no_response(res, ear, &"ac_masked")
 
 
 ## Every playable script in a case file, as [["where", script], ...]: the top-level scripts, the
@@ -390,6 +482,8 @@ static func validate(c: Dictionary) -> PackedStringArray:
 	for d: StringName in CaseRules.DECISIONS:
 		if not (dec["lines"] as Dictionary).get(String(d), null) is String:
 			out.append("decision line missing for " + String(d))
+	if dec.has("asymmetry_known_cause") and not dec["asymmetry_known_cause"] is bool:
+		out.append("decision.asymmetry_known_cause must be true or false")
 	var cp: Dictionary = c["clue_pick"]
 	var guaranteed := false
 	for a: Variant in cp["answers"]:

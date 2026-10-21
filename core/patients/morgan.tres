@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_case"]
+
+[resource]
+script = ExtResource("1_case")
+id = "morgan"
+display_name = "Morgan Gale"
+age = 58
+complaint = "My right ear has heard nothing since mumps at seven, and dinners are getting hard."
+thresholds_right = Dictionary[int, int]({
+250: 110,
+500: 130,
+750: 135,
+1000: 140,
+1500: 140,
+2000: 140,
+3000: 140,
+4000: 140,
+6000: 130,
+8000: 120
+})
+thresholds_left = Dictionary[int, int]({
+250: 10,
+500: 10,
+750: 10,
+1000: 5,
+1500: 5,
+2000: 10,
+3000: 10,
+4000: 15,
+6000: 15,
+8000: 20
+})
+ia_phones_db = 50
+ia_inserts_db = 70
+ia_bone_db = 0
+false_alarms_per_minute = 0.4
+reaction_time_min_s = 0.3
+reaction_time_max_s = 0.7
+psychometric_slope_db = 1.8
+attention = 0.95
+fatigue_per_tone = 0.0005
+min_tone_s = 0.45
+rhythm_sensitivity = 0.5
+tinnitus_hz = 0
+tags = PackedStringArray("dead_ear", "sensorineural", "unilateral", "case")
+pronoun = "they"
+nickname = "Morgan"

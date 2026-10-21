@@ -216,6 +216,10 @@ func show_pattern() -> void:
 					Sfx.play(&"thunk", 0.7, -2.0)
 					Sfx.play(&"pop", 0.8, -4.0)
 					Events.screen_shake.emit(0.45, 0.2))
+		"shadow":
+			# (Day 12) a low whoosh as the shadow draws, then a ghostly blip as the ghost pops up
+			Sfx.play(&"whoosh", 0.45, -6.0)
+			get_tree().create_timer(1.2, false).timeout.connect(func() -> void: Sfx.play(&"blip", 0.6, -6.0))
 		"retest":
 			Sfx.play(&"pop", 1.0, -4.0)
 			# the fanfare lands with the arrows (they shoot up once the earlier chart has drawn)
@@ -632,6 +636,8 @@ func _draw_fx() -> void:
 				_draw_cookie()
 			"gap":
 				_draw_gap()
+			"shadow":
+				_draw_shadow()
 			"retest":
 				_draw_previous([500, 1000, 2000, 4000] as Array[int], true)
 	if _type_t >= 0.0:
@@ -874,6 +880,67 @@ func _draw_flat_one() -> void:
 			_fx.draw_arc(Vector2.ZERO, 38.0 + 8.0 * j, PI - 0.5, PI + 0.5, 8, Palette.CORAL, 3.0, true)
 		_fx.draw_string_outline(UiKit.font(700), Vector2(-30, -48), "RING!", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, 7, Palette.INK)
 		_fx.draw_string(UiKit.font(700), Vector2(-30, -48), "RING!", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.SUNNY)
+	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## (Day 12) The shadow curve: the case ear's unmasked air, which the other ear heard across the head,
+## draws as a dashed line of open circles (the Audiogram shows the masked no-response marks in its
+## place), then the Cross-Hearing Ghost bobs beside it with a "SHADOW" sticker.
+func _draw_shadow() -> void:
+	var s := _sc()
+	var ear := _focus_ear()
+	var col := Palette.ear_color(ear)
+	var sheet: Dictionary = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("freqs", {})
+	var keys: Array = []
+	for f: int in sheet:
+		if not bool((sheet[f] as Dictionary).get("no_response", false)):
+			keys.append(f)
+	keys.sort()
+	if keys.is_empty():
+		return
+	var pts := PackedVector2Array()
+	for f: int in keys:
+		pts.append(_pt(f, float((sheet[f] as Dictionary).get("stored_db", 0))))
+	var k := clampf(_pattern_t / 1.2, 0.0, 1.0)
+	var span := maxf(1.0, pts.size() - 1)
+	for i in pts.size() - 1:
+		if float(i) / span > k:
+			break
+		var n := maxi(1, int(pts[i].distance_to(pts[i + 1]) / (12.0 * s)))
+		for j in n:
+			if j % 2 == 0:
+				_fx.draw_line(pts[i].lerp(pts[i + 1], float(j) / n), pts[i].lerp(pts[i + 1], float(j + 1) / n), Color(col, 0.55), 3.0 * s, true)
+	for i in pts.size():
+		if float(i) / span <= k + 0.001:
+			_fx.draw_arc(pts[i], 7.0 * s, 0.0, TAU, 16, Color(col, 0.65), 2.5 * s, true)
+	if k < 1.0:
+		return
+	var mid := pts[pts.size() / 2]
+	_draw_ghost(mid + Vector2(34.0, -46.0 + sin(_t * 3.0) * 4.0) * s, s, minf(1.0, (_pattern_t - 1.2) / 0.3))
+	_draw_sticker(pts[0] + Vector2(-4, -34) * s, "SHADOW", Palette.PAPER, _pattern_t - 1.2)
+
+
+## The Cross-Hearing Ghost (as on Day 2's AudiOtron, fx_layer.gd), small, at c; grow 0..1 pops it in.
+func _draw_ghost(c: Vector2, s: float, grow: float) -> void:
+	if grow <= 0.0:
+		return
+	_fx.draw_set_transform(c, sin(_t * 2.0) * 0.08, Vector2.ONE * s * (0.6 + 0.4 * grow))
+	var shape := PackedVector2Array()
+	for i in 13:
+		var a := PI + PI * i / 12.0
+		shape.append(Vector2(cos(a), sin(a)) * 22.0 + Vector2(0, -6))
+	for i in 7:
+		var x := 22.0 - 44.0 * i / 6.0
+		shape.append(Vector2(x, 20.0 + (7.0 if i % 2 == 0 else 0.0) + 2.0 * sin(_t * 10.0 + i * 1.6)))
+	_fx.draw_colored_polygon(shape, Color(1, 1, 1, 0.92))
+	var outline := shape.duplicate()
+	outline.append(shape[0])
+	_fx.draw_polyline(outline, Palette.INK, 3.0, true)
+	_fx.draw_circle(Vector2(-7, -8), 4.0, Palette.INK)
+	_fx.draw_circle(Vector2(7, -8), 4.0, Palette.INK)
+	_fx.draw_arc(Vector2(0, 4), 4.5, 0.0, TAU, 14, Palette.INK, 3.0, true)
+	_fx.draw_circle(Vector2(-14, 0), 3.0, Color(Palette.CORAL, 0.45))
+	_fx.draw_circle(Vector2(14, 0), 3.0, Color(Palette.CORAL, 0.45))
 	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

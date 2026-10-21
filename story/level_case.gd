@@ -85,6 +85,10 @@ const OTHER_EAR_CAPTION := "Fresh speculum. %s's %s ear first: a clear canal, a 
 const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
 ## After masked bone, when no ear needed masked air (built from the stamps).
 const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bone needed masking today!"
+## (Clinical review C10) After masked air, when every masked air stamp on an ear was no response: the
+## answers climbed with the noise and never plateaued, then nothing at the limit (Morgan's deaf ear).
+## It names no ear: the evidence question asks who answered.
+const NO_PLATEAU := "No plateau, just a climb, then nothing at the limit."
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
 const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
 ## The retest's chart when its measured type is not the story's.
@@ -779,12 +783,15 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	hud.call("complete_step", &"beeps")
 	if masked_bone and not masked_air:
 		await _say("Hoot", NO_MASKED_AIR)
+	for ear: String in ac_ears:
+		if CaseData.all_no_response(results, ear, &"ac_masked"):
+			await _say("Hoot", NO_PLATEAU)
+			break
 	# the case's line describes the true chart ("bone sits with the air: no gap"); if the player's
 	# stamps left a different type on a bone ear, it would contradict the screen, so say a neutral line
 	var agrees := true
 	for ear: String in bone_ears:
-		var measured: StringName = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
-		if measured != CaseData.truth_type(patient, ear):
+		if CaseData.measured_type(results, ear) != CaseData.truth_type(patient, ear):
 			agrees = false
 	if agrees:
 		await _play(case_data.get("after_audiometry", []))
@@ -961,7 +968,8 @@ func _add_findings() -> void:
 ## Whether a finding with this "when" shows: "" always; "symmetric" / "asymmetric" by asym (the
 ## chart's, or the truth's); "conductive" when the case ear types conductive on the chart (the truth
 ## type when the chart can't tell); "abg_flag" when the ear's own air and bone show the air-bone-gap
-## red flag (the truth when the ear has no bone). res = {} reads the truth.
+## red flag (no-response bone left out; the truth when no bone answered); "shadow" and "no_response" by
+## CaseData.shadow_shows / no_response_shows (a deaf ear, Day 12). res = {} reads the truth.
 static func finding_shows(when: String, res: Dictionary, p: PatientProfile, ear: String, asym: bool) -> bool:
 	match when:
 		"symmetric":
@@ -969,12 +977,12 @@ static func finding_shows(when: String, res: Dictionary, p: PatientProfile, ear:
 		"asymmetric":
 			return asym
 		"conductive":
-			var measured: StringName = ((res.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
+			var measured := CaseData.measured_type(res, ear)
 			if measured == &"unknown":
 				measured = CaseData.truth_type(p, ear)
 			return measured == &"conductive"
 		"abg_flag":
-			var bone := ClinicRules.best_thresholds(res, ear, true)
+			var bone := CaseData.answered_bone(res, ear)
 			if not bone.is_empty():
 				return ClinicRules.abg_red_flag(ClinicRules.best_thresholds(res, ear, false), bone)
 			if p == null:
@@ -984,6 +992,10 @@ static func finding_shows(when: String, res: Dictionary, p: PatientProfile, ear:
 			for f: int in air:
 				truth_bone[f] = p.get_bc_threshold(ear, f)
 			return ClinicRules.abg_red_flag(air, truth_bone)
+		"shadow":
+			return CaseData.shadow_shows(res, p, ear)
+		"no_response":
+			return CaseData.no_response_shows(res, p, ear)
 	return true
 
 

@@ -180,6 +180,41 @@ func test_day2_bonnie_extras() -> void:
 	assert_false((c.call("get_patient") as Node3D).visible, "Bonnie left through the door")
 
 
+## (D2-8) Head gear takes any patient's glasses off first, and they go back on, where they were,
+## when the patient stands up with the head clear. Glasses a level took off itself stay off.
+func test_head_gear_takes_glasses_off() -> void:
+	Engine.time_scale = 4.0
+	Game.begin_visit("mike")
+	var c: Node3D = (load(CLINIC) as PackedScene).instantiate()
+	c.set("patient_id", "mike")
+	add_node(c)
+	await wait_frames(2)
+	var g: Node3D = ((c.call("get_patient") as Node3D).get("parts") as Dictionary)["glasses"]
+	var rest := g.position
+	await c.call("walk_in")
+	await c.call("sit")
+	c.call("put_on_earphones", true)
+	await wait_seconds(0.4)
+	assert_false(g.visible, "earphones: his shades come off first")
+	c.call("put_on_bone_oscillator", "right")
+	c.call("put_on_masking_phone", "left")
+	await wait_seconds(0.2)
+	assert_false(g.visible, "still off under the bone band")
+	c.call("take_off_bone_oscillator")
+	await c.call("stand")
+	await wait_seconds(0.4)
+	assert_true(g.visible, "back on when he stands up with the head clear")
+	assert_true(g.position.is_equal_approx(rest), "where they were (pushed up on his hairline)")
+	# a level that takes them off itself (Day 1) puts them back itself
+	c.call("take_off_glasses")
+	await c.call("sit")
+	c.call("put_on_earphones", true)
+	c.call("take_off_earphones")
+	await c.call("stand")
+	await wait_seconds(0.4)
+	assert_false(g.visible, "the level's own take-off is not undone by standing")
+
+
 ## (Speech) Day 3 with Mike: his spec (vest, neck brace, shades, quiff, clipboard, own face), the
 ## clipboard goes on the desk when he sits, no response button while he answers out loud, every
 ## reaction is safe on him (incl. the quiff's hair blast), and the "GLAZED?!" peek after he leaves.

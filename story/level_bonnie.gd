@@ -64,7 +64,7 @@ var dialogue: DialogueBox
 var screen: CanvasLayer
 var results: Dictionary = {}
 var _walk_done := true
-var _found_glasses := false   # the player tried the oscillator on her glasses (the running gag)
+var _found_glasses := false   # the running gag: found before the earphones (D2-8), or at a placement
 var _movie_watched := false   # (v4) the movie played to the end this visit (lines may refer to it)
 var _placement_slips := 0     # (v4) both placements (left, then right) share the bc_placement medal
 var _ghost_seen := false      # (v4) the demo tone was answered by the LEFT cochlea (cross_heard)
@@ -294,6 +294,7 @@ func _earphones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
+	await _glasses_gag()
 	var g := Earphones.new()
 	g.setup(clinic, "her")
 	hud.call("add_game", g)
@@ -307,6 +308,28 @@ func _earphones() -> void:
 	g.queue_free()
 	_react(&"cheer")
 	hud.call("complete_step", &"phones")
+
+
+## (D2-8) Glasses off before the headphones: the running gag lands here, a free win (no medal).
+func _glasses_gag() -> void:
+	await _say("Hoot", "Glasses off before the headphones: they lift the cushions. Bonnie, your glasses?")
+	_react(&"confused")
+	await _say("Bonnie", "Lost! Third time this week. Have you seen them anywhere?")
+	var opts: Array[String] = ["On top of her head!", "In the croissant basket.", "Baked into a loaf."]
+	while true:
+		var c: int = await dialogue.choose("Where are Bonnie's glasses?", opts, opts.find("On top of her head!"))
+		if opts[c].begins_with("On top"):
+			break
+		if opts[c].begins_with("In the"):
+			await _say("Bonnie", "Only croissants in there. Warm ones, though!")
+		else:
+			await _say("Bonnie", "I'd have noticed a crunchy loaf. Probably.")
+		opts.remove_at(c)
+	_found_glasses = true
+	clinic.call("take_off_glasses")
+	_react(&"startle")
+	await _say("Bonnie", "On my HEAD? All morning? Don't tell the sourdough.")
+	await _say("Hoot", "Same for every patient: glasses off before headphones or the bone band.")
 
 
 # ---------------------------------------------------------------- 6. air conduction (Hoot runs most of it)
@@ -351,20 +374,24 @@ func _air() -> void:
 	hud.call("set_step", &"air")
 	# a career-fair player may start here (Unlock all days): no "like yesterday"
 	var veteran := Game.is_chapter_done("gus")
-	# (E2) the first ear keeps its 1 kHz retest (Hoot does it in his turn); the left, second, owes none
-	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "done_title": "RIGHT AIR DONE!",
-		"intro": "Air first, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
-			else "New trainee? Air first: I'll coach your first beep, then whizz through the rest!",
-		"intro_full": "Air first: her whole right ear is yours. I'll coach the first beep."})
-	# quick visit: the left ear is a few-second montage (Hoot "did it while you chatted")
-	await _test("left", false, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true, "done_title": "LEFT AIR DONE!",
-		"intro": "I did her left while you chatted. Normal! Watch the stamps fly in.",
-		"intro_full": "Left ear: all yours this time! Same dance as the right."})
+	# (D2-2) better ear first, as for bone: her left (she calls it perfect), then her right.
+	# Quick visit: the left is Hoot's few-second montage, which waives its 1 kHz retest (taught on
+	# Day 1), so the right, second, owes none (E2); the player stamps the right's 1k, coached, and
+	# Hoot runs the rest. Quick visit off: the player runs both, coached on the left, whose retest
+	# is then owed as usual.
+	var quick := _quick()
+	await _test("left", not quick, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true, "done_title": "LEFT AIR DONE!",
+		"intro": "Better ear first: her left. I did it while you chatted. Normal! Watch the stamps fly in.",
+		"intro_full": "Better ear first: her left, the one she calls perfect. I'll coach the first beep."})
+	await _test("right", quick, {"test": "ac", "hoot_turn_after": 1, "done_title": "RIGHT AIR DONE!",
+		"intro": "Now her right, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
+			else "Now her right! I'll coach your first beep, then whizz through the rest.",
+		"intro_full": "Now her right: all yours. Same dance as the left."})
 	hud.call("complete_step", &"air")
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
 	await _say("Hoot", "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?")
-	await _say("Hoot", "Air goes through the ear canal and middle ear. Bone skips both, straight to the cochlea.")
+	await _say("Hoot", "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea.")
 
 
 # ---------------------------------------------------------------- 7. bone oscillator placement
@@ -379,11 +406,13 @@ func _bone_placement() -> void:
 	await _say("Hoot", "So: her LEFT. It sits behind the ear, on the bony mastoid.")
 	var g := BonePlacement.new()
 	g.setup("left")
+	g.glasses_on = not _found_glasses
 	hud.call("add_game", g)
 	_shot("bone_placement", 0.7)
 	await g.run()
 	_placement_slips = g.mistakes
-	_found_glasses = g.wrong_spots.has("top")
+	if g.wrong_spots.has("top"):
+		_found_glasses = true
 	var was_unicorn := g.wrong_spots.has("forehead")
 	_record_placement()
 	await _wait(0.6)
@@ -392,9 +421,7 @@ func _bone_placement() -> void:
 	await _wait(0.4)
 	if was_unicorn:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
-	if _found_glasses:
-		await _say("Bonnie", "And you found my glasses! They were on my HEAD? All morning?")
-	await _say("Hoot", "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up.")
+	await _say("Hoot", "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up.")
 
 
 ## Both placements share one medal: every slip of the visit counts (0 gold, 1 silver, more bronze).
@@ -529,6 +556,7 @@ func _masking() -> void:
 	Game.record_medal("masking", medal)
 	clinic.call("put_on_masking_phone", "left")
 	_react(&"nod")
+	await _say("Hoot", "Her right ear stays open. A cup on the test ear makes low bone tones seem louder.")
 	# (polish) one hook, no rule dump: the coach teaches the numbers step by step on the AudiOtron
 	await _say("Hoot", "I'll walk you through it. Trick: if more noise makes her answer vanish, it was the Ghost.")
 	await _recap()
@@ -651,7 +679,7 @@ func _evidence(b: Control) -> void:
 		_shot("carhart", 0.5)
 		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: the stiff middle ear fakes a small bone dip. Her cochlea is fine, and it often recovers after surgery!")
 	else:
-		await _say("Hoot", "Young, one ear, family history, normal eardrum: a doctor may suspect otosclerosis.")
+		await _say("Hoot", "Young, family history, normal eardrum: a doctor may suspect otosclerosis. It often starts in one ear, then reaches the other.")
 	await _say("Hoot", "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!")
 	hud.call("complete_step", &"case")
 
@@ -683,7 +711,8 @@ func _referral(b: Control) -> void:
 	# (polish) what otosclerosis is and what happens next; the ENT confirms, the game never diagnoses
 	await _say("Hoot", "If it's otosclerosis: extra bone grows around the stapes, the tiny stirrup bone, so it can't vibrate freely.")
 	await _say("Bonnie", "A tiny stirrup! Like the nozzle on my piping bag, gone stiff?")
-	await _say("Hoot", "Exactly! The ENT checks it. Then you and the doctor choose: surgery to free it, or hearing aids. Both can work well.")
+	await _say("Hoot", "Exactly! The ENT checks it, often adding tympanometry and reflex tests to ours.")
+	await _say("Hoot", "Then you and the doctor choose: an operation that swaps it for a tiny piston, or hearing aids. Both can work well.")
 	await _say("Bonnie", "A doctor for my ear, then back to my buns. Deal! Croissant for the road?")
 	await _payoff(b)
 	hud.call("complete_step", &"refer")
@@ -707,6 +736,9 @@ func _payoff(b: Control) -> void:
 		await _say("Hoot", "Oh, and Bonnie? Your glasses are on your head.")
 		_react(&"startle")
 		await _say("Bonnie", "...All MORNING? Don't tell the sourdough.")
+	else:
+		clinic.call("put_on_glasses")
+		await _say("Bonnie", "Glasses back on my head, where they live. I'll lose them by lunch!")
 	clinic.call("focus_camera", &"door", 1.6)
 	_shot("goodbye", 1.6)
 	await clinic.call("walk_out")

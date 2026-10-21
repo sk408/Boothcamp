@@ -1,6 +1,6 @@
 extends RefCounted
 ## Hoot's tympanometer movie, "The Eardrum Trampoline" (clinical review C12). Plays just before the
-## tympanometer step on the player's first case day (any of Days 6 to 11), after Hoot's lead-in
+## tympanometer step on the player's first case day (any of Days 6 to 12), after Hoot's lead-in
 ## (story/level_case.gd CASE_MOVIES); replay from the pause menu on any case day, or the title.
 ## DATA ONLY: the scenes are drawn by this movie's own sets, story/case_movies/tymp_sets.gd.
 ## Facts (Steve reviews), the game's own numbers (core/cases/case_rules.gd, docs/CASES.md §5): look in
@@ -17,7 +17,7 @@ const MOVIE: Dictionary = {
 	"title": "Hoot's tympanometer movie",
 	"subtitle": "The Eardrum Trampoline",
 	"chapter": "rocco",
-	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye"],
+	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan"],
 	"narrator": "Hoot",
 	"stage": "res://story/case_movies/tymp_sets.gd",
 	"seen_at": "compare",
