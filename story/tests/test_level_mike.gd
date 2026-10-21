@@ -2,10 +2,12 @@ extends TestCase
 ## (Speech) Day 3, Mike (story/level_mike.gd, story/games/mike_board.gd): the board's three beats
 ## and their solvers, the level's SPEECH plans and objection cards with real numbers (and Hoot's
 ## recheck when the player's SRT can't show the mismatch), Hoot's textbook fallback run, Hoot's
-## line lengths, the Daily Decibel's word golf card, and a smoke run of the first beats.
+## line lengths, the Daily Decibel's word golf card, a smoke run of the first beats, and (clinical
+## review A1 and A2, all days) the routine lines and why the day has no masking recap.
 
 const MikeBoard := preload("res://story/games/mike_board.gd")
 const LevelMike := preload("res://story/level_mike.gd")
+const LevelCase := preload("res://story/level_case.gd")
 
 var beats: Array = []
 var phases: Array[StringName] = []
@@ -926,6 +928,55 @@ func test_misscore_error_keeps_its_direction() -> void:
 	assert_eq(String(e["kind"]), "misscored")
 	assert_eq(e.get("scored", null), not truth, "the player's score")
 	assert_true(e.has("said_kind"), "what was said")
+
+
+# ---------------------------------------------------------------- the routine (clinical review A1, A2)
+
+## (A1, all days) A fresh speculum on the otoscope's caption, and the cases' listening-check line
+## once, before the first tone test. (A2, all days) Day 3 never masks: with Mike's tones no speech
+## level on the dial needs noise in the other ear, and the day has no bone, so no masking recap.
+func test_routine_lines_and_no_masking_recap() -> void:
+	assert_eq(LevelMike.ROUTINE_LINE, LevelCase.ROUTINE_LINE, "the cases' own words")
+	assert_true(LevelMike.SPECULUM_CAPTION.begins_with(LevelCase.OTHER_EAR_CAPTION.substr(0, 15)), "a fresh speculum, as on the case days")
+	var caption := LevelMike.SPECULUM_CAPTION % ["Mike", "RIGHT"]
+	for line: String in [LevelMike.ROUTINE_LINE, caption]:
+		assert_true(line.split(" ", false).size() <= Hoot.MAX_WORDS, line)
+	var said: Array[String] = []
+	var on_line := func(speaker: String, text: String) -> void: said.append("%s: %s" % [speaker, text])
+	Events.dialogue_line.connect(on_line)
+	Engine.time_scale = 6.0
+	var lv: Node = (load(LevelMike.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var seen := false
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < 60000 and not phases.has(&"audiometry"):
+		await wait_frames(2)
+		if not seen and phases.has(&"otoscopy"):
+			seen = _find_label(lv, caption) != null
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	Events.dialogue_line.disconnect(on_line)
+	assert_has(phases, &"audiometry", "the visit reached the first tone test")
+	assert_true(seen, "the otoscope's caption: " + caption)
+	assert_eq(said.count("Hoot: " + LevelMike.ROUTINE_LINE), 1, "the listening check, once, before the first tone test")
+	assert_false(lv.has_method("_recap"), "no masking recap on Day 3")
+	lv.queue_free()
+	await wait_seconds(0.5)
+	var tones := SpeechSession.tone_results_from(_mike())
+	var masks := false
+	for ear: String in ClinicRules.EARS:
+		var other := SpeechRules.nontest_best_threshold(tones, ear)
+		assert_true(other > 0.0 and other < SpeechRules.MAX_DB, "his other ear's air (%s)" % str(other))
+		for tr: StringName in SpeechRules.SPEECH_IA_DB:
+			for level in range(SpeechRules.MIN_DB, SpeechRules.MAX_DB + 1, 5):
+				masks = masks or SpeechRules.speech_masking_needed(level, other, tr)
+	assert_false(masks, "no SRT level needs noise with Mike's tones")
 
 
 # ---------------------------------------------------------------- smoke: the first beats
