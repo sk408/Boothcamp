@@ -103,7 +103,7 @@ locked, his stamps marked "hoot", not scored for golf). Every blocking beat emit
 | 2 | `history` | Two rounds of questions (table above). Red-flag card: "One ear only: YES = see a doctor." Medal `history`. | choice | 1:10 |
 | 3 | `otoscopy` | A quick look: canals clear, eardrums normal. | dialogue | 0:15 |
 | 4 | `instructions` | "Press for every beep, even faint ones. Ignore the shhh noise." | choice | 0:30 |
-| 5 | `earphones` | Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | earphones_place | 0:30 |
+| 5 | `earphones` | **(D2-8)** Glasses off first: "Where are Bonnie's glasses?" (on her head; a free win, no medal), then Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | choice, earphones_place | 0:40 |
 | 6 | `audiometry` {left, ac} | Better ear first (clinical review D2-2): the left-ear montage. | (AudiOtron) | 0:15 |
 | 6b | `audiometry` {right, ac} | Player stamps 1 kHz (coached), Hoot runs the rest. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 1:10 |
 | **7** | **`bc_placement` {ear: left}** | **Earphones off. "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway." "So: her LEFT." The placement game on her LEFT profile (§6). The 3D oscillator goes on her left mastoid.** | **bc_placement** (`mastoid_target_left`) | **0:45** |
@@ -227,8 +227,9 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 **(v4) Two placements.** First her LEFT side (`setup("left")`: the profile faces LEFT so her left ear is the one you
 see, the tray sits bottom-left, target `mastoid_target_left`, Left/Right walk the highlight towards the back of her
 head the other way round). Then, for the Ghost demo, a quick RIGHT one (`setup("right", true)`: caption "Swap sides!
-Her RIGHT mastoid: the same bony bump, behind the right ear."; if her glasses were found the first time, they are
-gone from the card and "top" is a plain slip). One medal for both. The text below describes the right side.
+Her RIGHT mastoid: the same bony bump, behind the right ear."). **(D2-8)** Her glasses were found before the
+earphones, so they are gone from both cards and "top" is a plain slip; a dev start that skips the earphones
+still shows them. One medal for both. The text below describes the right side.
 
 Bonnie in profile on a cream card, facing RIGHT, so the visible ear is her RIGHT (a profile facing left would
 show her left ear; fixed at integration). The grey "bone buzzer" sits in a tray. Drag it onto a spot, or click a

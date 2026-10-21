@@ -992,6 +992,7 @@ func demo_start() -> void                      # standalone showcase (--scene)
 # v2 story extras (called by name; see world/INTEGRATION_NOTES.md):
 # doris_enter() (coroutine), doris_react(kind), gus_look(target), set_title_mode(on), play_birdsong(),
 # get_head_screen_position(), take_off_glasses(), put_on_glasses(), put_on_hearing_aids(), get_muffle() -> float
+# (D2-8) head gear takes glasses off first; those come back when the patient stands (world/INTEGRATION_NOTES.md)
 # v3 (Chapter 2):
 var patient_id := ""                           # set BEFORE add_child: "bonnie" builds Bonnie (the node is still `gus`)
 func put_on_bone_oscillator(ear := "right") -> void   # headband + vibrator on the mastoid (takes the earphones off)

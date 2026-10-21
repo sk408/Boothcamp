@@ -64,7 +64,7 @@ var dialogue: DialogueBox
 var screen: CanvasLayer
 var results: Dictionary = {}
 var _walk_done := true
-var _found_glasses := false   # the player tried the oscillator on her glasses (the running gag)
+var _found_glasses := false   # the running gag: found before the earphones (D2-8), or at a placement
 var _movie_watched := false   # (v4) the movie played to the end this visit (lines may refer to it)
 var _placement_slips := 0     # (v4) both placements (left, then right) share the bc_placement medal
 var _ghost_seen := false      # (v4) the demo tone was answered by the LEFT cochlea (cross_heard)
@@ -294,6 +294,7 @@ func _earphones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
+	await _glasses_gag()
 	var g := Earphones.new()
 	g.setup(clinic, "her")
 	hud.call("add_game", g)
@@ -307,6 +308,28 @@ func _earphones() -> void:
 	g.queue_free()
 	_react(&"cheer")
 	hud.call("complete_step", &"phones")
+
+
+## (D2-8) Glasses off before the headphones: the running gag lands here, a free win (no medal).
+func _glasses_gag() -> void:
+	await _say("Hoot", "Glasses off before the headphones: they lift the cushions. Bonnie, your glasses?")
+	_react(&"confused")
+	await _say("Bonnie", "Lost! Third time this week. Have you seen them anywhere?")
+	var opts: Array[String] = ["On top of her head!", "In the croissant basket.", "Baked into a loaf."]
+	while true:
+		var c: int = await dialogue.choose("Where are Bonnie's glasses?", opts, opts.find("On top of her head!"))
+		if opts[c].begins_with("On top"):
+			break
+		if opts[c].begins_with("In the"):
+			await _say("Bonnie", "Only croissants in there. Warm ones, though!")
+		else:
+			await _say("Bonnie", "I'd have noticed a crunchy loaf. Probably.")
+		opts.remove_at(c)
+	_found_glasses = true
+	clinic.call("take_off_glasses")
+	_react(&"startle")
+	await _say("Bonnie", "On my HEAD? All morning? Don't tell the sourdough.")
+	await _say("Hoot", "Same for every patient: glasses off before headphones or the bone band.")
 
 
 # ---------------------------------------------------------------- 6. air conduction (Hoot runs most of it)
@@ -383,11 +406,13 @@ func _bone_placement() -> void:
 	await _say("Hoot", "So: her LEFT. It sits behind the ear, on the bony mastoid.")
 	var g := BonePlacement.new()
 	g.setup("left")
+	g.glasses_on = not _found_glasses
 	hud.call("add_game", g)
 	_shot("bone_placement", 0.7)
 	await g.run()
 	_placement_slips = g.mistakes
-	_found_glasses = g.wrong_spots.has("top")
+	if g.wrong_spots.has("top"):
+		_found_glasses = true
 	var was_unicorn := g.wrong_spots.has("forehead")
 	_record_placement()
 	await _wait(0.6)
@@ -396,8 +421,6 @@ func _bone_placement() -> void:
 	await _wait(0.4)
 	if was_unicorn:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
-	if _found_glasses:
-		await _say("Bonnie", "And you found my glasses! They were on my HEAD? All morning?")
 	await _say("Hoot", "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up.")
 
 
@@ -713,6 +736,9 @@ func _payoff(b: Control) -> void:
 		await _say("Hoot", "Oh, and Bonnie? Your glasses are on your head.")
 		_react(&"startle")
 		await _say("Bonnie", "...All MORNING? Don't tell the sourdough.")
+	else:
+		clinic.call("put_on_glasses")
+		await _say("Bonnie", "Glasses back on my head, where they live. I'll lose them by lunch!")
 	clinic.call("focus_camera", &"door", 1.6)
 	_shot("goodbye", 1.6)
 	await clinic.call("walk_out")

@@ -109,9 +109,9 @@ when Gus wobbles it never costs you a bogey, and a slip never earns a birdie.
 On the second ear you test a few frequencies on your own, then Hoot takes a turn and finishes
 the ear at 8x speed so you can watch the whole routine (turn this off with **Quick visit (Hoot
 runs the repeats)** in the pause menu to test every frequency yourself; Hoot's stamps never count
-for or against you). On Day 2 the air test is a repeat of Day 1, so Hoot coaches one beep and
-runs the rest, and her left ear plays as a quick stamp montage; the bone and masking sheets are
-yours. With Quick visit off you test everything.
+for or against you). On Day 2 the air test is a repeat of Day 1: her left ear, the better one, goes first as a quick
+stamp montage, then Hoot coaches one beep on her right and runs the rest; the bone and masking
+sheets are yours. With Quick visit off you test everything.
 
 On Day 2 the AudiOtron grows a **MASKING** deck. The **AIR | BONE** switch shows where the tone
 goes (AIR reads INSERT with the insert earphones from the shop). **NOISE** turns the masker on in

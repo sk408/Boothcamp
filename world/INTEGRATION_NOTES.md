@@ -21,7 +21,7 @@ the desk for the fitting scene). The original eight are unchanged and keep their
 | `set_title_mode(on)` | Gus waits at `TITLE_GUS_SPOT` with idle reactions; the camera drifts on `&"title"`. |
 | `play_birdsong()` | Quiet procedural chirps (Sfx `chirp`, -9 dB) and a confetti burst over Gus's head. |
 | `get_head_screen_position()` | Gus's head projected by the main camera. |
-| `take_off_glasses()`, `put_on_glasses()`, `put_on_hearing_aids()` | Props. |
+| `take_off_glasses()`, `put_on_glasses()`, `put_on_hearing_aids()` | Props. **(D2-8)** `put_on_earphones`, `put_on_bone_oscillator` and `put_on_masking_phone` take any patient's glasses off first; glasses taken off that way go back on when the patient stands up from the booth chair with the head clear. Glasses a level took off itself stay off until it calls `put_on_glasses()` (back where they were). |
 | `get_muffle()` | 0 clear .. 1 fully muffled (grey fitting world). Read by `story/voice.gd` through `Stage.clinic`. |
 
 Constants: `SPOT_FACING`, `DORIS_SPOT`, `TITLE_GUS_SPOT`, `GUS_TURN_TO_DORIS`, `GUS_FACE_CAMERA`.
