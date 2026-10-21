@@ -3032,7 +3032,7 @@ func _play_movie(id: String) -> Dictionary:
   Hoot's party movie"). `Movies.replay_ids()` leaves out a movie whose chapter is not in `Game.CHAPTERS` yet; both
   days exist now, so both movies are listed.
 - **(Clinical review A2, all days)** While the masking movie is unseen, the visit's first masked test (Day 4: Hoot's masked
-  bone; Day 5: his masked bone where a gap shows, else his words in quiet when they need noise) plays the one-card
+  bone; Day 5: his masked bone, where a gap shows) plays the one-card
   `masking_recap` first (the `explainer` beat, source `recap`), once a visit, then Hoot: "The full masking movie is
   under Hoot's Movies, in the pause menu or on the title screen." The level joins `MASKING_LEVEL_GROUP` right there,
   so from then on its pause menu offers every replay movie, as on the case days. Day 4's day-start masking offer

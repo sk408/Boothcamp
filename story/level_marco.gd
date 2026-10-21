@@ -38,9 +38,9 @@ const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const SPORTS_SCRIPT := "res://story/papers/paper_party_golf.gd"
 const PATIENT_ID := "marco"
 const MOVIE_ID := "party_noise"
-## (Clinical review A2, all days) Before the visit's first masked test (Hoot's masked bone where a
-## gap shows, else his words in quiet with noise), while the masking movie is unseen: the one-card
-## recap, then where the full movie lives (HOOT "masking_hint"), as the case days do.
+## (Clinical review A2, all days) Before Hoot's masked bone (where a gap shows), while the masking
+## movie is unseen: the one-card recap, then where the full movie lives (HOOT "masking_hint"), as the
+## case days do.
 const MASKING_MOVIE := "masking"
 const MASKING_RECAP := "masking_recap"
 ## Voices (story/voice.gd is not edited: registered at runtime, CHAPTER5 §12).
@@ -338,10 +338,11 @@ func _play_movie(id: String) -> Dictionary:
 	return r
 
 
-## (Clinical review A2, all days) The masking recap card before the visit's first masked test,
-## while the masking movie is unseen (a player who starts here, or skipped it on Day 2), then where
-## the full movie lives (level_case._recap). From here the level is in Movies.MASKING_LEVEL_GROUP,
-## so its pause menu lists the masking movie too (E19); a watched movie leaves the day as it was.
+## (Clinical review A2, all days) The masking recap card before Hoot's masked bone (where a gap
+## shows), while the masking movie is unseen (a player who starts here, or skipped it on Day 2),
+## then where the full movie lives (level_case._recap). From here the level is in
+## Movies.MASKING_LEVEL_GROUP, so its pause menu lists the masking movie too (E19); a watched movie
+## leaves the day as it was.
 func _recap() -> void:
 	if _recapped or Game.is_movie_seen(MASKING_MOVIE) or not Movies.has(MASKING_RECAP):
 		return
@@ -608,10 +609,7 @@ func _hidden_speech() -> void:
 	if not wrs_ok:
 		await _hoot("no_wrs")
 		return
-	var noise := words_need_noise(tones, _air_transducer())
-	if noise:
-		await _recap()
-	await _hoot("words_noise" if noise else "words_quiet")
+	await _hoot("words_noise" if words_need_noise(tones, _air_transducer()) else "words_quiet")
 	var lists := {"right": SpeechRules.WRS_LISTS[0], "left": SpeechRules.WRS_LISTS[1]}
 	for ear: String in ClinicRules.EARS:
 		_phase(&"speech", {"ear": ear, "test": "wrs"})

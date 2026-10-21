@@ -226,8 +226,8 @@ func test_movie_announced_only_when_unseen() -> void:
 
 ## (A1, all days) A fresh speculum on the otoscope's caption, and the cases' listening-check line
 ## once, before the first tone test. (A2, all days) While the masking movie is unseen, the recap
-## card plays once, before the visit's first masked test: Hoot's masked bone where a gap shows, else
-## his words in quiet when they need noise (his measured tones decide; with neither, no card).
+## card plays once, before Hoot's masked bone where a gap shows (his measured tones decide; with no
+## gap, no card: the words' noise is not the tone plateau the card teaches).
 func test_routine_and_masking_recap_when_unseen() -> void:
 	assert_eq(LevelMarco.line("routine"), LevelCase.ROUTINE_LINE, "the cases' own words")
 	assert_eq(LevelMarco.line("masking_hint"), LevelCase.MASKING_HINT, "the cases' own words")
@@ -244,15 +244,13 @@ func test_routine_and_masking_recap_when_unseen() -> void:
 	assert_eq(timeline.count(routine), 1, "the listening check, once")
 	assert_true(timeline.find(routine) < timeline.find("audiometry:ac"), "before the first tone test")
 	var first := timeline.find("audiometry:bc_masked")
-	if first < 0 and LevelMarco.words_need_noise(lv.get("tones"), &"phones"):
-		first = timeline.find("speech:wrs")
 	var recap := "movie:" + LevelMarco.MASKING_RECAP
 	var hint := "Hoot: " + LevelCase.MASKING_HINT
-	assert_eq(timeline.count(recap), 1 if first >= 0 else 0, "the recap card once, before a masked test only")
+	assert_eq(timeline.count(recap), 1 if first >= 0 else 0, "the recap card once, before masked bone only")
 	assert_eq(timeline.count(hint), timeline.count(recap), "then where the full movie lives")
 	if first >= 0:
 		var at := timeline.find(recap)
-		assert_true(at > timeline.find("audiometry:bc") and at < first, "after unmasked bone, before the first masked test")
+		assert_true(at > timeline.find("audiometry:bc") and at < first, "after unmasked bone, before the masked bone")
 		assert_true(timeline.find(hint) > at and timeline.find(hint) < first, "right after the card")
 		assert_true(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "the pause menu offers every replay movie now (E19)")
 	await lv.call("_recap")
