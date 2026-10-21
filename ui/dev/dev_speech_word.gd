@@ -293,8 +293,8 @@ func _nora() -> PatientProfile:
 
 ## Hoot's three Day 4 tone sheets: right air, left air, left masked bone at 1k and 4k.
 static func _nora_tones() -> Dictionary:
-	var oct := {"right": {250: 10, 500: 10, 1000: 15, 2000: 20, 4000: 30, 8000: 40},
-		"left": {250: 30, 500: 35, 1000: 40, 2000: 45, 4000: 55, 8000: 60}}
+	var oct := {"right": {250: 10, 500: 10, 1000: 15, 1500: 15, 2000: 20, 3000: 25, 4000: 30, 6000: 35, 8000: 40},
+		"left": {250: 30, 500: 35, 1000: 40, 1500: 45, 2000: 45, 3000: 50, 4000: 55, 6000: 55, 8000: 60}}
 	var ears := {}
 	for e: String in ["right", "left"]:
 		var freqs := {}
