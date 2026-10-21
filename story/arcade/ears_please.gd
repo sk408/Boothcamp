@@ -1,18 +1,21 @@
 extends Control
 ## EarsPlease (arcade, story-internal): the Ears, Please! arcade cabinet (docs/ARCADE.md part 2).
 ## You run the front desk of a hearing clinic. Each patient's file lands on the desk: an intake
-## card (ASKED and LOOKED boxes, each NO or YES) and the chart. Stamp it FIT (fit hearing aids) or
-## REFER (a doctor first), and for REFER point at the proof: the ticked box, a column where one ear
-## is worse, or (Shift 2) a column with an air-bone gap. Every call comes from DeskRules.decide().
+## card (ASKED and LOOKED boxes, each NO or YES) and the chart. Stamp it FIT (fit hearing aids),
+## REFER (a doctor first) or (Shift 3) DOCTOR TODAY, and for REFER or TODAY point at the proof: the
+## ticked box, a column where one ear is worse, (Shift 2) a column with an air-bone gap, or (Shift
+## 3) the alarm-clock card that says how and when the loss came on. Every call comes from
+## DeskRules.decide(). Two missed same-day patients close the desk early.
 ## A shift is an untimed warm-up with Hoot, then 120 seconds. A slip shows a note that holds the
 ## clock until you go on (reading the lesson never costs time); a missed red flag costs two clean
 ## calls. HOOT HELP stamps and points for you, scores nothing and counts as not clean.
-## Controls: keys 1-2 (or click a stamp); in PROVE IT the arrows move the pointer and Enter or
+## Controls: keys 1-3 (or click a stamp); in PROVE IT the arrows move the pointer and Enter or
 ## Space points (or click); H for HOOT HELP; Enter or Space closes a note; on the results, Enter
 ## or Space plays again, S picks a shift and T goes back to the arcade. Pausable game time.
 ## The playfield is 1280x720, centred in wider or taller windows; the wall and desk fill the rest.
 ## Shifts: 1 Trainee (ticks and one ear worse), 2 Dispenser (+ the air-bone gap, wax and ear
-## shape), opened by a safe shift of 8 files or more. Shift 3 (DOCTOR TODAY) comes next.
+## shape), 3 Clinic Lead (+ DOCTOR TODAY and the alarm clock), each opened by a safe shift of 8
+## files or more on the one before.
 ## Beats (CONTRACTS.md §3.2): "desk_shift" (solver: start the highlighted shift), "desk_stamp"
 ## (solver: the right stamp; mouse: click "desk_stamp_<decision>"), "desk_prove" (solver: point at
 ## the best proof; mouse: click its anchor), "desk_note" (solver: go on; mouse: click
@@ -174,12 +177,16 @@ class HitBox extends Control:
 			accept_event()
 
 
-## One patient file on the desk: the tab, the intake card, the chart and the marks drawn over them
-## (the PROVE IT pointer, the pin, the tell, a ✕ on a wrong pick, the ink and the goal sticker).
+## One patient file on the desk: the tab, the intake card, the chart (under the alarm-clock card
+## from shift 3) and the marks drawn over them (the PROVE IT pointer, the pin, the tell, a cross on
+## a wrong pick, the ink and the goal sticker).
 class FileView extends Control:
 	const TILE := Vector2(104, 90)
 	const CARD := Rect2(14, 38, 228, 400)
 	const CHART := Rect2(256, 38, 476, 366)
+	## Shift 3: the alarm-clock card across the top of the chart column, and the chart under it.
+	const HISTORY := Rect2(256, 36, 476, 46)
+	const CHART_LOW := Rect2(256, 94, 476, 310)
 	const LEGEND := Rect2(256, 406, 476, 30)
 	const PRINT_AT := Vector2(470, -12)
 	var file: Dictionary = {}
@@ -222,9 +229,18 @@ class FileView extends Control:
 		motion = create_tween()
 		return motion
 
+	## The chart's rect: lower from shift 3, where the alarm-clock card sits above it.
+	func chart_rect() -> Rect2:
+		return CHART_LOW if bool(sh.get("sudden", false)) else CHART
+
+	func place_chart() -> void:
+		ag.position = chart_rect().position
+		ag.size = chart_rect().size
+
 	func show_file(f: Dictionary, s: Dictionary, on_hover: Callable, on_click: Callable) -> void:
 		file = f
 		sh = s
+		place_chart()
 		cursor = {}
 		pin = {}
 		wrong = {}
@@ -284,7 +300,7 @@ class FileView extends Control:
 		var half_l := maxf(9.0, (x - lo) * 0.5)
 		var half_r := maxf(9.0, (hi - x) * 0.5)
 		var pr := ag.plot_rect()
-		return Rect2(CHART.position + Vector2(x - half_l, pr.position.y - 22), Vector2(half_l + half_r, pr.size.y + 22))
+		return Rect2(chart_rect().position + Vector2(x - half_l, pr.position.y - 22), Vector2(half_l + half_r, pr.size.y + 22))
 
 	func target_rect(t: Dictionary) -> Rect2:
 		match String(t.get("kind", "")):
@@ -292,6 +308,8 @@ class FileView extends Control:
 				return tile_rect(String(t["id"]))
 			"chart":
 				return column_rect(int(t["freq"]))
+			"sudden":
+				return HISTORY
 		return Rect2(CHART.position, Vector2(60, 40))
 
 	func _process(delta: float) -> void:
@@ -336,9 +354,29 @@ class FileView extends Control:
 			UiDraw.rounded_rect(self, lr, Color(Palette.INK, 0.78), 12)
 			draw_string(f, lr.position + Vector2(0, 40), "From Shift 2", HORIZONTAL_ALIGNMENT_CENTER, lr.size.x, 18, Color(Palette.PAPER, 0.85))
 			draw_string(UiKit.font(500), lr.position + Vector2(0, 64), "wax and ear shape", HORIZONTAL_ALIGNMENT_CENTER, lr.size.x, 15, Color(Palette.PAPER, 0.7))
-		# the chart's card and its legend
-		UiDraw.rounded_rect(self, Rect2(CHART.position - Vector2(4, 4), CHART.size + Vector2(8, 38)), Color("#ffffff"), 14, 3, Palette.INK)
+		# the chart's card and its legend, and from shift 3 the alarm-clock card above them
+		var cr := chart_rect()
+		UiDraw.rounded_rect(self, Rect2(cr.position - Vector2(4, 4), cr.size + Vector2(8, 38)), Color("#ffffff"), 14, 3, Palette.INK)
 		_draw_legend()
+		if bool(sh.get("sudden", false)):
+			_draw_history()
+
+	## The alarm-clock card: how the loss came on, when it started, which ear (DeskRun.history).
+	## The same clock on every file, whatever it says, so only reading it tells the call.
+	func _draw_history() -> void:
+		var r := HISTORY
+		UiDraw.rounded_rect(self, Rect2(r.position - Vector2(4, 2), r.size + Vector2(8, 4)), Palette.PAPER, 12, 3, Palette.INK)
+		DeskArt.alarm_clock(self, r.position + Vector2(24, 24), 30.0)
+		var xs: Array[float] = [52.0, 262.0, 400.0]
+		var fields := DeskRun.history(file.get("sudden", {}))
+		for i in fields.size():
+			var fd: Array = fields[i]
+			var at := r.position + Vector2(xs[i], 0)
+			var w := (xs[i + 1] if i + 1 < xs.size() else r.size.x) - xs[i] - 8.0
+			draw_string(UiKit.font(600), at + Vector2(0, 16), String(fd[0]), HORIZONTAL_ALIGNMENT_LEFT, w, 12, Palette.INK_SOFT)
+			var ear := String(fd[2])
+			var col := Palette.INK if ear == "" else Palette.ear_color(ear)
+			draw_string(UiKit.font(700), at + Vector2(0, 38), String(fd[1]), HORIZONTAL_ALIGNMENT_LEFT, w, 18, col)
 
 	func _draw_tile(id: String, r: Rect2, open: bool, yes: bool) -> void:
 		UiDraw.rounded_rect(self, r, Color("#fffdf6") if open else Color("#efe7d6"), 12, 2, Color(Palette.INK, 0.5))
@@ -379,6 +417,8 @@ class FileView extends Control:
 			var rects: Array[Rect2] = []
 			if String(tell.get("kind", "")) == "intake":
 				rects.append(tile_rect(String(tell["id"])))
+			elif String(tell.get("kind", "")) == "sudden":
+				rects.append(HISTORY.grow(2))
 			elif String(tell.get("kind", "")) == "chart":
 				for fr: int in tell.get("freqs", []):
 					rects.append(column_rect(fr))
@@ -389,7 +429,11 @@ class FileView extends Control:
 				ag.show_gap = true
 		if not ring.is_empty():
 			var rr := target_rect(ring).grow(5)
-			_over.draw_arc(rr.get_center(), maxf(rr.size.x, rr.size.y * 0.55) * 0.62, 0.0, TAU, 40, Palette.MINT, 5.0)
+			if String(ring.get("kind", "")) == "sudden":
+				# the card is wide: a circle would cross the desk. A box, just outside the tell's glow on the card.
+				UiDraw.rounded_rect(_over, target_rect(ring).grow(9), Color(0, 0, 0, 0), 14, 5, Palette.MINT)
+			else:
+				_over.draw_arc(rr.get_center(), maxf(rr.size.x, rr.size.y * 0.55) * 0.62, 0.0, TAU, 40, Palette.MINT, 5.0)
 		if not wrong.is_empty():
 			var wr := target_rect(wrong)
 			UiDraw.cross(_over, wr.get_center(), 26.0, Palette.CORAL, 6.0)
@@ -397,7 +441,13 @@ class FileView extends Control:
 			var cr := target_rect(cursor).grow(3)
 			_over.draw_rect(cr, Color(Palette.SUNNY, 0.12))
 			UiDraw.rounded_rect(_over, cr, Color(0, 0, 0, 0), 10, 4, Color(Palette.SELECT_ORANGE, 0.75 + 0.25 * pulse))
-			UiDraw.arrow(_over, Vector2(cr.get_center().x, cr.position.y - 16), 24.0, Vector2.DOWN, Palette.SELECT_ORANGE)
+			var kind := String(cursor.get("kind", ""))
+			if kind == "sudden":
+				UiDraw.arrow(_over, Vector2(HISTORY.position.x + 24, cr.position.y - 16), 24.0, Vector2.DOWN, Palette.SELECT_ORANGE)   # over the clock face, clear of the ink
+			elif kind == "chart" and bool(sh.get("sudden", false)):
+				UiDraw.arrow(_over, Vector2(cr.get_center().x, cr.position.y - 7), 14.0, Vector2.DOWN, Palette.SELECT_ORANGE)   # short: the alarm clock sits just above
+			else:
+				UiDraw.arrow(_over, Vector2(cr.get_center().x, cr.position.y - 16), 24.0, Vector2.DOWN, Palette.SELECT_ORANGE)
 		if not pin.is_empty():
 			var pr := target_rect(pin)
 			DeskArt.pin(_over, pr.get_center() + Vector2(0, 8), 22.0)
@@ -406,7 +456,8 @@ class FileView extends Control:
 		if goal != "":
 			var g := "GOAL: " + goal
 			var gw := UiKit.font(700).get_string_size(g, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 26
-			var at := Vector2(CHART.position.x + CHART.size.x - gw - 10, CHART.position.y + 30)
+			var cr := chart_rect()
+			var at := Vector2(cr.position.x + cr.size.x - gw - 10, cr.position.y + 30)
 			_over.draw_set_transform(at + Vector2(gw * 0.5, 17), -0.05, Vector2.ONE)
 			UiDraw.rounded_rect(_over, Rect2(Vector2(-gw * 0.5, -17), Vector2(gw, 34)), Palette.MINT, 10, 3, Palette.INK)
 			_over.draw_string(UiKit.font(700), Vector2(-gw * 0.5 + 13, 7), g, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
@@ -416,11 +467,14 @@ class FileView extends Control:
 		var word := ink_word if ink_word != "" else CaseRules.DECISION_STAMPS[ink]
 		var col: Color = STAMP_INK[ink] if ink_word == "" else Color(Palette.INK_SOFT)
 		var f := UiKit.font(700)
-		var w := f.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 30
-		_over.draw_set_transform(PRINT_AT + Vector2(w * 0.5, 22), -0.1, Vector2.ONE)
+		var short := word.length() <= 6
+		var fs := 30 if short else 24   # DOCTOR TODAY stays on the folder
+		var w := f.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 30
+		# a long stamp tilts less and sits a little lower, so its far end stays off the wall card's chips
+		_over.draw_set_transform(PRINT_AT + Vector2(w * 0.5, 22.0 if short else 26.0), -0.1 if short else -0.06, Vector2.ONE)
 		var r := Rect2(Vector2(-w * 0.5, -22), Vector2(w, 44))
 		UiDraw.rounded_rect(_over, r, Color(col, 0.12), 8, 4, col)
-		_over.draw_string(f, Vector2(-w * 0.5 + 15, 11), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, col)
+		_over.draw_string(f, Vector2(-w * 0.5 + 15, fs * 0.36), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 		_over.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -546,6 +600,7 @@ func _anchor_ids() -> PackedStringArray:
 		out.append("desk_intake_" + id)
 	for f: int in ClinicRules.AC_FREQS:
 		out.append("desk_chart_%d" % f)
+	out.append("desk_sudden")
 	return out
 
 
@@ -832,8 +887,10 @@ func _setup_shift() -> void:
 	for s: StringName in _stamps:
 		var sv := _stamps[s]
 		sv.locked = not (_sh["stamps"] as Array).has(s)
-		sv.lock_text = "SHIFT 3 · SOON"
+		sv.lock_text = "SHIFT 3"
 		sv.queue_redraw()
+	_prove_ask.text = "Point at the reason: a YES box, a column on the chart, or the alarm clock." if bool(_sh.get("sudden", false)) \
+		else "Point at the reason: a YES box, or a column on the chart."
 	_wall.queue_redraw()
 
 
@@ -964,8 +1021,13 @@ func _serve(f: Dictionary, warm: Array) -> void:
 				_boss_clean = true
 			await _clean_feedback(f, s, int(r["points"]), false)
 		else:
+			if outcome == DeskRules.MISSED_TODAY and int(_counts[outcome]) < DeskRules.MAX_INCIDENTS:
+				Hoot.say(DeskRun.INCIDENT_LINE, Hoot.URGENT, "", "", 4.0)
 			await _slip_feedback(f, s, target, outcome, int(r["points"]), false)
 		_slide_out(_view)
+		if int(_counts[DeskRules.MISSED_TODAY]) >= DeskRules.MAX_INCIDENTS and _phase == "run":
+			_closed = true   # two same-day patients sent home: the desk shuts early
+			_end_shift()
 		return
 
 
@@ -1042,9 +1104,11 @@ func _clean_feedback(f: Dictionary, s: StringName, pts: int, warm: bool) -> void
 		_shot_once("desk_fit_goal")
 	else:
 		var card := DeskRules.card_for(proof)
-		_card_fx[card] = {"t": 1.0, "col": Palette.MINT, "mark": "check"}
+		_card_fx[card] = {"t": 1.0, "col": Palette.MINT, "mark": "check", "row": StringName(_v["decision"])}
 		_view.tell = proof
-		_send_letter()
+		_send_letter(s)
+		if s == &"today":
+			_flash_word("SEEN TODAY!", WINDOW_RECT.get_center() + Vector2(0, -50))
 		Sfx.play(&"whoosh", 1.1, -6.0)
 		_window_fx["wave"] = 0.0
 		_shot_once("desk_letter")
@@ -1065,7 +1129,7 @@ func _slip_feedback(f: Dictionary, s: StringName, target: Dictionary, outcome: S
 		_view.ring = DeskRules.best_target(_v)
 		_view.tell = proof
 		var card := DeskRules.card_for(proof)
-		_card_fx[card] = {"t": 1.0, "col": Palette.CORAL, "mark": "none"}
+		_card_fx[card] = {"t": 1.0, "col": Palette.CORAL, "mark": "none", "row": StringName(_v["decision"])}
 	elif outcome == DeskRules.OVER:
 		for id: String in DeskRules.RED_FLAG_RULES:
 			if (_sh["rules"] as Array).has(id):
@@ -1174,7 +1238,7 @@ func _tally() -> void:
 	_step = ""
 	Hoot.clear()
 	Sfx.play(&"fanfare", 1.0, -4.0)
-	_flash_banner("CLOSING TIME!", Palette.CORAL, 1.2)
+	_flash_banner("DESK CLOSED!" if _closed else "CLOSING TIME!", Palette.CORAL, 1.2)
 	await get_tree().create_timer(1.3, false).timeout
 	var st := stats()
 	_promoted_now = DeskRules.promoted(st) and _shift_id < DeskRules.SHIFTS.size() and _unlocked() <= _shift_id
@@ -1227,7 +1291,7 @@ func _picker(open: int) -> int:
 	col.add_theme_constant_override("separation", 14)
 	panel.add_child(col)
 	col.add_child(UiKit.label("EARS, PLEASE!", 44, Palette.CORAL, 700))
-	col.add_child(UiKit.label("Pick a shift. Stamp each file FIT or REFER, then prove it.", 20, Palette.INK_SOFT, 600))
+	col.add_child(UiKit.label("Pick a shift. Stamp each file, then prove it.", 20, Palette.INK_SOFT, 600))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
 	col.add_child(row)
@@ -1240,15 +1304,17 @@ func _picker(open: int) -> int:
 		var text := "%d  %s\n%s\n%s" % [id, String(sh["title"]).to_upper(), _shift_blurb(id),
 			("Your best lately: %s" % _thousands(mine)) if mine > 0 else ("Top: %s %s" % [best[0]["initials"], _thousands(int(best[0]["score"]))])]
 		if not playable:
-			text = "%d  %s\n%s" % [id, String(sh["title"]).to_upper(), "Coming soon" if id > DeskRun.PLAYABLE else "Finish Shift %d safely (8+ files)" % (id - 1)]
+			text = "%d  %s\n%s" % [id, String(sh["title"]).to_upper(), _lock_text(id)]
 		var b := UiKit.button(text, &"AccentButton" if id == _picker_pick else &"", Vector2(300, 170))
 		b.disabled = not playable
 		b.pressed.connect(pick_shift.bind(id))
 		row.add_child(b)
 		tiles.append(b)
 		Hoot.register_anchor("desk_shift_%d" % id, b)
+	panel.position.x = (FIELD.x - panel.get_combined_minimum_size().x) * 0.5   # centred, however wide the tiles came out
 	var hints := UiKit.show_key_hints()
-	col.add_child(UiKit.label("Keys 1 or 2, or click a shift.   T: back to the arcade" if hints else "Click a shift.", 17, Palette.INK_SOFT, 500))
+	var keys := "1 or 2" if open == 2 else "1 to %d" % open
+	col.add_child(UiKit.label(("Keys %s, or click a shift.   T: back to the arcade" % keys) if hints else "Click a shift.", 17, Palette.INK_SOFT, 500))
 	Juice.bounce_in(panel)
 	_beat_serial += 1
 	var serial := _beat_serial
@@ -1283,13 +1349,17 @@ func _picker_key(code: int, physical: int) -> void:
 		pick_shift(_picker_pick)
 
 
+static func _lock_text(id: int) -> String:
+	return "Coming soon" if id > DeskRun.PLAYABLE else "Finish Shift %d safely\n(8+ files)" % (id - 1)
+
+
 static func _shift_blurb(id: int) -> String:
 	match id:
 		1:
 			return "Ticks and one ear worse"
 		2:
-			return "+ the air-bone gap, wax, ear shape"
-	return "+ DOCTOR TODAY"
+			return "+ the air-bone gap,\nwax, ear shape"
+	return "+ DOCTOR TODAY\nand the alarm clock"
 
 
 static func _best_score(id: int) -> int:
@@ -1330,9 +1400,9 @@ func _park(view: FileView) -> void:
 	tw.tween_callback(view.hide)
 
 
-## The referral letter flies from the file out of the window.
-func _send_letter() -> void:
-	var g := Glyph.new(&"refer")
+## The referral letter (or, for DOCTOR TODAY, the phone call) flies from the file out of the window.
+func _send_letter(s: StringName = &"refer") -> void:
+	var g := Glyph.new(s)
 	_fx.add_child(g)
 	var from := _view.position + FileView.PRINT_AT + Vector2(40, 40)
 	g.position = from
@@ -1409,6 +1479,7 @@ var _note_points_l: Label
 var _note_line_l: Label
 var _note_lesson_l: Label
 var _prove_box: VBoxContainer
+var _prove_ask: Label
 var _note_box: VBoxContainer
 
 
@@ -1481,10 +1552,10 @@ func _build_right_panel() -> void:
 	_prove_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	stack.add_child(_prove_box)
 	_prove_box.add_child(UiKit.label("PROVE IT!", 28, Palette.CORAL, 700))
-	var ask := UiKit.label("Point at the reason: a YES box, or a column on the chart.", 17, Palette.INK, 600)
-	ask.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	ask.custom_minimum_size = Vector2(146, 0)
-	_prove_box.add_child(ask)
+	_prove_ask = UiKit.label("Point at the reason: a YES box, or a column on the chart.", 17, Palette.INK, 600)
+	_prove_ask.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prove_ask.custom_minimum_size = Vector2(146, 0)
+	_prove_box.add_child(_prove_ask)
 	if UiKit.show_key_hints():
 		# arrow keys as words: the game font has no arrow glyphs (the web build can't fall back)
 		_prove_box.add_child(UiKit.hint_row([["Left"], ["Right"]], 15))
@@ -1624,6 +1695,10 @@ func _draw_wall() -> void:
 	var hx := 330.0
 	UiDraw.rounded_rect(_wall, Rect2(hx, 88, CARD_SIZE.x * 3 + 22, 22), Palette.CORAL, 8, 2, Palette.INK)
 	_wall.draw_string(f, Vector2(hx, 105), "RED FLAGS: A DOCTOR FIRST, SO REFER", HORIZONTAL_ALIGNMENT_CENTER, CARD_SIZE.x * 3 + 22, 16, Palette.PAPER)
+	if open.has("sudden"):
+		var sx := 330.0 + 3 * (CARD_SIZE.x + 11)
+		UiDraw.rounded_rect(_wall, Rect2(sx, 88, CARD_SIZE.x, 22), STAMP_INK[&"today"], 8, 2, Palette.INK)
+		_wall.draw_string(f, Vector2(sx, 105), "THE ALARM CLOCK", HORIZONTAL_ALIGNMENT_CENTER, CARD_SIZE.x, 16, Palette.PAPER)
 	for i in CARD_SLOTS.size():
 		var id := CARD_SLOTS[i]
 		var r := Rect2(Vector2(330 + i * (CARD_SIZE.x + 11), CARD_Y), CARD_SIZE)
@@ -1632,18 +1707,22 @@ func _draw_wall() -> void:
 			UiDraw.rounded_rect(_wall, r, Color("#4a4363"), 14, 3, Palette.INK)
 			_wall.draw_string(f, r.position + Vector2(0, 58), "?", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 40, Color(Palette.PAPER, 0.5))
 			_wall.draw_string(f, r.position + Vector2(0, 92), String(info["title"]), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 15, Color(Palette.PAPER, 0.7))
-			_wall.draw_string(f, r.position + Vector2(0, 118), "SHIFT 2" if id == "gap" else "SHIFT 3 · SOON", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 15, Palette.SUNNY)
+			_wall.draw_string(f, r.position + Vector2(0, 118), "SHIFT 2" if id == "gap" else "SHIFT 3", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 15, Palette.SUNNY)
 			continue
 		var fx: Dictionary = _card_fx.get(id, {})
 		UiDraw.rounded_rect(_wall, r, Palette.PAPER, 14, 3, Palette.INK)
 		if not fx.is_empty():
 			var k := clampf(float(fx["t"]), 0.0, 1.0)
 			UiDraw.rounded_rect(_wall, r, Color(fx["col"], 0.35 * k), 14, 5, Color(fx["col"], k))
+		if id == "sudden":
+			_draw_sudden_card(r, info, fx)
+			continue
 		DeskArt.rule(_wall, id, r.position + Vector2(r.size.x * 0.5 - 14, 38), 28.0)
 		_wall.draw_string(f, r.position + Vector2(0, 88), String(info["title"]), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 17, Palette.INK)
 		_wall.draw_string(UiKit.font(600), r.position + Vector2(0, 108), String(info["sub"]), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 14 if String(info["sub"]).length() > 22 else 15, Palette.INK_SOFT)
 		var stamp_id: StringName = info["stamp"]
-		var chip := Rect2(r.position + Vector2(r.size.x * 0.5 - 52, 116), Vector2(104, 20))
+		var cw := maxf(104.0, f.get_string_size(CaseRules.DECISION_STAMPS[stamp_id], HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0)
+		var chip := Rect2(r.position + Vector2(r.size.x * 0.5 - cw * 0.5, 116), Vector2(cw, 20))
 		UiDraw.rounded_rect(_wall, chip, STAMP_FACE[stamp_id], 8, 2, Palette.INK)
 		_wall.draw_string(f, chip.position + Vector2(0, 16), CaseRules.DECISION_STAMPS[stamp_id], HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 14, Palette.INK)
 		if String(fx.get("mark", "")) == "check":
@@ -1664,6 +1743,30 @@ func _draw_wall() -> void:
 	_wall.draw_circle(CLOCK_C, 5.0, Palette.CORAL)
 	var clock_txt := "%d:%02d" % [int(minutes / 60.0), int(fmod(minutes, 60.0))]
 	_wall.draw_string(f, CLOCK_C + Vector2(-40, 34), clock_txt, HORIZONTAL_ALIGNMENT_CENTER, 80, 15, Palette.INK_SOFT)
+
+
+## The SUDDEN LOSS card: the clock and its title, then both calls the alarm clock can make, each with its
+## stamp (DeskRules.SUDDEN_ROWS). A lit card marks the line that fits the file.
+func _draw_sudden_card(r: Rect2, info: Dictionary, fx: Dictionary) -> void:
+	var f := _font()
+	DeskArt.alarm_clock(_wall, r.position + Vector2(28, 30), 28.0)
+	_wall.draw_string(f, r.position + Vector2(48, 28), String(info["title"]), HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 54, 16, Palette.INK)
+	_wall.draw_string(UiKit.font(600), r.position + Vector2(48, 45), String(info["sub"]), HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 54, 13, Palette.INK_SOFT)
+	for i in DeskRules.SUDDEN_ROWS.size():
+		var row: Array = DeskRules.SUDDEN_ROWS[i]
+		var stamp_id: StringName = row[1]
+		var y := 66.0 + i * 42.0
+		_wall.draw_string(UiKit.font(600), r.position + Vector2(0, y), String(row[0]), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 14, Palette.INK)
+		var word: String = CaseRules.DECISION_STAMPS[stamp_id]
+		var cw := maxf(104.0, f.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0)
+		var chip := Rect2(r.position + Vector2(r.size.x * 0.5 - cw * 0.5, y + 5), Vector2(cw, 19))
+		var lit := not fx.is_empty() and StringName(fx.get("row", &"")) == stamp_id
+		if lit:
+			UiDraw.rounded_rect(_wall, chip.grow(3), Color(0, 0, 0, 0), 10, 3, Color(fx["col"], clampf(float(fx["t"]), 0.0, 1.0)))
+		UiDraw.rounded_rect(_wall, chip, STAMP_FACE[stamp_id], 8, 2, Palette.INK)
+		_wall.draw_string(f, chip.position + Vector2(0, 15), word, HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 14, Palette.INK)
+		if lit and String(fx.get("mark", "")) == "check":
+			UiDraw.check(_wall, Vector2(chip.end.x + 14, chip.get_center().y), 18.0, Palette.MINT, 4.0)
 
 
 ## The left column under the window: name, the patient's line, the combo.
@@ -1690,9 +1793,19 @@ func _draw_side() -> void:
 		_side.draw_string(f, flame + Vector2(-40, 42), "x%d" % mult, HORIZONTAL_ALIGNMENT_CENTER, 80, 24, Palette.INK)
 	else:
 		_side.draw_string(UiKit.font(500), box.position + Vector2(110, 62), "3 clean in a row = x2", HORIZONTAL_ALIGNMENT_LEFT, 180, 16, Palette.INK_SOFT)
+	var missed := int(_counts.get(DeskRules.MISSED_FLAG, 0))
+	if bool(_sh.get("sudden", false)):
+		# shift 3: red flags missed, and same-day patients sent home (the second closes the desk)
+		var today := int(_counts.get(DeskRules.MISSED_TODAY, 0))
+		for i in 2:
+			var b := Rect2(16 + i * 154, 602, 146, 40)
+			var n := missed if i == 0 else today
+			UiDraw.rounded_rect(_side, b, Color(Palette.PAPER, 0.8), 12, 2, Color(Palette.INK, 0.4))
+			_side.draw_string(UiKit.font(600), b.position + Vector2(10, 26), "FLAGS MISSED" if i == 0 else "TODAY MISSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Palette.INK_SOFT)
+			_side.draw_string(f, b.position + Vector2(0, 28), str(n) if i == 0 else "%d/%d" % [n, DeskRules.MAX_INCIDENTS], HORIZONTAL_ALIGNMENT_RIGHT, b.size.x - 10, 20, Palette.CORAL if n > 0 else Palette.INK_SOFT)
+		return
 	var inc := Rect2(16, 602, 300, 40)
 	UiDraw.rounded_rect(_side, inc, Color(Palette.PAPER, 0.8), 12, 2, Color(Palette.INK, 0.4))
-	var missed := int(_counts.get(DeskRules.MISSED_FLAG, 0))
 	_side.draw_string(UiKit.font(600), inc.position + Vector2(14, 27), "RED FLAGS MISSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Palette.INK_SOFT)
 	_side.draw_string(f, inc.position + Vector2(0, 29), str(missed), HORIZONTAL_ALIGNMENT_RIGHT, inc.size.x - 16, 24, Palette.CORAL if missed > 0 else Palette.INK_SOFT)
 
@@ -1731,7 +1844,7 @@ func _show_results() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 24)
 	col.add_child(head)
-	head.add_child(UiKit.label("CLOSING TIME!", 42, Palette.CORAL, 700))
+	head.add_child(UiKit.label("TWO WENT HOME!" if _closed else "CLOSING TIME!", 42, Palette.CORAL, 700))   # the rank says "Desk Closed"
 	var rank := String(st["rank"])
 	var rank_col := VBoxContainer.new()
 	rank_col.add_child(UiKit.label(rank, 32, Palette.INK, 700))
@@ -1745,6 +1858,9 @@ func _show_results() -> void:
 	nums.add_child(_stat("FILES", str(_files), Palette.INK))
 	nums.add_child(_stat("CLEAN", ("%d  (%d%%)" % [clean, roundi(acc * 100.0)]) if acc >= 0.0 else "–", Palette.MINT))
 	nums.add_child(_stat("RED FLAGS MISSED", str(int(st["missed_flag"])), Palette.CORAL))
+	if bool(_sh.get("sudden", false)):
+		nums.add_theme_constant_override("separation", 22)
+		nums.add_child(_stat("TODAY MISSED", str(int(st["missed_today"])), Palette.CORAL))
 	nums.add_child(_stat("EXTRA REFERRALS", str(int(st["over"])), Palette.SELECT_ORANGE))
 	nums.add_child(_stat("BEST COMBO", str(_best_combo), Palette.INK))
 	nums.add_child(_stat("SCORE", _thousands(int(st["score"])), Palette.INK))
@@ -1757,7 +1873,10 @@ func _show_results() -> void:
 	elif _shift_id < DeskRun.PLAYABLE and _unlocked() <= _shift_id:
 		gate = "Promotion to Shift %d needs %s." % [_shift_id + 1, DeskRun.promotion_needs(st)]
 	elif not bool(st["safe"]) and _files > 0:
-		gate = "The board takes shifts with no red flag missed and 3 in 4 calls clean."
+		if bool(_sh.get("sudden", false)):
+			gate = "The board takes shifts with no red flag or same-day patient missed, 3 in 4 clean."
+		else:
+			gate = "The board takes shifts with no red flag missed and 3 in 4 calls clean."
 		gate_col = Palette.CORAL
 	if gate != "":
 		col.add_child(UiKit.label(gate, 20, gate_col, 700))

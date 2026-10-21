@@ -7,18 +7,22 @@ extends Node
 ## Policies (--policy=):
 ##   careful           the beats' solvers after a short reading pause: every file clean, promotion
 ##                     (shift 1), the VIP handled, the board
-##   keys              real keys: 1-2 to stamp, the arrows and Enter to point (it walks the pointer
+##   keys              real keys: 1-3 to stamp, the arrows and Enter to point (it walks the pointer
 ##                     to the proof), Enter for notes, K E Y for the initials, T back to the arcade
 ##   mouse             real clicks only: the stamp, the proof, Next, the initials' + and OK,
 ##                     "Back to the arcade"
 ##   fit_everything    key 1 on every file: missed red flags, a negative raw score, never the board
+##                     (shift 3: the second same-day patient sent home closes the desk instead)
 ##   refer_everything  key 2 and Enter on every file (points at the first box): no flag missed, many
-##                     extra referrals, never the board
+##                     extra referrals, never the board (shift 3: a same-day patient sent home)
+##   today_everything  key 3 on every file (shift 3 only): nobody sent home, but many files sent
+##                     too fast, never the board
 ##   guess             a random stamp and a random target: never the board
 ##   help              HOOT HELP every time: no files, no points, no board
 ## The warm-up is played by the solver for every policy except keys and mouse.
 ## --shift=N: play shift N (opens it in the save first). --via-title: start on the title, open the
-## Arcade and pick the Ears, Please! cabinet, as a player would.
+## Arcade and pick the Ears, Please! cabinet, as a player would. --picker: pick shift N (2 or 3) in the
+## shift picker (by key, or a click with the mouse policy) instead of going straight to it.
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
 
@@ -38,7 +42,8 @@ func demo_start() -> void:
 func _ready() -> void:
 	var shift := clampi(int(Game.cli_value("shift", "1")), 1, DeskRun.PLAYABLE)
 	ArcadeScores.data("ears_please")["unlocked"] = shift
-	EarsPlease.again_shift = shift
+	if not Game.cli_flag("picker"):
+		EarsPlease.again_shift = shift   # --picker: open the shift picker and pick shift N there
 	var d := Driver.new()
 	d.name = "ArcadeDeskDriver"
 	d.shift = shift
@@ -204,6 +209,8 @@ class Driver extends Node:
 				await _key(KEY_1)
 			"refer_everything":
 				await _key(KEY_2)
+			"today_everything":
+				await _key(KEY_3)
 			"guess":
 				await _key(KEY_1 + _rng.randi() % (info["options"] as Array).size())
 			"help":
@@ -287,6 +294,7 @@ class Driver extends Node:
 		var clean := int(st.get("clean", 0))
 		var on_board := int(beats.get("arcade_initials", 0)) > 0
 		var unlocked := int(ArcadeScores.data("ears_please").get("unlocked", 1))
+		var closed := bool(st.get("closed", false))
 		var sum := 0
 		for o: StringName in DeskRules.OUTCOMES:
 			sum += int(st.get(String(o), 0))
@@ -294,7 +302,9 @@ class Driver extends Node:
 			problems.append("outcomes add up to %d for %d files" % [sum, files])
 		if int(st.get("score", -1)) < 0:
 			problems.append("a negative score was shown")
-		if not bool(st.get("closed", false)) and absf(float(st.get("t", 0.0)) - DeskRules.SHIFT_S) > 0.5:
+		if int(st.get("missed_today", 0)) >= DeskRules.MAX_INCIDENTS and not closed:
+			problems.append("%d same-day patients went home and the desk stayed open" % int(st.get("missed_today", 0)))
+		if not closed and absf(float(st.get("t", 0.0)) - DeskRules.SHIFT_S) > 0.5:
 			problems.append("the shift ended at %.1f s" % float(st.get("t", 0.0)))
 		if _after_end > 0:
 			problems.append("%d stamp beats after the clock ran out" % _after_end)
@@ -302,6 +312,8 @@ class Driver extends Node:
 			problems.append("%d VIP files in one shift" % _bosses.size())
 		if int(beats.get("desk_prove", 0)) > int(beats.get("desk_stamp", 0)):
 			problems.append("more proofs than stamps")
+		if Game.cli_flag("picker") and shift >= 2 and int(beats.get("desk_shift", 0)) < 1:
+			problems.append("--picker never reached the shift picker")
 		match policy:
 			"careful", "keys", "mouse":
 				if clean != files:
@@ -318,23 +330,40 @@ class Driver extends Node:
 					if shift < DeskRun.PLAYABLE and unlocked < shift + 1:
 						problems.append("a perfect shift did not open shift %d" % (shift + 1))
 			"fit_everything":
-				if int(st.get("missed_flag", 0)) * 4 < files:
-					problems.append("FIT on everything missed only %d flags in %d files" % [int(st.get("missed_flag", 0)), files])
+				var missed := int(st.get("missed_flag", 0)) + int(st.get("missed_today", 0))
+				if closed:
+					# shift 3: the second same-day patient sent home ends the shift, however few files came first
+					if int(st.get("missed_today", 0)) != DeskRules.MAX_INCIDENTS:
+						problems.append("the desk closed after %d same-day misses" % int(st.get("missed_today", 0)))
+				elif missed * 4 < files:
+					problems.append("FIT on everything missed only %d flags in %d files" % [missed, files])
 				if int(st.get("over", 0)) != 0:
 					problems.append("FIT on everything made extra referrals")
-				if int(st.get("raw_score", 0)) >= 0:
+				if not closed and int(st.get("raw_score", 0)) >= 0:
 					problems.append("FIT on everything did not lose points (%d)" % int(st.get("raw_score", 0)))
 				if on_board or bool(st.get("promoted", false)):
 					problems.append("FIT on everything reached the board or a promotion")
 			"refer_everything":
 				if int(st.get("missed_flag", 0)) != 0:
 					problems.append("REFER on everything missed a flag")
-				if int(st.get("over", 0)) * 4 < files:
+				if closed:
+					if int(st.get("missed_today", 0)) != DeskRules.MAX_INCIDENTS or int(st.get("too_urgent", 0)) != 0:
+						problems.append("the desk closed after %d same-day misses, %d too urgent" % [int(st.get("missed_today", 0)), int(st.get("too_urgent", 0))])
+				elif int(st.get("over", 0)) * 4 < files:
 					problems.append("REFER on everything made only %d extra referrals" % int(st.get("over", 0)))
 				if float(st.get("accuracy", 1.0)) >= 0.5:
 					problems.append("REFER on everything was %.0f%% clean" % (float(st.get("accuracy", 0.0)) * 100.0))
 				if on_board or bool(st.get("promoted", false)):
 					problems.append("REFER on everything reached the board or a promotion")
+				if shift >= 3 and int(st.get("missed_today", 0)) == 0:
+					problems.append("REFER on everything never sent a same-day patient home")
+			"today_everything":
+				if int(st.get("missed_flag", 0)) + int(st.get("missed_today", 0)) != 0:
+					problems.append("TODAY on everything missed a flag")
+				if (int(st.get("over", 0)) + int(st.get("too_urgent", 0))) * 2 < files:
+					problems.append("TODAY on everything sent only %d files too fast in %d" % [int(st.get("over", 0)) + int(st.get("too_urgent", 0)), files])
+				if on_board or bool(st.get("promoted", false)):
+					problems.append("TODAY on everything reached the board or a promotion")
 			"guess":
 				if float(st.get("accuracy", 1.0)) >= 0.6:
 					problems.append("guessing was %.0f%% clean" % (float(st.get("accuracy", 0.0)) * 100.0))
