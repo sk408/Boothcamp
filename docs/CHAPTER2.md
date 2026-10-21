@@ -43,7 +43,8 @@ What she says when asked (case history, two rounds of three choices, 2 / 1 / 0 p
 
 The picture a clinician should form: young adult, one ear, slowly progressive, family history, normal
 eardrums, own voice loud (occlusion-like). That points to a conductive problem behind a normal eardrum
-(otosclerosis). The game never diagnoses: Hoot says "a doctor may suspect otosclerosis".
+(otosclerosis). The game never diagnoses: Hoot says "a doctor may suspect otosclerosis",
+and that it often starts in one ear, then reaches the other.
 
 ## 2. Truth tables (`core/patients/bonnie.tres`)
 
@@ -138,8 +139,8 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | One-sided = flag | "One-sided hearing loss is a red flag by itself. A doctor should see her." |
 | Normal eardrum | "Not a crumb. A healthy-looking eardrum can still hide a stiff middle ear." |
 | Instructions | "She'd press for the noise all day! Beeps only. Try again." |
-| Air vs bone | "Air goes through the ear canal and middle ear. Bone skips both, straight to the cochlea." |
-| Placement | **(polish)** "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up." |
+| Air vs bone | "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea." |
+| Placement | **(polish)** "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up." |
 | ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
 | Tip `cross_hearing_air` **(E4)** | "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." (an air tone; no Day 2 air tone is loud enough) |
@@ -170,7 +171,7 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 | Movie offer (seen before) | choice | "Hoot's masking movie again? Popcorn's on me!" / "Roll the film! (about 90 s)" / "Skip it: I know my masking." |
 | Placement, left | Hoot | **(polish)** "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway." / "So: her LEFT. It sits behind the ear, on the bony mastoid." |
 | Placement caption, quick | card | "Swap sides! Her RIGHT mastoid: the same bony bump, behind the right ear." |
-| Unicorn slip | Hoot | "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her {left / right} ear." |
+| Unicorn slip | Hoot | "Unicorn! The forehead sits steadier but needs more power. Today: the mastoid, behind her {left / right} ear." |
 | Top of head, glasses already found | Hoot | "Top of her head? Glasses gone, so: behind the ear, on the bony mastoid." ("Bonk!") |
 | Left bone intro | AudiOtron tip | "Bone time, left ear! B = bone. Same dance: down 10, up 5. Start at 1k." |
 | After left bone | Hoot | "Left bone %d, left air %d: side by side. Her left ear works fine all the way in." |
@@ -239,7 +240,7 @@ of her head), Enter/Space places. Beat `bc_placement` (solver = place on the mas
 |---|---|---|---|
 | **Mastoid** (behind the ear, on bone) | correct | buzz rings, "Bone on bone!" | "Perfect: on the mastoid bone, behind the ear, not touching it." |
 | Ear flap (pinna) | slip | a drawn feedback squeal (no loud sound), "SQUEEEE!" | "Off the ear flap! Touching the pinna leaks buzz into the canal. Behind it, on bone." |
-| Forehead | slip | a golden **unicorn horn** sprouts, "UNICORN!" | "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her right ear." |
+| Forehead | slip | a golden **unicorn horn** sprouts, "UNICORN!" | "Unicorn! The forehead sits steadier but needs more power. Today: the mastoid, behind her right ear." |
 | Nose | slip | the nose flashes, "BOOP!" | "Boop! A nose is cartilage, not bone. Find the bony bump behind her ear." |
 | Top of head | slip | her lost reading glasses, "My glasses!" (the running gag) | "Her lost glasses! Mystery solved. The buzzer needs skin over bone, behind the ear." |
 | Jaw | slip | chattering teeth lines | "She'd hear her teeth chatter! Higher and further back: the mastoid." |
@@ -256,7 +257,7 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 | Bone maximum output | 250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65 dB HL | `BC_MAX_DB` |
 | Felt, not heard | 250 Hz at 25+, 500 Hz at 55+, 1000 Hz at 70+ (E16) | `VIBROTACTILE_DB` |
 | Oscillator position | mastoid, not touching the pinna | mini-game |
-| Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is never joined by lines; masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
+| Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is left unjoined (some clinics use a dashed line); masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
 | Interaural attenuation (rules) | phones 40, inserts 55, bone 0 | `IA_RULE_DB` |
 | Air-bone gap | conductive when AC - BC > 10 | `ABG_CONDUCTIVE_DB`, `is_conductive_gap` |
 | Referral red flag | AC - BC >= 15 at 500, 1000 AND 2000 Hz | `ABG_RED_FLAG_DB`, `abg_red_flag` |
@@ -391,7 +392,8 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
   the first unmasked bone beep gets a small "boo?". The overmasking callout says the noise "could leak into
   the test ear". A one-time tip names the shadow chase, and the plateau tip then says why pros trust it.
 - **Otosclerosis.** After the referral stamp: extra bone grows around the stapes so it cannot vibrate freely;
-  the ENT confirms; surgery or hearing aids, both can work well. The Carhart line says the cochlea is fine.
+  the ENT confirms (often adding tympanometry and reflexes); an operation that swaps the stapes for a
+  tiny piston, or hearing aids, both can work well. The Carhart line says the cochlea is fine.
 - **Board.** The bridge is drawn per frequency: planks under the bone marks, pillars down to the air marks
   labelled "toll N dB", the river only between gaps, the bone car hopping plank to plank.
 

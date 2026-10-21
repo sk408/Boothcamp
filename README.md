@@ -129,7 +129,7 @@ ear: that was the Ghost.
   any of which means a doctor checks the ears first.
 - **Otoscopy:** look before you test. Gus has a sesame seed in his ear canal: never poke at it; a
   doctor or trained clinician removes it safely. (He sneezes it out, which is cartoon physics.)
-- **Instructions:** "press whenever you hear a beep, even a very faint one" gives honest answers.
+- **Instructions:** "press as soon as you hear a beep, in either ear, even a faint one; let go when it stops" gives honest answers.
 - **Earphones:** glasses off, red on the right ear, blue on the left (his right is your left).
 - **Pure-tone audiometry (Hughson-Westlake, simplified):** start at 1000 Hz around 40 dB HL; climb
   10 dB until the first response; then down 10 after every "yes" and up 5 after every miss; the
@@ -175,14 +175,15 @@ paper sells insert earphones).
   is the classic picture of otosclerosis: extra bone grows around the stapes (the stirrup bone),
   so it cannot vibrate freely. Her bone line has a small dip at 2 kHz, the **Carhart notch**: a
   stiff middle ear fakes a small bone loss there, and her cochlea is fine. The ENT confirms it;
-  then surgery to free the stapes, or hearing aids, both of which can work well. The game never
+  then an operation that swaps the stapes for a tiny piston, or hearing aids, both of which can work well. The game never
   diagnoses.
 - **The Day 2 board:** the air-bone gap drawn as a river, with the bone line as the bridge over
   it and a toll booth: the "toll" is the dB the middle ear charges before sound reaches the
   cochlea.
 
 Symbols follow the usual audiogram conventions: O / X for air, < / > for unmasked bone,
-[ / ] for masked bone, triangle / square for masked air; bone symbols are never joined by lines.
+[ / ] for masked bone, triangle / square for masked air; bone symbols are often left unjoined
+(some clinics join them with a dashed line).
 The masking noise is synthesized narrowband noise, quiet and capped like the beeps, and it
 always lights the NOISE box and the booth squiggles, so Day 2 is playable without sound too.
 

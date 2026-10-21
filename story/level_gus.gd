@@ -229,12 +229,14 @@ func _otoscopy() -> void:
 			clinic.call("hoot_emote", &"gasp")
 			await _say("Hoot", "NO paperclips! Never poke in an ear. That's how eardrums get hurt.")
 			medal = "silver" if medal == "gold" else "bronze"
+			Game.set_visit_flag(Game.NO_S_FLAG, true)   # (D1-7) a safety slip keeps the visit off S
 		1:
 			clinic.call("hoot_emote", &"nod")
 			await _say("Hoot", "Exactly. Something stuck in the canal? A doctor or trained clinician removes it safely.")
 		2:
 			await _say("Hoot", "Hmm. A stuck object can block sound, or the earphone. A doctor or trained clinician removes it first.")
 			medal = "silver" if medal == "gold" else "bronze"
+			Game.set_visit_flag(Game.NO_S_FLAG, true)
 	Game.record_medal("otoscopy", medal)
 	g.slide_aside(0.0, 0.35)
 	await _say("Gus", "Ah... ah... AH...")
@@ -259,10 +261,13 @@ func _instructions() -> void:
 	_phase(&"instructions")
 	hud.call("set_step", &"explain")
 	clinic.call("focus_camera", &"desk", 0.8)
-	var opts: Array[String] = ["Only press when you're totally, completely sure.", "Just relax. I'll figure it out.", "Press the button whenever you hear a beep, even if it's very faint."]
+	# (clinical review D1-1) the full instruction (BSA 2018, 6.1), and wrong options about as long,
+	# so the length doesn't give the answer away
+	var good := "Press as soon as you hear a beep, in either ear, even a faint one. Let go when it stops."
+	var opts: Array[String] = ["Only press when you're totally, completely sure it was a beep. Never guess.", "Just relax and sit back. I'll watch your face and work out what you hear.", good]
 	var first_try := true
 	while true:
-		var best := opts.find("Press the button whenever you hear a beep, even if it's very faint.")
+		var best := opts.find(good)
 		var c: int = await dialogue.choose("Before the beeps, tell Gus what to do:", opts, best)
 		var picked: String = opts[c]
 		if c == best:
@@ -316,12 +321,16 @@ func _earphones() -> void:
 	g.queue_free()
 	_shot("earphones_on", 0.3)
 	_react(&"cheer")
+	# (clinical review D1-4, question 6)
+	await _say("Hoot", "Each cup centred right over the canal. Older canals can fold shut under a cup: foam inserts fix that.")
 	hud.call("complete_step", &"phones")
 
 
 # ---------------------------------------------------------------- 6. audiometry
 
 func _audiometry() -> void:
+	# (clinical review D1-2) the rule, even when it doesn't decide anything today
+	await _say("Hoot", "Better ear first! Gus says both ears are the same, so either works. Right it is.")
 	var screen: Node = (load(AUDIOMETER_SCENE) as PackedScene).instantiate()
 	add_child(screen)
 	var cam: Camera3D = clinic.call("get_main_camera")
@@ -411,6 +420,8 @@ func _fitting() -> void:
 	await _say("Gus", "Do the... FISHES? We don't HAVE fishes, Doris!")
 	clinic.call("doris_react", &"wince")
 	await _say("Hoot", "A teaser of what's coming: a little boost, right where his hearing slopes.")
+	# (clinical review D1-3)
+	await _say("Hoot", "Only a teaser! Real aids come after bone conduction, speech tests and a red-flag check, then get measured in his ear.")
 	var f := Fitting.new()
 	hud.call("add_game", f)
 	await f.run()

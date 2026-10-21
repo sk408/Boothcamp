@@ -364,7 +364,7 @@ func _air() -> void:
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
 	await _say("Hoot", "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?")
-	await _say("Hoot", "Air goes through the ear canal and middle ear. Bone skips both, straight to the cochlea.")
+	await _say("Hoot", "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea.")
 
 
 # ---------------------------------------------------------------- 7. bone oscillator placement
@@ -394,7 +394,7 @@ func _bone_placement() -> void:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
 	if _found_glasses:
 		await _say("Bonnie", "And you found my glasses! They were on my HEAD? All morning?")
-	await _say("Hoot", "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up.")
+	await _say("Hoot", "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up.")
 
 
 ## Both placements share one medal: every slip of the visit counts (0 gold, 1 silver, more bronze).
@@ -529,6 +529,7 @@ func _masking() -> void:
 	Game.record_medal("masking", medal)
 	clinic.call("put_on_masking_phone", "left")
 	_react(&"nod")
+	await _say("Hoot", "Her right ear stays open. A cup on the test ear makes low bone tones seem louder.")
 	# (polish) one hook, no rule dump: the coach teaches the numbers step by step on the AudiOtron
 	await _say("Hoot", "I'll walk you through it. Trick: if more noise makes her answer vanish, it was the Ghost.")
 	await _recap()
@@ -651,7 +652,7 @@ func _evidence(b: Control) -> void:
 		_shot("carhart", 0.5)
 		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: the stiff middle ear fakes a small bone dip. Her cochlea is fine, and it often recovers after surgery!")
 	else:
-		await _say("Hoot", "Young, one ear, family history, normal eardrum: a doctor may suspect otosclerosis.")
+		await _say("Hoot", "Young, family history, normal eardrum: a doctor may suspect otosclerosis. It often starts in one ear, then reaches the other.")
 	await _say("Hoot", "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!")
 	hud.call("complete_step", &"case")
 
@@ -683,7 +684,8 @@ func _referral(b: Control) -> void:
 	# (polish) what otosclerosis is and what happens next; the ENT confirms, the game never diagnoses
 	await _say("Hoot", "If it's otosclerosis: extra bone grows around the stapes, the tiny stirrup bone, so it can't vibrate freely.")
 	await _say("Bonnie", "A tiny stirrup! Like the nozzle on my piping bag, gone stiff?")
-	await _say("Hoot", "Exactly! The ENT checks it. Then you and the doctor choose: surgery to free it, or hearing aids. Both can work well.")
+	await _say("Hoot", "Exactly! The ENT checks it, often adding tympanometry and reflex tests to ours.")
+	await _say("Hoot", "Then you and the doctor choose: an operation that swaps it for a tiny piston, or hearing aids. Both can work well.")
 	await _say("Bonnie", "A doctor for my ear, then back to my buns. Deal! Croissant for the road?")
 	await _payoff(b)
 	hud.call("complete_step", &"refer")

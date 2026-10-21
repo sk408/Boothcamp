@@ -277,7 +277,9 @@ func _examine(p: Vector2) -> void:
 		key = "wall"
 		what = "Just healthy canal skin. Keep looking!"
 	_examined[key] = true
-	_wrong_clicks += 1
+	# (clinical review D1-5) looking at the drum and its cone of light is part of the exam: free
+	if key != "drum" and key != "cone":
+		_wrong_clicks += 1
 	Sfx.play(&"blip", 1.2, -8.0)
 	Juice.float_text(self, what, p + Vector2(0, -40), Palette.PAPER, 22)
 	if not _hint_given and (_wrong_clicks >= 3 or elapsed() > 14.0):

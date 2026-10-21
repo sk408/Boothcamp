@@ -10,6 +10,8 @@ const SAVE_VERSION := 1
 const DEFAULT_SAVE_PATH := "user://save.json"
 const AUTOPLAY_SAVE_PATH := "user://save_autoplay.json"
 const PATIENT_DIR := "res://core/patients/"
+## (Clinical review D1-7) Visit flag: a safety slip in the story; finish_visit() caps the grade at A.
+const NO_S_FLAG := "no_s_grade"
 
 ## Every story phase id (Events.phase_changed). Story may add more; keep these stable.
 const PHASES: Array[StringName] = [
@@ -407,6 +409,10 @@ func finish_visit() -> Dictionary:
 	var score := 100.0 * (w["accuracy"] * a + w["technique"] * t + w["efficiency"] * e + w["care"] * c)
 	score = clampf(score, 0.0, 100.0)
 	var grade := ClinicRules.grade_for_score(score)
+	# (clinical review D1-7, question 7) a safety slip in the story (Day 1: the paperclip, or ignoring
+	# the seed) keeps the visit off S, whatever the beeps scored; Hoot's correction stays
+	if grade == "S" and bool((visit["flags"] as Dictionary).get(NO_S_FLAG, false)):
+		grade = "A"
 	var medal_bonus := 0
 	for m: String in (visit["medals"] as Dictionary).values():
 		medal_bonus += {"gold": 10, "silver": 6, "bronze": 3}.get(m, 0)
