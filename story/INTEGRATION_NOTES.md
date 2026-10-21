@@ -242,7 +242,9 @@ Requests for the integrator and the title owner:
   are now `[sheet key, ear]`; `_row_tag` draws the symbol.
 - **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
 - **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button
-  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save).
+  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save). **(clinical
+  review S7)** Day 3 now opens with Hoot's spondee movie (`level_mike._movie`, as Day 4's), and its pause menu
+  offers "Watch Hoot's spondee movie".
 
 ## Freestyle (the walk-in clinic; freestyle branch; CONTRACTS.md §12, docs/FREESTYLE.md)
 

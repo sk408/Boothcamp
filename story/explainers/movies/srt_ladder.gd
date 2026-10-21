@@ -1,9 +1,8 @@
 extends RefCounted
 ## Day 3's explainer: Hoot's spondee movie, "The Spondee Ladder" (clinical review S7 / A3; the shape of
 ## Day 4's story/explainers/movies/letter_choir.gd, CONTRACTS.md §3.4 and §9.20).
-## Built ahead of its level: story/level_mike.gd plays it at the start of Day 3 in a later step (the
-## &"explainer" phase, as Day 2 plays the masking movie); replay from the pause menu or the title's
-## "Hoot's Movies".
+## story/level_mike.gd plays it at the start of Day 3 (_movie: the &"explainer" phase, as Day 4
+## plays its own); replay from the pause menu or the title's "Hoot's Movies".
 ## DATA ONLY. The player types "captions", fires "cues" (quiet Sfx, seconds from the scene start) and
 ## hands "set" + "params" to the stage; the scenes are drawn by this movie's own sets,
 ## story/explainers/stages/srt_ladder_sets.gd (MOVIE.stage). Every scene's top-level params are its
