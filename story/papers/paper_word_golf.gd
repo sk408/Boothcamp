@@ -12,6 +12,9 @@ const HEADER := "SPORTS: THE WORD GOLF CARD"
 const COLUMNS: Array[String] = ["Ear · List · Level", "Noise", "Score + band", "Golf"]
 const CELL_W: Array[int] = [196, 64, 150, 96]
 const CELL_H := 26
+## More rows than this (a redone list): shorter rows and smaller lines, so the page still fits.
+const ROOMY_ROWS := 3
+const COMPACT_CELL_H := 21
 const HOOT_SAYS_GOOD := "HOOT SAYS: Whole words, both ears, louder once, flags raised. Lovely, careful work, trainee."
 const HOOT_SAYS_REST := "HOOT SAYS: Whole words, both ears, louder once, flags raised. We'll tune the rest together."
 const ARTS := "ARTS: Nightingale Singers' altos now stand on the director's right."
@@ -21,13 +24,15 @@ const ROLL_CALL_CARDS := 9
 func build(c2: VBoxContainer, aud: Dictionary, s: Dictionary) -> void:
 	var sp: Dictionary = aud.get("speech", {})
 	c2.add_child(UiKit.label(HEADER, 16, Palette.INK, 700))
-	c2.add_child(_table(rows(sp)))
+	var rs := rows(sp)
+	var compact := rs.size() > ROOMY_ROWS
+	c2.add_child(_table(rs, compact))
 	# the lines sit close together, so a visit with a redone list still fits the page
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", -1)
 	c2.add_child(box)
 	for line: String in lines(sp, s):
-		var l := UiKit.label(line, 14, Palette.INK, 700 if line.begins_with("HOOT SAYS") else 600)
+		var l := UiKit.label(line, 13 if compact else 14, Palette.INK, 700 if line.begins_with("HOOT SAYS") else 600)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(500, 0)
 		box.add_child(l)
@@ -138,7 +143,7 @@ static func golf_name(g: StringName) -> String:
 	return String(g).replace("double_", "2x ").replace("triple_", "3x ").replace("_", " ")
 
 
-static func _table(rs: Array[Dictionary]) -> GridContainer:
+static func _table(rs: Array[Dictionary], compact: bool = false) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = COLUMNS.size()
 	grid.add_theme_constant_override("h_separation", 4)
@@ -156,15 +161,19 @@ static func _table(rs: Array[Dictionary]) -> GridContainer:
 		var golf_col: Color = SpeechScreen.GOLF_COLORS.get(golf, Palette.HOOT_BROWN if golf == &"hoot" else Color(Palette.INK, 0.3))
 		var cols: Array[Color] = [ear_col, Color(Palette.INK, 0.45) if bool(r["masked"]) else Color(Palette.INK, 0.25), band_col, golf_col]
 		for i in texts.size():
-			grid.add_child(_cell(texts[i], CELL_W[i], cols[i], bool(r["redone"])))
+			grid.add_child(_cell(texts[i], CELL_W[i], cols[i], bool(r["redone"]), COMPACT_CELL_H if compact else CELL_H))
 	return grid
 
 
-static func _cell(text: String, w: int, col: Color, struck: bool) -> PanelContainer:
+static func _cell(text: String, w: int, col: Color, struck: bool, h: int = CELL_H) -> PanelContainer:
 	var cell := PanelContainer.new()
-	cell.custom_minimum_size = Vector2(w, CELL_H)
-	cell.add_theme_stylebox_override("panel", UiKit.style(Color(col, 0.07 if struck else 0.16), Color(col, 0.5 if struck else 1.0), 6, 2, 0, 2))
-	var l := UiKit.label(text, 14 if text.length() > 20 else 15, Color(Palette.INK, 0.55) if struck else Palette.INK, 700)
+	cell.custom_minimum_size = Vector2(w, h)
+	var sb := UiKit.style(Color(col, 0.07 if struck else 0.16), Color(col, 0.5 if struck else 1.0), 6, 2, 0, 2)
+	if h < CELL_H:
+		sb.content_margin_top = 0
+		sb.content_margin_bottom = 0
+	cell.add_theme_stylebox_override("panel", sb)
+	var l := UiKit.label(text, 14 if text.length() > 20 or h < CELL_H else 15, Color(Palette.INK, 0.55) if struck else Palette.INK, 700)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.clip_text = true
