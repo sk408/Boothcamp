@@ -1274,7 +1274,8 @@ func _fail(code: int, why: String) -> void:
 
 
 ## (Speech, §9.9) Every stored speech measurement within 10 dB of the truth; on a speech day both
-## ears have an SRT; on Day 3 (Mike) the PTA/SRT agreement comes out poor in both ears.
+## ears have an SRT; on Day 3 (Mike) the PTA/SRT agreement comes out poor in both ears, and a
+## fresh save starts Hoot's spondee movie.
 func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var sp: Dictionary = res.get("speech", {})
 	var chapter := String(_summary.get("chapter_id", Game.current_chapter_id))
@@ -1303,6 +1304,10 @@ func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringAr
 				problems.append("Day 3: no %s SRT" % e)
 			elif StringName(String((srt[e] as Dictionary).get("agreement", ""))) != &"poor":
 				problems.append("Day 3: %s PTA/SRT agreement is not poor" % e)
+		# (clinical review S7) Hoot's spondee movie starts on a fresh save (level_mike._movie, contract §9.20)
+		report["movies"] = _movies
+		if not _movies.has("srt_ladder") and not Game.cli_flag("keep-save"):
+			problems.append("Day 3: Hoot's srt_ladder movie never started on a fresh save")
 	# (Days 4-5) §9.22: every counted word list on any day with a word sheet; Day 4's own checks
 	if not (sp.get("wrs", {}) as Dictionary).is_empty():
 		_check_wrs_lists(sp, report, problems)
