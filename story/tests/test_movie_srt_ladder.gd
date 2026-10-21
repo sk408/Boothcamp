@@ -4,7 +4,8 @@ extends TestCase
 ## §9.20). Tested by id, the shape of test_movie_letter_choir.gd: valid for the shared player with its
 ## own eight sets, Steve's lead-in on scene 1, every scene drawn at several moments with and without
 ## reduced motion, the cards-only fallback, only our own spondees, and the facts it teaches pinned to
-## SpeechRules. The level that plays it (and its announcement) comes in a later step on Day 3's line.
+## SpeechRules. story/level_mike.gd plays it at Day 3's start; story/tests/test_level_mike.gd tests its
+## announcement and replay offer.
 
 const Movies := preload("res://story/explainers/movies.gd")
 const Stage2D := preload("res://story/explainers/explainer_stage.gd")
