@@ -7,7 +7,21 @@ one block marked `# (Days 4-5)` and lists it under "Already in the bot" below.
 
 ## Already in the bot
 
-Nothing yet.
+W5a (Day 4) applied the Day 4 part of the patch in `tools/autoplay_bot.gd`, in blocks marked `# (Days 4-5)`. None
+of it runs on Days 1-3 or 6-13: each block needs a `wrs` / `sin` test, a word sheet, or the `nora` chapter.
+
+- §1: `speech_day` also holds for `nora` and `marco`.
+- §3: `_check_wrs_lists(sp, report, problems)` on any day with a `speech.wrs` sheet. It also adds
+  `report.wrs_lists` (`ear:list_id:level:mask:pct`, with `:void` on a list that does not count), which only a day
+  with word lists prints.
+- §5: `_check_nora(res, sp, problems)`. The decision is read from the visit flag `decision`, which is where Day 4
+  records it (as the cases do).
+- Day 4's movie (M-MV4, not in §9.22): on `nora` the result adds `movies` (the movies that started, as Day 2 and
+  the cases print it), and a fresh save (no `--keep-save`) must start `letter_choir`.
+- §7: `_speech_shot_key()` and the `wrs` / `sin` shot names. The `_low` / `_descent` shot is now kept for
+  `test == &"srt"` only.
+
+Still to do (Day 5): §4 `_check_sin_lists` and §6.
 
 ## The autoplay patch (§9.22)
 

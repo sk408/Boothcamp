@@ -13,7 +13,7 @@ extends RefCounted
 ##   - score what the patient SAID: half a word, a different word or silence are all misses
 ##   - SRT = the softest level with 2+ right and half or more, the level 5 below scoring under half
 ##   - compare with the PTA: within 6 dB good, 7-12 fair, 13+ poor. An SRT much better than the PTA:
-##     think non-organic, recheck; a worse one: instructions, language, word recognition or a slope
+##     think non-organic, recheck; a worse one: instructions, language or word recognition
 ## Golf: each SRT is a hole; par = the textbook dance from the first word's level (srt_par).
 
 signal technique(kind: StringName, data: Dictionary)
@@ -52,7 +52,7 @@ const AGREEMENT_TIPS: Dictionary[StringName, String] = {
 	&"fair_better": "SRT {diff} dB better than the PTA: fair agreement. Recheck the tones near 500 to 2000 Hz.",
 	&"fair_worse": "SRT {diff} dB worse than the PTA: fair agreement. Check {he} understood, then recheck the tones.",
 	&"poor_better": "SRT {diff} dB better than the PTA: POOR agreement! Think non-organic: re-instruct and recheck.",
-	&"poor_worse": "SRT {diff} dB worse than the PTA: POOR agreement! Check instructions, language, word recognition, or a sloping loss.",
+	&"poor_worse": "SRT {diff} dB worse than the PTA: POOR agreement! Check instructions, language and word recognition.",
 }
 ## Positive kinds and the points they are worth (times the combo multiplier).
 const POINTS: Dictionary[StringName, int] = {&"speech_textbook": 10, &"srt_good_start": 10, &"srt_low_start": 10, &"srt_store_ok": 50}

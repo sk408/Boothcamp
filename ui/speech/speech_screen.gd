@@ -2387,6 +2387,8 @@ func _draw_perch() -> void:
 	_hoot_spot.draw_arc(c + Vector2(-7, -18), 5.0, 0.2, PI - 0.2, 10, Color(Palette.INK, 0.22), 2.0, true)
 	_hoot_spot.draw_arc(c + Vector2(7, -18), 5.0, 0.2, PI - 0.2, 10, Color(Palette.INK, 0.22), 2.0, true)
 	var txt := "Hoot is testing: watch the ladder!" if _auto_running else "Hoot's perch: tips pop up here"
+	if _mode != null and _auto_running and session != null and session.test == &"wrs":
+		txt = "Hoot is testing: watch the tiles!"   # (Day 4) the WORD test has no ladder
 	if _mode != null and _auto_running and session != null and session.test == &"sin":
 		txt = "Hoot is testing: watch the plates!"   # (Day 5) the PARTY test has no ladder
 	AoDraw.text_c(_hoot_spot, c + Vector2(0, 18), txt, 13, Color(Palette.INK, 0.32 if not _auto_running else 0.6), AoDraw.FONT_BOLD)

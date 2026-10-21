@@ -24,6 +24,8 @@ const BOARD_SEEDS: Dictionary = {
 		{"initials": "GUS", "score": 12000, "accuracy": 0.9}, {"initials": "BON", "score": 6000, "accuracy": 0.8}],
 	"ears_please:table_2": [{"initials": "HOO", "score": 24000, "accuracy": 1.0},
 		{"initials": "SID", "score": 12000, "accuracy": 0.9}, {"initials": "VIO", "score": 6000, "accuracy": 0.8}],
+	"ears_please:table_3": [{"initials": "HOO", "score": 24000, "accuracy": 1.0},
+		{"initials": "MEL", "score": 12000, "accuracy": 0.9}, {"initials": "DAS", "score": 6000, "accuracy": 0.8}],
 }
 const LETTERS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

@@ -1,0 +1,69 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_case"]
+
+[resource]
+script = ExtResource("1_case")
+id = "bev"
+display_name = "Bev Bingham"
+age = 46
+complaint = "Both ears have faded for ten years. The bingo hall's fine; it's quiet chat I miss."
+thresholds_right = Dictionary[int, int]({
+250: 65,
+500: 55,
+750: 55,
+1000: 55,
+1500: 50,
+2000: 45,
+3000: 40,
+4000: 35,
+6000: 40,
+8000: 40
+})
+thresholds_left = Dictionary[int, int]({
+250: 65,
+500: 55,
+750: 55,
+1000: 55,
+1500: 50,
+2000: 45,
+3000: 40,
+4000: 35,
+6000: 40,
+8000: 40
+})
+ia_phones_db = 50
+ia_inserts_db = 70
+ia_bone_db = 0
+false_alarms_per_minute = 0.4
+reaction_time_min_s = 0.3
+reaction_time_max_s = 0.7
+psychometric_slope_db = 1.5
+attention = 0.95
+fatigue_per_tone = 0.0005
+min_tone_s = 0.45
+rhythm_sensitivity = 0.5
+tinnitus_hz = 0
+tags = PackedStringArray("middle_ear", "conductive", "bilateral", "case")
+pronoun = "she"
+nickname = "Bev"
+bc_right = Dictionary[int, int]({
+250: 20,
+500: 10,
+750: 10,
+1000: 10,
+1500: 15,
+2000: 25,
+3000: 20,
+4000: 15
+})
+bc_left = Dictionary[int, int]({
+250: 20,
+500: 10,
+750: 10,
+1000: 10,
+1500: 15,
+2000: 25,
+3000: 20,
+4000: 15
+})

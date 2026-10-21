@@ -519,8 +519,11 @@ func test_agreement_tips_by_direction() -> void:
 	assert_has(better, "recheck")
 	var worse := s.agreement_tip(&"poor", 20)
 	assert_has(worse, "20 dB worse")
-	for w: String in ["instructions", "language", "word recognition", "sloping loss"]:
+	for w: String in ["instructions", "language", "word recognition"]:
 		assert_has(worse, w)
+	# (A8) a sloping loss makes the SRT better than the PTA, if anything: never a reason for a worse one
+	for k: StringName in SpeechSession.AGREEMENT_TIPS:
+		assert_false(String(SpeechSession.AGREEMENT_TIPS[k]).to_lower().contains("slop"), "%s names a slope" % k)
 	assert_false(worse.contains("non-organic"), "a worse SRT is not a sign of a non-organic loss")
 	assert_has(s.agreement_tip(&"fair", -9), "9 dB better")
 	assert_has(s.agreement_tip(&"fair", 9), "9 dB worse")

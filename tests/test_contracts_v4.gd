@@ -817,3 +817,26 @@ func test_masking_recap_short() -> void:
 	var at_mask := src.find("func _masking() -> void:")
 	assert_true(src.find("await _recap()", at_mask) > at_mask, "the masking phase plays it")
 	assert_true(src.contains("Rewatch it any time"), "a day-start skip says where the movie lives")
+
+
+## (D2-7) Day 2's two-card short on air, bone and the gap: after the air results, before the bone
+## placement, never in a replay list; skipping it keeps Hoot's one-line version.
+func test_bone_gap_short() -> void:
+	assert_true(Movies.has("bone_gap"))
+	assert_true(Movies.is_short("bone_gap"))
+	var bad := Movies.validate("bone_gap", Stage2D.SETS)
+	assert_true(bad.is_empty(), "validate: %s" % ", ".join(bad))
+	assert_between(Movies.total_s("bone_gap"), 15.0, 25.0, "15-25 s")
+	assert_false(Movies.replay_ids().has("bone_gap"), "not on the title's list")
+	assert_false(Movies.for_chapter("bonnie").has("bone_gap"), "not in Day 2's replay")
+	var lines: Array = []
+	for sc: Dictionary in Movies.movie("bone_gap")["scenes"]:
+		lines.append_array((sc["params"] as Dictionary)["lines"])
+	var text := " ".join(lines)
+	for w: String in ["CONDUCTIVE", "SENSORINEURAL", "MIXED", "air minus bone", "mostly skips"]:
+		assert_true(text.contains(w), "the cards say %s" % w)
+	var src := (load("res://story/level_bonnie.gd") as GDScript).source_code
+	var at_air := src.find("func _air() -> void:")
+	var at_bone := src.find("func _bone_placement() -> void:")
+	var at := src.find("_short_movie(BONE_GAP_ID)", at_air)
+	assert_true(at > at_air and at < at_bone, "the air phase plays it, before the bone placement")

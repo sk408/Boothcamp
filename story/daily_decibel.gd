@@ -842,7 +842,7 @@ static func recheck_note(sp: Dictionary) -> String:
 ## (Speech) The agreement legend, with which way a gap points (two lines at the paper's width).
 static func agreement_legend() -> String:
 	return ("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor. Words better than beeps " \
-		+ "point to a non-organic loss; worse, to instructions, language, word recognition or a sloping loss.") \
+		+ "point to a non-organic loss; worse, to instructions, language or word recognition.") \
 		% [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)]
 
 

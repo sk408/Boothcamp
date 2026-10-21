@@ -5,7 +5,10 @@ extends RefCounted
 ## Every list lives in res://core/speech/material/<list_id>.json and was written for Booth Camp: no
 ## list, order or recording is copied; every word is checked against ASHA (1988) Appendices A-C and
 ## CID W-1 (the guard in core/tests/test_speech_core.gd). A spondee is a two-part word said with equal
-## stress on both parts, chosen because such words are about equally easy to hear. Shapes:
+## stress on both parts, chosen because such words are about equally easy to hear. Word lists 1-4
+## (Day 4, words_<n>.json) were written fresh too: no word list, order or rhyme set comes from a
+## published word test (NU-6, W-22, CID W-1, PB-50, AB / Boothroyd, NU-CHIPS, WIPI or the Modified
+## Rhyme Test), and their guard (core/tests/test_speech_wrs.gd) checks only our own lists. Shapes:
 ##   {"id", "title", "kind": "spondee" | "monosyllable" | "sentence", "original": true, "items": [...]}
 ##   spondee item:      {"id", "text", "parts": [first, second], "mishears": [funny wrong words]}
 ##   monosyllable item: {"id", "text", "key_sound", "foils": [3 words that differ in the key sound]}

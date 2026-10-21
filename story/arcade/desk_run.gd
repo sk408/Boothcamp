@@ -6,18 +6,20 @@ extends RefCounted
 ##   var t := DeskRun.targets(file, sh)            # [{kind: intake, id} | {kind: chart, freq}]
 ##   var j := DeskRun.step(centres, i, Vector2.RIGHT)
 ##   var s := DeskRun.slip(v, file, outcome, stamp)   # {title, line}
+##   var h := DeskRun.history(file["sudden"])          # the alarm-clock card's fields (shift 3)
 
 const DeskRules := preload("res://story/arcade/desk_rules.gd")
 const DeskDeck := preload("res://story/arcade/desk_deck.gd")
 
-## Shifts you can play in this build. Shift 3 (Clinic Lead, DOCTOR TODAY) comes next.
-const PLAYABLE := 2
+## Shifts you can play: all three (shift 3, Clinic Lead, adds DOCTOR TODAY and the alarm clock).
+const PLAYABLE := 3
 
 ## The untimed warm-up of each shift: [kind, intake id to tick]. "fit_masked" is a FIT file whose
 ## chart shows masked bone [ ] sitting on air ("the gap is the distance, not the bracket").
 const WARMUP: Dictionary = {
 	1: [["fit", ""], ["one_ear", ""], ["intake", "dizziness"]],
 	2: [["gap_both", ""], ["fit_masked", ""], ["intake", "wax"]],
+	3: [["today", ""], ["sudden_late", ""], ["fluctuating", ""]],
 }
 
 ## Hoot in the warm-up: before the stamp, and (REFER) before the proof. Anchors in brackets are
@@ -33,6 +35,12 @@ const WARMUP_LINES: Dictionary = {
 	"fit_masked": ["Brackets mean masked bone. Here it sits on air: no gap. FIT!", ""],
 	"intake_wax": ["New LOOKED boxes, from the otoscope. Lots of wax? A doctor or nurse first. REFER!",
 		"Point at the wax box."],
+	"today": ["New: the alarm clock. Sudden, under a month ago? That can't wait: stamp DOCTOR TODAY!",
+		"Point at the alarm clock: it's the only proof for TODAY."],
+	"sudden_late": ["Sudden, but months ago. Still a red flag, just not a same-day one: REFER.",
+		"Point at the alarm clock: that's your proof."],
+	"fluctuating": ["Hearing that comes and goes is a red flag too. Stamp REFER!",
+		"Point at the alarm clock again."],
 }
 const WARMUP_WRONG_STAMP := "Not quite! Look where I'm pointing, then stamp again."
 const WARMUP_WRONG_PROOF := "Close! Point here instead."
@@ -40,6 +48,7 @@ const WARMUP_DONE := "Desk opens! Two minutes. Read first, stamp second."
 const SHIFT_START: Dictionary = {
 	1: "Check every file. Any red flag means a doctor first!",
 	2: "Promotion! New rule: the air-bone gap. And two LOOKED boxes: wax and ear shape.",
+	3: "Promotion! New stamp: DOCTOR TODAY. Read the alarm clock on every file.",
 }
 
 ## The first clean call of each kind in a run teaches its rule (the note holds the clock).
@@ -53,8 +62,11 @@ const LESSONS: Dictionary = {
 	"wax": "Lots of wax: a doctor or nurse clears it first, then test again.",
 	"deformity": "An odd ear shape: a doctor first, before any fitting.",
 	"gap": "Bone 15+ better than air at 500, 1k and 2k: the middle ear. A doctor first.",
+	"today": "A sudden loss that started under a month ago: a doctor TODAY. Treatment works best started early.",
+	"sudden_refer": "A loss that comes and goes, or a sudden one months ago: still a red flag. REFER.",
 }
 const VIP_LINE := "A VIP! Very Insistent Patient. Read the file, not the pleading."
+const INCIDENT_LINE := "A same-day patient went home! One more, and the desk closes."
 
 ## The results' breakdown rows, in order: what each kind of file teaches.
 const ROWS: Dictionary = {
@@ -62,12 +74,14 @@ const ROWS: Dictionary = {
 	"tick": "A TICKED BOX",
 	"one_ear": "ONE EAR WORSE",
 	"gap": "AIR-BONE GAP",
+	"sudden": "THE ALARM CLOCK",
 }
 const ROW_TIPS: Dictionary = {
 	"fit": "No ticks, ears alike, no gap: aids can help.",
 	"tick": "Read every box: any YES means a doctor first.",
 	"one_ear": "Watch for the red O and blue X splitting.",
 	"gap": "Bone 15+ above air at 500, 1k and 2k.",
+	"sudden": "Sudden, under a month ago: TODAY. Older, or comes and goes: REFER.",
 }
 
 const RANK_LINES: Dictionary = {
@@ -233,13 +247,13 @@ static func slip(v: Dictionary, file: Dictionary, outcome: StringName, stamp: St
 		DeskRules.MISSED_FLAG:
 			return {"title": "CITATION", "line": "%s. A doctor first: REFER." % why}
 		DeskRules.OVER:
-			return {"title": "EXTRA REFERRAL", "line": "Nothing ticked, ears alike, no gap: aids can help. FIT."}
+			return {"title": "EXTRA REFERRAL", "line": "%s: aids can help. FIT." % _fit_words(file)}
 		DeskRules.WRONG_REASON:
 			if stamp == &"today":
-				return {"title": "RIGHT STAMP, WRONG PROOF", "line": "The chart says refer. The alarm clock makes it TODAY."}
+				return {"title": "RIGHT STAMP, WRONG PROOF", "line": "The proof for TODAY is the alarm clock: %s." % why}
 			return {"title": "RIGHT STAMP, WRONG PROOF", "line": "The proof: %s." % why}
 		DeskRules.TOO_URGENT:
-			return {"title": "TOO URGENT", "line": "%s: an urgent referral, not today. REFER." % why}
+			return {"title": "TOO URGENT", "line": "%s. A red flag, but not a same-day one: REFER." % why}
 		DeskRules.MISSED_TODAY:
 			return {"title": "INCIDENT", "line": "%s: a doctor TODAY." % why}
 	return {"title": "", "line": ""}
@@ -279,19 +293,47 @@ static func row(file: Dictionary) -> String:
 	return "sudden"
 
 
+## "Nothing ticked, ears alike, no gap" (and, with an alarm clock on the file, "a slow loss"): a
+## FIT file in words.
+static func _fit_words(file: Dictionary) -> String:
+	if (file.get("sudden", {}) as Dictionary).is_empty():
+		return "Nothing ticked, ears alike, no gap"
+	return "Nothing ticked, ears alike, no gap, a slow loss"
+
+
 ## HOOT HELP: what Hoot says before stamping and pointing for you.
 static func help_line(v: Dictionary, file: Dictionary) -> String:
 	if v["decision"] == &"fit":
-		return "Nothing ticked, ears alike, no gap: FIT!"
+		return "%s: FIT!" % _fit_words(file)
 	var p := DeskRules.best_proof(v)
+	if v["decision"] == &"today":
+		return "%s: DOCTOR TODAY! Point at the alarm clock." % reason(p, file)
 	match String(p.get("kind", "")):
 		"intake":
 			return "%s. A red flag: REFER, then point at it." % reason(p)
 		"sudden":
-			return "%s: point at the alarm clock." % reason(p, file)
+			return "%s: a red flag. REFER, then point at the alarm clock." % reason(p, file)
 	if String(p.get("rule", "")) == "gap":
 		return "Bone well above air at 500, 1k and 2k: REFER, point there."
 	return "The ears split apart at %s: REFER, then point there." % freq_span(p.get("freqs", []))
+
+
+## The alarm-clock card's fields (shift 3), each [label, value, ear]: how the loss came on, when it
+## started and the ear it hit (ear "" names none). Only what the patient says: never the stamp, so
+## the reading is the player's.
+static func history(s: Dictionary) -> Array:
+	var h := int(s.get("came_on_h", 0))
+	var how := "Slowly, over years"
+	var ear := ""
+	match String(s.get("pattern", "")):
+		"sudden":
+			how = "Suddenly, overnight" if h <= 12 else ("Suddenly, in a day" if h <= 36 else "Suddenly, in %d days" % roundi(h / 24.0))
+			ear = String(s.get("ear", ""))
+		"fluctuating":
+			how = "Comes and goes"
+	var when := DeskRules.when_words(int(s.get("days_ago", 0)))
+	return [["CAME ON", how, ""], ["STARTED", when.left(1).to_upper() + when.substr(1), ""],
+		["EAR", ear.to_upper() if ear != "" else "–", ear]]
 
 
 ## The high-score board of a shift (ArcadeScores board key).

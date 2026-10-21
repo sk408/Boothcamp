@@ -17,7 +17,7 @@ const MOVIE: Dictionary = {
 	"title": "Hoot's tympanometer movie",
 	"subtitle": "The Eardrum Trampoline",
 	"chapter": "rocco",
-	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan"],
+	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan", "bev"],
 	"narrator": "Hoot",
 	"stage": "res://story/case_movies/tymp_sets.gd",
 	"seen_at": "compare",

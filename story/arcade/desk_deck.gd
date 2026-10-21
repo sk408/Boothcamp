@@ -407,9 +407,13 @@ static func final_chart(air: Dictionary, bone_gap: Dictionary) -> Dictionary:
 static func _sudden_card(rng: RandomNumberGenerator, kind: String, ear: String) -> Dictionary:
 	match kind:
 		"today":
-			return {"pattern": "sudden", "came_on_h": [8, 30, 48][rng.randi() % 3], "days_ago": [1, 2, 3, 5, 9, 14][rng.randi() % 6], "ear": ear}
+			# it started at least as long ago as the card says it took to come on (never "Yesterday" by "in 2 days")
+			var h: int = [8, 30, 48][rng.randi() % 3]
+			var days: Array = [1, 2, 3, 5, 9, 14].filter(func(d: int) -> bool: return d >= roundi(h / 24.0))
+			return {"pattern": "sudden", "came_on_h": h, "days_ago": days[rng.randi() % days.size()], "ear": ear}
 		"sudden_late":
-			return {"pattern": "sudden", "came_on_h": [8, 30, 48][rng.randi() % 3], "days_ago": [75, 90, 120][rng.randi() % 3], "ear": ear}
+			# whole months (2 to 4), well past a month and past the 6-week window for treatment
+			return {"pattern": "sudden", "came_on_h": [8, 30, 48][rng.randi() % 3], "days_ago": [60, 90, 120][rng.randi() % 3], "ear": ear}
 		"fluctuating":
 			return {"pattern": "fluctuating", "came_on_h": 0, "days_ago": [7, 10, 20][rng.randi() % 3], "ear": ""}
 	return {"pattern": "gradual", "came_on_h": 0, "days_ago": 365 * rng.randi_range(2, 9), "ear": ""}

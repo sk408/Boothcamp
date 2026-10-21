@@ -36,13 +36,16 @@ const ASKED: Array[String] = ["drainage", "pain", "dizziness", "one_sided"]
 const LOOKED: Array[String] = ["wax", "deformity"]
 
 ## The wall's picture rules: what each one sends where. The first three are red flags (a doctor
-## first, CaseRules.RED_FLAGS); SUDDEN + RECENT is the same-day exception.
+## first, CaseRules.RED_FLAGS); SUDDEN LOSS is the alarm clock's card, with its two calls in SUDDEN_ROWS.
 const RULES: Dictionary[String, Dictionary] = {
 	"tick": {"title": "A TICKED BOX", "sub": "Any YES on the intake", "stamp": &"refer"},
 	"one_ear": {"title": "ONE EAR WORSE", "sub": "No known cause", "stamp": &"refer"},
 	"gap": {"title": "AIR-BONE GAP", "sub": "Gap 15+ at 500, 1k, 2k", "stamp": &"refer"},
-	"sudden": {"title": "SUDDEN + RECENT", "sub": "Came on in 3 days, this month", "stamp": &"today"},
+	"sudden": {"title": "SUDDEN LOSS", "sub": "In 3 days or less", "stamp": &"today"},
 }
+## The SUDDEN LOSS card's two lines: started under a month ago (SUDDEN_REFER_TODAY_DAYS) is the same-day
+## call; an older sudden loss, or one that comes and goes, is still a red flag (in the last 6 months).
+const SUDDEN_ROWS: Array = [["Under a month ago", &"today"], ["Older, or comes & goes", &"refer"]]
 const RED_FLAG_RULES: Array[String] = ["tick", "one_ear", "gap"]
 
 ## The shifts, one new rule each (a promotion). "mix": the share of each right call in the line.
@@ -220,10 +223,22 @@ static func sudden_today(file: Dictionary) -> bool:
 	return true
 
 
+## How long ago, in the unit a person would say it: "yesterday", "9 days ago", "3 months ago",
+## "6 years ago" (whole months from 60 days, whole years from a year).
+static func when_words(days: int) -> String:
+	if days <= 1:
+		return "yesterday"
+	if days < 60:
+		return "%d days ago" % days
+	if days < 365:
+		return "%d months ago" % (days / 30)
+	return "%d years ago" % (days / 365)
+
+
 ## What the slip and the wall say about a sudden card.
 static func sudden_words(s: Dictionary) -> String:
 	var days := int(s.get("days_ago", 0))
-	var when := "yesterday" if days == 1 else "%d days ago" % days
+	var when := when_words(days)
 	match String(s.get("pattern", "")):
 		"fluctuating":
 			return "Comes and goes, %s" % when
@@ -231,7 +246,7 @@ static func sudden_words(s: Dictionary) -> String:
 			if days > CaseRules.SUDDEN_REFER_TODAY_DAYS:
 				return "Sudden, but %s" % when
 			return "Sudden, %s" % when
-	return "Worse lately, %s" % when
+	return "Slowly, over years"
 
 
 ## Does the thing the player pointed at prove the call? target: {"kind": "intake", "id"} |

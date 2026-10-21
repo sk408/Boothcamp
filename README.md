@@ -36,6 +36,20 @@ where he repeats half of them. His words come back far better than his beeps, so
 clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests, with
 his doctor told about the sudden loss.
 
+**Day 4** brings Nora Nightingale, a choir director whose left ear "has gone like a radio between
+stations": she hears the voices, not the words. It opens with **Hoot's word movie** ("The Letter
+Choir"), a 70-second cartoon in eight scenes: why loud-enough words can still come out mushy, the
+speech banana, the high-pitch curtain that hides s, f and th, words loud enough for every sound,
+loud words crossing the head to the good ear, and 25 words at 4% each. Replay it from the pause
+menu ("Watch Hoot's word movie") or **Hoot's Movies**. Hoot runs her beeps at top speed, then you
+score her **word recognition** in the SPEECH screen's new WORD mode: one-syllable words, loud
+enough for every sound, scored whole (a rhyme or a plural is a miss). Word list 1 on her right is
+coached, with **NORA-VISION** showing which sounds of each word reach her. Word list 2 on her left
+is yours: set the level and decide about noise in her right ear. "Is that her best?" A list 20 dB
+louder makes her worse, not better: rollover. Then the **Red-Flag Roll Call** sorts nine clues,
+and you stamp a referral to an ear doctor, soon, with a letter that says what you found, never
+what it is. About 11 minutes.
+
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -71 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
@@ -81,6 +95,18 @@ options). Closing the window saves and quits.
 | **M** | Speech noise in the other ear on / off |
 | **H** | Show or hide the key hints |
 
+| Key | SPEECH screen, word lists (Day 4) |
+|---|---|
+| **Space** | Present the next word |
+| **Up** / **Down** | Louder / softer, before the list's first word (one level per list) |
+| **Right**, **+** or **=** | She repeated the whole word: REPEATED (also "She'll get it" in Call it, and RED FLAG on the Roll Call) |
+| **Left** or **-** | She missed it (a rhyme, a plural, another word or silence): MISSED (also "She'll miss it", and FINE) |
+| **M** | Speech noise in the other ear on / off, before the list's first word |
+| **V** | NORA-VISION: which sounds of the word reach her ear |
+| **H** | Show or hide the key hints |
+
+There is no STORE on a word list: it scores itself after word 25.
+
 Prefer Up = softer? Click **Up = LOUDER** on the AudiOtron (or use the pause menu) to swap the
 two arrows. Everywhere else: Space or Enter continues dialogue, Up / Down or 1 to 4 picks an
 answer, and every screen says which keys it uses.
@@ -97,6 +123,9 @@ the title's **Days** card, click a day; the mouse wheel scrolls the grid when th
 than fit.
 On Day 3, click a word card to drop it, click **PRESENT**, **CORRECT**, **MISSED**, **LOUDER**,
 **SOFTER**, **STORE** and **MASK** on the SPEECH screen, and drag a clue onto Mike's claim.
+On Day 4, click **PRESENT**, **REPEATED**, **MISSED**, **LOUDER**, **SOFTER**, **NOISE** and
+**NORA-VISION** on the SPEECH screen and the two Call it buttons, then **RED FLAG** or **FINE** for
+each Roll Call card and the stamp.
 
 ### The AudiOtron in one breath
 
@@ -199,17 +228,28 @@ always lights the NOISE box and the booth squiggles, so Day 2 is playable withou
   patient said: half a word is a miss.
 - **PTA/SRT agreement:** a reliable SRT lands within about 6 dB of the PTA (12 is fair). The
   direction matters: Mike's SRT is about 40 dB better than his beeps, a classic sign of a
-  non-organic loss; an SRT worse than the PTA points to the instructions, language, word
-  recognition or a sloping loss instead.
+  non-organic loss; an SRT worse than the PTA points to the instructions, language or word
+  recognition instead.
 - **Never accuse:** most non-organic losses aren't fibs (stress, worry, even a real loss
   underneath). Gather the clues (the agreement, the whispered coffee, clear canals), stay kind,
   recheck, refer for objective tests, and tell his doctor about the sudden loss. The game never
   calls Mike a liar.
+- **Word recognition (Day 4):** play one-syllable words loud enough for every sound (the game's rule:
+  the PTA plus 35, never below 55), score whole words only, 25 words at 4% each, and keep one level
+  and one set-up per list. Loud words can cross the head, so speech noise goes in the other ear when
+  the level minus 40 (with earphones) reaches that ear's best bone. A poor score earns one more list
+  20 dB louder; a score that falls when louder is rollover.
+- **Red flags in word scores:** a best score below what the tones predict, two ears too far apart
+  for chance, or rollover, with a one-sided loss, a one-sided hiss or unsteadiness, means an ear
+  doctor should look further: refer soon, with imaging asked for in the letter, before any hearing
+  aid. A sudden change would mean a doctor today. The game never names a diagnosis.
 
 The words are an original list written for the game, shown on screen as you play: no list, order
 or recording is copied, and every word is checked against ASHA (1988) Appendices A-C and CID W-1.
 Each word plays as a quiet murmur through the same safety limits as the beeps; a recording can
-replace it later, and nothing depends on hearing it.
+replace it later, and nothing depends on hearing it. Day 4's "Word list 1" to "Word list 4" were
+written fresh for the game the same way: everyday words, each with rhymes that change only its key
+sound, and no published word list, order or rhyme set copied.
 
 ## Build from source
 
@@ -225,6 +265,7 @@ tools/autoplay_check.sh --day=2                     # ...Day 2 (bone and masking
 tools/autoplay_check.sh --day=2 --upgrades=insert_earphones   # ...Day 2 with inserts
 tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Days card
 tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
+tools/autoplay_check.sh --day=4                     # ...Day 4 (word recognition)
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
@@ -243,7 +284,8 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
   audiometry, the masking dilemma (both ears with big gaps), and a "something's not right, refer
   to a doctor" case. Day 2's design and rules are in `docs/CHAPTER2.md`.
 - A real fitting level: choosing a target, adjusting gain by frequency, and the follow-up visit.
-- More speech tests: word recognition (Day 4) and a party-noise test (Day 5). The speech rules
-  are in `docs/SPEECH.md`, Day 3's design in `docs/CHAPTER3.md`.
+- One more speech test: a party-noise test (Day 5, speech in noise) after Day 4's word scores.
+  The speech rules are in `docs/SPEECH.md`, Day 3's and Day 4's designs in `docs/CHAPTER3.md` and
+  `docs/CHAPTER4.md`.
 - Counselling choices that change how the visit ends.
 - More upgrades for the clinic, and a practice booth with random patients.

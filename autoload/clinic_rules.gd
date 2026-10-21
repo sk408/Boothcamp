@@ -568,7 +568,9 @@ static func unmasked_bone(results: Dictionary, freq: int) -> Variant:
 ## recommended order. test = &"bc_masked": wherever the ear's air-bone gap (best AC - unmasked BC)
 ## is 10 dB or more (E5); (v4) the unmasked BC may come from either mastoid (unmasked_bone()), so testing
 ## unmasked bone on the better ear only is enough to see the poorer ear's gap.
-## test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate.
+## test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate. (Day 13) A stamp that
+## records its own air transducer ("phones" / "inserts") is judged with that one: air measured through
+## headphones before the inserts were lent still needs masking by the headphones' rule.
 static func masked_freqs_needed(results: Dictionary, ear: String, test: StringName, phones: StringName = &"phones") -> Array[int]:
 	var out: Array[int] = []
 	if test == &"bc_masked":
@@ -583,12 +585,17 @@ static func masked_freqs_needed(results: Dictionary, ear: String, test: StringNa
 				out.append(f)
 	elif test == &"ac_masked":
 		var ac2 := sheet_thresholds(results, ear, &"ac")
+		var sheet2: Dictionary = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("freqs", {})
 		var order2: Array[int] = [1000, 1500, 2000, 3000, 4000, 6000, 8000, 750, 500, 250]
 		for f: int in order2:
 			if not ac2.has(f):
 				continue
+			var tr := phones
+			var rec := String((sheet2[f] as Dictionary).get("transducer", ""))
+			if rec == "phones" or rec == "inserts":
+				tr = StringName(rec)
 			var nb: Variant = nontest_bone_estimate(results, ear, f)
-			if nb != null and ac_masking_needed(int(ac2[f]), int(nb), phones, f):
+			if nb != null and ac_masking_needed(int(ac2[f]), int(nb), tr, f):
 				out.append(f)
 	return out
 

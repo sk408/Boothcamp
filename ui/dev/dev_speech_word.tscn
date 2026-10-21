@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/dev/dev_speech_word.gd" id="1"]
+
+[node name="DevSpeechWord" type="Node"]
+script = ExtResource("1")

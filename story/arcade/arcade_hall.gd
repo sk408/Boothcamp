@@ -297,8 +297,8 @@ static func _extra_line(mode: String) -> String:
 	for r: Dictionary in runs:
 		best = maxi(best, int(r["score"]))
 	var line := "Your best lately: %s" % _thousands(best)
-	if mode == "ears_please" and int(ArcadeScores.data(mode).get("unlocked", 1)) >= 2:
-		line += "  ·  Shift 2 open"
+	if mode == EarsPlease.MODE and EarsPlease._unlocked() >= 2:
+		line += "  ·  Shift %d open" % EarsPlease._unlocked()
 	return line
 
 

@@ -89,6 +89,12 @@ const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bo
 ## answers climbed with the noise and never plateaued, then nothing at the limit (Morgan's deaf ear).
 ## It names no ear: the evidence question asks who answered.
 const NO_PLATEAU := "No plateau, just a climb, then nothing at the limit."
+## (Clinical review C9) After the masked tests, when Hoot stored a masked stamp with no room left for a
+## plateau: what his purple ? means (the player's own get the screen's line instead).
+const NO_ROOM := "Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer."
+## (C9) Day 13: the case lends inserts (lend_inserts) when masked bone would open in a dilemma through
+## headphones and the player owns none. For this visit only: never an upgrade.
+const LEND_INSERTS := "Headphones leak too much noise for this. Borrow my insert earphones today: a deeper seal."
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
 const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
 ## The retest's chart when its measured type is not the story's.
@@ -114,6 +120,9 @@ var _walk_done := true
 var _canal_blocked := false
 ## (A2) The masking recap played this visit (once, before the first masked test).
 var _recapped := false
+## (C9) The case's on_dilemma lines played this visit, and Hoot's inserts lent for it (lend_inserts).
+var _dilemma_told := false
+var _lent_inserts := false
 ## The scored visit's summary when a retest follows it: Game.finish_visit runs before the retest, so
 ## quitting during the unscored victory lap keeps the day (chapters_done, coins, best grade).
 var _summary: Dictionary = {}
@@ -646,10 +655,10 @@ func _close_screen(cam: Camera3D) -> void:
 	cam.current = true
 
 
-## Headphones, or foam inserts once the upgrade is owned. Never an insert into a canal full of wax.
-## The masking rules read the same transducer.
+## Headphones, or foam inserts once the upgrade is owned (or Hoot lent his, Day 13). Never an insert
+## into a canal full of wax. The masking rules read the same transducer.
 func _air_transducer() -> StringName:
-	return CaseData.air_transducer(_canal_blocked)
+	return CaseData.air_transducer(_canal_blocked, _lent_inserts)
 
 
 func _test(ear: String, plan: Dictionary, info: Dictionary = {}) -> Dictionary:
@@ -751,6 +760,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 			await _recap()
 			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
 				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
+			await _dilemma_beat(ear)
 			_open_screen()
 			await _test(ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 0,
 				"intro": ("Masked bone at Hoot speed: the shhh goes in the %s ear." if _quick()
@@ -787,6 +797,8 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 		if CaseData.all_no_response(results, ear, &"ac_masked"):
 			await _say("Hoot", NO_PLATEAU)
 			break
+	if hoot_left_no_room(results):
+		await _say("Hoot", NO_ROOM)
 	# the case's line describes the true chart ("bone sits with the air: no gap"); if the player's
 	# stamps left a different type on a bone ear, it would contradict the screen, so say a neutral line
 	var agrees := true
@@ -797,6 +809,38 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 		await _play(case_data.get("after_audiometry", []))
 	else:
 		await _say("Hoot", "Bone's in. Let's lay it over the air and see what it says.")
+
+
+## (Clinical review C9) Before an ear's masked bone test: when the stamps say it opens in a masking
+## dilemma through today's earphones (CaseData.dilemma_freqs), the case's on_dilemma lines, once a
+## visit; then, if the case lends them and the player has no inserts, Hoot's own pair for the rest of
+## the visit (a loan, never an upgrade). Read from the stamps before the test, so Hoot's turns get it
+## too (the session's masking_dilemma observation fires only on the player's own tones).
+func _dilemma_beat(ear: String) -> void:
+	if _dilemma_told or not case_data.has("on_dilemma"):
+		return
+	if CaseData.dilemma_freqs(results, ear, _air_transducer()).is_empty():
+		return
+	_dilemma_told = true
+	Game.set_visit_flag("dilemma_told", true)
+	await _play(case_data["on_dilemma"])
+	if bool(case_data.get("lend_inserts", false)) and _air_transducer() == &"phones" and not _canal_blocked:
+		_lent_inserts = true
+		Game.set_visit_flag("lent_inserts", true)
+		clinic.call("hoot_emote", &"wing_up")
+		await _say("Hoot", LEND_INSERTS)
+
+
+## True when Hoot stored a masked stamp (either ear) with no room left for a plateau: the purple ?.
+static func hoot_left_no_room(res: Dictionary) -> bool:
+	for e: Variant in (res.get("ears", {}) as Dictionary).values():
+		for sheet: String in ["bc_masked", "ac_masked"]:
+			var t: Dictionary = (e as Dictionary).get(sheet, {})
+			for f: int in t:
+				var info: Dictionary = t[f]
+				if bool(info.get("plateau_not_reached", false)) and bool(info.get("by_hoot", false)):
+					return true
+	return false
 
 
 ## (Clinical review A2) The masking recap card before the visit's first masked test, while Day 2's
@@ -969,7 +1013,8 @@ func _add_findings() -> void:
 ## chart's, or the truth's); "conductive" when the case ear types conductive on the chart (the truth
 ## type when the chart can't tell); "abg_flag" when the ear's own air and bone show the air-bone-gap
 ## red flag (no-response bone left out; the truth when no bone answered); "shadow" and "no_response" by
-## CaseData.shadow_shows / no_response_shows (a deaf ear, Day 12). res = {} reads the truth.
+## CaseData.shadow_shows / no_response_shows (a deaf ear, Day 12); "no_plateau" by
+## CaseData.no_plateau_shows (the masking dilemma, Day 13). res = {} reads the truth.
 static func finding_shows(when: String, res: Dictionary, p: PatientProfile, ear: String, asym: bool) -> bool:
 	match when:
 		"symmetric":
@@ -996,6 +1041,8 @@ static func finding_shows(when: String, res: Dictionary, p: PatientProfile, ear:
 			return CaseData.shadow_shows(res, p, ear)
 		"no_response":
 			return CaseData.no_response_shows(res, p, ear)
+		"no_plateau":
+			return CaseData.no_plateau_shows(res, p)
 	return true
 
 
@@ -1125,6 +1172,7 @@ func _retest() -> void:
 	await _play(rt.get("intro", []))
 	patient = Game.load_patient(String(rt["patient_id"])) as PatientProfile
 	_canal_blocked = false
+	_lent_inserts = false
 	if rt.get("otoscopy", null) is Dictionary:
 		await _otoscopy(rt["otoscopy"], false)
 	if rt.get("tymp", null) is Dictionary:
