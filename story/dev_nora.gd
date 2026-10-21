@@ -8,6 +8,9 @@ extends "res://story/level_nora.gd"
 ## --from (FROM): movie (the default: the whole visit), intro, history, otoscopy, instructions,
 ## tones, srt, words_r, words_l, louder, flags, call, payoff; or paper: four Daily Decibels and no
 ## level (S; A with a redone list; C; Do-over), shot as dev_day4_paper_<grade>.
+## --boo (with --from=words_l, without --autoplay): a scripted unmasked PRESENT on List 2 at the
+## comfortable level, then MASK, for the level's day4_boo and day4_ghostbuster shots (the bot always
+## masks first, so it never meets the BOO); the scene quits after them.
 ## The textbook results: Hoot's tones from core/patients/nora.tres (air, unmasked bone at 1k and 4k
 ## on the right, masked bone there on the left), then his SRTs and word lists, by the book.
 
@@ -128,6 +131,44 @@ func _speech_from(at: int) -> void:
 	cam.current = true
 	clinic.call("take_off_earphones")
 	clinic.call("focus_camera", &"face", 0.6)
+
+
+func _list_left() -> Dictionary:
+	if Game.cli_flag("boo"):
+		_boo_driver.call_deferred()
+	return await super()
+
+
+## The unmasked press the BOO needs, as a player who forgot the noise would make it.
+func _boo_driver() -> void:
+	var sc := screen as SpeechScreen
+	await _until(func() -> bool: return sc.session != null and sc.session.test == &"wrs" and sc.session.ear == "left", 20.0)
+	await _wait(0.5)
+	await _until(func() -> bool: return not sc.hoot_running() and sc.idle(), 40.0)
+	await _wait(0.3)
+	var guard := 0
+	while guard < 30:
+		guard += 1
+		var target := int(sc.session.mode.call("textbook_target"))
+		if sc.session.db == target:
+			break
+		sc.do_action(&"louder" if sc.session.db < target else &"softer")
+		await _wait(0.1)
+	await _wait(0.5)
+	sc.do_action(&"present")
+	await _wait(1.2)
+	sc.do_action(&"mask_toggle")
+	await _wait(2.0)
+	get_tree().quit()
+
+
+func _until(cond: Callable, max_s: float) -> void:
+	var t0 := Time.get_ticks_msec()
+	while not bool(cond.call()):
+		if Time.get_ticks_msec() - t0 > int(max_s * 1000.0):
+			push_warning("dev_nora: timed out waiting")
+			return
+		await get_tree().process_frame
 
 
 func _hidden(ear: String, plan: Dictionary) -> void:
