@@ -219,7 +219,15 @@ Requests for the integrator and the title owner:
   `tools/monkey.gd` mirrors the loan. The case movies list Bev. `story/games/case_props.gd`: a wax-jar sparkle under
   a pixel wide is skipped (its star polygon could fail to triangulate, an engine error that flaked
   `test_new_gadgets_draw_every_view`).
-- **Tests:** `story/tests/test_cases.gd` (49 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Words before a FIT (clinical review C13 and A4).** A case with `speech_check` (`{"ears": [...], "after": script}`;
+  Rocco and Ginger) adds the HUD's Words step after the tones: Hoot runs the SRT and a word score on each ear, then
+  one unaided Party Noise Test list (`SpeechRules.SIN_LISTS[0]`, slot `both`), with `SpeechScreen.run_hidden` (Day 5's
+  montage; `SpeechSession.run_by_textbook` without the screen). Hoot's sheets are unscored (`units` 0), so
+  `merge_results` keeps the tone grade. `LevelCase.speech_lines(res, ears)` and `speech_clues(res, ears)` are static
+  and read only `res.speech`, so **freestyle's FS-13 can reuse them** after its own hidden runs: the lines never hint
+  at the call. Marina's payoff gains the "hearing nerve" line. `ui/speech/speech_screen.gd`: `run_hidden` names
+  the patient in the bubble (see `ui/INTEGRATION_NOTES.md`).
+- **Tests:** `story/tests/test_cases.gd` (52 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
   a warning without python3).
 

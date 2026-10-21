@@ -30,11 +30,12 @@ const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_case.tscn"
 const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
+const SPEECH_SCENE := "res://ui/speech/speech_screen.tscn"
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"tymp", &"beeps", &"reveal", &"pattern", &"call"]
 const STEP_LABELS: Dictionary = {
 	&"chat": "Chat", &"peek": "Peek", &"tymp": "Tymp", &"beeps": "Beeps", &"reveal": "Reveal",
-	&"pattern": "Pattern", &"call": "The call", &"retest": "Retest",
+	&"pattern": "Pattern", &"call": "The call", &"retest": "Retest", &"words": "Words",
 }
 ## The Daily Decibel's medal row for every case.
 const MEDAL_BEATS: Array = [["history", "Chat"], ["tymp", "Tymp"], ["evidence", "Pattern"], ["decision", "Call"]]
@@ -95,6 +96,15 @@ const NO_ROOM := "Purple ? marks: no safe noise level was left for a plateau. Tr
 ## (C9) Day 13: the case lends inserts (lend_inserts) when masked bone would open in a dilemma through
 ## headphones and the player owns none. For this visit only: never an upgrade.
 const LEND_INSERTS := "Headphones leak too much noise for this. Borrow my insert earphones today: a deeper seal."
+## (Clinical review C13, A4) Before the call on a FIT case (case key speech_check): Hoot's SRTs, word
+## scores and one Party Noise Test list at Hoot speed, as on every full test (IHS 2020). Neutral lines:
+## they never hint at the call. %s: "match" or "sit near"; the band's word score title; the SNR loss.
+const SPEECH_INTRO := "Words next: a word score in each ear, then the Party Noise Test. Hoot speed!"
+const SPEECH_WORDS := "SRTs %s the beeps. Words in quiet: right %d%%, left %d%%. %s!"
+const SPEECH_WORD := "SRT %s the beeps. Words in quiet, %s ear: %d%%. %s!"
+const SPEECH_NOISE := "Party Noise Test: %s dB SNR loss. %s trouble in noise."
+## SPEECH_NOISE's second sentence per SNR-loss band (SpeechRules.sin_band).
+const SPEECH_NOISE_BANDS: Dictionary = {&"normal": "Little", &"mild": "Mild", &"moderate": "Real", &"severe": "Big"}
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
 const MISMATCH := "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!"
 ## The retest's chart when its measured type is not the story's.
@@ -167,6 +177,8 @@ func _ready() -> void:
 	hud = Hud.new()
 	add_child(hud)
 	var steps: Array[StringName] = STEPS.duplicate()
+	if case_data.has("speech_check"):
+		steps.insert(steps.find(&"beeps") + 1, &"words")
 	if case_data.has("retest"):
 		steps.append(&"retest")
 	hud.call("set_steps", steps, STEP_LABELS, String(case_data["case_title"]))
@@ -325,6 +337,8 @@ func _run() -> void:
 	await _tymp()
 	await _instructions(case_data["instructions"])
 	await _audiometry(case_data["audiometry"])
+	if case_data.has("speech_check"):
+		await _speech_check()
 	var board: Control = await _reveal()
 	await _evidence(board)
 	await _decision(board)
@@ -830,6 +844,112 @@ func _dilemma_beat(ear: String) -> void:
 		Game.set_visit_flag("lent_inserts", true)
 		clinic.call("hoot_emote", &"wing_up")
 		await _say("Hoot", LEND_INSERTS)
+
+
+## (Clinical review C13, A4) Before a FIT call: Hoot's SRT and word score on each speech_check ear, then
+## one Party Noise Test list, off-screen at Hoot speed (SpeechScreen.run_hidden, as Day 5's montage;
+## without the screen, SpeechSession.run_by_textbook). His sheets join the visit's results unscored,
+## and two cards join the case file.
+func _speech_check() -> void:
+	var spec: Dictionary = case_data["speech_check"]
+	var ears: Array = spec.get("ears", ["right", "left"])
+	hud.call("set_step", &"words")
+	clinic.call("put_on_earphones", true)
+	clinic.call("hold_response_button", false)
+	clinic.call("focus_camera", &"face", 0.4)
+	await _say("Hoot", SPEECH_INTRO)
+	var cam: Camera3D = clinic.call("get_main_camera")
+	var sp: CanvasLayer = null
+	if ResourceLoader.exists(SPEECH_SCENE):
+		sp = (load(SPEECH_SCENE) as PackedScene).instantiate() as CanvasLayer
+		add_child(sp)
+		cam.current = false
+	var tones := results
+	var tr := String(_air_transducer())
+	var fallback: SpeechSession = null
+	for i in ears.size():
+		var ear := String(ears[i])
+		for plan: Dictionary in [{"test": "srt"}, {"test": "wrs", "list": SpeechRules.WRS_LISTS[i]}]:
+			plan.merge({"tones": tones, "transducer": tr})
+			_phase(&"speech", {"ear": ear, "test": String(plan["test"])})
+			fallback = await _hidden_speech(sp, fallback, ear, plan, tones)
+	_phase(&"speech", {"ear": "both", "test": "sin"})
+	fallback = await _hidden_speech(sp, fallback, "both", {"test": "sin", "list": SpeechRules.SIN_LISTS[0],
+		"condition": "unaided", "tones": tones, "transducer": tr}, tones)
+	if sp != null:
+		sp.queue_free()
+	cam.current = true
+	clinic.call("take_off_earphones")
+	clinic.call("focus_camera", &"face", 0.4)
+	Game.set_audiometry_results(results)
+	for line: String in speech_lines(results, ears):
+		await _say("Hoot", line)
+	for c: Dictionary in speech_clues(results, ears):
+		_add_clue(String(c["tag"]), String(c["text"]), "clue", "test")
+	await _play(spec.get("after", []))
+	hud.call("complete_step", &"words")
+
+
+## One of Hoot's off-screen speech tests: results become the merged visit results. Returns the
+## fallback session (made on first use when there is no SPEECH screen).
+func _hidden_speech(sp: CanvasLayer, fallback: SpeechSession, ear: String, plan: Dictionary, tones: Dictionary) -> SpeechSession:
+	if sp != null:
+		await sp.call("run_hidden", patient, ear, plan)
+		results = (sp as SpeechScreen).get_results()
+		return fallback
+	if fallback == null:
+		fallback = SpeechSession.new(patient, Game.rng.randi())
+	fallback.configure(plan)
+	fallback.run_by_textbook(ear)
+	await _wait(0.3)
+	results = SpeechSession.merge_results(tones, fallback.build_results())
+	return fallback
+
+
+## Hoot's lines after the speech check, from the visit's speech sheets: SRT agreement and word
+## scores, then the Party Noise Test's SNR loss and how much trouble in noise its band means.
+static func speech_lines(res: Dictionary, ears: Array) -> Array[String]:
+	var out: Array[String] = []
+	var sp: Dictionary = res.get("speech", {})
+	var srt: Dictionary = sp.get("srt", {})
+	var wrs: Dictionary = sp.get("wrs", {})
+	var agree := true
+	var worst := 101
+	for e: Variant in ears:
+		if String((srt.get(e, {}) as Dictionary).get("agreement", "")) != "good":
+			agree = false
+		worst = mini(worst, int((wrs.get(e, {}) as Dictionary).get("pct", 101)))
+	if worst <= 100:
+		var band := String(SpeechRules.WRS_BAND_TITLES.get(SpeechRules.wrs_band(worst), "Fine"))
+		if ears.size() == 1:
+			out.append(SPEECH_WORD % ["matches" if agree else "sits near", String(ears[0]), worst, band])
+		else:
+			out.append(SPEECH_WORDS % ["match" if agree else "sit near", int((wrs["right"] as Dictionary).get("pct", 0)),
+				int((wrs["left"] as Dictionary).get("pct", 0)), band])
+	var sin: Dictionary = (sp.get("sin", {}) as Dictionary).get("both", {})
+	if sin.has("snr_loss"):
+		var loss := float(sin["snr_loss"])
+		out.append(SPEECH_NOISE % [String.num(loss, 1), String(SPEECH_NOISE_BANDS[SpeechRules.sin_band(loss)])])
+	return out
+
+
+## The speech check's case-file cards: "words" (each ear's word score) and "sin" (the SNR loss).
+static func speech_clues(res: Dictionary, ears: Array) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var sp: Dictionary = res.get("speech", {})
+	var wrs: Dictionary = sp.get("wrs", {})
+	var parts: PackedStringArray = []
+	for e: Variant in ears:
+		if (wrs.get(e, {}) as Dictionary).has("pct"):
+			parts.append("%s %d%%" % [String(e).substr(0, 1).to_upper(), int((wrs[e] as Dictionary)["pct"])])
+	if not parts.is_empty():
+		out.append({"tag": "words", "text": "Words in quiet: " + ", ".join(parts)})
+	var sin: Dictionary = (sp.get("sin", {}) as Dictionary).get("both", {})
+	if sin.has("snr_loss"):
+		var loss := float(sin["snr_loss"])
+		out.append({"tag": "sin", "text": "Party Noise Test: %s dB SNR loss (%s)" % [String.num(loss, 1),
+			String(SpeechRules.SIN_BAND_NAMES[SpeechRules.sin_band(loss)]).to_lower()]})
+	return out
 
 
 ## True when Hoot stored a masked stamp (either ear) with no room left for a plateau: the purple ?.
