@@ -7,12 +7,15 @@ extends Node
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn (Hoot runs both tone ears)
 ##           res://ui/speech/speech_screen.tscn start_test(patient, ear, coached, plan) (§9.7)
 ##   global: Game (visit, medals, scores), Events (phases, awaiting_input), Hoot (tips)
-## Beats: dialogue, choice, familiarize_cards, the SPEECH screen's speech beats, objection_present,
-## referral_stamp, results_continue. Board: story/games/mike_board.gd.
+## Beats: the movie's own explainer beat (or a choice on replays), dialogue, choice,
+## familiarize_cards, the SPEECH screen's speech beats, objection_present, referral_stamp,
+## results_continue. Board: story/games/mike_board.gd. (Clinical review S7) The day opens with
+## Hoot's spondee movie (story/explainers/movies/srt_ladder.gd), played as Day 4 plays its own.
 
 const Hud := preload("res://story/hud.gd")
 const MikeBoard := preload("res://story/games/mike_board.gd")
 const Otoscopy := preload("res://story/games/otoscopy.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -20,7 +23,10 @@ const SPEECH_SCENE := "res://ui/speech/speech_screen.tscn"
 const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_mike.tscn"
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const PATIENT_ID := "mike"
+## (Clinical review S7) Hoot's spondee movie, The Spondee Ladder.
+const MOVIE_ID := "srt_ladder"
 
 ## The spondee list, how many cards Hoot says for Mike to repeat, and the one he has never heard of.
 const LIST_ID := "spondee_a"
@@ -92,6 +98,8 @@ var dropped: Array[String] = []
 var recheck: Dictionary = {}
 ## Hoot's coffee whisper has been on screen: from then on a low (ascending) SRT start is smart.
 var _whisper_seen := false
+## The movie reached its seen_at scene this visit (lines may refer to it).
+var _movie_watched := false
 var _session: SpeechSession   # only when the SPEECH screen is missing (Hoot's fallback run)
 
 
@@ -158,6 +166,7 @@ static func quick_visit() -> bool:
 
 
 func _run() -> void:
+	await _movie()
 	await _intro()
 	await _history()
 	await _otoscopy()
@@ -169,6 +178,39 @@ func _run() -> void:
 	await _referral(board)
 	await _payoff(board)
 	await _results()
+
+
+# ---------------------------------------------------------------- 0. the movie (contract §9.20)
+
+## (Clinical review S7) Hoot's spondee movie, played as Day 4 plays its own (level_nora._movie): a
+## one-line announcement before the first play only; once seen, just the replay offer (best: skip).
+func _movie() -> void:
+	if not Movies.has(MOVIE_ID):
+		return
+	var seen := Game.is_movie_seen(MOVIE_ID)
+	_phase(&"explainer", {"movie": MOVIE_ID, "source": "day_start", "seen": seen})
+	clinic.call("focus_camera", &"door", 0.0)
+	if seen:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(MOVIE_ID) / 10.0) * 10.0),
+			"Skip it: I know my spondees."]
+		var c: int = await dialogue.choose("Hoot's spondee movie again? Popcorn's on me!", opts, 1)
+		if c != 0:
+			return
+	else:
+		await _say("Hoot", "New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!")
+	var r := await _play_movie(MOVIE_ID)
+	_movie_watched = bool(r.get("watched", not bool(r.get("skipped", false))))
+	Game.set_visit_flag("movie_watched", _movie_watched)
+	if bool(r.get("skipped", false)):
+		await _say("Hoot", "Skipped! Rewatch it any time: pause menu, \"Watch %s\"." % Movies.title(MOVIE_ID))
+
+
+func _play_movie(id: String) -> Dictionary:
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", id, "day_start")
+	player.queue_free()
+	return r
 
 
 # ---------------------------------------------------------------- 1. intro: the coffee whisper
