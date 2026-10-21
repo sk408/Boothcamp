@@ -89,7 +89,8 @@ func complete_step(step: StringName) -> void:
 	Sfx.play(&"ding", 1.4, -10.0)
 
 
-## A sticky note with a case-history clue. kind: "clue" or "flag" (red flag card).
+## A sticky note with a case-history clue. kind: "clue" or "flag" (red flag card), or (Days 4-5)
+## "ok" (a green all-clear card: Day 5's "No red flags").
 func add_clue(text: String, kind: String = "clue") -> void:
 	var p := PanelContainer.new()
 	var col: Color = NOTE_COLORS[_note_count % NOTE_COLORS.size()]
@@ -97,6 +98,9 @@ func add_clue(text: String, kind: String = "clue") -> void:
 	if kind == "flag":
 		col = Color("#fff4f2")
 		border = Palette.RIGHT_RED
+	elif kind == "ok":
+		col = Color("#e6f7ee")
+		border = Color("#2f9e73")
 	var sb := UiKit.style(col, border, 6, 3 if kind == "flag" else 2, 4, 10)
 	p.add_theme_stylebox_override("panel", sb)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -106,6 +110,9 @@ func add_clue(text: String, kind: String = "clue") -> void:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(v)
 	var head := UiKit.label("RED FLAGS" if kind == "flag" else "CASE NOTE", 12, Palette.RIGHT_RED if kind == "flag" else Palette.INK_SOFT, 700)
+	if kind == "ok":
+		head.text = "ALL CLEAR"
+		head.add_theme_color_override("font_color", Color("#2f9e73"))
 	v.add_child(head)
 	var l := UiKit.label(text, 15, Palette.INK, 500)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
