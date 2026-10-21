@@ -11,7 +11,8 @@ const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 const WARMUP_CARDS := 3
 const RUN_S := 60.0
 ## When each chute opens (seconds into the run).
-const UNLOCK_AT: Dictionary[StringName, float] = {&"sloping": 0.0, &"notch": 0.0, &"cookie_bite": 10.0, &"rising": 25.0}
+const UNLOCK_AT: Dictionary[StringName, float] = {&"sloping": 0.0, &"notch": 0.0, &"cookie_bite": 10.0, &"rising": 25.0, &"reverse_bite": 35.0,
+	&"sensorineural": 0.0, &"conductive": 0.0, &"mixed": 15.0}
 ## The ramp inside the run.
 const LEFT_FROM_S := 30.0       ## left-ear (blue) cards join
 const BOTH_FROM_S := 40.0       ## two-ear cards: sort the colour the card names
@@ -32,10 +33,11 @@ const FLUENT_MAX_OOPS := 1
 const BOARD_MIN_ACCURACY := 0.9
 
 
-## The chutes open at run time t (seconds; t < 0 = the warm-up), in key order.
-static func unlocked(t: float) -> Array[StringName]:
+## The chutes open at run time t (seconds; t < 0 = the warm-up), in key order. belt: a key of
+## ChartDeck.BELTS (&"shapes" for Chart Chute, &"types" for AIR & BONE).
+static func unlocked(t: float, belt: StringName = &"shapes") -> Array[StringName]:
 	var out: Array[StringName] = []
-	for s: StringName in ChartDeck.SHAPES:
+	for s: StringName in ChartDeck.BELTS[belt]:
 		if t < 0.0:
 			if is_zero_approx(float(UNLOCK_AT[s])):
 				out.append(s)
@@ -46,9 +48,10 @@ static func unlocked(t: float) -> Array[StringName]:
 
 ## (seeded) What the next card looks like at run time t: {"shape", "ear", "lookalike", "golden"}.
 ## recent: the last shapes dealt (a shape never comes three times running). golden_left: shapes
-## whose story chart has not been dealt this run.
-static func next_spec(rng: RandomNumberGenerator, t: float, recent: Array, golden_left: Array) -> Dictionary:
-	var open := unlocked(t)
+## whose story chart has not been dealt this run. The type belt has no two-ear cards (and no story
+## charts: its golden_left is empty).
+static func next_spec(rng: RandomNumberGenerator, t: float, recent: Array, golden_left: Array, belt: StringName = &"shapes") -> Dictionary:
+	var open := unlocked(t, belt)
 	if t >= GOLDEN_FROM_S:
 		var g: Array = golden_left.filter(func(s: Variant) -> bool: return open.has(s))
 		if g.size() > 1 and recent.size() >= 2 and recent[-1] == recent[-2]:
@@ -66,7 +69,7 @@ static func next_spec(rng: RandomNumberGenerator, t: float, recent: Array, golde
 		choices.erase(recent[-1])
 	var shape: StringName = choices[rng.randi() % choices.size()]
 	var ear := "right"
-	if t >= BOTH_FROM_S and rng.randf() < 0.3:
+	if belt == &"shapes" and t >= BOTH_FROM_S and rng.randf() < 0.3:
 		ear = "both"
 	elif t >= LEFT_FROM_S and rng.randf() < 0.4:
 		ear = "left"
