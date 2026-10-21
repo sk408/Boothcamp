@@ -97,7 +97,9 @@ him what to expect in his first weeks. About 8 minutes.
 (an open question gets the stories), read the aids' diary of hours worn, then fix each complaint
 at the tune-up desk with the right tool: soften the loud highs for the sharp teaspoons, run the
 feedback test for the whistle at hugs, switch on a noisy-places program for the bingo hall, and
-talk through why he should wear them all day. Then it's bingo night at Bev's hall. About 6 minutes.
+talk through why he should wear them all day. Before that, a listening tube finds the plugged wax
+guard that made his right aid go quiet, and after it you plan his next visits. Then it's bingo night
+at Bev's hall. Hoot's movie "The Tune-Up" plays first. About 8 minutes.
 
 **Freestyle** (on the title) is the walk-in clinic: eight patients in the waiting room, any order,
 as often as you like, or **Surprise me**. There is no script and no coaching during the tones: you
