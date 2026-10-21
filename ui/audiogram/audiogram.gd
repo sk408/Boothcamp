@@ -70,6 +70,8 @@ const NO_PLATEAU_COLOR := Color("#8e5cc4")
 ## (E18) The end screens' chart notes: show_results() fills `notes` from ClinicRules.chart_notes()
 ## and a small strip under the plot shows it (the plot gives up NOTES_H of height for it).
 @export var show_notes: bool = false
+## Right-align the notes (Day 1's reveal keeps its averages chips bottom-left).
+@export var notes_right: bool = false
 var notes: String = ""
 const NOTES_H := 18.0
 
@@ -472,7 +474,11 @@ func _draw() -> void:
 		_draw_no_plateau_legend(r)
 	AoDraw.ring(self, r.grow(2.0), Color(Palette.INK, 0.55), 6, 2)
 	if notes != "":
-		AoDraw.text_l(self, Vector2(r.position.x + 2.0, r.end.y + 2.0 + NOTES_H * 0.5), notes, 12, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+		var ny := r.end.y + 2.0 + NOTES_H * 0.5
+		if notes_right:
+			AoDraw.text_r(self, Vector2(r.end.x - 2.0, ny), notes, 12, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+		else:
+			AoDraw.text_l(self, Vector2(r.position.x + 2.0, ny), notes, 12, Palette.INK_SOFT, AoDraw.FONT_SEMI)
 
 
 func _draw_grid(r: Rect2) -> void:
