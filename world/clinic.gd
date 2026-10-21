@@ -71,6 +71,9 @@ var _drift := true
 var _title_mode := false
 var _tick := 0
 var _glasses_off := false
+var _glasses_auto := false   # (D2-8) taken off for the head gear: back on when the patient stands
+var _glasses_rest := Vector3.ZERO
+var _glasses_rest_set := false
 var _look_lock: StringName = &""
 var _title_idle := 0.0
 ## (v3) Which bean walks in: "" / "gus" = Grandpa Gus, "bonnie" = Bonnie. Set before add_child.
@@ -330,6 +333,9 @@ func sit() -> void:
 func stand() -> void:
 	gus.call("set_holding_button", false)
 	await gus.call("stand_up")
+	if _glasses_auto and not _head_gear_on():
+		_glasses_auto = false
+		put_on_glasses()
 	if gus.position.distance_to(SPOTS[&"booth"]) < 0.3:
 		var t := create_tween()
 		t.tween_property(gus, "position", refs["chair_front"] as Vector3, 0.3)
@@ -351,6 +357,7 @@ func focus_camera(shot: StringName, duration: float = 0.8) -> void:
 
 func put_on_earphones(red_on_right: bool = true) -> void:
 	take_off_earphones()
+	_glasses_off_for_gear()
 	var head: Node3D = gus.get("parts")["head"]
 	var hc: Vector3 = gus.get("parts")["head_center"]
 	_phones = Node3D.new()
@@ -545,6 +552,8 @@ func take_off_glasses() -> void:
 	if g == null or _glasses_off:
 		return
 	_glasses_off = true
+	_glasses_rest = g.position
+	_glasses_rest_set = true
 	var t := g.create_tween()
 	t.tween_property(g, "position:y", g.position.y + 0.25, 0.2).set_trans(Tween.TRANS_BACK)
 	t.parallel().tween_property(g, "scale", Vector3.ONE * 0.2, 0.25)
@@ -560,9 +569,26 @@ func put_on_glasses() -> void:
 	g.visible = true
 	g.scale = Vector3.ONE * 0.3
 	var hc: Vector3 = gus.get("parts")["head_center"]
-	g.position = hc + Vector3(0, 0.055, 0.34)
+	g.position = _glasses_rest if _glasses_rest_set else hc + Vector3(0, 0.055, 0.34)
 	var t := g.create_tween()
 	t.tween_property(g, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK)
+
+
+## (D2-8) Glasses come off before anything goes on the head (they lift the cushions and the band),
+## for every patient, as case hats do, and go back on when the patient stands up from the booth
+## chair with the head clear. A level that takes them off itself (Day 1, Day 2's gag) puts them back.
+func _glasses_off_for_gear() -> void:
+	if _glasses_off or not (gus.get("parts") as Dictionary).has("glasses"):
+		return
+	take_off_glasses()
+	_glasses_auto = true
+
+
+func _head_gear_on() -> bool:
+	for n: Variant in [_phones, _bone, _mask_phone]:
+		if n != null and is_instance_valid(n) and not n.is_queued_for_deletion():
+			return true
+	return false
 
 
 ## Fitting teaser: two tiny teal behind-the-ear aids pop onto Gus with a sparkle.
@@ -601,6 +627,7 @@ func put_on_bone_oscillator(ear: String = "right") -> void:
 		_bone.queue_free()
 	_bone = null
 	take_off_earphones()
+	_glasses_off_for_gear()
 	var head: Node3D = gus.get("parts")["head"]
 	var hc: Vector3 = gus.get("parts")["head_center"]
 	var side := -1.0 if ear == "right" else 1.0
@@ -665,6 +692,7 @@ func put_on_bone_oscillator(ear: String = "right") -> void:
 func put_on_masking_phone(ear: String = "left") -> void:
 	if _mask_phone and is_instance_valid(_mask_phone):
 		_mask_phone.queue_free()
+	_glasses_off_for_gear()
 	var head: Node3D = gus.get("parts")["head"]
 	var hc: Vector3 = gus.get("parts")["head_center"]
 	var side := -1.0 if ear == "right" else 1.0

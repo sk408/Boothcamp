@@ -817,3 +817,128 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - Do-over: **FLIGHT DELAYED: TRAINEE REQUESTS A SECOND BOARDING** Check the canal volume: tiny means blocked, normal means behind the drum.
 - First stamp FIT (S to C): **TRAINEE OFFERS HEARING AID TO A FISH TANK; OWL DECLINES** Fluid behind the eardrum: a doctor first, and it often clears.
 - First stamp DOCTOR TODAY (S to C): **PRETZEL EMERGENCY DECLARED; DOCTOR SAYS THIS WEEK IS FINE** Normal bone meant the middle ear: a doctor soon, before the flight, not today.
+
+## Morgan Gale's Case (`dead_ear`)
+
+**The call:** FIT
+
+### Intro
+- **Morgan:** Ahoy! Morgan Gale, keeper of the Gullrock light. My sister Marina says you're the best owl ashore.
+- *(Hoot: wing up)*
+- **Hoot:** Captain Marina's family! Welcome ashore, Morgan. What brings a lighthouse keeper inland?
+- *(patient: confused)*
+- **Morgan:** Society dinners. Anyone on my right sounds like the sea. And I never know where the foghorn is.
+- **Morgan:** My right ear's been off duty since mumps at seven. I brought the ear doctor's letter.
+- *(Hoot: nod)*
+- **Hoot:** A letter! Lovely. We still test both ears properly, though.
+
+Always on the notes: *Right ear hears nothing, says Morgan*; *Ear doctor's letter: mumps, checked, no change*
+
+### History (pick one per round)
+
+| Question | Pts | Answer | Clue card | Hoot |
+|---|---|---|---|---|
+| R1: Where do you have the most trouble? | 2 | Society dinners, when the chatterbox sits on my right. And working out where the foghorn is. | Trouble: talkers on the right, and where sounds come from | One good ear can't tell where a sound comes from. That takes two! |
+| R1: Has your right ear changed lately? | 2 | Not a whisper since I was seven. The ear doctor checked it again three years ago. Same. | No change in the right ear since childhood |  |
+| R1: How many steps up the lighthouse? | 0 | Two hundred and twelve. I count them every night. My knees count them twice. |  | Sea stories later! Ask about Morgan's ears. |
+| R2: Any pain, drainage, dizziness, or sudden change? | 2 | None of those. No spins, no drips. The right's been quiet for fifty years, not fifty days. | No pain, drainage, dizziness or sudden change |  |
+| R2: Do you protect your ears from the foghorn? | 1 | Earmuffs, always! I've only got one good ear. I'm not lending it to a foghorn. | Wears earmuffs by the foghorn | Smart. Guard that one good ear like treasure. |
+| R2: Seen any mermaids? | 0 | Only on the society's tea towels. Very disappointing. |  | Sea stories later! Ask about Morgan's ears. |
+
+Red-flag sweep (if skipped): **Hoot:** Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only. **Morgan:** Only the one ear, and you've seen the letter. No pain, no drips, no spins.
+
+Red-flag card: *One ear only: YES, since mumps at 7. / Known cause, doctor-checked, no change.*
+
+- **Hoot:** One ear, but no mystery: a cause, a doctor's letter, no change. Let's look.
+
+### Otoscopy
+First caption: *Fresh speculum. Morgan's LEFT ear first: a clear canal, a healthy eardrum.*
+
+Caption: *Morgan's RIGHT ear: a roomy canal, no wax, a healthy eardrum.*
+
+- **Hoot:** Clear canal, pearly drum. Whatever's wrong sits deeper than we can see.
+- Card: *Right canal and eardrum look healthy*
+
+### Tympanometer
+Tip: large (roomy canal). Right: type A, peak -10 daPa, 0.8 mL, canal 1.5 mL. Left: type A, peak -5 daPa, 0.9 mL, canal 1.6 mL.
+
+Question: **What type are both of Morgan's tympanograms?** (A / B / C, shuffled)
+- A wrong pick: Hoot: Type X would be (its shape). Look where the peak sits, and how tall.
+
+- **Hoot:** Type A both sides: both middle ears move fine. Now the beeps.
+
+### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
+- **Hoot:** Tell them: press for every beep, in either ear, even faint ones.
+- **Morgan:** Either ear? My right one's retired, but I'll press for anything. Aye aye!
+
+### Test plan
+- Left AC (Hoot's montage): "Better ear first: Hoot's montage on the left. Shipshape!"
+- Right AC (player for 4 stamps, then Hoot): "Right ear's yours: the quiet one. Start at 1k and watch."
+- Left BC (Hoot's montage): "Hoot's montage: bone on the good left ear."
+  - before:
+    - **Hoot:** Hold on. A deaf ear just answered! Same shape as the left ear, only louder.
+    - **Hoot:** Is that really the right ear hearing? Masking will tell.
+    - **Hoot:** Bone first, on the better left ear. Then we mask.
+- Then masked bone and masked air wherever the rules ask (Hoot). When every masked air stamp on an ear is no response: **Hoot:** No plateau, just a climb, then nothing at the limit.
+
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+
+- **Hoot:** Masked, the right ear's bone found nothing, even at the audiometer's limit.
+
+### The chart, the shape question, the reveal
+- **Hoot:** Here's Morgan's chart. Masked, the right ear shows only arrows. Yet unmasked, it answered you!
+- **Question:** Who answered the right ear's unmasked beeps?
+  - (right) The left ear, across the head.
+  - The right ear: a moderate loss.: Hoot: Masked, the right ear gave no response at all. Those beeps went somewhere else.
+  - The right's middle ear: a gap.: Hoot: Tymp A, and masked bone found nothing: that cochlea isn't hearing. No middle-ear gap to blame.
+- *(the shadow comes alive: THE SHADOW CURVE)*
+- **Hoot:** Dashed: the shadow. The left ear heard those beeps across the head.
+- **Morgan:** So my good ear was covering for my bad one? Loyal little thing.
+- **Hoot:** Very loyal. Masked, the right ear shows the truth: no response at all.
+- **Hoot:** The left ear! Same shape, just louder: a shadow cast across the head.
+
+Cards from the chart: *Right unmasked: a shadow of the left ear* (shadow); *Right ear, masked: no response at all* (no_response); *Right ear only: a big difference* (if the ears differ)
+
+If the chart and the truth disagree on any of those: **Hoot:** Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!
+
+### The call
+- **FIT** (right): FIT! Old, explained and doctor-checked. A CROS aid sends the right side's sound to the left ear.
+- **REFER**: Not this time. It's old, explained and checked. A NEW difference would be a REFER.
+- **DOCTOR TODAY**: Nothing sudden here: quiet since age seven. No emergency, and no referral needed.
+
+**Present the evidence: why can Morgan be fitted without a referral?**
+- Proof cards (tags): known_cause, no_change. Right: Exactly: old, explained and checked. Fit the CROS!
+  - known_cause: Yes! A known cause, checked by an ear doctor, no change: no referral needed.
+  - no_change: Yes! Unchanged for fifty years and doctor-checked. A NEW change would mean REFER.
+- Wrong card (default): True, but why is a referral not needed? Look again!
+  - dead_right: That's the problem, not the reason. Why is no referral needed?
+  - where_trouble: That's what the aid will help. Why is no referral needed?
+  - shadow: That's how we found it. But why is it safe to fit without a referral?
+  - no_response: That shows how deaf the right ear is. Why is no referral needed?
+  - right_only: One ear worse usually means REFER. What makes Morgan's different?
+  - red_flag_check: Good news, but one ear is still far worse. What explains it?
+  - clear_drum: Healthy on the outside. Why is the inside safe to fit without a doctor?
+  - tymp_a: Middle ears fine. But why no referral for the inner ear?
+  - earmuffs: A smart habit. Not a reason to skip a referral, though.
+
+### Payoff
+- *(hearing aids)*
+- **Hoot:** This is a CROS: a little microphone sits on the right ear.
+- **Hoot:** It sends the right side's sound across to a receiver on the good left ear.
+- **Morgan:** So the chatterbox on my right lands in my left? Brilliant.
+- **Hoot:** It helps at dinners. It can't tell you where the foghorn is, though.
+- **Hoot:** Direction takes two hearing ears. A CROS moves sound across; it can't add a second ear.
+- **Hoot:** Guard that left ear: earmuffs on, and a hearing check every year.
+- **Hoot:** If the left ear ever changes, come straight back. It's doing all the work.
+- *(patient: cheer)*
+- **Morgan:** Aye aye, owl. I'll keep a light on for you.
+
+### The Daily Decibel
+- S: **GHOST CAUGHT AT LIGHTHOUSE; TRAINEE SHINES A LIGHT ON THE SHADOW CURVE** Unmasked right air was the left ear's shadow. Masked: no response. Known cause: fit a CROS.
+- A: **MASKING CHASES OFF THE SHADOW; CROS AID SIGNALS ACROSS THE HEAD** Masking showed the truth: no response on the right. Old and checked: fit.
+- B: **SHADOW SPOTTED THROUGH THE FOG; A FEW STAMPS LOST AT SEA** The shadow showed up; a few stamps drifted.
+- C: **SOME BEEPS ADRIFT, REPORTS OWL; LEFT EAR STILL ON DUTY** A loud ear that copies the good ear's shape is a shadow. Mask it.
+- Do-over: **FOGHORN SOUNDS: TRAINEE ROWS BACK FOR ANOTHER LOOK** When one ear answers far louder than the other ear's bone, mask before you believe it.
+- First stamp REFER (S to C): **TRAINEE SENDS FIFTY-YEAR-OLD NEWS TO THE EAR DOCTOR; DOCTOR SENDS IT BACK** Old, explained and checked by an ear doctor: no referral needed. A CROS helps.
+- First stamp DOCTOR TODAY (S to C): **EMERGENCY DECLARED FOR 1975; OWL CHECKS THE CALENDAR** Nothing sudden: quiet since age seven. Fit a CROS and check the left ear every year.

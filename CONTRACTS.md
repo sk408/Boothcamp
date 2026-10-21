@@ -21,7 +21,7 @@ Engine: Godot 4.7.2, statically typed GDScript, Compatibility (OpenGL) renderer,
 | `story/**` | builder B | title, level director, dialogue, micro-games, Hoot bubble view, pause menu, results paper |
 | `autoload/**`, `main.tscn`, `main.gd`, `tests/**`, `tools/**`, `project.godot`, `export_presets.cfg`, `assets/**`, `CONTRACTS.md` | foundation, then integrator | shared services, harness, contracts |
 | **(Speech)** `core/speech/**`, `ui/speech/**`, `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | Day 3: the SPEECH screen and its logic (§9) |
-| **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-9: the case files and their runner (§11) |
+| **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-12: the case files and their runner (§11) |
 
 **Export presets.** `export_presets.cfg` has two presets, "Windows Desktop" and "Web" (Steve's, 2026-10-19; `.github/workflows/pages.yml` deploys the web build to GitHub Pages on every push to main). A run-time data file that is not a Godot resource (patient and case JSON, word lists) must be in BOTH presets' `include_filter`, or the exported game runs without it.
 
@@ -164,7 +164,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `clock: float` | Game seconds. Pauses with the tree and follows `Engine.time_scale`. |
 | `PHASES` | Phase ids (§3.1). **(v4)** adds `explainer` and `ghost_demo`; **(Speech)** `familiarize`, `speech` (§9.8); **(cases)** `tymp`, `decision` (§11) |
 | **(v4)** `is_movie_seen(id) -> bool`, `mark_movie_seen(id)` | `progress.movies_seen`; `mark_movie_seen` adds the id once and saves. The explainer player calls it when a movie ends after reaching its `seen_at` scene (§3.4) |
-| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`); **(Speech)** `mike` (Day 3, `res://story/level_mike.tscn`, §9.8); **(cases)** `rocco`, `marina`, `dash`, `ginger` (Days 6-9, `res://story/level_case.tscn` with the extra key `case`, §11). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
+| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`); **(Speech)** `mike` (Day 3, `res://story/level_mike.tscn`, §9.8); **(cases)** `rocco`, `marina`, `dash`, `ginger`, `barnaby`, `skye`, `morgan` (Days 6-12, `res://story/level_case.tscn` with the extra key `case`, §11). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
 | **(v3)** `chapters()`, `chapter(id)`, `chapter_for_patient(id)`, `chapter_for_day(day)`, `chapter_scene(id)` | Registry lookups (`{}` / `""` when unknown) |
 | **(v3)** `is_chapter_done(id)`, `is_chapter_unlocked(id)`, `unlocked_chapter_ids()` | **(polish)** Every chapter is open from the start, in any order (Steve's rule): `is_chapter_unlocked()` is always true and `unlocked_chapter_ids()` lists every chapter. Kept so callers need not change |
 | **(polish)** `suggested_chapter_id()`, `static suggested_from(list, done)` | The suggested day (the title's "UP NEXT" badge): the first chapter in day order not done whose `requires` is done, empty or unknown; else the first not done; `""` when every day is done |
@@ -387,7 +387,7 @@ recap "The short version". How to add one: `docs/ADDING_A_CHAPTER.md`, "Hoot's m
 
 | Part | File | What it is |
 |---|---|---|
-| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps and, **(Days 4-5)**, any movie whose `chapter` is not in `Game.CHAPTERS` yet, such as a stub registered before its day), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-11" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps and, **(Days 4-5)**, any movie whose `chapter` is not in `Game.CHAPTERS` yet, such as a stub registered before its day), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-12" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
 | Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list), `stage` (the movie's own sets script, below) and **(cases)** `also_chapters` (more Game.CHAPTERS ids whose pause menu lists it: the case movies belong to `rocco` and also to Days 7 to 11) |
 | Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
 | Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | Fully animated: `SETS` (the built-in set ids: the ten masking sets of `docs/CHAPTER2.md` §16 and `card`), `use_movie(movie)` (the player calls it: loads `MOVIE.stage`), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes, a screenshot repeats and a skipped scene leaves nothing behind. `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. **Fallback:** a `set` nobody knows (neither the stage nor the movie's sets script) draws a card with the scene's title (never an error, never a blank screen) |
@@ -994,6 +994,7 @@ func demo_start() -> void                      # standalone showcase (--scene)
 # v2 story extras (called by name; see world/INTEGRATION_NOTES.md):
 # doris_enter() (coroutine), doris_react(kind), gus_look(target), set_title_mode(on), play_birdsong(),
 # get_head_screen_position(), take_off_glasses(), put_on_glasses(), put_on_hearing_aids(), get_muffle() -> float
+# (D2-8) head gear takes glasses off first; those come back when the patient stands (world/INTEGRATION_NOTES.md)
 # v3 (Chapter 2):
 var patient_id := ""                           # set BEFORE add_child: "bonnie" builds Bonnie (the node is still `gus`)
 func put_on_bone_oscillator(ear := "right") -> void   # headband + vibrator on the mastoid (takes the earphones off)
@@ -1485,7 +1486,7 @@ Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from th
 | What | Where | Owner |
 |---|---|---|
 | Case data, one per case | `story/cases/<case_id>.json` (the source of truth for every line) | cases |
-| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural cases: no bone data, bone = air; conductive cases carry `bc_right` / `bc_left`). A retest profile `<id>_after.tres` (the ear after treatment) is loaded by the runner and never registered as a chapter | cases |
+| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural cases: no bone data, bone = air; conductive cases carry `bc_right` / `bc_left`; a deaf ear (Day 12) puts its air past the dial, up to `ClinicRules.max_db(f) + 30`, so masked tests store no response). A retest profile `<id>_after.tres` (the ear after treatment) is loaded by the runner and never registered as a chapter | cases |
 | Runner (one for every case) | `story/level_case.gd` + `.tscn` | cases |
 | Loader and checks | `story/case_data.gd` (`CaseData`, preload by path) | cases |
 | Rules | `core/cases/case_rules.gd` (`class_name CaseRules`): decisions, red flags (2022 labeling), asymmetry, the sudden-loss definition, tympanogram types and curve | cases |
@@ -1520,6 +1521,14 @@ ear's stamps asked for that frequency and it is on the chart (Ginger's 750 Hz);
 stamp; `retest` `{patient_id, card?, intro?, otoscopy?, tymp?, before?, instructions?, audiometry (air only),
 reveal {ear, label?, title?, lines?}, payoff?}`. When `reveal.ear` is right or left, unmasked bone goes on the better ear only; the runner then masks bone on each ear
 whose air sits over it (`CaseData.masked_bone_ears`, as on Day 2).
+**(Day 12, clinical review C10)** `findings[].when` `shadow` (most of the case ear's masked air stamps are no response
+where its unmasked air answered; `CaseData.shadow_shows`) and `no_response` (every masked air stamp, and every masked
+bone stamp if run; `CaseData.no_response_shows`); `reveal.pattern` `shadow` (the board redraws the unmasked answers
+as a dashed line with the Ghost); `decision.asymmetry_known_cause` (bool: a FIT with one ear worse, for a known,
+doctor-checked, unchanged cause; a test allows an asymmetric FIT only with it). `CaseData.measured_type(res, ear)`
+types an ear with no-response bone dropped (the chart's `hearing_type` reads a deaf ear as mixed); the runner and
+`finding_shows` use it. After masked air, when every masked air stamp on an ear is no response, Hoot says
+`LevelCase.NO_PLATEAU`.
 `CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
 checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
 the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
@@ -1559,7 +1568,8 @@ picker teasers give nothing away; batch 2: the 0.6 mL blocked floor and canal-vo
 survive a wobble and mask bone but not air, no shipped case gains a masked test, script names (reactions, emotes,
 props, speakers), patients match their chapters and validate, flat tymps read their canal volume, every new
 validate rule and broken file is reported, the retest profile, finding conditions, wrong-first headlines,
-`merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw. `tools/run_tests.sh` also
+`merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw; Day 12: the shadow and
+no-response findings, masked bone then masked air to no response with phones and inserts, and the known-cause FIT. `tools/run_tests.sh` also
 fails when `docs/CASE_SCRIPTS.md` is stale.
 
 ---------------------------------------------------------------------------------------------

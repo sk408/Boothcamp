@@ -43,7 +43,8 @@ What she says when asked (case history, two rounds of three choices, 2 / 1 / 0 p
 
 The picture a clinician should form: young adult, one ear, slowly progressive, family history, normal
 eardrums, own voice loud (occlusion-like). That points to a conductive problem behind a normal eardrum
-(otosclerosis). The game never diagnoses: Hoot says "a doctor may suspect otosclerosis".
+(otosclerosis). The game never diagnoses: Hoot says "a doctor may suspect otosclerosis",
+and that it often starts in one ear, then reaches the other.
 
 ## 2. Truth tables (`core/patients/bonnie.tres`)
 
@@ -102,9 +103,9 @@ locked, his stamps marked "hoot", not scored for golf). Every blocking beat emit
 | 2 | `history` | Two rounds of questions (table above). Red-flag card: "One ear only: YES = see a doctor." Medal `history`. | choice | 1:10 |
 | 3 | `otoscopy` | A quick look: canals clear, eardrums normal. | dialogue | 0:15 |
 | 4 | `instructions` | "Press for every beep, even faint ones. Ignore the shhh noise." | choice | 0:30 |
-| 5 | `earphones` | Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | earphones_place | 0:30 |
-| 6 | `audiometry` {right, ac} | Player stamps 1 kHz (coached), Hoot runs the rest. | (AudiOtron) | 1:10 |
-| 6b | `audiometry` {left, ac} | The left-ear montage. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 0:15 |
+| 5 | `earphones` | **(D2-8)** Glasses off first: "Where are Bonnie's glasses?" (on her head; a free win, no medal), then Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | choice, earphones_place | 0:40 |
+| 6 | `audiometry` {left, ac} | Better ear first (clinical review D2-2): the left-ear montage. | (AudiOtron) | 0:15 |
+| 6b | `audiometry` {right, ac} | Player stamps 1 kHz (coached), Hoot runs the rest. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 1:10 |
 | **7** | **`bc_placement` {ear: left}** | **Earphones off. "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway." "So: her LEFT." The placement game on her LEFT profile (§6). The 3D oscillator goes on her left mastoid.** | **bc_placement** (`mastoid_target_left`) | **0:45** |
 | **8** | **`audiometry` {left, bc}** | **Unmasked bone on the LEFT, coached: press B, stamp 1k; Hoot does 2k, 4k, 500 (`>` marks). (polish) Plan `masking_deck: false`: the AIR / BONE route buttons but no MASKING group yet. Optional 250 Hz bonus hole (the tickle, also without the masking group). Then: "Left bone 0, left air 5: side by side." and THE RULE: "unmasked bone tells you about the BETTER cochlea, wherever the buzzer sits."** | (AudiOtron), choice | **1:40** |
 | **9** | **`ghost_demo` {ear: right}** | **"Her right air needs 50. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." "Watch what happens if we try anyway: swap the buzzer to her RIGHT mastoid." A quick second placement ("Swap sides!") on her RIGHT mastoid. ONE unmasked tone at 1 kHz, 5 dB above her measured left bone (every control but TONE locked; TONE wiggles "Hold Space!" if you wait, Hoot presses it after twice that). Her LEFT cochlea answers: the Ghost flies, "Bone 10, air 50? BOO!" (the level she really answered at). Nothing is stored. "Was that her right cochlea, or the LEFT one? Can't tell!" Then the rule with her numbers: "Right air 50, unmasked bone 5: a 45 dB gap. Gap of 10 or more? Mask the bone!"** | **bc_placement** (quick), (AudiOtron `demo_tone`) | **0:50** |
@@ -138,8 +139,8 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | One-sided = flag | "One-sided hearing loss is a red flag by itself. A doctor should see her." |
 | Normal eardrum | "Not a crumb. A healthy-looking eardrum can still hide a stiff middle ear." |
 | Instructions | "She'd press for the noise all day! Beeps only. Try again." |
-| Air vs bone | "Air goes through the ear canal and middle ear. Bone skips both, straight to the cochlea." |
-| Placement | **(polish)** "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up." |
+| Air vs bone | "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea." |
+| Placement | **(polish)** "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up." |
 | ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
 | Tip `cross_hearing_air` **(E4)** | "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." (an air tone; no Day 2 air tone is loud enough) |
@@ -170,7 +171,7 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 | Movie offer (seen before) | choice | "Hoot's masking movie again? Popcorn's on me!" / "Roll the film! (about 90 s)" / "Skip it: I know my masking." |
 | Placement, left | Hoot | **(polish)** "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway." / "So: her LEFT. It sits behind the ear, on the bony mastoid." |
 | Placement caption, quick | card | "Swap sides! Her RIGHT mastoid: the same bony bump, behind the right ear." |
-| Unicorn slip | Hoot | "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her {left / right} ear." |
+| Unicorn slip | Hoot | "Unicorn! The forehead sits steadier but needs more power. Today: the mastoid, behind her {left / right} ear." |
 | Top of head, glasses already found | Hoot | "Top of her head? Glasses gone, so: behind the ear, on the bony mastoid." ("Bonk!") |
 | Left bone intro | AudiOtron tip | "Bone time, left ear! B = bone. Same dance: down 10, up 5. Start at 1k." |
 | After left bone | Hoot | "Left bone %d, left air %d: side by side. Her left ear works fine all the way in." |
@@ -226,8 +227,9 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 **(v4) Two placements.** First her LEFT side (`setup("left")`: the profile faces LEFT so her left ear is the one you
 see, the tray sits bottom-left, target `mastoid_target_left`, Left/Right walk the highlight towards the back of her
 head the other way round). Then, for the Ghost demo, a quick RIGHT one (`setup("right", true)`: caption "Swap sides!
-Her RIGHT mastoid: the same bony bump, behind the right ear."; if her glasses were found the first time, they are
-gone from the card and "top" is a plain slip). One medal for both. The text below describes the right side.
+Her RIGHT mastoid: the same bony bump, behind the right ear."). **(D2-8)** Her glasses were found before the
+earphones, so they are gone from both cards and "top" is a plain slip; a dev start that skips the earphones
+still shows them. One medal for both. The text below describes the right side.
 
 Bonnie in profile on a cream card, facing RIGHT, so the visible ear is her RIGHT (a profile facing left would
 show her left ear; fixed at integration). The grey "bone buzzer" sits in a tray. Drag it onto a spot, or click a
@@ -239,7 +241,7 @@ of her head), Enter/Space places. Beat `bc_placement` (solver = place on the mas
 |---|---|---|---|
 | **Mastoid** (behind the ear, on bone) | correct | buzz rings, "Bone on bone!" | "Perfect: on the mastoid bone, behind the ear, not touching it." |
 | Ear flap (pinna) | slip | a drawn feedback squeal (no loud sound), "SQUEEEE!" | "Off the ear flap! Touching the pinna leaks buzz into the canal. Behind it, on bone." |
-| Forehead | slip | a golden **unicorn horn** sprouts, "UNICORN!" | "A majestic unicorn! Forehead placement exists, but today: the mastoid, behind her right ear." |
+| Forehead | slip | a golden **unicorn horn** sprouts, "UNICORN!" | "Unicorn! The forehead sits steadier but needs more power. Today: the mastoid, behind her right ear." |
 | Nose | slip | the nose flashes, "BOOP!" | "Boop! A nose is cartilage, not bone. Find the bony bump behind her ear." |
 | Top of head | slip | her lost reading glasses, "My glasses!" (the running gag) | "Her lost glasses! Mystery solved. The buzzer needs skin over bone, behind the ear." |
 | Jaw | slip | chattering teeth lines | "She'd hear her teeth chatter! Higher and further back: the mastoid." |
@@ -256,7 +258,7 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 | Bone maximum output | 250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65 dB HL | `BC_MAX_DB` |
 | Felt, not heard | 250 Hz at 25+, 500 Hz at 55+, 1000 Hz at 70+ (E16) | `VIBROTACTILE_DB` |
 | Oscillator position | mastoid, not touching the pinna | mini-game |
-| Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is never joined by lines; masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
+| Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is left unjoined (some clinics use a dashed line); masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
 | Interaural attenuation (rules) | phones 40, inserts 55, bone 0 | `IA_RULE_DB` |
 | Air-bone gap | conductive when AC - BC > 10 | `ABG_CONDUCTIVE_DB`, `is_conductive_gap` |
 | Referral red flag | AC - BC >= 15 at 500, 1000 AND 2000 Hz | `ABG_RED_FLAG_DB`, `abg_red_flag` |
@@ -376,9 +378,10 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 
 ## 15. Polish pass (after the fun, audiology and bug reviews)
 
-- **Pacing.** Right air: Hoot coaches one beep, then runs the rest, the 1 kHz retest included (clinical
-  review E2: the first ear keeps it). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
-  visit off the player tests everything. The bone and masking sheets are always the player's.
+- **Pacing.** Better ear first (clinical review D2-2). Left air: a few-second stamp montage (`montage`, quick visit
+  only), which waives the left's 1 kHz retest, so the right, second, owes none (E2). Right air: Hoot coaches one
+  beep, then runs the rest. With Quick visit off the player tests everything, coached on the left, and the left
+  keeps its retest. The bone and masking sheets are always the player's.
 - **Masked air after masked bone.** Clinics often mask air first; the level says so in one line. With the
   insert earphones (55 dB rule IA) Bonnie's right air cannot reach her left cochlea, so the level skips
   masked air with two Hoot lines, and the AudiOtron finishes an empty goal sheet at once (no soft-lock).
@@ -391,7 +394,8 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
   the first unmasked bone beep gets a small "boo?". The overmasking callout says the noise "could leak into
   the test ear". A one-time tip names the shadow chase, and the plateau tip then says why pros trust it.
 - **Otosclerosis.** After the referral stamp: extra bone grows around the stapes so it cannot vibrate freely;
-  the ENT confirms; surgery or hearing aids, both can work well. The Carhart line says the cochlea is fine.
+  the ENT confirms (often adding tympanometry and reflexes); an operation that swaps the stapes for a
+  tiny piston, or hearing aids, both can work well. The Carhart line says the cochlea is fine.
 - **Board.** The bridge is drawn per frequency: planks under the bone marks, pillars down to the air marks
   labelled "toll N dB", the river only between gaps, the bone car hopping plank to plank.
 

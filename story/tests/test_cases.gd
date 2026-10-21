@@ -19,6 +19,7 @@ const EXPECTED: Dictionary = {
 	"cookie_bite": [&"fit", &"cookie_bite", &"cookie_bite", false, &"sensorineural"],
 	"wax": [&"refer", &"flat", &"normal", true, &"conductive"],
 	"fluid": [&"refer", &"normal", &"flat", true, &"conductive"],
+	"dead_ear": [&"fit", &"flat", &"normal", true, &"sensorineural"],
 }
 ## The conductive cases: case id -> the ear with the gap.
 const CONDUCTIVE: Dictionary = {"wax": "right", "fluid": "left"}
@@ -199,6 +200,8 @@ func test_pick_case_follows_the_chapter() -> void:
 	assert_eq(LevelCase.pick_case_id(), "wax")
 	Game.current_chapter_id = "skye"
 	assert_eq(LevelCase.pick_case_id(), "fluid")
+	Game.current_chapter_id = "morgan"
+	assert_eq(LevelCase.pick_case_id(), "dead_ear")
 
 
 func test_shuffles_are_permutations_and_reproducible() -> void:
@@ -529,6 +532,7 @@ func test_validate_survives_broken_files() -> void:
 		func(c: Dictionary) -> void: c["audiometry"][0]["montage"] = "true",
 		func(c: Dictionary) -> void: c["tymp"]["quiz"]["options"][0][1] = "true",
 		func(c: Dictionary) -> void: c["red_flags"]["extra_clues"] = null,
+		func(c: Dictionary) -> void: c["decision"]["asymmetry_known_cause"] = "yes",
 	]
 	for i in breaks.size():
 		var got := _wax_problems(breaks[i])
@@ -704,12 +708,12 @@ func test_hoot_lines_cover_the_retest_and_runner() -> void:
 	for w: String in ["retest.intro", "retest.otoscopy.lines", "retest.tymp.after", "retest.before.choose", "retest.payoff"]:
 		assert_true(wheres.has(w), "Hoot's %s lines are counted" % w)
 	for line: String in [LevelCase.NO_MASKED_AIR, LevelCase.MISMATCH, LevelCase.RETEST_NEUTRAL, LevelCase.BRIEFING,
-			LevelCase.MASKING_HINT]:
+			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU]:
 		assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
 
 
 func test_new_patients_get_portraits() -> void:
-	for who: String in ["Barnaby", "Skye"]:
+	for who: String in ["Barnaby", "Skye", "Morgan"]:
 		assert_true(CasePortraits.has(who), who)
 
 
@@ -752,7 +756,7 @@ func test_case_movies_registered_everywhere() -> void:
 		assert_true(bad.is_empty(), "%s: %s" % [id, ", ".join(bad)])
 		assert_false(Movies.is_short(id), "%s is a full movie" % id)
 		assert_has(Movies.replay_ids(), id, "%s on the title's list" % id)
-		assert_eq(Movies.day_label(id), "Days 6-11", id)
+		assert_eq(Movies.day_label(id), "Days 6-12", id)
 		var m := Movies.movie(id)
 		assert_true(float((m["scenes"][0] as Dictionary).get("duration", 0.0)) >= 7.0, "%s: the lead-in card holds" % id)
 		for sc: Dictionary in m["scenes"]:
@@ -863,3 +867,100 @@ func test_masking_recap_on_case_days() -> void:
 	lc.free()
 	if not had:
 		(Game.progress["movies_seen"] as Array).erase(LevelCase.MASKING_MOVIE)
+
+
+## (Clinical review C10) Morgan's chart as a good run leaves it: unmasked right air answered about
+## one real IA above the left ear's bone (the shadow), then masked bone and masked air on the right
+## found no response at their limits; unmasked bone went on the better left ear.
+func _morgan_run(tr: StringName = &"phones") -> Dictionary:
+	var p := _patient("dead_ear")
+	var right := {"freqs": {}, "bc": {}, "bc_masked": {}, "ac_masked": {}}
+	var left := {"freqs": {}, "bc": {}, "bc_masked": {}, "ac_masked": {}}
+	for f: int in STAMPED:
+		var bone := p.get_bc_threshold("left", f)
+		(left["freqs"] as Dictionary)[f] = {"stored_db": p.get_threshold("left", f)}
+		(right["freqs"] as Dictionary)[f] = {"stored_db": mini(bone + p.get_ia(tr), ClinicRules.max_db(f))}
+		(right["ac_masked"] as Dictionary)[f] = {"stored_db": ClinicRules.max_db(f), "no_response": true}
+	for f: int in ClinicRules.BC_REQUIRED:
+		(left["bc"] as Dictionary)[f] = {"stored_db": p.get_bc_threshold("left", f)}
+		(right["bc_masked"] as Dictionary)[f] = {"stored_db": ClinicRules.max_db_for(f, &"bone"), "no_response": true}
+	for e: Dictionary in [right, left]:
+		var air := {}
+		for f: int in e["freqs"]:
+			air[f] = int((e["freqs"] as Dictionary)[f]["stored_db"])
+		for f: int in e["ac_masked"]:
+			air[f] = int((e["ac_masked"] as Dictionary)[f]["stored_db"])
+		var bone := {}
+		for sheet: String in ["bc", "bc_masked"]:
+			for f: int in e[sheet]:
+				bone[f] = int((e[sheet] as Dictionary)[f]["stored_db"])
+		e["hearing_type"] = ClinicRules.hearing_type(air, bone)
+	return {"ears": {"right": right, "left": left}, "air_transducer": tr}
+
+
+func test_dead_ear_shadow_and_no_response() -> void:
+	var p := _patient("dead_ear")
+	assert_true(CaseData.dead_truth(p, "right"), "Morgan's right ear: past every limit")
+	assert_false(CaseData.dead_truth(p, "left"))
+	for tr: StringName in [&"phones", &"inserts"]:
+		var res := _morgan_run(tr)
+		# the raw stamps fake a gap between the air and bone limits; no-response bone can't show one
+		assert_eq(StringName((res["ears"]["right"] as Dictionary)["hearing_type"]), &"mixed", "raw stamps (%s)" % tr)
+		assert_eq(CaseData.measured_type(res, "right"), &"sensorineural", "no-response bone leaves no gap (%s)" % tr)
+		assert_eq(CaseData.measured_type(res, "left"), &"normal")
+		assert_eq(CaseData.measured_type(res, "right"), CaseData.truth_type(p, "right"), "the after-test line agrees")
+		assert_false(LevelCase.finding_shows("abg_flag", res, p, "right", true), "no-response bone shows no gap flag (%s)" % tr)
+		for when: String in ["shadow", "no_response"]:
+			assert_true(LevelCase.finding_shows(when, res, p, "right", true), "%s on the chart (%s)" % [when, tr])
+			assert_true(LevelCase.finding_shows(when, {}, p, "right", true), "%s on the truth: no MISMATCH" % when)
+		# a masked air plateau (a stamp that answered) is no shadow there, and not "no response"
+		var wob := _morgan_run(tr)
+		for f: int in [250, 500, 1000, 1500, 2000]:
+			((wob["ears"]["right"] as Dictionary)["ac_masked"] as Dictionary)[f] = {"stored_db": 90}
+		assert_false(CaseData.shadow_shows(wob, p, "right"), "most masked air answered: no shadow")
+		assert_false(CaseData.no_response_shows(wob, p, "right"))
+	# every other case: no deaf ear, so neither finding shows on the truth
+	for id: String in CaseData.chapter_case_ids():
+		if id == "dead_ear":
+			continue
+		for ear: String in ["right", "left"]:
+			assert_false(CaseData.shadow_shows({}, _patient(id), ear), "%s %s: no shadow" % [id, ear])
+			assert_false(CaseData.no_response_shows({}, _patient(id), ear), "%s %s: hears" % [id, ear])
+	# measured_type leaves every chart without no-response bone as it was
+	var wax := _perfect(_patient("wax"), PackedStringArray(["left"]), PackedStringArray(["right"]))
+	for ear: String in ["right", "left"]:
+		var e: Dictionary = wax["ears"][ear]
+		e["hearing_type"] = &"conductive"
+		assert_eq(CaseData.measured_type(wax, ear), &"conductive", "no no-response bone: the chart's own type")
+
+
+func test_dead_ear_plan_masks_both_ways() -> void:
+	# the plan tests unmasked bone on the better left ear, then the runner adds masked bone on the
+	# right (500-4k) and masked air on the right at every routine frequency (E1), with phones or inserts
+	var c := _case("dead_ear")
+	assert_eq(CaseData.plan_ears(c["audiometry"], "bc"), PackedStringArray(["left"]))
+	for tr: StringName in [&"phones", &"inserts"]:
+		var res := _morgan_run(tr)
+		for ear: String in ["right", "left"]:
+			((res["ears"][ear] as Dictionary)["bc_masked"] as Dictionary).clear()
+			((res["ears"][ear] as Dictionary)["ac_masked"] as Dictionary).clear()
+		assert_eq(ClinicRules.masked_freqs_needed(res, "right", &"bc_masked").size(), 4, "masked bone on the right (%s)" % tr)
+		assert_eq(ClinicRules.masked_freqs_needed(res, "right", &"ac_masked", tr).size(), STAMPED.size(), "masked air on the right (%s)" % tr)
+		assert_eq(ClinicRules.masked_freqs_needed(res, "left", &"ac_masked", tr), [] as Array[int], "the left needs none (%s)" % tr)
+
+
+## Steve's rule: refer for red flags, or for an asymmetry with no known cause. A FIT with one ear
+## worse must say the cause is known (Morgan: since childhood, checked by an ear doctor, unchanged).
+func test_fit_with_an_asymmetry_needs_a_known_cause() -> void:
+	for id: String in CaseData.chapter_case_ids():
+		var dec: Dictionary = _case(id)["decision"]
+		var asym := CaseRules.is_asymmetric(_truth(id, "right"), _truth(id, "left"))
+		var known := bool(dec.get("asymmetry_known_cause", false))
+		if String(dec["answer"]) == "fit" and asym:
+			assert_true(known, "%s: a FIT with one ear worse needs a known cause" % id)
+		if known:
+			assert_true(asym and String(dec["answer"]) == "fit", "%s: asymmetry_known_cause only on a FIT with an asymmetry" % id)
+	var c := _case("dead_ear")
+	assert_has(c["always_clues"].map(func(x: Dictionary) -> String: return String(x["tag"])), "known_cause",
+		"the known cause is always on the board")
+	assert_has(c["clue_pick"]["answers"], "known_cause")

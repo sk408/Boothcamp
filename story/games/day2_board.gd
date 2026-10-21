@@ -3,7 +3,7 @@ extends Control
 ## air-bone gap lights up as a toll bridge: the gap between bone (top) and air (bottom) is a river,
 ## each gap frequency gets a plank hung just under its bone mark and a stone pillar down to the air
 ## mark with the toll in dB (bone drives straight past: a little bone car hops plank to plank; the
-## planks are separate, because bone marks are never joined), and a toll booth with a bobbing
+## planks are separate, because bone marks often stay unjoined), and a toll booth with a bobbing
 ## barrier sits at the air end (air pays at the middle ear). The left ear fades while the bridge
 ## is up, so the eye compares right air with right bone. Later: the Carhart notch callout, the type-of-loss badge, and the big
 ## "REFERRED TO ENT" stamp when the player presses it.
@@ -305,7 +305,7 @@ func _draw_legend(c: Control) -> void:
 	var total := 0.0
 	for it: Array in items:
 		total += 44.0 + f.get_string_size(String(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-	var note := "Bone marks are never joined."
+	var note := "Bone marks often stay unjoined."
 	total += f.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 6.0
 	var x := maxf(0.0, (c.size.x - total) * 0.5)
 	for it: Array in items:
