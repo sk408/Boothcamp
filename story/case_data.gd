@@ -174,6 +174,9 @@ static func _section_scripts(c: Dictionary, prefix: String, out: Array) -> void:
 		for p: Variant in plan:
 			if p is Dictionary and (p as Dictionary).has("before"):
 				out.append([prefix + "audiometry.before", (p as Dictionary)["before"]])
+			if p is Dictionary and (p as Dictionary).get("if_tested", null) is Dictionary:
+				for f: Variant in (p as Dictionary)["if_tested"]:
+					out.append(["%saudiometry.if_tested.%s" % [prefix, f], (p as Dictionary)["if_tested"][f]])
 
 
 ## Every line of Hoot's in a case file (for the word-count test), as ["where", "text"].
@@ -353,9 +356,11 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("audiometry must test air in both ears")
 		var case_ear := String(rv.get("ear", "right"))
 		if case_ear == "right" or case_ear == "left":
-			var bc_ears := plan_ears(c["audiometry"], "bc")
-			if not bc_ears.has(case_ear) or bc_ears.size() > 1:
-				out.append("bone is tested on the reveal ear (%s) only, so masking runs on that ear" % case_ear)
+			# Steve: unmasked bone goes on the better ear; the runner then masks bone on the reveal ear
+			# wherever its air sits over that bone (masked_bone_ears), as on Day 2
+			var better := "left" if case_ear == "right" else "right"
+			if plan_ears(c["audiometry"], "bc") != PackedStringArray([better]):
+				out.append("unmasked bone goes on the better ear (%s) only; masked bone on the reveal ear (%s) follows" % [better, case_ear])
 	var pattern := String(rv["pattern"])
 	if not PATTERNS.has(pattern):
 		out.append("reveal pattern must be one of " + ", ".join(PATTERNS))
@@ -476,8 +481,8 @@ static func _check_otoscopy(oto: Dictionary, where: String) -> PackedStringArray
 
 
 ## Both ears' tympanograms: a known type whose numbers agree, and a canal volume that reads right.
-## A flat (B) tymp has no peak (under TYMP_FLAT_ML) and a volume outside the 0.6-0.9 grey zone; every
-## other type sits inside the adult band.
+## A flat (B) tymp has no peak (under TYMP_FLAT_ML), read with its volume (CaseRules.tymp_b_reading);
+## every other type sits inside the adult band.
 static func _check_tymp(ty: Dictionary, where: String) -> PackedStringArray:
 	var out := PackedStringArray()
 	if not CaseRules.TIP_SIZES.has(StringName(String(ty.get("tip", "")))):
@@ -502,8 +507,6 @@ static func _check_tymp(ty: Dictionary, where: String) -> PackedStringArray:
 		if kind == &"B":
 			if float(t["peak_ml"]) >= CaseRules.TYMP_FLAT_ML:
 				out.append("%s %s: a flat tymp has no peak (peak_ml under %s)" % [where, ear, CaseRules.TYMP_FLAT_ML])
-			if ecv >= CaseRules.TYMP_BLOCKED_ECV and ecv < CaseRules.TYMP_ADULT_ECV.x:
-				out.append("%s %s: a flat tymp's canal volume %s sits in the 0.6-0.9 grey zone" % [where, ear, ecv])
 		else:
 			if CaseRules.tymp_type_of(t) != kind:
 				out.append("%s %s: numbers say %s, not %s" % [where, ear, CaseRules.tymp_type_of(t), kind])
@@ -512,7 +515,9 @@ static func _check_tymp(ty: Dictionary, where: String) -> PackedStringArray:
 	return out
 
 
-## A test plan: steps {ear, test, hoot_turn_after?, intro?, before?, montage?, skip_hoot_retest?}.
+## A test plan: steps {ear, test, hoot_turn_after?, intro?, before?, montage?, skip_hoot_retest?,
+## if_tested? (air steps: {"750": script}, said once the stamps asked for that half-octave and it
+## is on the ear's chart)}.
 ## Masked tests are never listed: the rules add them. air_only: the retest's plan (air tests only).
 static func _check_plan(plan: Array, where: String, air_only: bool) -> PackedStringArray:
 	var out := PackedStringArray()
@@ -538,6 +543,14 @@ static func _check_plan(plan: Array, where: String, air_only: bool) -> PackedStr
 				out.append("%s: %s must be true or false" % [where, k])
 		if pd.has("intro") and not pd["intro"] is String:
 			out.append(where + ": intro must be text")
+		if pd.has("if_tested"):
+			if not pd["if_tested"] is Dictionary or String(pd.get("test", "")) != "ac" or air_only:
+				out.append(where + ": if_tested is for the first visit's air steps: {\"750\": script}")
+			else:
+				for f: Variant in pd["if_tested"]:
+					# (E1) 1.5k, 3k and 6k are routine, so only 750 is ever added by the 20 dB rule
+					if not ClinicRules.INTEROCTAVES.has(int(String(f))) or ClinicRules.is_routine(int(String(f))):
+						out.append("%s: if_tested %s is not a half-octave the 20 dB rule adds (750)" % [where, f])
 	return out
 
 
@@ -550,6 +563,30 @@ static func plan_ears(plan: Array, test: String) -> PackedStringArray:
 			if not out.has(ear):
 				out.append(ear)
 	return out
+
+
+## The ears the runner checks for masked bone after a case's plan, in order: the plan's bone ears, then
+## every other air-tested ear. Unmasked bone on the better ear alone shows the poorer ear's gap
+## (ClinicRules.unmasked_bone), so a one-sided case gets its masked bone on the case ear. Masked air
+## then follows on each air-tested ear (plan_ears(plan, "ac")). Used by level_case.gd and tools/monkey.gd.
+static func masked_bone_ears(plan: Array) -> PackedStringArray:
+	var out := plan_ears(plan, "bc")
+	for ear: String in plan_ears(plan, "ac"):
+		if not out.has(ear):
+			out.append(ear)
+	return out
+
+
+## A case's first-visit look found a canal full of wax (the otoscopy view "wax"): air goes through
+## headphones, since inserts go deep and could push the wax further.
+static func canal_blocked(c: Dictionary) -> bool:
+	return c.get("otoscopy", null) is Dictionary and String((c["otoscopy"] as Dictionary).get("view", "clear")) == "wax"
+
+
+## The air transducer for a case's tests: the inserts once owned, else headphones; always headphones
+## while the canal is blocked. Used by level_case.gd, tools/autoplay_bot.gd and tools/monkey.gd.
+static func air_transducer(blocked: bool) -> StringName:
+	return &"inserts" if Game.has_upgrade("insert_earphones") and not blocked else &"phones"
 
 
 ## paper.wrong_first: {decision: {headline, subhead?}} for each wrong first stamp (never the answer).

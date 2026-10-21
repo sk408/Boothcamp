@@ -6,7 +6,7 @@ extends Node
 ##  - Stimuli: pure (steady), pulsed (225 ms on / 225 ms off), warble (5 Hz FM, +-5 %).
 ##  - 25 ms raised-cosine on/off ramps (no clicks); level changes glide over 15 ms.
 ##  - Level ALWAYS goes through AudioSafety.hl_to_peak() and every sample through
-##    AudioSafety.clamp_sample(): 0 dB HL ~ -75 dBFS RMS, never above -12 dBFS peak.
+##    AudioSafety.clamp_sample(): 0 dB HL ~ -71 dBFS RMS, never above -12 dBFS peak.
 ## render(frames) is pure DSP (no audio server), so tests can measure exactly what would play.
 ## Visual indicators never depend on this node: the game is fully playable without sound.
 ## (v3) Narrow-band masking noise for the OTHER ear (start_masker()): white noise through a

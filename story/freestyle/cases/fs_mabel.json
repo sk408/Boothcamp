@@ -30,7 +30,7 @@
 		"hardest": {"say": [
 			"Restaurants. All that clatter, and every word turns to porridge.",
 			"And my grandchildren. Their little voices just vanish. I turn the telly up; my daughter turns it down."
-		], "note": "Restaurants, grandkids' voices, loud TV"}
+		], "note": "Trouble: restaurants, grandkids, the telly"}
 	},
 	"key_questions": ["red_flags", "onset", "which_ear", "hardest"],
 	"otoscopy": {
@@ -56,14 +56,15 @@
 		"options": [
 			["A slow, matching loss in both ears, and no red flags.", true, "Exactly! Gradual, even and safe to fit. That's the classic first fitting."],
 			["She's 74: everyone her age needs hearing aids.", false, "Age decides nothing. Plenty of 74-year-olds hear fine. Her chart and her history decide."],
-			["Bone matched air, so any inner-ear loss is safe to fit.", false, "No gap clears one red flag. But a sudden or one-sided inner-ear loss still needs a doctor."],
+			["Bone matched air, so any inner-ear loss is safe to fit.", false, "No gap clears one red flag. Sudden, or one ear worse for no known reason? Still a doctor."],
 			["Hearing aids will switch off her ringing.", false, "They often make ringing less noticeable, but no promises. She's fitted for her hearing."]
 		]
 	},
 	"debrief": [
 		["Hoot", "A textbook first fitting: slow, matching, sloping down to the high pitches. No red flags, so fit."],
 		["Hoot", "Vowels are low and loud. Consonants like s, f and th are high and soft. She misses those."],
-		["Hoot", "Family tips: face her, get her attention first, pick a quiet table, and turn on TV subtitles."]
+		["Hoot", "Family tips: face her, get her attention first, pick a quiet table, and turn on TV subtitles."],
+		["Hoot", "Restaurants, grandchildren, the telly: those are Mabel's goals. We check each one at her follow-up."]
 	],
 	"goodbye": [
 		{"do": "hearing_aids"},

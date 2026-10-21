@@ -10,6 +10,9 @@ const CaseData := preload("res://story/case_data.gd")
 const FsTray := preload("res://story/freestyle/fs_tray.gd")
 const FsClipboard := preload("res://story/freestyle/fs_clipboard.gd")
 const LevelFreestyle := preload("res://story/freestyle/level_freestyle.gd")
+const Movies := preload("res://story/explainers/movies.gd")
+const PAUSE_MENU := "res://story/pause_menu.tscn"
+const AUDIOMETER := "res://ui/audiometer/audiometer_screen.tscn"
 
 ## case id -> [the call, right ear type, left ear type, asymmetric?, needs bone?, needs tymp?]
 const EXPECTED: Dictionary = {
@@ -56,6 +59,24 @@ func test_expected_cases_exist() -> void:
 		assert_true(_patient(id) != null, "patient for " + id)
 	for id: String in FsData.CASE_IDS:
 		assert_true(EXPECTED.has(id), "%s has an EXPECTED row (its call and truth are pinned)" % id)
+
+
+## Steve (2026-10-19): every workup asks where the patient has trouble, and the answer names places in
+## their daily life. A FIT turns those places into goals. The keys always leave the player a free pick.
+func test_every_walk_in_asks_where_they_have_trouble() -> void:
+	for id: String in FsData.CASE_IDS:
+		var c := _case(id)
+		var keys: Array = c["key_questions"]
+		assert_has(keys, FsRules.TROUBLE_QUESTION, id + ": the trouble question is a key question")
+		assert_true(keys.size() < FsRules.CHAT_BUDGET, id + ": the keys leave a free pick")
+		assert_true(FsData.answer_note(c, FsRules.TROUBLE_QUESTION).begins_with("Trouble: "), id + ": the note lists the trouble spots")
+		assert_true(FsData.answer_lines(c, FsRules.TROUBLE_QUESTION).size() >= 2, id + ": more than one place")
+		if String(c["decision"]) != "fit":
+			continue
+		var goals := false
+		for l: Array in FsData.hoot_lines(c):
+			goals = goals or (String(l[0]) == "debrief" and String(l[1]).contains("goals"))
+		assert_true(goals, id + ": the debrief turns the trouble spots into goals")
 
 
 ## Every DOCTOR TODAY walk-in meets the game's sudden-loss definition (CaseRules, like Dash).
@@ -337,8 +358,8 @@ func test_a_wandering_stamp_still_counts() -> void:
 	lv.free()
 
 
-## "Look before you insert" counts what went in an ear before the otoscope, not the tray's order.
-func test_look_first_counts_probes_only() -> void:
+## "Look first" counts any test begun before the otoscope (bone included, FS-08), not the tray's order.
+func test_look_first_counts_any_test() -> void:
 	var lv := _visit("fs_penny")
 	var p := _patient("fs_penny")
 	lv.set("results", {"ears": {"right": _ear(FsRules.truth_air(p, "right"), {}), "left": _ear(FsRules.truth_air(p, "left"), {})}})
@@ -350,9 +371,112 @@ func test_look_first_counts_probes_only() -> void:
 				return String(r["state"])
 		return ""
 	assert_eq(oto.call(), "ok")
-	lv.set("probe_before_look", true)
-	assert_eq(oto.call(), "slip", "a probe or earphone before the look is the slip")
+	lv.set("tested_before_look", true)
+	assert_eq(oto.call(), "slip", "a probe, earphone or bone oscillator before the look is the slip")
+	assert_has((lv.call("workup_report") as Dictionary)["lines"], "Look before any test, bone too: what you see explains the chart.")
 	lv.free()
+
+
+## (FS-05) Every masked frequency on headphones leaves at least 20 dB between the starting noise and
+## the overmasking line, so a 15 dB plateau fits without the warning. Conservative: the occlusion
+## allowance whenever the masked ear's own gap allows it, and for masked air's line the better cochlea
+## at the nearest stamped bone frequency (the AudiOtron's stand-in, AudiometrySession._nearest_freq).
+func test_masking_windows_fit_a_plateau() -> void:
+	for id: String in FsData.CASE_IDS:
+		var p := _patient(id)
+		for ear: String in ClinicRules.EARS:
+			var other := "left" if ear == "right" else "right"
+			for f: int in FsRules.truth_masked_bone(p, ear):
+				var start := ClinicRules.initial_masking(p.get_threshold(other, f), f, &"bc_masked",
+					p.get_threshold(other, f) - p.get_bc_threshold(other, f), &"phones")
+				var limit := ClinicRules.overmask_limit(p.get_bc_threshold(ear, f), &"bc_masked", 0, &"phones")
+				assert_true(limit - start >= 20, "%s %s masked bone %d Hz: noise starts at %d, overmasking at %d" % [id, ear, f, start, limit])
+			for f: int in FsRules.truth_masked_air(p, ear, &"phones"):
+				var bf := 0
+				for b: int in ClinicRules.BC_REQUIRED:
+					if bf == 0 or absf(log(float(b) / f)) < absf(log(float(bf) / f)) - 0.0001:
+						bf = b
+				var start2 := ClinicRules.initial_masking(p.get_threshold(other, f), f, &"ac_masked", 0, &"phones")
+				var limit2 := ClinicRules.overmask_limit(p.get_threshold(ear, f), &"ac_masked",
+					p.get_threshold(ear, f) - FsRules.better_cochlea(p, bf), &"phones")
+				assert_true(limit2 - start2 >= 20, "%s %s masked air %d Hz: noise starts at %d, overmasking at %d" % [id, ear, f, start2, limit2])
+
+
+## (FS-14) No walk-in's true bone reaches the felt-vibration line at 500 Hz (about 55 dB HL), as on the days.
+func test_bone_stays_under_the_felt_line() -> void:
+	for id: String in FsData.CASE_IDS:
+		var p := _patient(id)
+		for ear: String in ClinicRules.EARS:
+			assert_true(p.get_bc_threshold(ear, 500) < 55, "%s %s bone at 500 Hz is %d" % [id, ear, p.get_bc_threshold(ear, 500)])
+
+
+## (FS-03, FS-13) After the case's debrief: the Carhart line only when the truth has the notch and the
+## chart shows it (Hector), and the word-test line on every FIT.
+func test_debrief_extras() -> void:
+	var lv := _visit("fs_hector")
+	assert_true(ClinicRules.has_carhart_notch(FsRules.truth_bone(_patient("fs_hector"), "left")), "Hector's stiff ear has the notch")
+	assert_eq(lv.call("debrief_extras"), [] as Array[String], "no notch on the chart, no line")
+	lv.set("results", {"ears": {"left": {"carhart_notch": true}, "right": {"carhart_notch": true}}})
+	assert_eq(lv.call("debrief_extras"), [LevelFreestyle.CARHART_LINE % "left"], "the left ear only: the right's truth has no notch")
+	lv.free()
+	for id: String in FsData.CASE_IDS:
+		var v := _visit(id)
+		var fit := StringName(String(_case(id)["decision"])) == &"fit"
+		assert_eq((v.call("debrief_extras") as Array).has(LevelFreestyle.WORDS_LINE), fit, "%s: the word-test line on a FIT only" % id)
+		v.free()
+
+
+## (E19) After a day with its own movie, freestyle's pause menu still offers the masking movie that
+## Hoot's MOVIE_HINT points to: the waiting room leaves the days behind (FsData.NOT_A_DAY).
+func test_a_visit_pauses_to_the_masking_movie() -> void:
+	var m := Movies.movie("masking")
+	m["id"] = "fake_day_movie"
+	m["chapter"] = "rocco"
+	m.erase("seen_at")
+	Movies.extra["fake_day_movie"] = m
+	Game.current_chapter_id = "rocco"   # the day played last, with a movie of its own
+	# (cases) a level that can mask offers every replay movie, even beside a day's own movies
+	assert_true(Movies.for_level(Game.current_chapter_id, true).has("masking"), "the masking movie stays beside a day's own")
+	var room: Control = (load("res://story/freestyle/waiting_room.tscn") as PackedScene).instantiate()
+	add_node(room)
+	await wait_frames(1)
+	assert_eq(Game.current_chapter_id, FsData.NOT_A_DAY, "the waiting room leaves the days behind")
+	var visit := Node.new()   # stands in for the runner, which joins the same group
+	visit.add_to_group(Movies.MASKING_LEVEL_GROUP)
+	add_node(visit)
+	var menu: CanvasLayer = (load(PAUSE_MENU) as PackedScene).instantiate()
+	add_node(menu)
+	await wait_frames(1)
+	menu.call("open")
+	await wait_frames(1)
+	var here: Array = menu.call("movie_ids_here")
+	assert_true(here.has("masking"), "the pause menu offers the masking movie (%s)" % [here])
+	assert_false(here.has("masking_recap"), "never the recap")
+	assert_true(LevelFreestyle.MOVIE_HINT.contains("pause menu"), "Hoot's hint names the pause menu")
+	menu.call("close")
+	Movies.extra.clear()
+
+
+## (FS-07, E2) Bone before air keeps the visit's 1 kHz retest: the screen waives the retest per ear, not
+## per test, so the bone plan must not ask Hoot to skip it. With one screen (one session) per visit,
+## the first air ear then owes the retest and the second does not (E2).
+func test_bone_first_keeps_the_air_retest() -> void:
+	assert_false(bool(LevelFreestyle.bone_plan().get("skip_hoot_retest", false)), "the bone plan waives nothing")
+	assert_false(bool(LevelFreestyle.air_plan().get("skip_hoot_retest", false)), "the air plan waives nothing")
+	var screen: CanvasLayer = (load(AUDIOMETER) as PackedScene).instantiate()
+	add_node(screen)
+	Game.begin_visit("fs_mabel")
+	var plan := LevelFreestyle.bone_plan()
+	plan["air_transducer"] = &"phones"
+	screen.call("start_test", _patient("fs_mabel"), "right", false, plan)
+	await wait_frames(3)
+	var s: AudiometrySession = screen.get("session")
+	assert_true(s.retest_waived.is_empty(), "Hoot's bone montage waives no ear's air retest (%s)" % [s.retest_waived])
+	assert_true(s.retest_required("right"), "right air first, after right bone: it owes the retest")
+	s.air_ear_order = ["right"] as Array[String]
+	assert_false(s.retest_required("left"), "the second air ear does not")
+	Engine.time_scale = 1.0
+	Hoot.clear()
 
 
 ## A double-click on a tray card cannot also answer the next row (mouse presses wait out the arming).
@@ -375,7 +499,7 @@ func test_tray_ignores_a_double_click() -> void:
 	assert_eq(got, [1], "a press once armed answers")
 
 
-## The title's menu card (six buttons for a returning player, with stats) ends above the safety footer.
+## The title's menu card (seven buttons for a returning player, with stats) ends above the safety footer.
 func test_title_menu_clears_the_footer() -> void:
 	Game.reset_save()
 	Game.progress["plays"] = 3
@@ -388,7 +512,7 @@ func test_title_menu_clears_the_footer() -> void:
 	title.call("_on_notice_ok")
 	await wait_seconds(0.6)
 	var buttons: Array = title.get("_menu_buttons")
-	assert_eq(buttons.size(), 6, "Play, Days, Freestyle, New player, Options, Quit")
+	assert_eq(buttons.size(), 7, "Play, Days, Freestyle, Arcade, New player, Options, Quit")
 	var card := title.get("_menu_card") as Control
 	var foot := title.get_viewport_rect().size.y - float(title.get("FOOTER_H"))
 	assert_true(card.get_global_rect().end.y <= foot, "the card ends at %d, the footer starts at %d" % [int(card.get_global_rect().end.y), int(foot)])
@@ -431,7 +555,9 @@ func test_an_air_only_visit_misses_the_rest() -> void:
 ## Every line the runner gives Hoot keeps the house limit, filled with its longest words.
 func test_runner_hoot_lines_fit_the_limit() -> void:
 	var lines: Array[String] = [LevelFreestyle.BRIEFING, LevelFreestyle.TEXTBOOK_LINE,
-		LevelFreestyle.WANDER_LINE % ["right", "a mixed loss"], LevelFreestyle.GAP_LINE % ["right", "a mixed loss"]]
+		LevelFreestyle.WANDER_LINE % ["right", "a mixed loss"], LevelFreestyle.GAP_LINE % ["right", "a mixed loss"],
+		LevelFreestyle.ROUTINE_LINE, LevelFreestyle.MOVIE_HINT, LevelFreestyle.CARHART_LINE % "right",
+		LevelFreestyle.WORDS_LINE]
 	for k: StringName in CaseRules.TYMP_TYPES:
 		lines.append(LevelFreestyle.TYMP_HINT % [k, CaseRules.TYMP_SHAPES[k]])
 	for id: String in FsData.CASE_IDS:

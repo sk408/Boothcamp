@@ -5,6 +5,7 @@ extends Control
 ## save, then the suggested day). Days -> the day picker (phase / beat &"chapter_select"): a
 ## scrolling grid with one card per chapter, any number of them. Every day is open (polish: no
 ## locks, any order); the suggested day wears an "UP NEXT" badge. Options opens the pause menu.
+## Freestyle -> the walk-in clinic; Arcade -> the arcade hall (docs/ARCADE.md).
 ## Quit quits. Keyboard: Up/Down + Enter/Space (Days: arrows move in the grid, Esc = Back).
 ## Mouse: click, wheel scrolls the grid. The notice shows once per session; the footer
 ## "This is a game, not a hearing test." is always on screen.
@@ -15,6 +16,8 @@ const LEVEL_SCENE := "res://story/level_gus.tscn"
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const Movies := preload("res://story/explainers/movies.gd")
 const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
+## (arcade, docs/ARCADE.md) The arcade hall: a cabinet per game (Chart Chute, Ears, Please!).
+const ARCADE_SCENE := "res://story/arcade/arcade_hall.tscn"
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -403,6 +406,16 @@ func _on_freestyle() -> void:
 	Events.goto_scene.emit(FREESTYLE_SCENE)
 
 
+## (arcade, docs/ARCADE.md) The arcade hall, where the player picks a cabinet.
+func _on_arcade() -> void:
+	if _state != &"menu" or _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"click")
+	Events.goto_scene.emit(ARCADE_SCENE)
+
+
 func _on_options() -> void:
 	var pm := get_tree().get_first_node_in_group("pause_menu")
 	if pm:
@@ -515,7 +528,7 @@ func _build() -> void:
 	var play_txt := "Play"
 	if _has_progress():
 		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
-	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Freestyle", _on_freestyle]]
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Freestyle", _on_freestyle], ["Arcade", _on_arcade]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
 	specs.append(["Options", _on_options])
@@ -524,11 +537,15 @@ func _build() -> void:
 	# clear the safety footer (Up/Down still walk them in order)
 	var pair := HBoxContainer.new()
 	pair.add_theme_constant_override("separation", 6)
+	# (arcade) Freestyle and Arcade share a row the same way
+	var modes := HBoxContainer.new()
+	modes.add_theme_constant_override("separation", 6)
 	for spec: Array in specs:
 		var paired := String(spec[0]) in ["Options", "Quit"]
-		var b := UiKit.button(spec[0], &"", Vector2(167 if paired else 340, 48))
+		var mode_pair := String(spec[0]) in ["Freestyle", "Arcade"]
+		var b := UiKit.button(spec[0], &"", Vector2(167 if paired or mode_pair else 340, 48))
 		b.set_meta("label", spec[0])
-		b.add_theme_font_size_override("font_size", 22 if paired else 24)
+		b.add_theme_font_size_override("font_size", 22 if paired or mode_pair else 24)
 		b.pressed.connect(spec[1])
 		var idx := _buttons.size()
 		b.mouse_entered.connect(func() -> void:
@@ -537,6 +554,11 @@ func _build() -> void:
 		if paired:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			pair.add_child(b)
+		elif mode_pair:
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if modes.get_parent() == null:
+				v.add_child(modes)
+			modes.add_child(b)
 		else:
 			v.add_child(b)
 		_buttons.append(b)

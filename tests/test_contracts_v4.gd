@@ -308,6 +308,19 @@ func test_pause_menu_movie_button() -> void:
 	await wait_frames(1)
 	assert_true(menu.call("movie_button") == null, "Day 1's pause menu does not change")
 	menu.call("close")
+	# (E19) a level that can mask (a case, Freestyle) offers the masking movie too
+	var lvl := Node.new()
+	lvl.add_to_group(Movies.MASKING_LEVEL_GROUP)
+	add_node(lvl)
+	Game.current_chapter_id = "rocco"
+	menu.call("open")
+	await wait_frames(1)
+	var cb: Button = menu.call("movie_button")
+	assert_true(cb != null and cb.visible, "a case day's pause menu offers the masking movie")
+	assert_eq(menu.call("movie_ids_here"), Movies.replay_ids(), "every replay movie, never the recap")
+	menu.call("close")
+	lvl.free()
+	await wait_frames(1)
 	Game.current_chapter_id = "bonnie"
 	menu.call("open")
 	await wait_frames(1)
@@ -481,6 +494,7 @@ func test_results_show_left_bone() -> void:
 	var rows: Array = dd.get_script_constant_map()["GOLF_EXTRA_ROWS"]
 	assert_eq(rows[0], ["bc", "left"], "golf card: left bone '>' row")
 	assert_has(rows, ["bc_masked", "right"])
+	assert_has(rows, ["bc", "right"])   # (cases) a better right ear's unmasked bone
 
 
 # ---------------------------------------------------------------- (v4, builders) merged at integration
@@ -551,12 +565,25 @@ func test_title_movies_button() -> void:
 	assert_true(b.visible, "shown in the menu state")
 	b.pressed.emit()
 	await wait_frames(3)
+	# (cases, C12) with several movies (the case days add three) the list opens over the title:
+	# play its first row, then Back closes the whole menu
+	var several := Movies.replay_ids().size() > 1
+	if several:
+		assert_true(bool(menu.call("is_movie_list_open")), "several movies: the list opens over the title")
+		var rows: Array = menu.call("movie_list_rows")
+		assert_eq(rows.size(), Movies.replay_ids().size(), "one row per movie")
+		menu.call("play_movie", String(rows[0]["id"]))
+		await wait_frames(3)
 	var p := tree.get_first_node_in_group("explainer_player")
 	assert_true(p != null and bool(p.call("is_playing")), "the movie plays from the title")
 	assert_eq(sources, ["title"], "source title")
 	assert_true(tree.paused, "the title waits paused")
 	p.call("skip_all")
 	await wait_frames(6)
+	if several:
+		assert_true(bool(menu.call("is_movie_list_open")), "the list comes back after the movie")
+		menu.call("close_movie_list")
+		await wait_frames(2)
 	assert_false(bool(menu.call("is_open")), "back on the title, the menu closed")
 	assert_false(tree.paused)
 	assert_eq(title.get("_state"), &"menu")

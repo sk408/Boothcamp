@@ -2,8 +2,10 @@ extends TestCase
 ## Playback safety: simulated dB HL never becomes a loud sound.
 
 
-func test_zero_hl_is_about_minus_75_dbfs() -> void:
-	assert_near(AudioSafety.hl_to_dbfs(0), -75.0, 0.01)
+func test_zero_hl_is_about_minus_71_dbfs() -> void:
+	# (E7) the base -75 dBFS plus the tones' 4 dB boost
+	assert_near(AudioSafety.hl_to_dbfs(0), -71.0, 0.01)
+	assert_near(AudioSafety.DBFS_AT_0_HL + AudioSafety.TONE_BOOST_DB, -71.0, 0.01)
 
 
 func test_peak_never_exceeds_ceiling() -> void:

@@ -26,11 +26,11 @@ func _peak(buf: PackedVector2Array) -> float:
 	return p
 
 
-func test_zero_hl_plays_near_minus_75_dbfs() -> void:
+func test_zero_hl_plays_near_minus_71_dbfs() -> void:
 	var g := _gen()
 	g.start_tone("right", 1000, 0)
 	var buf := g.render(int(SR * 0.5))
-	assert_near(_rms_dbfs(buf, true, int(SR * 0.1)), -75.0, 0.3, "0 dB HL RMS")
+	assert_near(_rms_dbfs(buf, true, int(SR * 0.1)), -71.0, 0.3, "0 dB HL RMS (E7: 4 dB boost)")
 	g.free()
 
 
@@ -38,7 +38,7 @@ func test_mapping_is_0_6_db_per_db_hl() -> void:
 	var g := _gen()
 	g.start_tone("left", 1000, 50)
 	var buf := g.render(int(SR * 0.4))
-	assert_near(_rms_dbfs(buf, false, int(SR * 0.1)), -45.0, 0.3, "50 dB HL RMS")
+	assert_near(_rms_dbfs(buf, false, int(SR * 0.1)), -41.0, 0.3, "50 dB HL RMS")
 	g.free()
 
 

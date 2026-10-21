@@ -303,7 +303,7 @@ static func _draw_neck_scarf(ci: CanvasItem, c: Vector2, r: float, col: Color) -
 ## Gerald the bee, hovering by the head: a striped body, buzzing wings, a stinger and a dotted trail.
 static func _draw_bee(ci: CanvasItem, at: Vector2, r: float) -> void:
 	var still := bool(Game.settings.get("reduced_motion", false))
-	var t := 0.0 if still else Time.get_ticks_msec() / 1000.0
+	var t := 0.0 if still else Game.clock   # game time: Gerald freezes on pause
 	var p := at + Vector2(cos(t * 2.2) * r * 0.05, sin(t * 4.4) * r * 0.035)
 	var body := Vector2(r * 0.13, r * 0.095)
 	var black := Color("#2b2b2b")

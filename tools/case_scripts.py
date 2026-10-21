@@ -42,7 +42,34 @@ TYMP_ADULT_ECV_MAX = rules_number(r"const TYMP_ADULT_ECV := Vector2\([\d.]+, ([\
 def runner_line(name):
     """One of level_case.gd's own Hoot lines (const NAME := "..."), so this page stays in step."""
     m = re.search(r'const %s := "([^"]*)"' % name, RUNNER.read_text(encoding="utf-8"))
-    return m.group(1) if m else "?"
+    if not m:
+        sys.exit(f"case_scripts.py: const {name} not found in {RUNNER}")
+    return m.group(1)
+
+
+MOVIE_WHEN = {"case_files": "before the patient knocks", "tymp": "before the tympanometer",
+              "shapes": "before the chart"}
+
+
+def case_movies():
+    """level_case.gd's CASE_MOVIES: Hoot's case movies with their lead-in and offer lines (clinical review C12)."""
+    src = RUNNER.read_text(encoding="utf-8")
+    found = re.findall(r'"(\w+)": \{\s*"lead_in": "([^"]*)",\s*"offer": "([^"]*)",\s*\}', src)
+    if not found:
+        sys.exit(f"case_scripts.py: CASE_MOVIES not found in {RUNNER}")
+    out = ["## Hoot's case movies (every case day)", "",
+           "Each plays just before its step on the player's first case, after Hoot's lead-in. On a later case Hoot",
+           "offers one that was never watched to the end; once watched, it lives in the pause menu (Hoot's Movies)",
+           "and the title's list. The movies' captions are in `story/explainers/movies/<id>.gd`.", "",
+           "| Movie | When | Lead-in (first case) | Offer (later case) |", "|---|---|---|---|"]
+    for mid, lead, offer in found:
+        mf = ROOT / "story" / "explainers" / "movies" / f"{mid}.gd"
+        t = re.search(r'"title": "([^"]*)"', mf.read_text(encoding="utf-8")) if mf.exists() else None
+        title = f"{t.group(1)} (`{mid}`)" if t else f"`{mid}`"
+        out.append(f"| {title} | {MOVIE_WHEN.get(mid, '')} | {lead} | {offer} |")
+    out += ["", "Before a visit's first masked test, while Day 2's masking movie is unseen: the 12-second masking recap",
+            f"card (Esc skips it), then **Hoot:** {runner_line('MASKING_HINT')}"]
+    return out + [""]
 
 
 def tymp_desc(t):
@@ -131,6 +158,9 @@ def render(c):
     oto = c["otoscopy"]
     out.append("")
     out.append("### Otoscopy")
+    other = "LEFT" if oto.get("ear", "right") == "right" else "RIGHT"
+    out.append(f"First caption: *{runner_line('OTHER_EAR_CAPTION') % (c['speaker'], other)}*")
+    out.append("")
     otoscopy(oto, out)
     ty = c["tymp"]
     out.append("")
@@ -155,6 +185,7 @@ def render(c):
     script(ty.get("after", []), out)
     out.append("")
     out.append("### Instructions")
+    out.append(f"- **Hoot:** {runner_line('ROUTINE_LINE')}")
     script(c["instructions"], out)
     out.append("")
     out.append("### Test plan")
@@ -162,7 +193,7 @@ def render(c):
     out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no "
                f"ear needed masked air: **Hoot:** {runner_line('NO_MASKED_AIR')}")
     out.append("")
-    out.append("After the tests (said when the measured bone ear agrees with the case; "
+    out.append("After the tests (said when every ear with bone agrees with the case; "
                "otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):")
     out.append("")
     script(c.get("after_audiometry", []), out)
@@ -243,6 +274,9 @@ def plan(steps, out):
         if p.get("before"):
             out.append("  - before:")
             script(p["before"], out, "    ")
+        for f, lines in p.get("if_tested", {}).items():
+            out.append(f"  - after it, if the stamps asked for {f} Hz (and it is on the chart):")
+            script(lines, out, "    ")
 
 
 def retest(rt, out):
@@ -279,6 +313,7 @@ def main():
              "Generated from `story/cases/*.json` by `python3 tools/case_scripts.py`. Do not edit by hand: change the",
              "JSON and run the tool again. Every Hoot line is 18 words or fewer (`story/tests/test_cases.gd`). Choices",
              "are shown in file order; the game shuffles them.", ""]
+    lines += case_movies()
     for cid in case_order():
         p = CASES / f"{cid}.json"
         if p.exists():

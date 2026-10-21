@@ -1,14 +1,18 @@
 class_name AoQuest
 extends Control
 ## AoQuest: the test plan for the current ear as a grid of tokens (ui/ only), in textbook order:
-## 1k, 2k, 4k, 8k, 1k retest, 500, 250, plus any half-octave the audiogram asks for. Done tokens
-## show the stored level; the current one glows; newly required half-octaves pop in with "NEW".
+## 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, 1k retest, 500, 250, plus 750 when the audiogram asks for it. Done
+## tokens show the stored level; the current one glows; a newly required 750 pops in with "NEW".
 ## Clicking a token jumps to that frequency.
 
 signal token_clicked(freq: int)
 
 const TOKEN := Vector2(52, 40)
 const GAP := 5.0
+## (Clinical review E1) A long plan in a short card: tokens narrow down to this width first, then
+## shrink to this height in small print (masked air with masking controls on can list 7-10 pitches).
+const TOKEN_MIN_W := 34.0
+const TOKEN_MIN_H := 20.0
 
 var ear: String = "right"
 ## [{"freq", "label", "done", "db", "current", "retest", "nr", "new"}]
@@ -118,17 +122,23 @@ func _draw() -> void:
 		if k > 0.0:
 			AoDraw.rbox(self, Rect2(bar.position + Vector2(2, 2), Vector2((bar.size.x - 4) * k, bar.size.y - 4)), Palette.MINT if k < 1.0 else Palette.SUNNY, 6)
 		AoDraw.text_r(self, Vector2(size.x - 14, 20), "%d%%" % int(round(k * 100.0)), 14, Palette.INK, AoDraw.FONT_BOLD)
-	# tokens
-	var per_row := maxi(1, int((size.x - 20.0 + GAP) / (TOKEN.x + GAP)))
-	var row_w := per_row * TOKEN.x + (per_row - 1) * GAP
-	var x0 := (size.x - row_w) * 0.5
+	# tokens: as many per row as fit at full width; (E1) when the plan needs more rows than the card
+	# holds at 28 px, narrower tokens (down to TOKEN_MIN_W) fit more in a row first
 	var y0 := 36.0
-	# a third row (several half-octaves) squeezes the tokens instead of spilling out of the card
+	var avail := size.x - 20.0
+	var fit_rows := maxi(1, int((size.y - y0 - 8.0 + GAP) / (28.0 + GAP)))
+	var per_row := maxi(1, int((avail + GAP) / (TOKEN.x + GAP)))
+	per_row = clampi(ceili(float(items.size()) / fit_rows), per_row, maxi(per_row, int((avail + GAP) / (TOKEN_MIN_W + GAP))))
+	var tok_w := minf(TOKEN.x, (avail - (per_row - 1) * GAP) / per_row)
+	var row_w := per_row * tok_w + (per_row - 1) * GAP
+	var x0 := (size.x - row_w) * 0.5
+	# a row more than fits squeezes the tokens (small print below 28 px) instead of spilling out of the card
 	var rows := maxi(1, ceili(float(items.size()) / per_row))
-	var tok := Vector2(TOKEN.x, clampf((size.y - y0 - 8.0 - (rows - 1) * GAP) / rows, 28.0, TOKEN.y))
+	var tok := Vector2(tok_w, clampf((size.y - y0 - 8.0 - (rows - 1) * GAP) / rows, TOKEN_MIN_H, TOKEN.y))
+	var small := tok.y < 28.0
 	for i in items.size():
 		var it: Dictionary = items[i]
-		var cell := Rect2(Vector2(x0 + (i % per_row) * (TOKEN.x + GAP), y0 + (i / per_row) * (tok.y + GAP)), tok)
+		var cell := Rect2(Vector2(x0 + (i % per_row) * (tok_w + GAP), y0 + (i / per_row) * (tok.y + GAP)), tok)
 		var pop := float(_pop.get(_key(it), 0.0))
 		var s := 1.0 + 0.35 * sin(clampf(pop / 0.6, 0.0, 1.0) * PI)
 		var done := bool(it["done"])
@@ -147,15 +157,16 @@ func _draw() -> void:
 		AoDraw.rbox(self, Rect2(rc.position + Vector2(0, 3), rc.size), Color(Palette.INK, 0.2), 10)
 		AoDraw.rbox(self, rc, fill, 10, 2 if not cur else 3, Palette.INK)
 		var label: String = it["label"]
-		AoDraw.text_c(self, rc.get_center() + Vector2(0, -8), label, 15, Palette.INK, AoDraw.FONT_BOLD)
+		var dy := 6.0 if small else 9.0   # label above the centre, mark below it
+		AoDraw.text_c(self, rc.get_center() + Vector2(0, -dy + 1.0), label, 12 if small else 15, Palette.INK, AoDraw.FONT_BOLD)
 		if done:
-			var sc := rc.get_center() + Vector2(-10, 10)
-			UiDraw.audiogram_symbol(self, sc, ear, test, 9.0, 2.0, bool(it.get("nr", false)))
-			AoDraw.text_l(self, sc + Vector2(9, 0), "NR" if bool(it.get("nr", false)) else str(int(it["db"])), 12, col.darkened(0.2), AoDraw.FONT_BOLD)
+			var sc := rc.get_center() + Vector2(-8 if small else -10, dy + 1.0)
+			UiDraw.audiogram_symbol(self, sc, ear, test, 6.0 if small else 9.0, 2.0, bool(it.get("nr", false)))
+			AoDraw.text_l(self, sc + Vector2(7 if small else 9, 0), "NR" if bool(it.get("nr", false)) else str(int(it["db"])), 10 if small else 12, col.darkened(0.2), AoDraw.FONT_BOLD)
 		elif cur:
-			UiDraw.triangle(self, rc.get_center() + Vector2(0, 11), 9.0, false, Palette.INK)
+			UiDraw.triangle(self, rc.get_center() + Vector2(0, dy + 2.0), 6.0 if small else 9.0, false, Palette.INK)
 		else:
-			draw_circle(rc.get_center() + Vector2(0, 10), 3.0, Palette.INK_SOFT)
+			draw_circle(rc.get_center() + Vector2(0, dy + 1.0), 3.0, Palette.INK_SOFT)
 		if bool(it.get("new", false)) and not done:
 			var nr := Rect2(rc.position + Vector2(rc.size.x - 30, -8), Vector2(34, 15))
 			AoDraw.rbox(self, nr, Palette.CORAL, 7, 2, Palette.INK)

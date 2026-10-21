@@ -14,6 +14,10 @@ const MOVIES: Dictionary = {
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
 	"letter_choir": "res://story/explainers/movies/letter_choir.gd",
 	"party_noise": "res://story/explainers/movies/party_noise.gd",
+	## (cases, clinical review C12) Hoot's case movies, on every case day (also_chapters)
+	"case_files": "res://story/explainers/movies/case_files.gd",
+	"tymp": "res://story/explainers/movies/tymp.gd",
+	"shapes": "res://story/explainers/movies/shapes.gd",
 }
 ## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
 ## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.
@@ -35,7 +39,8 @@ const SCENE_KEYS: Array[String] = ["id", "set", "duration", "captions", "teaches
 const MOVIE_KEYS: Array[String] = ["id", "title", "subtitle", "chapter", "narrator", "scenes"]
 ## Optional movie keys: "seen_at" (the scene id that counts as seen, default the last), "short"
 ## (a recap: see SHORT_MIN_S), "stage" (the movie's own sets script, extending
-## story/explainers/explainer_sets.gd: CONTRACTS.md §3.4).
+## story/explainers/explainer_sets.gd: CONTRACTS.md §3.4), (cases) "also_chapters" (more
+## Game.CHAPTERS ids whose pause menu lists it: a movie shared by several days).
 ## The generic "card" set: at most this many lines, each this many characters (they never wrap).
 const CARD_MAX_LINES := 4
 const CARD_MAX_CHARS := 36
@@ -84,14 +89,39 @@ static func is_short(id: String) -> bool:
 
 
 ## The movies a chapter (Game.CHAPTERS id) offers for replay, in registry order (recaps only with
-## include_short).
+## include_short). (cases) A movie's "also_chapters" list it there too.
 static func for_chapter(chapter_id: String, include_short: bool = false) -> Array[String]:
 	var out: Array[String] = []
 	for id: String in ids():
 		var m := movie(id)
-		if String(m.get("chapter", "")) == chapter_id and (include_short or not bool(m.get("short", false))):
+		if chapters_of(m).has(chapter_id) and (include_short or not bool(m.get("short", false))):
 			out.append(id)
 	return out
+
+
+## (cases) The chapter ids a movie belongs to: its "chapter", then its "also_chapters".
+static func chapters_of(m: Dictionary) -> Array[String]:
+	var out: Array[String] = [String(m.get("chapter", ""))]
+	var more: Variant = m.get("also_chapters", [])
+	if more is Array:
+		for c: Variant in more:
+			if not out.has(String(c)):
+				out.append(String(c))
+	return out
+
+
+## (E19) The group a level joins when it can mask (the cases, Freestyle): its pause menu offers
+## every replay movie, so Day 2's masking movie is one tap away.
+const MASKING_LEVEL_GROUP := &"masking_level"
+
+
+## The movies a level's pause menu offers: the chapter's own, or (E19) every replay movie when the
+## level can mask. (cases) That holds even when the chapter has movies of its own (the case days'
+## three, through "also_chapters"), so the masking movie stays one tap away there.
+static func for_level(chapter_id: String, masks: bool) -> Array[String]:
+	if masks:
+		return replay_ids()
+	return for_chapter(chapter_id)
 
 
 ## Every movie the replay lists show (the pause menu's and the title's "Hoot's Movies"): all but
@@ -105,10 +135,18 @@ static func replay_ids() -> Array[String]:
 	return out
 
 
-## The chapter's day label for the replay list ("Day 2"), "" when unknown.
+## The chapter's day label for the replay list ("Day 2"; "Days 6-11" with "also_chapters"), ""
+## when unknown.
 static func day_label(id: String) -> String:
-	var c: Dictionary = Game.chapter(String(movie(id).get("chapter", "")))
-	return "Day %d" % int(c["day"]) if c.has("day") else ""
+	var days: Array[int] = []
+	for cid: String in chapters_of(movie(id)):
+		var c: Dictionary = Game.chapter(cid)
+		if c.has("day"):
+			days.append(int(c["day"]))
+	if days.is_empty():
+		return ""
+	days.sort()
+	return "Day %d" % days[0] if days[0] == days[-1] else "Days %d-%d" % [days[0], days[-1]]
 
 
 ## The movie's own set ids from its sets script (MOVIE.stage), [] when it has none.
@@ -156,6 +194,8 @@ static func validate(id: String, known_sets: Array = []) -> PackedStringArray:
 			bad.append("%s: missing %s" % [id, k])
 	if String(m.get("id", "")) != id:
 		bad.append("%s: id says %s" % [id, m.get("id", "")])
+	if m.has("also_chapters") and not m["also_chapters"] is Array:
+		bad.append("%s: also_chapters is a list of chapter ids" % id)
 	var sets: Array = known_sets.duplicate()
 	if m.has("stage"):
 		var path := String(m["stage"])

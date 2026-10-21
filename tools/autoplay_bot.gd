@@ -27,7 +27,7 @@ const CaseData := preload("res://story/case_data.gd")
 const BEAT_DELAY_S := 0.6       ## game seconds before solving a beat (lets things settle)
 const STALL_TIMEOUT_S := 120.0  ## game seconds without progress -> exit 2
 const MAX_RUN_S := 3000.0       ## game seconds overall -> exit 3
-const GAPS: Array[float] = [0.7, 1.6, 1.0, 2.1, 0.8, 1.8, 1.2, 2.4]  ## varied gaps: no rhythm
+const GAPS: Array[float] = [1.1, 1.6, 1.05, 2.1, 1.2, 1.8, 1.3, 2.4]  ## varied gaps: no rhythm, never shorter than a beep (E6)
 const DURATIONS: Array[float] = [1.3, 1.6, 1.2, 1.5, 1.7, 1.4]
 
 
@@ -101,6 +101,8 @@ var _freestyle_opened := false
 var _days_opened := false
 var _days_report: Dictionary = {}
 var _days_problems: PackedStringArray = []
+## (Cases) Problems seen during a case's visit (the retest must start after the scored visit is saved).
+var _case_problems: PackedStringArray = []
 
 
 func _ready() -> void:
@@ -179,6 +181,8 @@ func _on_phase(phase: StringName, info: Dictionary) -> void:
 	_phase = phase
 	_phase_info = info
 	_phase_log.append(phase)
+	if phase == &"retest" and not Game.visit.has("summary"):
+		_case_problems.append("retest: began before the scored visit was saved (quitting would lose the day)")
 	var suffix := ("_" + String(info["ear"])) if info.has("ear") else ""
 	if info.has("test") and String(info["test"]) != "ac":
 		suffix += "_" + String(info["test"])
@@ -405,6 +409,8 @@ func _run_audiometry(ear: String) -> void:
 	while i < plan.size() and not _ear_done.get(ear, false) and not _hoot_turn():
 		var f: int = plan[i]
 		i += 1
+		if f == ClinicRules.START_FREQ and found.has(f) and not (_state().get("remaining", []) as Array).has(f):
+			continue   # (E2) the 1 kHz retest is only owed by the first air ear of the visit
 		var start := ClinicRules.START_DB if last < 0 else clampi(last + 10, 20, ClinicRules.MAX_START_DB)
 		if found.has(f):
 			start = clampi(int(found[f]) + 10, ClinicRules.MIN_DB, ClinicRules.MAX_START_DB)  # retest
@@ -620,7 +626,8 @@ func _plateau(ear: String, freq: int, goal: StringName) -> void:
 				start = int(mine_un[e][freq]) if start == -999 else mini(start, int(mine_un[e][freq]))
 	if start == -999:
 		start = int(_state().get("db", 30))
-	var initial := int(_state().get("initial_mask_db", 30))
+	# (E9) the screen's start: the initial masking, or one step short of overmasking in a dilemma
+	var initial := int(_state().get("start_mask_db", _state().get("initial_mask_db", 30)))
 	await _set_mask(initial)
 	await _set_level(start)
 	var steps := 0
@@ -644,6 +651,9 @@ func _plateau(ear: String, freq: int, goal: StringName) -> void:
 				await _wait(0.3)
 				return
 			await _set_level(tone + ClinicRules.UP_AFTER_MISS_DB)
+			var lim := int(_state().get("overmask_limit_db", 999))
+			if int(_state()["mask_db"]) >= lim:
+				await _set_mask(lim - ClinicRules.MASK_STEP_DB)  # (E9) never overmask the next tone
 	if bool((_state().get("plateau", {}) as Dictionary).get("found", false)):
 		_plateaus += 1
 		if not _shot_flags.has("plateau"):
@@ -1009,6 +1019,7 @@ func _finish() -> void:
 		elif String(_summary.get("chapter_id", "")) != String(_days_report["picked"]):
 			problems.append("days: picked %s but played %s" % [_days_report["picked"], _summary.get("chapter_id", "")])
 		problems.append_array(_days_problems)
+	problems.append_array(_case_problems)
 	if _summary.has("freestyle_case"):
 		report["freestyle"] = {"case": _summary["freestyle_case"], "medals": _summary.get("medals", {}),
 			"visit_score": snappedf(float(_summary.get("visit_score", 0.0)), 0.1)}
@@ -1037,6 +1048,7 @@ func _finish() -> void:
 func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var ears: Dictionary = res.get("ears", {})
 	var sheets := {}
+	var not_reached: Array[String] = []
 	for ear: String in ["right", "left"]:
 		var e: Dictionary = ears.get(ear, {})
 		for key: String in ["bc", "bc_masked", "ac_masked"]:
@@ -1047,12 +1059,17 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 			for f: int in sh:
 				var info: Dictionary = sh[f]
 				t[str(f)] = [info["stored_db"], info["true_db"]]
+				if bool(info.get("plateau_not_reached", false)):
+					not_reached.append("%s %s %d" % [ear, key, f])
+					if int(info["stored_db"]) <= int(info["true_db"]):
+						continue  # (E9) a full window: the true threshold may be poorer, that is the "?"
 				if absi(int(info["stored_db"]) - int(info["true_db"])) > 10:
 					problems.append("%s %s %d Hz off by more than 10 dB" % [ear, key, f])
 			sheets["%s_%s" % [ear, key]] = t
 	if not sheets.is_empty():
 		report["sheets"] = sheets
 		report["plateaus_found"] = _plateaus
+		report["plateau_not_reached"] = not_reached
 	if String(_summary.get("chapter_id", "")) == "bonnie":
 		var r: Dictionary = ears.get("right", {})
 		report["right_type"] = String(r.get("hearing_type", ""))
@@ -1094,6 +1111,12 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 	var case_id := String(Game.chapter(String(_summary.get("chapter_id", ""))).get("case", ""))
 	if case_id != "":
 		_check_conductive_case(case_id, res, report, problems)
+		# (cases, clinical review C12) Hoot's three case movies start on a fresh save (level_case.gd _movie)
+		report["movies"] = _movies
+		if not Game.cli_flag("keep-save"):
+			for id: String in ["case_files", "tymp", "shapes"]:
+				if not _movies.has(id):
+					problems.append("Hoot's %s movie never started on a fresh save" % id)
 
 
 ## (cases) A conductive case (Days 10 and 11): the case ear comes out conductive with the air-bone
@@ -1115,8 +1138,7 @@ func _check_conductive_case(case_id: String, res: Dictionary, report: Dictionary
 	for f: int in [500, 1000, 2000, 4000]:
 		if not (e.get("bc_masked", {}) as Dictionary).has(f):
 			problems.append("%s: %s masked bone missing at %d Hz" % [case_id, ear, f])
-	var wax := String((c.get("otoscopy", {}) as Dictionary).get("view", "clear")) == "wax"
-	var tr := &"inserts" if Game.has_upgrade("insert_earphones") and not wax else &"phones"
+	var tr := CaseData.air_transducer(CaseData.canal_blocked(c))
 	report["air_transducer"] = String(tr)
 	for chk: String in ["right", "left"]:
 		var need := ClinicRules.masked_freqs_needed(res, chk, &"ac_masked", tr)

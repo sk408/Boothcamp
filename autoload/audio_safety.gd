@@ -4,7 +4,8 @@ extends RefCounted
 ##
 ## Consumer headphones are uncalibrated, so every "dB HL" in the game is simulated.
 ## Rules (design notes §6, engine-and-fun §1.6):
-##  - 0 dB HL plays at about -75 dBFS RMS; each dB HL adds 0.6 dB.
+##  - 0 dB HL plays at about -75 dBFS RMS; each dB HL adds 0.6 dB. Tones play TONE_BOOST_DB above
+##    that (E7: a little louder for the player, about -71 dBFS at 0 dB HL); noise and words do not.
 ##  - Peak sample amplitude never exceeds -12 dBFS, whatever the displayed level.
 ##  - The "Tones" bus carries a hard limiter at -12 dBFS and Master one at -6 dBFS
 ##    (res://default_bus_layout.tres), as a second and third line of defence.
@@ -13,6 +14,9 @@ extends RefCounted
 ## generator MUST call masker_to_rms() and clamp_masker_sample() (v3).
 
 const DBFS_AT_0_HL := -75.0
+## (E7, Steve 2026-10-19) Tones only: this much louder than the base mapping. The ceilings below
+## are unchanged, so a loud tone is never louder than before; it just reaches the ceiling sooner.
+const TONE_BOOST_DB := 4.0
 const DBFS_PER_DB_HL := 0.6
 const FLOOR_DBFS := -90.0
 ## Hard ceiling for any synthesized sample (peak, dBFS).
@@ -43,7 +47,7 @@ const VOICE_BUS := &"Voice"
 
 ## Simulated dB HL -> RMS dBFS of a sine, before the peak ceiling.
 static func hl_to_dbfs(hl: float) -> float:
-	var rms := clampf(DBFS_AT_0_HL + DBFS_PER_DB_HL * hl, FLOOR_DBFS, PEAK_CEILING_DBFS)
+	var rms := clampf(DBFS_AT_0_HL + TONE_BOOST_DB + DBFS_PER_DB_HL * hl, FLOOR_DBFS, PEAK_CEILING_DBFS)
 	return rms
 
 

@@ -27,9 +27,13 @@
 		"family": {"say": "Grandad wore aids from young, and my auntie. We Sprockets say 'pardon?' a lot.", "note": "Grandad and an aunt had early hearing loss"},
 		"health": {"say": "Fit as a fiddle. I ride to work. No pills, just energy bars.", "note": "Healthy, no medicines"},
 		"aids": {"say": ["Since I was six! This pair's seven years old.", "The left one died Tuesday. The right one's wheezing too."], "note": "Aids since age 6; this pair is 7 years old"},
-		"hardest": {"say": "Without aids? Everywhere. With these old ones, the shop radio plus customers is tough.", "note": "Old aids struggle with shop noise"}
+		"hardest": {"say": [
+			"Without aids? Everywhere. With these old ones, customers over the shop radio are tough.",
+			"Group rides! Whoever's riding behind me might as well be on Mars.",
+			"And the shop phone. Speaker on, and I hope for the best."
+		], "note": "Trouble: shop customers, group rides, phone"}
 	},
-	"key_questions": ["red_flags", "onset", "which_ear", "aids"],
+	"key_questions": ["red_flags", "onset", "which_ear", "aids", "hardest"],
 	"otoscopy": {
 		"canal": "roomy",
 		"right": {"view": "clear", "caption": "Sid's RIGHT ear: a roomy, clean canal and a healthy, pearly eardrum."},
@@ -44,7 +48,7 @@
 	"decision": "fit",
 	"decision_lines": {
 		"fit": "Fit! Lifelong, steady, matching ears, no red flags. New aids, and his wheels keep turning.",
-		"refer": "Refer for what? A doctor checked him as a kid. Nothing's changed, ears match, no red flags.",
+		"refer": "Refer for what? No red flags, both ears match, and nothing's changed in years.",
 		"today": "Nothing sudden here. His hearing hasn't changed in years. Only his hearing aid died.",
 		"clear": "No aids needed? A moderate loss in both ears says otherwise. And his old ones just died!"
 	},
@@ -60,7 +64,8 @@
 	"debrief": [
 		["Hoot", "Years of aids don't mean skipping the checks. Look, ask and test, every visit."],
 		["Hoot", "Bone sat right on air, no gap: that's what shows it's sensorineural. Air alone can't tell."],
-		["Hoot", "A new sudden drop: a doctor today. One ear slipping behind: a doctor first. Sid has neither."]
+		["Hoot", "A sudden drop: a doctor today. One ear behind, no known cause: a doctor first. Sid has neither."],
+		["Hoot", "Customers, group rides, the shop phone: those are Sid's goals. We check each one at follow-up."]
 	],
 	"goodbye": [
 		{"do": "hearing_aids"},

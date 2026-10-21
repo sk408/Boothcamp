@@ -22,7 +22,7 @@ thresholds_right = Dictionary[int, int]({
 })
 thresholds_left = Dictionary[int, int]({
 250: 35,
-500: 55,
+500: 50,
 750: 55,
 1000: 60,
 1500: 60,

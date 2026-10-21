@@ -7,7 +7,9 @@ extends RefCounted
 ##   const FsRules := preload("res://story/freestyle/fs_rules.gd")
 
 ## The calls, in the stamp tray's order. CaseRules.DECISIONS plus "clear": normal hearing in both
-## ears, no red flag: no hearing aids needed (counsel, retest if anything changes).
+## ears, no red flag: no hearing aids needed (counsel, retest if anything changes). Referral follows
+## CaseRules' red flags (Steve, 2026-10-19: red flags, or an asymmetry with no known cause; a likely
+## cause such as Buck's shooting still sees a doctor first, question 14).
 const DECISIONS: Array[StringName] = [&"fit", &"refer", &"today", &"clear"]
 ## What each rubber stamp says (the stamp buttons' text starts with this).
 const DECISION_STAMPS: Dictionary[StringName, String] = {
@@ -33,12 +35,16 @@ const QUESTIONS: Array[Dictionary] = [
 	{"id": "family", "text": "Does hearing loss run in your family?"},
 	{"id": "health", "text": "Any medicines or health problems?"},
 	{"id": "aids", "text": "Have you worn hearing aids before?"},
-	{"id": "hardest", "text": "Where is hearing hardest for you?"},
+	{"id": "hardest", "text": "Where do you have trouble hearing?"},
 ]
 ## The red-flag question every workup needs (pain, drainage, dizziness).
 const RED_FLAG_QUESTION := "red_flags"
-## Questions per visit: the waiting room is full, so ask what matters.
-const CHAT_BUDGET := 5
+## Every workup also asks where the patient has trouble: the places in their daily life become the
+## fitting goals (Steve, 2026-10-19).
+const TROUBLE_QUESTION := "hardest"
+## Questions per visit: the waiting room is full, so ask what matters. A case has at most one key
+## question fewer, so the player always has a free pick.
+const CHAT_BUDGET := 6
 const DONE_ASKING := "Done asking"
 
 ## The tools on the tray, in tray order. Speech joins once the speech screen is on main.
@@ -123,7 +129,7 @@ static func truth_needs_bone(p: PatientProfile) -> bool:
 	return false
 
 
-## Masked bone from the truth: the bone frequencies where this ear's air sits more than 10 dB above
+## Masked bone from the truth: the bone frequencies where this ear's air sits 10 dB or more above
 ## the better cochlea (unmasked bone would show a gap that may be the other cochlea answering).
 static func truth_masked_bone(p: PatientProfile, ear: String) -> Array[int]:
 	var out: Array[int] = []
@@ -157,7 +163,7 @@ static func unmasked_bone(results: Dictionary) -> Dictionary:
 	return out
 
 
-## Masked bone the chart asks for on one ear: wherever its air sits more than 10 dB above the
+## Masked bone the chart asks for on one ear: wherever its air sits 10 dB or more above the
 ## unmasked bone (from either mastoid). Empty until some unmasked bone is stamped.
 static func masked_bone_needed(results: Dictionary, ear: String) -> Array[int]:
 	var out: Array[int] = []

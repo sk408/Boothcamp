@@ -154,13 +154,14 @@ func is_open() -> bool:
 
 
 ## (v4) The movies this menu offers: the current chapter's in a level, all of them on the title
-## (never the "short" recaps).
+## (never the "short" recaps). (E19) A level that can mask with no movie of its own offers them all.
 func movie_ids_here() -> Array[String]:
 	if _on_title():
 		return Movies.replay_ids()
 	if get_tree().get_first_node_in_group("explainer_player") != null:
 		return [] as Array[String]   # one movie at a time (P during the day-start movie)
-	return Movies.for_chapter(Game.current_chapter_id)
+	var masks := get_tree().get_first_node_in_group(Movies.MASKING_LEVEL_GROUP) != null
+	return Movies.for_level(Game.current_chapter_id, masks)
 
 
 ## The menu's movie button now: "Watch <title>" (one movie here), "Hoot's Movies..." (two or

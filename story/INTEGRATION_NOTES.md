@@ -154,11 +154,39 @@ Requests for the integrator and the title owner:
 - **Daily Decibel golf rows.** `GOLF_EXTRA_ROWS` has left-ear masked rows too (Marina's and Skye's masked tests are
   on the LEFT ear). Its rows are now `[sheet key, ear]`: the old label column was never read (`_row_tag` draws the
   symbol) and its U+25A1 square is not in Fredoka, so it was dropped at the integrator's request.
+  (cases follow-up) One-sided cases now put unmasked bone on the better ear only, as on Day 2, so Dash and
+  Barnaby show the `L  >` row, and a new `["bc", "right"]` row (`R  <`, after `L  >`, hidden like it when that ear
+  has masked bone) shows Marina's and Skye's right bone, and Rocco's and Ginger's.
 - **Notice to builder B: `story/games/case_otoscopy.gd`** extends `otoscopy.gd` and overrides `_draw_canal` (it
   draws the wax plug or the fluid on top of your healthy drum), reading `view_center`, `ear` and `_canal`, and
   calls `show_clear`. It also copies your drum's geometry from `_draw_canal` (centre offset (-6, 6), radii 112 x 98,
   tilt -0.25, colour #c9c6cf, cone of light (8, 8) / (56, 74) / (26, 84)). Please keep those names, and tell us if
-  the drum changes (or expose those numbers as constants and the cases will read them).
+  the drum changes (or expose those numbers as constants and the cases will read them). The copies live in an inner
+  class (`CaseLook`), so a constant you add to `otoscopy.gd` can never clash with them. The fluid bubbles also read
+  your `_t` (the game-time clock `_process` keeps), so please keep that name too.
+- **Retest and `Game.finish_visit`.** A case with a retest (Barnaby) calls `finish_visit` before the retest, so a
+  player who quits during it keeps the day; `_results` reuses that summary (`tools/autoplay_bot.gd` checks it).
+- **Tympanometer (shared with freestyle).** `story/games/case_tymp.gd` now prints "226 Hz probe tone" by its name
+  and the adult canal band 0.6-2.0 mL (`CaseRules.TYMP_ADULT_ECV`, was 0.9-2.0); `CaseRules.ecv_band` no longer
+  returns `&"low"` (the old 0.6-0.9 grey zone). Every freestyle canal volume is 0.9 mL or more (Viola's right ear is
+  0.9, already NORMAL under the old `< 0.9` check), so no freestyle reading changes.
+- **Otoscopy on both ears.** A case's first look shows the other ear first (`OTHER_EAR_CAPTION`), then the
+  case's ear, so both ears are looked at before any probe or insert goes in (about two seconds longer).
+- **Hoot's case movies (clinical review C12).** Three movies (`case_files`, `tymp`, `shapes`) for every case day.
+  Additive changes to shared files: `story/explainers/movies.gd` registers them, gains an optional movie key
+  `also_chapters` (`for_chapter` lists a movie on those chapters too; new `chapters_of(movie)`), and `day_label`
+  reads "Days 6-11" for a movie on several days (one-day movies still read "Day 2"). `tools/autoplay_bot.gd` checks
+  that a fresh save's case day starts all three (they play through the existing `explainer` beat, keys and mouse).
+  Their sets live in `story/case_movies/`, so the stage is untouched. The title now has more than one movie, so
+  its button opens the movie list (the existing `title_screen._on_movies` path): `tests/test_contracts_v4.gd`
+  `test_title_movies_button` plays the list's first row when there are several (Days 4 and 5 hit the same thing).
+  With E19, `Movies.for_level` now returns every replay movie whenever the level can mask (it used to only when the
+  chapter had none of its own); otherwise the case days, which now have three of their own, would have lost the
+  masking movie from their pause menu. `story/tests/test_freestyle.gd` `test_a_visit_pauses_to_the_masking_movie`
+  asserted the old behaviour ("a day's own movie would win"); that line now checks the new one.
+  `story/explainers/explainer_stage.gd` (two lines, via a new `_card_scene()`): a movie's own opening set with
+  `params.card_hold` is entered like Day 2's "meet" (no iris over the curtains; the scene chip waits for the card).
+  Only scenes with `card_hold` change, so the masking movie looks exactly as before.
 - **Daily Decibel weather line.** In the Day 6 screenshots taken before the Days rework, the pause corner button
   covered the end of "Weather: 100% chance of beeps". Not rechecked since; worth a look.
 - **Daily Decibel summary keys.** A case summary may carry `headlines` and `subheads` (grade -> text, incl.
@@ -171,8 +199,9 @@ Requests for the integrator and the title owner:
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
   Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (32 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
-  --check` after the suite, so a stale `docs/CASE_SCRIPTS.md` fails the run.
+- **Tests:** `story/tests/test_cases.gd` (40 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+  --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
+  a warning without python3).
 
 ## Merge: main (Days 3, 6-9) into the Day 2 feedback (v4)
 
@@ -180,7 +209,8 @@ Requests for the integrator and the title owner:
   (Day 2's unmasked bone on the better, left ear), then `R  [`, `R  O+`, and the cases' `L  ]`, `L  □`. A row only
   shows when that sheet has stamps, so Day 1 and Day 3 show none, Day 2 shows `L  >`, `R  [`, `R  O+` as on the
   feedback branch, and Rocco, Dash and Ginger as on main. Marina (her bone is tested on her left ear) shows only
-  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet. (cases, PR #3) The rows
+  her `L  ]` and `L  □` rows: the `L  >` row hides when that ear has a masked-bone sheet. (cases follow-up: her
+  unmasked bone is now on the right, the new `R  <` row; see the golf rows note in the Cases section.) (cases, PR #3) The rows
   are now `[sheet key, ear]`; `_row_tag` draws the symbol.
 - **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
 - **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button
@@ -205,3 +235,60 @@ Everything is in `story/freestyle/` plus `core/patients/fs_*.tres`. Changes to s
 - **Reused**: `story/games/case_tymp.gd` (the cases tympanometer), the AudiOtron's plans, `CaseRules`, `ClinicRules`.
   No second tympanometer.
 - **Tests:** `story/tests/test_freestyle.gd`.
+
+## Arcade: Chart Chute (arcade branch; docs/ARCADE.md)
+
+Everything is in `story/arcade/` plus its tests in `story/tests/`. Changes to shared files are additive:
+
+- **Title menu.** An **Arcade** button after Freestyle, sharing its row (as Options and Quit share theirs), so a
+  returning player's seven buttons still clear the safety footer. `test_title_menu_clears_the_footer` now expects
+  seven buttons.
+- **Game.DEFAULT_PROGRESS** gained `"arcade": {}` (mode -> {table, runs, found, initials}; `story/arcade/arcade_scores.gd`).
+- **New beats (CONTRACTS.md §3.2 table):**
+  - `chute_sort`: chart_chute. Info {shape, options, best, mouse: {click: "chute_<shape>"}}. The solver sorts into the right chute.
+  - `arcade_initials`: chart_chute's results. Info {mouse: {click: "arcade_initials_ok"}}. The solver enters BOT.
+  - `arcade_results`: chart_chute's results. Info {options, best, mouse: {text: "Back to the arcade"}}. The solver goes to the arcade hall (it went to the title before the hall existed).
+- **Autoplay bot.** It is not used for the arcade, because its `_finish` expects a visit's `results_continue`. The
+  arcade has its own harness, `story/tests/arcade_chute_check.tscn` (tools/README.md).
+- **Reused:**
+  - `ClinicRules.classify_shape`, `combo_multiplier`, `required_interoctaves` and `clamp_db`.
+  - The Audiogram and `CasePortraits.register` (for the belt's made-up patients).
+  - `Game.load_patient` for the story charts of Gus, Rocco, Ginger and Marina.
+- **Audiogram `dim` fix (shared file, a bug fix).** `ui/audiogram/audiogram.gd` documents `dim` as fading an ear's
+  marks, but it only faded the symbols: the pen lines and the stamp splats stayed full strength. Both now multiply by
+  the same fade (two lines). `case_board.gd` and `day2_board.gd` use `dim` too; their dimmed ear now looks dimmed all
+  the way through, which is what their comments already describe.
+- **Story charts need their Day.** `ChartDeck.golden_pool()` reads `Game.is_chapter_done()`: Gus, Rocco, Ginger and
+  Marina's own charts only ride the belt once Days 1, 6, 9 and 7 are finished, so the arcade never shows a Day's
+  pattern (or Marina's clue) first.
+- **Wide and tall windows.** The scene keeps its 1280x720 playfield centred with `get_viewport_rect()` and the
+  `size_changed` signal (the desktop stretch aspect is `expand`); the wall, floor, top band and belt fill the rest.
+  The web build's `keep` aspect needs nothing extra.
+- **Engine gotcha.** A typed dictionary const such as `Dictionary[StringName, PackedStringArray]` keeps its array
+  literals as plain Arrays. Indexing one through a `PackedStringArray` variable crashes Godot 4.7.2 (signal 11). For
+  such tables, use an untyped `Dictionary` and read the values as `Array`. The same goes for a const
+  `Array[PackedStringArray]` of literals (Ears, Please!'s patient lines are a plain `const LINES: Array`).
+
+## Arcade: the hall and Ears, Please! (arcade branch; docs/ARCADE.md part 2)
+
+Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
+
+- **Title menu.** `title_screen.gd`'s `ARCADE_SCENE` now opens `story/arcade/arcade_hall.tscn` (was Chart Chute
+  directly); the button and its row are unchanged.
+- **Chart Chute** (arcade-owned) now ends on "Back to the arcade [T]", which opens the hall.
+- **ArcadeScores** gained an optional `board` argument on `table`, `qualifies` and `add_score` (default `"table"`,
+  so Chart Chute is unchanged) and `BOARD_SEEDS` for boards with their own starting rows. Ears, Please! keeps one
+  board per shift (`table`, `table_2`) plus `unlocked` and `warmed` in `Game.progress["arcade"]["ears_please"]`.
+- **New beats (CONTRACTS.md §3.2 table):**
+  - `arcade_hall`: the hall. Info {options, best, mouse: {click: "arcade_cabinet_<id>"}}. The solver opens Ears, Please!.
+  - `desk_shift`: the shift picker. Info {options, open, best, mouse: {click: "desk_shift_<n>"}}. The solver picks the newest open shift.
+  - `desk_stamp`: a file waits for a stamp. Info {file, options, best, decision, kind, boss, warmup, mouse: {click: "desk_stamp_<stamp>"}}. The solver stamps the right call.
+  - `desk_prove`: PROVE IT. Info {file, stamp, target, anchor, count, mouse: {click: <anchor>}}. The solver points at the best proof.
+  - `desk_note`: a feedback note holds the clock. Info {title, mouse: {click: "desk_note_ok"}}. The solver closes it.
+  - `arcade_initials` and `arcade_results` as for Chart Chute.
+- **Harness.** `story/tests/arcade_desk_check.tscn` (tools/README.md); `arcade_chute_check` now also walks through
+  the hall (`--via-title` picks cabinet 1, and the results' T must reach the hall).
+- **Reused:** `CaseRules` (`RED_FLAGS` ids, `is_asymmetric`, `SUDDEN_*`, `DECISION_STAMPS`), `ClinicRules`
+  (`abg_red_flag`, `ABG_RED_FLAG_DB`, `ac_masking_needed` and `bc_masking_needed` for charting, `combo_multiplier`, `required_interoctaves`),
+  the Audiogram (`show_gap` for the gap tell), `CasePortraits.register` and `Portraits.draw`.
+- **No new data files**, so the Web preset's include_filter needs nothing.
