@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_vywsh"]
+
+[resource]
+script = ExtResource("1_vywsh")
+id = "gus_fit"
+display_name = "Grandpa Gus"
+age = 78
+complaint = "Everyone mumbles now. Especially my wife. Especially when she says \"dishes\"."
+thresholds_right = Dictionary[int, int]({
+250: 15,
+500: 20,
+750: 20,
+1000: 25,
+1500: 30,
+2000: 40,
+3000: 50,
+4000: 55,
+6000: 60,
+8000: 65
+})
+thresholds_left = Dictionary[int, int]({
+250: 15,
+500: 20,
+750: 25,
+1000: 25,
+1500: 35,
+2000: 45,
+3000: 50,
+4000: 60,
+6000: 65,
+8000: 65
+})
+false_alarms_per_minute = 0.3
+reaction_time_min_s = 0.4
+reaction_time_max_s = 0.9
+psychometric_slope_db = 1.7
+attention = 0.95
+fatigue_per_tone = 0.001
+min_tone_s = 0.6
+rhythm_sensitivity = 0.4
+tags = PackedStringArray("presbycusis", "fitting")
+pronoun = "he"
+nickname = "Gus"

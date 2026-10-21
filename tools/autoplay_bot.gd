@@ -852,6 +852,18 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 				_mouse_misses.append("fitting switch")
 				return
 			await _click(btn.get_global_rect().get_center())
+		&"fitting_target":
+			# (Day 14) each band's + or - button as many times as it needs, then Done
+			var tm := _find_script_node("story/games/target_match.gd")
+			if tm == null:
+				_mouse_misses.append("target match")
+				return
+			for i in (tm.call("gains") as Array).size():
+				var n := int(tm.call("presses_needed", i))
+				var b: Control = tm.call("arrow_button", i, n > 0)
+				for k in absi(n):
+					await _click(b.get_global_rect().get_center())
+			await _click((tm.call("done_button") as Control).get_global_rect().get_center())
 		_:
 			if info.get("mouse", null) is Dictionary:
 				await _mouse_route(info["mouse"] as Dictionary)
@@ -1016,7 +1028,12 @@ func _finish() -> void:
 	var ears: Dictionary = res.get("ears", {})
 	_check_v3(res, report, problems)
 	_check_speech(res, report, problems)
-	for ear: String in ["right", "left"]:
+	# (Day 14, chapter gus_fit) the fitting tests no ears: its check is the match itself
+	var fitting_day := String(_summary.get("chapter_id", Game.current_chapter_id)) == "gus_fit"
+	if fitting_day:
+		_check_fitting(res, report, problems)
+	var ear_list: Array = [] if fitting_day else ["right", "left"]
+	for ear: String in ear_list:
 		if not ears.has(ear) or not bool((ears[ear] as Dictionary).get("complete", false)):
 			problems.append("%s ear incomplete" % ear)
 			continue
@@ -1064,6 +1081,28 @@ func _finish() -> void:
 		code = 5
 	OS.remove_logger(_errors)
 	Events.quit_requested.emit(code)
+
+
+## (Day 14, docs/FITTING.md) The fitting: every band of the right ear in the green, the style picked,
+## and Hoot's left ear done.
+func _check_fitting(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var fit: Dictionary = res.get("fitting", {})
+	if fit.is_empty():
+		problems.append("fitting: no fitting results")
+		return
+	var errs := {}
+	for b: Dictionary in fit.get("bands", []):
+		errs[str(b.get("freq", 0))] = int(b.get("err", 99))
+		if absi(int(b.get("err", 99))) > 5:
+			problems.append("fitting: %s Hz left %+d dB off target" % [str(b.get("freq", 0)), int(b.get("err", 99))])
+	if errs.size() != 3:
+		problems.append("fitting: %d bands, expected 3" % errs.size())
+	if String(fit.get("style", "")) != "ric_open":
+		problems.append("fitting: style %s" % fit.get("style", ""))
+	if not bool(fit.get("left_by_hoot", false)):
+		problems.append("fitting: Hoot never did the left ear")
+	report["fitting"] = {"errs": errs, "moves": fit.get("moves", 0), "par": fit.get("par", 0), "style_tries": fit.get("style_tries", 0),
+		"overshoots": fit.get("overshoots", []), "medals": _summary.get("medals", {})}
 
 
 ## (v3) Bone / masked sheets: every stamp within 10 dB of the truth; on Day 2 the right ear must

@@ -10,7 +10,7 @@ later level!" This is that level. Steve reviews every clinical number and line.
 | Length | target 6-7 minutes |
 | Opens | from the chapter select like every day (`requires: "bev"` only picks UP NEXT) |
 | Level scene | `res://story/level_fitting.tscn` (`story/level_fitting.gd`) |
-| Patient | `core/patients/gus_fit.tres`: Gus's own thresholds (a copy of `gus.tres`), bone = air. Its own id because `Game.chapter_for_patient` returns the first match, so `gus` would score as Day 1 (like `barnaby_after`). The clinic draws Gus by default. |
+| Patient | `core/patients/gus_fit.tres`: Gus's own thresholds (a copy of `gus.tres`), bone = air. Its own id because `Game.chapter_for_patient` returns the first match, so `gus` would score as Day 1 (like `barnaby_after`). The chapter id is `gus_fit` too, as every chapter id is its patient id. The clinic draws Gus by default. |
 | Mini-game | `story/games/target_match.gd` (`TargetMatch`): the real-ear graph, three band handles, the "what Gus hears" strip |
 | Paper | `story/papers/paper_fitting.gd`: SPORTS: THE FITTING CARD (the summary's `sports_script`) |
 
@@ -27,7 +27,7 @@ PR 1 (this design's first PR) builds beats 1, 2, 4, 6 and 7. PR 2 adds 3, 5 and 
 | 1 | Back again | Gus walks in ("Plain bagel today. No seeds. Doris checked."). Hoot opens the file: red flags none (Day 1), bone matched air (an inner-ear loss), words clear when loud enough, some trouble in noise: a **FIT**. The four lines go on the notes board. | - |
 | 2 | Pick a style | Three options, one right: a **tiny speaker in the canal with an open dome** (his lows are nearly normal, so leave the ear open). Wrong: a **behind-the-ear aid with a sealed custom earmold** ("Why do I sound like I'm talking in a barrel?": the occlusion effect) and a **custom shell that fills the canal** ("Why does my bagel sound like a marching band?"). A wrong pick is explained and greyed; pick again. | style: gold first pick, silver second, bronze third |
 | 3 | The probe tube (PR 2) | Slide the thin tube in to within about 5 mm of the eardrum. Too shallow and the high pitches read low; too deep and Gus says OW. PR 1: Hoot places it while explaining it. | probe |
-| 4 | Match the target | The aids go on with the software's first guess. Doris comes in and says "Gus, the finches are back! Shall I put the kettle on?", which Gus hears with the high sounds missing ("_u_, _e _in__e_ are ba_!"). The player raises three bands (1k, 2k, 4k) until each sits inside the green zone (target ±5 dB). Every matched band brings back its sounds in the strip and a wave of colour; all three bring the birdsong. Then Hoot does the left ear at Hoot speed. | match: gold at par with every band within 2 dB, silver within par + 2, bronze otherwise |
+| 4 | Match the target | The aids go on with the software's first guess. Doris comes in and says "Gus, the finches are back! Shall I put the kettle on?", which Gus hears with the high sounds missing ("_u_, _e _in_e_ are ba_!"). The player raises three bands (1k, 2k, 4k) until each sits inside the green zone (target ±5 dB). Every matched band brings back its sounds in the strip and a wave of colour; all three bring the birdsong. Then Hoot does the left ear at Hoot speed. | match: gold at par with every band within 2 dB, silver within par + 2, bronze otherwise |
 | 5 | The loud-sound check (PR 2) | Doris drops a pan. Loud sounds must be loud but never painful: the output limit. | loud |
 | 6 | The first weeks | PR 1: one Hoot line (the brain needs a few weeks; wear them all day; a follow-up to fine-tune). PR 2: a choice of what to tell Gus. | (PR 2) counsel |
 | 7 | Payoff | Full colour. The dishes callback, with a twist: Gus pretends the new aids can't hear "dishes"; Hoot just measured them, they're perfect; Doris has a list. The Daily Decibel, then Hoot's finale line. | - |
@@ -56,7 +56,7 @@ the software's first guess is an average ear, and in a real ear it usually comes
 
 **What Gus hears.** Doris's line in the strip loses the sounds of the bands that are not matched yet, roughly where
 the familiar-sounds chart puts them: MIDS "ch", "sh"; HIGHS "k", "g", "p", "t" ("ck" counts as one k); TOPS "f",
-"s", "th". Unmatched: "_u_, _e _in__e_ are ba_! _all I _u_ _e _e__le on?"; all three: the whole line (question 3).
+"s", "th". Unmatched: "_u_, _e _in_e_ are ba_! _all I _u_ _e _e__le on?"; all three: the whole line (question 3).
 
 **Too much.** A band 6 dB or more over target is an overshoot: Gus winces ("Whoa! The fridge sounds like a jet
 engine!"), or at TOPS the aid whistles ("Wheeee!": feedback, which an open dome gets first). The first overshoot
