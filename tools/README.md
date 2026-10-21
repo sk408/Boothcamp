@@ -20,6 +20,8 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | Headless mouse-only playthrough (real clicks and drags only, ends back on the title) | `tools/mouse_check.sh` | ~10 s |
 | **(v3)** Day 2 (Bonnie: bone, masking, referral), keys or mouse only | `tools/autoplay_check.sh --day=2` / `tools/autoplay_check.sh --day=2 --mouse` | ~25 s |
 | **(Speech)** Day 3 (Mike: SRT on the SPEECH screen, the OBJECTION! board, the recheck stamp), keys or mouse only | `tools/autoplay_check.sh --day=3` / `tools/autoplay_check.sh --day=3 --mouse` | ~15 s |
+| **(Day 4)** Day 4 (Nora: Hoot's tones and SRTs, then word recognition in the SPEECH screen's WORD mode: Word list 1 right, Word list 2 left with the noise decision, the louder list, then the Red-Flag Roll Call and the referral stamp), keys or mouse only; Quick visit off (the player's SRTs and all 25 words of every list): add `--full` | `tools/autoplay_check.sh --day=4` / add `--mouse` / add `--full` | ~20 s each |
+| **(Day 4)** Day 4 picked from the Days grid by mouse (a fresh save, so the Letter Choir plays first) | `tools/autoplay_check.sh --save=/abs/s.json --via-days --mouse --pick=nora` | ~20 s |
 | **(cases)** Days 6 to 12, the case files (history, otoscopy, tymp, audiometry, the call; Day 10 also the retest; Day 12 the shadow curve), keys or mouse only | `tools/autoplay_check.sh --day=6` (or 7 to 12) / add `--mouse`; Quick visit off: add `--full`; Day 10 with inserts owned (the wax keeps headphones): add `--upgrades=insert_earphones` | ~30 s each (Day 10 ~45 s) |
 | **(cases)** A case picked from the Days grid by mouse | `tools/autoplay_check.sh --save=/abs/s.json --via-days --mouse --pick=marina` (or rocco, dash, ginger, barnaby, skye) | ~30 s |
 | **(cases)** `docs/CASE_SCRIPTS.md` matches the case JSON (regenerate it: drop `--check`; `tools/run_tests.sh` runs the check too) | `python3 tools/case_scripts.py --check` | ~1 s |
@@ -86,7 +88,7 @@ Exit codes:
 | 0 | ok |
 | 2 | stalled: no progress for 120 game seconds; a `stuck_<phase>.png` shot is taken |
 | 3 | overall timeout |
-| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k, and masked air at every frequency the rules ask for with this air transducer (none with inserts; a masked air stamp where none was needed is a problem too). **(v4)** Day 2 also: LEFT unmasked bone at 500-4k, no unmasked RIGHT bone stamp (the Ghost demo stores nothing), the `explainer` and `ghost_demo` phases, the movie started on a fresh save, and at least one demo tone | **(Speech)** Every stored speech sheet within 10 dB of the truth; on Day 3 both SRTs stored and a poor PTA/SRT agreement
+| 4 | results sanity check failed: an ear is incomplete, a threshold is more than 10 dB off, or `level_finished` never fired. **(v3)** Day 2 also: every sheet (`ac`, `bc`, `bc_masked`, `ac_masked`) within 10 dB of the truth, Bonnie's right ear conductive with the red flag, masked bone at 500-4k, and masked air at every frequency the rules ask for with this air transducer (none with inserts; a masked air stamp where none was needed is a problem too). **(v4)** Day 2 also: LEFT unmasked bone at 500-4k, no unmasked RIGHT bone stamp (the Ghost demo stores nothing), the `explainer` and `ghost_demo` phases, the movie started on a fresh save, and at least one demo tone | **(Speech)** Every stored speech sheet within 10 dB of the truth; on Day 3 both SRTs stored and a poor PTA/SRT agreement. **(Days 4-5)** Every counted word list the player scored within 8 points of its deal, equal to the truth when nothing was misscored, started at a fair level and masked exactly when needed; on Day 4 the better ear first, the lists in play order, the right ear 88% or more (excellent or good), the left comfortable list 64% or less with its best final, below predicted, asymmetric and rolled over, the louder list's noise by the formula (65-75 dB), a referral (and the visit's decision `refer`), and `letter_choir` started on a fresh save
 | 5 | script errors (or, since the polish pass, engine errors and `push_error()`) were logged during the run |
 | 6 | `--mouse` only: a mouse target was not found on screen |
 
@@ -104,7 +106,11 @@ Screenshots are named `NN_<name>.png`:
 
 **(Speech)** Speech shots: `speech_<ear>_srt_first_word`, `speech_<ear>_srt_descent` (the first word at 40 dB or
 softer), `speech_<ear>_srt_stored`; Day 3 adds `day3_familiarize`, `day3_objection`, `day3_stamp`, `day3_goodbye`,
-`day3_glazed`.
+`day3_glazed`. **(Days 4-5)** Word and party lists name their slot and list: `speech_<slot>_<test>_<list_id>_first_word`
+and `_stored` (for example `speech_left_wrs_words_2_first_word`); the descent shot is the SRT's only. Day 4 adds
+`day4_intro`, `day4_tuning_fork`, `day4_lens_right`, `day4_call_it`, `day4_tea_demo`, `day4_boo` and
+`day4_ghostbuster` (only when the noise was forgotten), `day4_audible_miss`, `day4_flags`, `day4_flags_done`,
+`day4_stamp`, `day4_letter` and `day4_a_flat`.
 
 Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `right_abg`, `right_type` and
 `plateaus_found`; **(v4)** `movies` (movies that started) and `ghost_demo_tones`. **(Speech)** Speech days add `speech` (`<test>_<ear>`: `[stored, true, agreement, words, par]`) and `speech_scores`. **(Days 4-5)** Days with word lists add `wrs_lists`; Day 4 adds `movies` (a fresh save must start `letter_choir`).
@@ -126,7 +132,7 @@ Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `ri
 | `--fresh` | reset the save first |
 | `--save=user://x.json` | use another save file (`--scene=` runs default to `user://save_scene.json`, never the player's save) |
 | `--mouse` | with `--autoplay`: drive everything with real mouse events (the mouse-only path) |
-| `--day=N` / `--chapter=id` | **(v3)** start that chapter (`--day=2` = Bonnie, `--day=3` = Mike) and treat it as unlocked for this run; with `--autoplay` the bot plays it |
+| `--day=N` / `--chapter=id` | **(v3)** start that chapter (`--day=2` = Bonnie, `--day=3` = Mike, `--day=4` = Nora) and treat it as unlocked for this run; with `--autoplay` the bot plays it |
 | `--unlock-all` | **(v3)** accepted and ignored since the polish pass: every day is always open |
 | `--keep-save` | **(v3)** with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 on one `--save=`) |
 | `--via-days` | **(v3)** with `--autoplay`: start from the title's Days card (`--pick=`, `--expect-days=`, `--expect-suggested=`; with `--mouse` the bot scrolls the grid with the wheel; see CONTRACTS.md §7.1) |

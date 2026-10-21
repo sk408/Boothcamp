@@ -100,6 +100,14 @@ need to edit the shared stage or player: everything below lives in your chapter'
    numbers come from `ClinicRules` and are reviewed by Steve; the test should check them against the rules.
    A one-card **recap** for later in the day is a movie too: `"short": true` (5-30 s), never listed for replay
    (Day 2's `masking_recap.gd`).
+   **Scene 1 is the lead-in** (Steve, 2026-10-19: every movie opens the way Day 2's does). It holds its title card
+   for `params.card_hold` seconds (8) with two `params.questions` chips under it (the question the movie answers, and
+   how), while its first captions ask that question and name the answer; then the scene's own picture runs, its
+   clock shifted by `card_hold - 2`. The built-in `meet` set reads both keys, and a scene-1 set of your own must too
+   (`stages/letter_choir_sets.gd` `_set_choir()` is an example; the stage already skips its iris and holds the scene
+   title for any scene with `card_hold`). Day 4's: `"card_hold": 8.0, "questions": ["Loud enough, so why mushy?",
+   "How do we score clear words?"]`, captions at 0.3, 4.4 and 8.4 s. Print the lead-in (the chips and the first
+   captions) in your chapter doc's movie table, as `docs/CHAPTER4.md` §4.2 does.
 2. **Register it:** one line in `story/explainers/movies.gd` `MOVIES` (`"tymp": "res://story/explainers/movies/tymp.gd"`).
 3. **Pick the sets: built-in, the no-code card, or your own sets script.**
    - **Built-in sets** (`explainer_stage.gd` `SETS`): the ten masking sets (`meet`, `air`, `wall`, `bone`, `ghost`,
@@ -137,14 +145,17 @@ need to edit the shared stage or player: everything below lives in your chapter'
 4. **Play it from your level** (copy `level_bonnie._movie()`): emit phase `explainer` {movie, source, seen}, then
    instance `res://story/explainers/explainer_player.tscn`, `await player.call("play", id, "day_start")`, free it.
    Once `Game.is_movie_seen(id)` is true, offer it with a choice (best = skip) instead of playing it again. If the
-   result says `skipped`, have Hoot say where it lives (pause menu, "Watch <title>"). A recap mid-day: copy
+   result says `skipped`, have Hoot say where it lives (pause menu, "Watch <title>"). Before the first play only,
+   Hoot announces the day in one line (Day 4: "New trick today: WORD SCORES. A quick cartoon first, then our next
+   patient!"; `level_nora._movie()` shows the whole pattern). A recap mid-day: copy
    `level_bonnie._recap()`. The player emits the `explainer` beat (solver = skip), so the autoplay bot and
    `--mouse` need no edits.
 5. **Replay is free:** the pause menu offers every movie whose `chapter` is the current chapter (one: a "Watch
    <title>" button; two or more: a "Hoot's Movies..." vertical list with the day, title and length per row), and
-   every movie on the title's Options and its "Hoot's Movies" button. Recaps (`"short": true`) are never listed,
-   nor is a movie whose `chapter` is not in `Game.CHAPTERS` yet (so a movie can be registered before its day lands).
-   Nothing to add; check the list with `dev_explainer --list`.
+   every movie on the title's Options and its "Hoot's Movies" button. A level in the `Movies.MASKING_LEVEL_GROUP`
+   group (the case days and the walk-ins) offers every replay movie instead (`Movies.for_level()`). Recaps
+   (`"short": true`) are never listed, nor is a movie whose `chapter` is not in `Game.CHAPTERS` yet (so a movie can be
+   registered before its day lands). Nothing to add; check the list with `dev_explainer --list`.
 6. **Test it:** add your movie to a test like `tests/test_contracts_v4.gd` (`Movies.validate(id, Stage2D.SETS)` is
    empty, the scene ids, the facts against `ClinicRules`).
 
