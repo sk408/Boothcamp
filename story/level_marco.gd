@@ -108,6 +108,8 @@ const HOOT: Dictionary[String, String] = {
 	"instructions_best": "Repeat the main voice, even single words. Guess if unsure. The party gets louder.",
 	"instructions_strict": "Too strict! Every key word counts, even one. Guessing is welcome.",
 	"instructions_party": "Just the main voice! The party is the noise we measure against.",
+	# (clinical review A1, all days) the routine before the first tone test, in the cases' words
+	"routine": LevelMike.ROUTINE_LINE,
 	"tones": "I'll run the beeps at top speed. Better ear first: the right.",
 	"bone": "Bone matches air: no gap. Sensorineural, both ears.",
 	"bone_other": "Bone's in. Now his words, in quiet first.",
@@ -421,7 +423,7 @@ func _otoscopy() -> void:
 	await clinic.call("focus_camera", &"otoscope", 0.8)
 	var g := Otoscopy.new()
 	hud.call("add_game", g)
-	await g.show_clear("right", "Marco's RIGHT ear: clear canal, healthy eardrum.")
+	await g.show_clear("right", LevelMike.SPECULUM_CAPTION % ["Marco", "RIGHT"])
 	await _hoot("otoscopy")
 	hud.call("add_clue", "Canals clear, eardrums healthy")
 	g.queue_free()
@@ -511,6 +513,7 @@ func _montage() -> void:
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
 	await _say("Marco", "Cosy. Like a pantry. Four stars.")
+	await _hoot("routine")
 	await _hoot("tones")
 	clinic.call("put_on_earphones", true)
 	await _wait(0.6)

@@ -40,6 +40,13 @@ const RETEST_BETTER_DB := 15
 ## then Hoot finishes the bracket (plan hoot_turn_after_up). This many words is the cap, for a
 ## descent that never misses.
 const LEFT_SOLO_WORDS := 12
+## (Clinical review A1, all days) The routine around the test, short and ungraded, in the cases'
+## own words (story/level_case.gd ROUTINE_LINE and OTHER_EAR_CAPTION); Days 4 and 5 use these too.
+## Once a visit, before the first tone test: the morning listening check, the response button and
+## the dials out of the patient's view. At the otoscope: a fresh speculum (%s: the patient, then the
+## ear in capitals).
+const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
+const SPECULUM_CAPTION := "Fresh speculum. %s's %s ear: clear canal, healthy eardrum."
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
 const STEP_LABELS: Dictionary = {
@@ -247,7 +254,7 @@ func _otoscopy() -> void:
 	await clinic.call("focus_camera", &"otoscope", 0.8)
 	var g := Otoscopy.new()
 	hud.call("add_game", g)
-	await g.show_clear("right", "Mike's RIGHT ear: clear canal, healthy eardrum.")
+	await g.show_clear("right", SPECULUM_CAPTION % ["Mike", "RIGHT"])
 	await _say("Hoot", "Look before you beep! Canals clear, eardrums normal. Nothing blocking the way in.")
 	await _say("Mike", "See? Nothing in there. Not even the beep.")
 	hud.call("add_clue", "Canals clear, eardrums look normal")
@@ -314,6 +321,7 @@ func _tones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
+	await _say("Hoot", ROUTINE_LINE)
 	await _say("Hoot", "Earphones on! I'll run the beeps myself today, at top speed.")
 	clinic.call("put_on_earphones", true)
 	await _wait(0.6)
