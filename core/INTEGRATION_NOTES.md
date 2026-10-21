@@ -58,3 +58,9 @@ that ("phones" / "inserts") and uses the param only for stamps without one (hand
 that keeps one transducer, which is every other day and Freestyle (the deck toggles only between that transducer
 and bone), gets the same answers as before; `story/tests/test_cases.gd`
 `test_masked_air_follows_each_stamps_transducer` pins the new case.
+
+Follow-up (done, small): the LCD masking lamp (`AudiometrySession.masking_needed_here`, behind `mask_status()`)
+still judged a stored air stamp by the session's current transducer, so after the loan it read "off" at Bev's
+500 Hz and 1 kHz while the masked-air sheet asked for masking there. Both now share the additive
+`ClinicRules.stamp_air_transducer(stamp, fallback)`; an unstored dial level still uses the current transducer.
+`tests/test_masking_session.gd` `test_mask_lamp_follows_each_stamps_transducer` pins it.

@@ -590,14 +590,19 @@ static func masked_freqs_needed(results: Dictionary, ear: String, test: StringNa
 		for f: int in order2:
 			if not ac2.has(f):
 				continue
-			var tr := phones
-			var rec := String((sheet2[f] as Dictionary).get("transducer", ""))
-			if rec == "phones" or rec == "inserts":
-				tr = StringName(rec)
+			var tr := stamp_air_transducer(sheet2[f] as Dictionary, phones)
 			var nb: Variant = nontest_bone_estimate(results, ear, f)
 			if nb != null and ac_masking_needed(int(ac2[f]), int(nb), tr, f):
 				out.append(f)
 	return out
+
+
+## (Day 13) The air transducer an air stamp records ("phones" / "inserts"), else the fallback.
+static func stamp_air_transducer(stamp: Dictionary, fallback: StringName) -> StringName:
+	var rec := String(stamp.get("transducer", ""))
+	if rec == "phones" or rec == "inserts":
+		return StringName(rec)
+	return fallback
 
 
 ## The patient's response threshold (dial dB) for one tone, from the cross-hearing model

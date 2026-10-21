@@ -394,6 +394,23 @@ func test_masked_air_follows_each_stamps_transducer() -> void:
 			"%s: headphone stamps keep the headphones' rule after the loan" % ear)
 
 
+## (C9) A player who owns inserts and gets Bev's bone 5 dB high at both 500 Hz and 1 kHz: neither window
+## is a strict dilemma (init 65 < limit 70), but neither has room for a plateau, so the purple ? will
+## show and Hoot's dilemma lines must play first.
+func test_dilemma_lines_play_wherever_room_runs_out() -> void:
+	var p := _patient("bilateral_conductive")
+	var res := _perfect(p, PackedStringArray(["right"]), PackedStringArray())
+	for f: int in [500, 1000]:
+		var info: Dictionary = (res["ears"] as Dictionary)["right"]["bc"][f]
+		info["stored_db"] = int(info["stored_db"]) + 5
+	for ear: String in ["right", "left"]:
+		for f: int in [500, 1000]:
+			var w := CaseData.bone_mask_window(res, ear, f, &"inserts")
+			assert_false(bool(w["dilemma"]), "%s %d: not a strict dilemma" % [ear, f])
+			assert_true(int(w["raises"]) < ClinicRules.PLATEAU_STEPS, "%s %d: no room for a plateau" % [ear, f])
+		assert_eq(CaseData.dilemma_freqs(res, ear, &"inserts"), [1000, 500] as Array[int], "%s: the lines play" % ear)
+
+
 ## (C9) Bev's windows, with perfect stamps and with any one stamp 5 dB off: masked bone through
 ## headphones opens in a dilemma at 1 kHz (the loan's trigger, the first frequency); through inserts
 ## there is no room for a plateau at 500 Hz and 1 kHz, but room at 2k and 4k; both ears need masked
@@ -411,6 +428,7 @@ func test_dilemma_case_windows() -> void:
 		var tag := str(w)
 		assert_eq(ClinicRules.masked_freqs_needed(res, "right", &"bc_masked")[0], 1000, "1 kHz first " + tag)
 		assert_true(CaseData.dilemma_freqs(res, "right", &"phones").has(1000), "headphones: a dilemma at 1 kHz " + tag)
+		assert_false(CaseData.dilemma_freqs(res, "right", &"inserts").is_empty(), "inserts owned: the lines still play " + tag)
 		for ear: String in ["right", "left"]:
 			assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").size(), 4, "%s masked bone %s" % [ear, tag])
 			for f: int in ClinicRules.BC_REQUIRED:

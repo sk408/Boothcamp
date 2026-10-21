@@ -3636,7 +3636,8 @@ types an ear with no-response bone dropped (the chart's `hearing_type` reads a d
 **(Day 13, clinical review C9)** `on_dilemma` (a script) and `lend_inserts` (bool; needs `on_dilemma`, never with a
 wax view): before each masked bone test the runner reads the noise window from the stamps
 (`CaseData.bone_mask_window(res, ear, f, masker)` -> `{initial, limit, raises, dilemma}`, mirroring the session;
-`CaseData.dilemma_freqs`); the first time one opens in a masking dilemma it plays `on_dilemma`, then, with
+`CaseData.dilemma_freqs`); the first time one opens in a masking dilemma or with fewer than `PLATEAU_STEPS` safe
+raises (so before any purple ? can show) it plays `on_dilemma`, then, with
 `lend_inserts` and no inserts owned, lends Hoot's for the rest of the visit (`CaseData.air_transducer(blocked, lent)`,
 `LevelCase.LEND_INSERTS`; never `progress.upgrades`). Visit flags `dilemma_told`, `lent_inserts`.
 `findings[].when` `no_plateau` (a masked stamp on either ear carries `plateau_not_reached`; on the truth, an inserts

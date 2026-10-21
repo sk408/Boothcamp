@@ -944,6 +944,7 @@ static func _nearest_freq(by_freq: Dictionary, f: int) -> int:
 ## Bone: the ear's air-bone gap (best air - unmasked bone, or the best bone estimate) is 10 dB or more.
 ## (v4) Unmasked bone from EITHER mastoid counts (ClinicRules.unmasked_bone(), as masked_freqs_needed).
 ## Air: the ear's air threshold (or the dial level, before it is stored) - IA >= the non-test bone.
+## (Day 13) A stored air stamp is judged by the transducer it records, as masked_freqs_needed does.
 func masking_needed_here(e: String = "", f: int = -1) -> bool:
 	var ee := ear if e == "" else e
 	var ff := freq if f < 0 else f
@@ -958,8 +959,12 @@ func masking_needed_here(e: String = "", f: int = -1) -> bool:
 		return est != null and ClinicRules.bc_masking_needed(int(ac[ff]), int(est))
 	var ac2 := ClinicRules.sheet_thresholds(v, ee, &"ac")
 	var level := int(ac2[ff]) if ac2.has(ff) else db
+	var tr := air_transducer
+	if ac2.has(ff):
+		var stamps: Dictionary = ((v["ears"] as Dictionary)[ee] as Dictionary)["freqs"]
+		tr = ClinicRules.stamp_air_transducer(stamps[ff] as Dictionary, air_transducer)
 	var nb: Variant = ClinicRules.nontest_bone_estimate(v, ee, ff)
-	return nb != null and ClinicRules.ac_masking_needed(level, int(nb), air_transducer, ff)
+	return nb != null and ClinicRules.ac_masking_needed(level, int(nb), tr, ff)
 
 
 ## (v3) The masking-help light for the current ear / freq / dial (ClinicRules.MASK_STATUSES).

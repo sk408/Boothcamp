@@ -713,11 +713,13 @@ static func bone_mask_window(res: Dictionary, ear: String, f: int, masker: Strin
 
 
 ## (Day 13) The frequencies of an ear's masked bone test that open in a masking dilemma with this
-## masker (the safe noise is too weak to mask the other ear), in the test's order.
+## masker (the safe noise is too weak to mask the other ear), or with too little room for a plateau
+## (where the purple ? will show), in the test's order.
 static func dilemma_freqs(res: Dictionary, ear: String, masker: StringName) -> Array[int]:
 	var out: Array[int] = []
 	for f: int in ClinicRules.masked_freqs_needed(res, ear, &"bc_masked"):
-		if bool(bone_mask_window(res, ear, f, masker).get("dilemma", false)):
+		var w := bone_mask_window(res, ear, f, masker)
+		if not w.is_empty() and (bool(w["dilemma"]) or int(w["raises"]) < ClinicRules.PLATEAU_STEPS):
 			out.append(f)
 	return out
 
