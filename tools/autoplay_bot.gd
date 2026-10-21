@@ -883,6 +883,13 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 			for k in absi(n):
 				await _click((lc.call("turn_button", n > 0) as Control).get_global_rect().get_center())
 			await _click((lc.call("drop_button") as Control).get_global_rect().get_center())
+		&"tune_desk":
+			# (Day 15) a click on the ticket's right tool
+			var td := _find_script_node("story/games/tune_desk.gd")
+			if td == null:
+				_mouse_misses.append("tune desk")
+				return
+			await _click((td.call("tool_button", td.call("right_tool")) as Control).get_global_rect().get_center())
 		_:
 			if info.get("mouse", null) is Dictionary:
 				await _mouse_route(info["mouse"] as Dictionary)
@@ -1048,9 +1055,13 @@ func _finish() -> void:
 	_check_v3(res, report, problems)
 	_check_speech(res, report, problems)
 	# (Day 14, chapter gus_fit) the fitting tests no ears: its check is the match itself
-	var fitting_day := String(_summary.get("chapter_id", Game.current_chapter_id)) == "gus_fit"
-	if fitting_day:
+	# (Day 15, chapter gus_tune) nor does the tune-up: its check is the desk
+	var chapter := String(_summary.get("chapter_id", Game.current_chapter_id))
+	var fitting_day := chapter in ["gus_fit", "gus_tune"]
+	if chapter == "gus_fit":
 		_check_fitting(res, report, problems)
+	elif chapter == "gus_tune":
+		_check_tuneup(res, report, problems)
 	if bool(_summary.get("demo", false)):
 		_check_demo(res, report, problems)
 	var ear_list: Array = [] if fitting_day else ["right", "left"]
@@ -1129,6 +1140,26 @@ func _check_fitting(res: Dictionary, report: Dictionary, problems: PackedStringA
 	report["fitting"] = {"errs": errs, "moves": fit.get("moves", 0), "par": fit.get("par", 0), "style_tries": fit.get("style_tries", 0),
 		"overshoots": fit.get("overshoots", []), "probe_mistakes": fit.get("probe_mistakes", -1), "loud_drops": fit.get("loud_drops", -1),
 		"counsel_slips": fit.get("counsel_slips", -1), "medals": medals}
+
+
+## (Day 15, docs/TUNEUP.md) The tune-up: both medals, every ticket fixed on the first tool (the bot
+## always picks the right one), the right question first, no WHOLE AID UP.
+func _check_tuneup(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var tune: Dictionary = res.get("tuneup", {})
+	var medals: Dictionary = _summary.get("medals", {})
+	for m: String in ["ask", "tune"]:
+		if not medals.has(m):
+			problems.append("tune-up: no %s medal (the beat never finished)" % m)
+	var tickets: Array = tune.get("tickets", [])
+	if tickets.size() != 4:
+		problems.append("tune-up: %d tickets, expected 4" % tickets.size())
+	for t: Dictionary in tickets:
+		if not bool(t.get("fixed", false)) or int(t.get("tries", 0)) != 1:
+			problems.append("tune-up: ticket %s fixed=%s in %d tries" % [t.get("id", "?"), t.get("fixed", false), int(t.get("tries", 0))])
+	if int(tune.get("ask_tries", 0)) != 1 or int(tune.get("ups", -1)) != 0:
+		problems.append("tune-up: ask_tries %d, ups %d" % [int(tune.get("ask_tries", 0)), int(tune.get("ups", -1))])
+	report["tuneup"] = {"tools_used": tune.get("tools_used", 0), "par": tune.get("par", 0), "ask_tries": tune.get("ask_tries", 0),
+		"ups": tune.get("ups", -1), "medals": medals}
 
 
 ## (career-fair demo, docs/DEMO.md) The demo: its four medals, the right ear's match in the green,

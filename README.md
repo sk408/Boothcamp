@@ -93,6 +93,12 @@ while the grey world colours in and Doris's "the finches are back" comes through
 to check that loud sounds are loud but never painful, Gus tries to dodge the dishes, and you tell
 him what to expect in his first weeks. About 8 minutes.
 
+**Day 15, Gus's Tune-Up**, is his first follow-up, two weeks later. You ask where he has trouble
+(an open question gets the stories), read the aids' diary of hours worn, then fix each complaint
+at the tune-up desk with the right tool: soften the loud highs for the sharp teaspoons, run the
+feedback test for the whistle at hugs, switch on a noisy-places program for the bingo hall, and
+talk through why he should wear them all day. Then it's bingo night at Bev's hall. About 6 minutes.
+
 **Freestyle** (on the title) is the walk-in clinic: eight patients in the waiting room, any order,
 as often as you like, or **Surprise me**. There is no script and no coaching during the tones: you
 pick the tools yourself (questions, the otoscope, the tympanometer, air, bone and masking), name
@@ -359,6 +365,7 @@ tools/autoplay_check.sh --day=4                     # ...Day 4 (word recognition
 tools/autoplay_check.sh --day=5                     # ...Day 5 (speech in noise)
 tools/autoplay_check.sh --day=6                     # ...Day 6, a case file (also 7 to 13)
 tools/autoplay_check.sh --day=14                    # ...Day 14 (the fitting)
+tools/autoplay_check.sh --day=15                    # ...Day 15 (the tune-up)
 tools/autoplay_check.sh --demo                      # ...the career-fair demo
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
@@ -372,12 +379,11 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
 (`tools/movie_check.sh`), and a button-mashing stress test of the AudiOtron
 (`--scene=res://tools/monkey.tscn`). `CONTRACTS.md` describes how the modules talk to each other.
 The designs are in `docs/`: `CHAPTER2.md` to `CHAPTER5.md` and `SPEECH.md` (Days 2 to 5), `CASES.md`
-(Days 6 to 13), `FITTING.md` (Day 14), `FREESTYLE.md`, `ARCADE.md` and `DEMO.md`.
+(Days 6 to 13), `FITTING.md` (Day 14), `TUNEUP.md` (Day 15), `FREESTYLE.md`, `ARCADE.md` and `DEMO.md`.
 
 ## What's next
 
 - A child who needs play audiometry: a new kind of patient and a new way to test.
-- Gus's follow-up visit: fine-tuning after his first weeks with the aids.
 - Real recorded voices for the speech tests (the words are on-screen text with a quiet murmur
   for now).
 - More upgrades for the clinic, more walk-ins for Freestyle and more arcade cabinets.
