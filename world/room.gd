@@ -17,6 +17,9 @@ const BOOTH := Color("#dfe9f2")
 const BOOTH_TRIM := Color("#8fb0cf")
 const INK := Color("#2e2442")
 
+const DOOR_X := -4.6        # the waiting-room door's centre on the back wall
+const DOOR_HALF_W := 0.65   # half the doorway's width (inside the purple frame)
+const DOOR_H := 2.44        # the doorway's height
 const BOOTH_X0 := 1.8
 const BOOTH_X1 := 5.6
 const BOOTH_Z0 := -4.0
@@ -51,12 +54,19 @@ static func _shell(room: Node3D, refs: Dictionary) -> void:
 	floor_opts.merge({"pattern": 3, "pattern_scale": 1.0, "pattern_color": FLOOR.lightened(0.12), "pattern_mix": 1.0})
 	Kit.box(room, Vector3(16, 0.2, 11), Vector3(0, -0.1, 0.8), FLOOR, floor_opts)
 	# back wall with wainscot and trim
-	Kit.box(room, Vector3(16, 4.6, 0.2), Vector3(0, 2.3, -4.3), WALL, flat)
+	# (in pieces around the waiting-room doorway, so the open door shows the hallway behind it)
 	var low := flat.duplicate()
 	low.merge({"pattern": 2, "pattern_scale": 2.5, "pattern_color": WALL_LOW.darkened(0.05), "pattern_mix": 1.0})
-	Kit.box(room, Vector3(16, 1.0, 0.06), Vector3(0, 0.5, -4.18), WALL_LOW, low)
-	Kit.box(room, Vector3(16, 0.08, 0.1), Vector3(0, 1.02, -4.15), TRIM, {"outline": 0.0})
-	Kit.box(room, Vector3(16, 0.12, 0.08), Vector3(0, 0.06, -4.15), WOOD.darkened(0.1), {"outline": 0.0})
+	var gap0 := DOOR_X - DOOR_HALF_W
+	var gap1 := DOOR_X + DOOR_HALF_W
+	for span: Vector2 in [Vector2(-8.0, gap0), Vector2(gap1, 8.0)]:
+		var w := span.y - span.x
+		var cx := (span.x + span.y) / 2.0
+		Kit.box(room, Vector3(w, 4.6, 0.2), Vector3(cx, 2.3, -4.3), WALL, flat)
+		Kit.box(room, Vector3(w, 1.0, 0.06), Vector3(cx, 0.5, -4.18), WALL_LOW, low)
+		Kit.box(room, Vector3(w, 0.08, 0.1), Vector3(cx, 1.02, -4.15), TRIM, {"outline": 0.0})
+		Kit.box(room, Vector3(w, 0.12, 0.08), Vector3(cx, 0.06, -4.15), WOOD.darkened(0.1), {"outline": 0.0})
+	Kit.box(room, Vector3(gap1 - gap0, 4.6 - DOOR_H, 0.2), Vector3(DOOR_X, (4.6 + DOOR_H) / 2.0, -4.3), WALL, flat)
 	# side walls
 	Kit.box(room, Vector3(0.2, 4.6, 11), Vector3(-7.2, 2.3, 0.8), WALL.darkened(0.05), flat)
 	Kit.box(room, Vector3(0.06, 1.0, 11), Vector3(-7.08, 0.5, 0.8), WALL_LOW.darkened(0.05), low)
@@ -68,14 +78,13 @@ static func _shell(room: Node3D, refs: Dictionary) -> void:
 
 
 static func _entrance(room: Node3D, refs: Dictionary) -> void:
-	var door_x := -4.6
+	var door_x := DOOR_X
 	var z := -4.18
 	# frame
 	for sx: int in [-1, 1]:
 		Kit.box(room, Vector3(0.14, 2.5, 0.16), Vector3(door_x + 0.72 * sx, 1.25, z + 0.02), Color("#8e5cc4"), {"outline": 0.01})
 	Kit.box(room, Vector3(1.58, 0.16, 0.16), Vector3(door_x, 2.52, z + 0.02), Color("#8e5cc4"), {"outline": 0.01})
-	# dark doorway behind the door (the waiting room)
-	Kit.box(room, Vector3(1.3, 2.44, 0.05), Vector3(door_x, 1.22, z - 0.02), Color("#ffe2b8"), {"outline": 0.0, "rim": 0.0})
+	_hallway(room)
 	# the door: pivot on the hinge (left edge), swings into the room
 	var pivot := Node3D.new()
 	pivot.name = "EntranceDoor"
@@ -104,6 +113,28 @@ static func _entrance(room: Node3D, refs: Dictionary) -> void:
 	Kit.label(hanger, "COME IN!", Vector3(0, 0, 0.008), 26, Color("#e5383b"), 0, 700)
 	refs["door_spot_outside"] = Vector3(door_x, 0, -5.2)
 	refs["door_spot_inside"] = Vector3(door_x + 0.1, 0, -3.1)
+
+
+## The dim hallway to the waiting room, seen through the open entrance door. The patient waits
+## here (door_spot_outside) before walk_in().
+static func _hallway(room: Node3D) -> void:
+	var flat := {"outline": 0.0, "rim": 0.0}
+	var z0 := -4.4
+	var z1 := -6.8
+	var depth := z0 - z1
+	var zc := (z0 + z1) / 2.0
+	var half := 1.25
+	var wall := Color("#3b3052")
+	Kit.box(room, Vector3(half * 2.0 + 0.4, 0.2, depth), Vector3(DOOR_X, -0.1, zc), Color("#2a2238"), flat)
+	Kit.box(room, Vector3(half * 2.0 + 0.4, 0.2, depth), Vector3(DOOR_X, 2.9, zc), Color("#211b2e"), flat)
+	for sx: int in [-1, 1]:
+		Kit.box(room, Vector3(0.2, 3.0, depth), Vector3(DOOR_X + (half + 0.1) * sx, 1.4, zc), wall.darkened(0.12), flat)
+	Kit.box(room, Vector3(half * 2.0 + 0.4, 3.0, 0.2), Vector3(DOOR_X, 1.4, z1 - 0.1), wall, flat)
+	# a runner rug and a waiting-room chair with a little lamp glow on the far wall
+	Kit.box(room, Vector3(0.9, 0.02, depth - 0.2), Vector3(DOOR_X, 0.01, zc), Color("#6b3a5e"), flat)
+	Kit.box(room, Vector3(0.7, 0.45, 0.5), Vector3(DOOR_X + 0.7, 0.22, z1 + 0.35), Color("#4f6a8f").darkened(0.25), flat)
+	Kit.box(room, Vector3(0.7, 0.6, 0.12), Vector3(DOOR_X + 0.7, 0.75, z1 + 0.12), Color("#4f6a8f").darkened(0.25), flat)
+	Kit.sphere(room, 0.16, Vector3(DOOR_X - 0.6, 1.9, z1 + 0.05), Color("#ffd99a"), Vector3(1, 1, 0.4), {"outline": 0.0, "rim": 0.0, "emission": Color("#ffd99a") * 0.6}, 12)
 
 
 static func _wall_decor(room: Node3D, refs: Dictionary) -> void:
