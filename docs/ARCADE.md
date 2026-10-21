@@ -396,3 +396,62 @@ Reply with a number only where you disagree. Each item says what the game does n
    say) or the drop should be different.
 10. The footer says "Practice, not a qualification. Real clinics follow their own referral rules, and a doctor makes
     the diagnosis."
+
+# Part 3: Chart Chute's new belts (Steve's note, 2026-10-21)
+
+Steve asked for more Chart Chute modes: one where **bone conduction** is on the chart and the player calls the loss
+**sensorineural, conductive or mixed**, and the **reverse cookie bite**, which he sees often enough to include. The
+first is its own cabinet; the second is a fifth chute on the shapes belt. Same engine, same rules as part 1 (warm-up,
+60 seconds, JAM and tell, HOOT HELP, streak, board at 90%), so only what differs is below.
+
+## 16. REVERSE BITE: a fifth chute on the shapes belt
+
+- The fifth chute is **5 REVERSE BITE** (key 5), with a rainbow picture (the arch the line makes) that shines when a
+  chart lands. It opens at **35 s** ("NEW CHUTE!", like the others); the five chutes sit a little narrower.
+- **The rule** (Chart Chute's own, on top of `ClinicRules.classify_shape`, which has no reverse bite and calls these
+  flat): the low pitches (average of 250 and 500) and the high pitches (average of 4k and 8k) are each **15 dB or
+  more worse** than the middle (average of 1k and 2k), and it is not a notch or a cookie bite. Like every chute, each
+  dealt chart still holds its shape with any one frequency 5 dB either way.
+- **The tell:** "Better in the middle, worse at both ends". **The lines:** "Mid voices are fine, the rest fades.",
+  "Low hum AND birdsong are gone.", "I hear you best in the middle."
+- No story patient has a reverse bite, so it has no gold card.
+
+## 17. AIR & BONE: a third cabinet
+
+The hall gets a third cabinet, **AIR & BONE** ("Air or bone? Find where the loss lives."). Every chart shows one
+ear's air line **and its bone line**, and the three chutes are where the loss lives:
+
+| Key | Chute (picture) | Rule (`ClinicRules.hearing_type`, the engine's own) | Tell |
+|---|---|---|---|
+| 1 | **SENSORINEURAL** (a snail shell: the cochlea) | no real gap: bone sits with air | "Bone sits on air: the inner ear" |
+| 2 | **CONDUCTIVE** (a cork in a tube) | a gap of more than 10 dB at two or more of 500, 1k, 2k, 4k, with bone normal (average 25 or better) | "Bone is normal, air is down: the middle ear" |
+| 3 | **MIXED** (the cork and the snail) | the same gap, but bone is down too | "Bone is down too, AND a gap: both" |
+
+- **The ramp:** warm-up with SENSORINEURAL and CONDUCTIVE; MIXED opens at 15 s; left ears (blue X, bone >) at
+  30 s; lookalikes at 40 s (a sensorineural chart with one 5 dB air-bone split, a conductive chart with bone at
+  20, a mixed chart whose bone is only just down). No two-ear cards and no story charts on this belt.
+- **Honest charts:** bone at 500, 1k, 2k and 4k, never poorer than air and never past the bone limits
+  (`ClinicRules.BC_MAX_DB`). Each chart keeps its type with any one air or bone point 5 dB either way: gaps are 20
+  dB or more, or 5 or less; conductive bone averages 15 or better, mixed bone 35 or worse. Bone is drawn **masked
+  [ ]** where it sits 10 dB or more better than air (where a clinician would mask, `ClinicRules.BC_MASK_GAP_DB`),
+  and unmasked < where it doesn't. Air: sloping or flat for sensorineural, flat or rising for conductive, sloping
+  or flat for mixed.
+- **Lines:** sensorineural "Loud enough, just not clear.", "Everyone mumbles!", "It's the S sounds."; conductive
+  "Like my head's under water.", "My own voice booms!", "It feels blocked."; mixed "Blocked AND fuzzy.", "Ear
+  trouble since I was a lad, and now this.", "Louder helps, but not enough."
+- Its own board (save key `chart_chute_types`), FLUENT and ranks as in part 1.
+
+## 18. For Steve: clinical check (the new belts)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. **REVERSE BITE** is low (250/500) and high (4k/8k) each 15 dB or more worse than the middle (1k/2k).
+2. The chute is called **REVERSE BITE** (the full name is in the tell and the NEW CHUTE line).
+3. **AIR & BONE** uses the engine's type rule: a gap is more than 10 dB, conductive or mixed needs a gap at two or
+   more of 500, 1k, 2k, 4k, and bone averaging 25 or better is "normal bone" (conductive), poorer is mixed.
+4. Each card shows **one ear**. Bone is drawn masked where there is a 10 dB or bigger gap, unmasked where not (the
+   other ear is not on the card, so the game doesn't show the masking decision itself).
+5. There is **no NORMAL chute**: every chart has a loss. A fourth NORMAL chute could come later.
+6. Conductive charts are flat or rising (stiffness-type), sensorineural sloping or flat, mixed sloping or flat.
+   Tell me if you want rising mixed losses or sloping conductive ones too.
+7. The lines in sections 16 and 17.
