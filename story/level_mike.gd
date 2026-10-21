@@ -519,6 +519,8 @@ func _speech() -> void:
 	await _say("Hoot", "Now the words. He repeats each one; you score what he SAID.")
 	# the same-level rule (SpeechRules.SRT_MAX_WORDS_PER_LEVEL), as the wrong-step tip says
 	await _say("Hoot", "Got it: down 10. Missed: up 5. Another word at the same level is fine too!")
+	# (clinical review S5) one common routine, not the only one
+	await _say("Hoot", "Down 10, up 5 is one common way, not the only method.")
 	var cam: Camera3D = clinic.call("get_main_camera")
 	var packed: PackedScene = load(SPEECH_SCENE) as PackedScene if ResourceLoader.exists(SPEECH_SCENE) else null
 	if packed != null:
@@ -801,7 +803,8 @@ func _payoff(b: Control) -> void:
 	clinic.call("hoot_emote", &"nod")
 	await _say("Hoot", "Thank you for telling us, Mike. That took guts.")
 	# the main path must not teach "non-organic = faking"
-	await _say("Hoot", "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse.")
+	await _say("Hoot", "Non-organic loss has many causes: money, stress, worry, even a real loss underneath.")
+	await _say("Hoot", "We can't tell which from the booth, so we never accuse.")
 	await _say("Hoot", "We'll still finish the objective tests and send your results to your doctor.")
 	await _say("Mike", "The neck brace goes back to Vinnie too.")
 	clinic.call("focus_camera", &"door", 1.6)
