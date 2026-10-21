@@ -29,10 +29,14 @@ on the title's **Days** card, in any order. The suggested day wears an **UP NEXT
 Day 1 The Daily Decibel stamps UP NEXT! and **Next: Day 2** goes straight on. Progress is saved.
 
 **Day 3** brings Mike Lenders, a forklift driver who says he can't hear a thing since a forklift
-beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his beeps, then you find
-his speech recognition threshold (SRT) on the new SPEECH screen: go through the two-part words
-first, present them softer and softer, score what Mike actually says, and find the softest level
-where he repeats half of them. His words come back far better than his beeps, so you present the
+beeped at work (yet he hears Hoot's whispered offer of coffee). It opens with **Hoot's spondee
+movie** ("The Spondee Ladder"), an 80-second cartoon in eight scenes: why test words after beeps,
+two-part words with both halves equally strong, the SRT as the halfway level, the down 10, up 5
+ladder (one common way, not the only one), saying the words first by ear, and whether words and
+beeps agree. Replay it from the pause menu ("Watch Hoot's spondee movie") or **Hoot's Movies**.
+Hoot runs his beeps, then you find his speech recognition threshold (SRT) on the new SPEECH
+screen, better ear first: go through the two-part words first, present them softer and softer,
+score what Mike actually says, and find the softest level where he repeats half of them. His words come back far better than his beeps, so you present the
 clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests, with
 his doctor told about the sudden loss.
 
