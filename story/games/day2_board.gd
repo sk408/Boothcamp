@@ -84,6 +84,7 @@ func _ready() -> void:
 		ag = (load(AUDIOGRAM_SCENE) as PackedScene).instantiate() as Audiogram
 		ag.ear = "both"
 		ag.show_notes = true   # (E18) transducer, mastoids, reliability under the chart
+		ag.true_aspect = true  # (E12) one octave as wide as 20 dB is tall
 		ag.custom_minimum_size = Vector2(820, 400)
 		ag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_card.add_child(ag)

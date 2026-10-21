@@ -797,6 +797,9 @@ var max_output_transducer: StringName = &"phones"   # &"bone" shades the bone ma
 @export var show_notes: bool = false          # show_results() then fills `notes` from ClinicRules.chart_notes(results)
 @export var notes_right: bool = false         # right-align them (Day 1's reveal: its chips sit bottom-left)
 var notes: String                             # one line under the plot ("Headphones  ·  Bone on both mastoids  ·  Reliability: good"); the plot gives up 18 px
+@export var true_aspect: bool = false         # (E12) one octave as wide as 20 dB is tall (ASHA 1990), the plot centred in its space;
+                                              #   on for the AudiOtron's ear cards and the four end screens
+@export var aspect_align: float = 0.5         # (E12) where that plot sits in the spare width (0 left, 1 right; Day 1's reveal: 1)
 # ClinicRules.chart_notes(results) / ClinicRules.reliability(results) -> "good" | "fair" | "poor" (1 kHz retest
 #   off by more than 5 dB: fair, more than 10: poor; false alarms 1 a minute: fair, 2: poor)
 # (v3, builders) optional layers, all off by default (Day 1 never sets them):

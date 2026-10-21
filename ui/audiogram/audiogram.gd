@@ -74,6 +74,13 @@ const NO_PLATEAU_COLOR := Color("#8e5cc4")
 @export var notes_right: bool = false
 var notes: String = ""
 const NOTES_H := 18.0
+## (E12) Draw the plot in the ASHA (1990) proportion, one octave as wide as 20 dB is tall, centred
+## in the space it has (the audiometer's ear cards and the end screens). Off: the plot fills it.
+@export var true_aspect: bool = false
+## (E12) Where a true_aspect plot sits in the spare width: 0 left, 0.5 centre, 1 right.
+@export_range(0.0, 1.0) var aspect_align: float = 0.5
+## (E12) The plot's width over its height when one octave spans the same distance as 20 dB.
+const TRUE_ASPECT := 20.0 / (DB_BOTTOM - DB_TOP) * OCTAVES / 0.93
 
 ## ear -> freq -> {"db": int, "no_response": bool, "age": float (seconds since stamped, -1 = static), "seed": int}
 var points: Dictionary = {"right": {}, "left": {}}
@@ -278,7 +285,15 @@ func plot_rect() -> Rect2:
 	var top := 26.0 + title_height()
 	var left := 40.0
 	var bottom := 12.0 + (NOTES_H if show_notes else 0.0)   # reserved before the notes arrive: no jump
-	return Rect2(left, top, maxf(10.0, size.x - left - 12.0), maxf(10.0, size.y - top - bottom))
+	var r := Rect2(left, top, maxf(10.0, size.x - left - 12.0), maxf(10.0, size.y - top - bottom))
+	if true_aspect:
+		var w := r.size.y * TRUE_ASPECT
+		if w < r.size.x:
+			r.position.x += (r.size.x - w) * aspect_align
+			r.size.x = w
+		else:
+			r.size.y = r.size.x / TRUE_ASPECT
+	return r
 
 
 func freq_to_x(freq: int) -> float:
