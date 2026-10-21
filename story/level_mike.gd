@@ -533,13 +533,15 @@ func srt_ears() -> Array[String]:
 	return SpeechRules.ears_better_first(ear_pta("right"), ear_pta("left"))
 
 
-## Hoot's lead-in on the first SRT ear: the better one by name, or the right when the ears tie.
+## Hoot's lead-in on the first SRT ear: the better one by name, else the ear srt_ears() picks (a tie,
+## or a missing PTA).
 func first_ear_lead() -> String:
 	var r := ear_pta("right")
 	var l := ear_pta("left")
+	var first: String = srt_ears()[0]
 	if is_nan(r) or is_nan(l) or is_equal_approx(r, l):
-		return "Right ear first."
-	return "Better ear first: the %s." % srt_ears()[0]
+		return "%s ear first." % _cap(first)
+	return "Better ear first: the %s." % first
 
 
 ## The SPEECH screen plan for one ear (§9.7).

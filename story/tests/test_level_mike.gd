@@ -361,7 +361,8 @@ func _tones_with_left(fn: Callable) -> Dictionary:
 
 
 ## S6: the SRT goes better ear first (the lower tone PTA), and Hoot coaches that ear; a tie keeps
-## the right first. Mike's own tones (71.7 against 73.3) keep his order as it was.
+## the right first, and a missing right PTA puts the left first, named. Mike's own tones (71.7
+## against 73.3) keep his order as it was.
 func test_srt_better_ear_first() -> void:
 	var quick: Variant = Game.settings.get("quick_visit", true)
 	Game.settings["quick_visit"] = true
@@ -390,6 +391,19 @@ func test_srt_better_ear_first() -> void:
 	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "a tie: right first")
 	assert_eq(String(lv.call("first_ear_lead")), "Right ear first.")
 	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Right ear first. "))
+	# no right PTA (fewer than two of 500, 1k and 2k Hz) but a known left: the left goes first, and
+	# Hoot names the ear on screen
+	var partial := SpeechSession.tone_results_from(_mike())
+	var right_freqs: Dictionary = ((partial["ears"] as Dictionary)["right"] as Dictionary)["freqs"]
+	right_freqs.erase(1000)
+	right_freqs.erase(2000)
+	lv.set("tones", partial)
+	assert_true(is_nan(float(lv.call("ear_pta", "right"))), "no right PTA")
+	assert_eq(lv.call("srt_ears"), ["left", "right"] as Array[String], "a missing right PTA: left first")
+	assert_eq(String(lv.call("first_ear_lead")), "Left ear first.")
+	var lone: String = (lv.call("speech_plan", "left") as Dictionary)["intro"]
+	assert_true(lone.begins_with("Left ear first. "), lone)
+	assert_true(lone.split(" ", false).size() <= Hoot.MAX_WORDS, lone)
 	Game.settings["quick_visit"] = quick
 	lv.free()
 

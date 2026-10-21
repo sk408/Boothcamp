@@ -145,7 +145,7 @@ on Day 3, and a fresh save must start `srt_ladder`.
 | By ear | "I'll say each word, nice and loud. You say it back. No peeking: the cards face me!" |
 | Drop a word | "Never seen a windmill? Drop it. Only use words they know." |
 | SRT instructions | "Every test word comes from this list, Mike. Say back what you hear, and guess if unsure." |
-| SRT start | "Better ear first: the right. Start at his PTA plus 15: 85 dB, easy to repeat." ("Right ear first." when the PTAs tie) |
+| SRT start | "Better ear first: the right. Start at his PTA plus 15: 85 dB, easy to repeat." ("Right ear first." when the PTAs tie; with one PTA missing, the ear `srt_ears()` puts first, "Left ear first.") |
 | SRT | "SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more." |
 | The dance | "Got it: down 10. Missed: up 5. Another word at the same level is fine too!" (the wrong-step tip: "...Another word here is fine too!") |
 | One way | "Down 10, up 5 is one common way, not the only method." |
