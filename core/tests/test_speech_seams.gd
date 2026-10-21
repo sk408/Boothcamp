@@ -398,11 +398,15 @@ func test_days45_movies_registered() -> void:
 ## (The day's builder replaces the stub and the chapter marker in the same step, W5a / P5a.) A movie
 ## built ahead of its day in its own branch (MV4: data, sets script and "stage" line) is no longer
 ## the stub; its own test checks it (story/tests/test_movie_<id>.gd) and the replay guard hides it.
+## Once its day exists (Day 4's nora line, then Day 5's marco line) the movie is its full data with its
+## sets script, never the stub.
 func test_days45_movie_stubs() -> void:
 	for id: String in DAYS45_MOVIES:
-		if not Game.chapter(String(DAYS45_MOVIES[id])).is_empty():
-			continue
 		var m := Movies.movie(id)
+		if not Game.chapter(String(DAYS45_MOVIES[id])).is_empty():
+			assert_true(m.has("stage"), "%s: its day exists, so it is the full movie with its sets script" % id)
+			assert_true((m["scenes"] as Array).size() > 3, "%s: more than the stub's three scenes" % id)
+			continue
 		if m.has("stage"):
 			continue
 		var scenes: Array = m["scenes"]
@@ -479,7 +483,8 @@ func test_days45_movie_card_hold_draw() -> void:
 
 ## A registered movie whose day is not in Game.CHAPTERS yet is in no replay list (the title's
 ## "Hoot's Movies" and its Options, through Movies.replay_ids()): the stubs stay hidden until
-## their day exists, and nothing a player sees changes before then.
+## their day exists, and nothing a player sees changes before then. Once the day's line is in
+## (nora on Day 4, marco on Day 5) its movie is listed and in that day's pause menu.
 func test_days45_movies_hidden_until_their_day() -> void:
 	for id: String in DAYS45_MOVIES:
 		var listed := Movies.replay_ids().has(id)
@@ -488,6 +493,7 @@ func test_days45_movies_hidden_until_their_day() -> void:
 			assert_false(Movies.for_chapter(Game.current_chapter_id).has(id), "%s: not in this day's pause menu" % id)
 		else:
 			assert_true(listed, "%s: its day exists, so it is listed" % id)
+			assert_true(Movies.for_chapter(String(DAYS45_MOVIES[id])).has(id), "%s: in its day's pause menu" % id)
 	assert_has(Movies.replay_ids(), "masking", "Day 2's movie stays listed")
 	# the guard itself, on two made-up movies
 	var here := Movies.movie("masking")
