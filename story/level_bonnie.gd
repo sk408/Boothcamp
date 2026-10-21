@@ -430,7 +430,8 @@ func _bone_placement() -> void:
 	await _wait(0.4)
 	if was_unicorn:
 		await _say("Bonnie", "Was I a unicorn for a second there? I felt majestic.")
-	await _say("Hoot", "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up.")
+	await _say("Hoot", "Snug on the mastoid, off the ear, hair brushed aside.")
+	await _say("Hoot", "Bone goes 250 to 4000 Hz: we need 500 and up.")
 
 
 ## Both placements share one medal: every slip of the visit counts (0 gold, 1 silver, more bronze).
@@ -680,15 +681,18 @@ func _evidence(b: Control) -> void:
 		&"sensorineural":
 			await _say("Hoot", "%s on your chart: no real gap, air and bone down together." % title)
 		_:
-			await _say("Hoot", "%s! A gap over 10 dB, bone near normal. 15 or more at 500, 1k AND 2k: a red flag." % title)
+			await _say("Hoot", "%s! A gap over 10 dB, bone near normal." % title)
+			await _say("Hoot", "A gap of 15 or more at 500, 1k AND 2k: a red flag.")
 	if kind != &"conductive":
 		await _say("Hoot", "Hmm, your masked bone came out poor. Overmasked? A real clinic would recheck: her real pattern is conductive.")
 	if bool(ear.get("carhart_notch", false)):
 		b.call("show_carhart")
 		_shot("carhart", 0.5)
-		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: the stiff middle ear fakes a small bone dip. Her cochlea is fine, and it often recovers after surgery!")
+		await _say("Hoot", "See the bone dip at 2k? A Carhart notch: the stiff middle ear fakes a small bone dip.")
+		await _say("Hoot", "Her cochlea is fine, and the dip often recovers after surgery!")
 	else:
-		await _say("Hoot", "Young, family history, normal eardrum: a doctor may suspect otosclerosis. It often starts in one ear, then reaches the other.")
+		await _say("Hoot", "Young, family history, normal eardrum: a doctor may suspect otosclerosis.")
+		await _say("Hoot", "It often starts in one ear, then reaches the other.")
 	await _say("Hoot", "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!")
 	hud.call("complete_step", &"case")
 
@@ -721,7 +725,8 @@ func _referral(b: Control) -> void:
 	await _say("Hoot", "If it's otosclerosis: extra bone grows around the stapes, the tiny stirrup bone, so it can't vibrate freely.")
 	await _say("Bonnie", "A tiny stirrup! Like the nozzle on my piping bag, gone stiff?")
 	await _say("Hoot", "Exactly! The ENT checks it, often adding tympanometry and reflex tests to ours.")
-	await _say("Hoot", "Then you and the doctor choose: an operation that swaps it for a tiny piston, or hearing aids. Both can work well.")
+	await _say("Hoot", "Then you and the doctor choose: an operation that swaps it for a tiny piston, or hearing aids.")
+	await _say("Hoot", "Both can work well.")
 	await _say("Bonnie", "A doctor for my ear, then back to my buns. Deal! Croissant for the road?")
 	await _payoff(b)
 	hud.call("complete_step", &"refer")

@@ -64,6 +64,41 @@ Serve the clues to Marco's two claims, test his hearing aids in the sound field 
 (programme A, then B), see whether directional microphones really help, and seat him for dinner.
 About 12 minutes.
 
+**Days 6 to 13 are the case files**: one patient and one puzzle each, about 8 or 9 minutes. You
+gather the clues (two rounds of history questions with the red-flag check every time, a look in
+both ears, the **tympanometer**, the beeps, and bone and masking wherever the chart needs them),
+name the shape or the type of loss, then stamp the call: **FIT** hearing aids, **REFER** to a doctor
+first, or **DOCTOR TODAY**, and prove it with the one clue that decides it. Hoot's three case
+movies ("Three Stamps and the Red Flags", "The Eardrum Trampoline", "Slopes, Notches & Cookie
+Bites") play just before the steps they explain. Day 6 is Rocco Rimshot, a drummer with ringing
+ears, who picks his own earplugs; Day 7 Captain Marina Gale, a ferry captain whose spinning spells
+come with a low-pitch loss in one ear; Day 8 Dash Delgado, whose right ear went yesterday morning,
+with an hours clock ticking in the corner; Day 9 Ginger Snapp, a ventriloquist whose puppet heckles
+while you read her nine-year-old chart; Day 10 Barnaby Bumble, a beekeeper with a wall of wax, who
+comes back a week later with the plug in a jar for a retest; Day 11 Skye Tailwind, cabin crew with
+fluid behind the eardrum before Friday's flight; Day 12 Morgan Gale, the lighthouse keeper, whose
+deaf ear "answers" until the noise goes in (the shadow curve); and Day 13 Bev Bingham, a bingo
+caller with gaps in both ears that run Hoot out of masking room until he lends his insert earphones.
+The game never diagnoses: Hoot says what a pattern points to, and a doctor decides.
+
+**Day 14, Gus's Fitting**, is the finale: Gus comes back for his hearing aids. You pick the style
+(a tiny speaker with an open dome, because his low pitches are nearly normal), slide the probe tube
+in until it sits near his eardrum, then match his prescription on the real-ear graph band by band
+while the grey world colours in and Doris's "the finches are back" comes through. Doris drops a pan
+to check that loud sounds are loud but never painful, Gus tries to dodge the dishes, and you tell
+him what to expect in his first weeks. About 8 minutes.
+
+**Freestyle** (on the title) is the walk-in clinic: eight patients in the waiting room, any order,
+as often as you like, or **Surprise me**. There is no script and no coaching during the tones: you
+pick the tools yourself (questions, the otoscope, the tympanometer, air, bone and masking), name
+the type of loss in each ear, and make the call (fit, refer, doctor today, or no aids needed). Hoot
+debriefs at the end.
+
+**Arcade** (on the title) is the quick-play corner, a minute or two a run with a high-score table:
+**Chart Chute** (drop each audiogram down the chute of its shape: slope, notch, cookie bite or
+rising) and **Ears, Please!** (stamp each patient file at the clinic's front desk FIT, REFER or
+DOCTOR TODAY, and point at the red flag behind every referral). Neither ever tests your own hearing.
+
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -71 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
@@ -315,6 +350,8 @@ tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Day
 tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
 tools/autoplay_check.sh --day=4                     # ...Day 4 (word recognition)
 tools/autoplay_check.sh --day=5                     # ...Day 5 (speech in noise)
+tools/autoplay_check.sh --day=6                     # ...Day 6, a case file (also 7 to 13)
+tools/autoplay_check.sh --day=14                    # ...Day 14 (the fitting)
 tools/autoplay_check.sh --demo                      # ...the career-fair demo
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
@@ -327,15 +364,14 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
 (`tools/shots.sh`), the audio-safety recording that measures every tone
 (`tools/movie_check.sh`), and a button-mashing stress test of the AudiOtron
 (`--scene=res://tools/monkey.tscn`). `CONTRACTS.md` describes how the modules talk to each other.
+The designs are in `docs/`: `CHAPTER2.md` to `CHAPTER5.md` and `SPEECH.md` (Days 2 to 5), `CASES.md`
+(Days 6 to 13), `FITTING.md` (Day 14), `FREESTYLE.md`, `ARCADE.md` and `DEMO.md`.
 
 ## What's next
 
-- More patients, each teaching one new idea: a noise notch (a drummer), a child who needs play
-  audiometry, the masking dilemma (both ears with big gaps), and a "something's not right, refer
-  to a doctor" case. Day 2's design and rules are in `docs/CHAPTER2.md`.
-- A real fitting level: choosing a target, adjusting gain by frequency, and the follow-up visit.
-- The speech days are done (Day 3's SRT, Day 4's word scores, Day 5's speech in noise). The speech
-  rules are in `docs/SPEECH.md`, the designs in `docs/CHAPTER3.md`, `docs/CHAPTER4.md` and
-  `docs/CHAPTER5.md`.
-- Counselling choices that change how the visit ends.
-- More upgrades for the clinic, and a practice booth with random patients.
+- A child who needs play audiometry: a new kind of patient and a new way to test.
+- Gus's follow-up visit: fine-tuning after his first weeks with the aids.
+- Real recorded voices for the speech tests (the words are on-screen text with a quiet murmur
+  for now).
+- A Hoot movie for Day 13's masking dilemma, and an attract loop for the career-fair demo.
+- More upgrades for the clinic, more walk-ins for Freestyle and more arcade cabinets.

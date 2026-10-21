@@ -140,7 +140,7 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Normal eardrum | "Not a crumb. A healthy-looking eardrum can still hide a stiff middle ear." |
 | Instructions | "She'd press for the noise all day! Beeps only. Try again." |
 | Air vs bone | "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea." |
-| Placement | **(polish)** "Snug on the mastoid, off the ear, hair brushed aside. Bone goes 250 to 4000 Hz: we need 500 and up." |
+| Placement | **(polish)** "Snug on the mastoid, off the ear, hair brushed aside." then "Bone goes 250 to 4000 Hz: we need 500 and up." |
 | ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
 | Tip `cross_hearing_air` **(E4)** | "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." (an air tone; no Day 2 air tone is loud enough) |

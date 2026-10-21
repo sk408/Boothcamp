@@ -245,7 +245,7 @@ func _otoscopy() -> void:
 	await g.sneeze_out()
 	_shot_line("sneeze")
 	await _say("Gus", "My sesame seed! It's been in there since 1987!")
-	await _say("Hoot", "...Well. Cartoon physics! Real ears can't sneeze things out. Canal clear, eardrum pearly grey and shiny: safe to test!")
+	await _say("Hoot", "...Well. Cartoon physics! Real ears can't sneeze things out. Canal clear, eardrum pearly grey: safe to test!")
 	await g.show_left_clear()
 	hud.call("add_clue", "Right canal: 1 sesame seed (sneezed out). Eardrums: healthy!")
 	var t2 := g.create_tween()
@@ -322,7 +322,7 @@ func _earphones() -> void:
 	_shot("earphones_on", 0.3)
 	_react(&"cheer")
 	# (clinical review D1-4, question 6)
-	await _say("Hoot", "Each cup centred right over the canal. Older canals can fold shut under a cup: foam inserts fix that.")
+	await _say("Hoot", "Each cup centred over the canal. Older canals can fold shut under a cup: foam inserts fix that.")
 	hud.call("complete_step", &"phones")
 
 
@@ -393,7 +393,8 @@ func _evidence() -> void:
 	_shot("evidence_solved", 0.35)
 	Game.record_medal("evidence", "gold" if e.attempts <= 1 else ("silver" if e.attempts == 2 else "bronze"))
 	await _wait(0.8)
-	await _say("Hoot", "Soft consonants like s, sh, f and th live up in the high pitches, right where Gus slopes down. He fills the gaps with a guess!")
+	await _say("Hoot", "Soft sounds like s, sh, f and th live up high, right where Gus slopes down.")
+	await _say("Hoot", "He fills the gaps with a guess!")
 	e.queue_free()
 	hud.call("complete_step", &"evidence")
 
@@ -421,7 +422,8 @@ func _fitting() -> void:
 	clinic.call("doris_react", &"wince")
 	await _say("Hoot", "A teaser of what's coming: a little boost, right where his hearing slopes.")
 	# (clinical review D1-3)
-	await _say("Hoot", "Only a teaser! Real aids come after bone conduction, speech tests and a red-flag check, then get measured in his ear.")
+	await _say("Hoot", "Only a teaser! Real aids come after bone conduction, speech tests and a red-flag check.")
+	await _say("Hoot", "Then we measure the aids in his ear.")
 	var f := Fitting.new()
 	hud.call("add_game", f)
 	await f.run()
