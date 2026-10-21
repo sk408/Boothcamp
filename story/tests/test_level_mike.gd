@@ -636,6 +636,45 @@ func test_retest_1k_comes_back_better() -> void:
 	lv.free()
 
 
+## (E2) Hoot's montage waives the AudiOtron's own 1 kHz retest on both ears, so its test plan never
+## shows "1k R" and neither sheet gets a retest; the visit's one retest is Hoot's retest_1k in the
+## level, on the first air ear (the right). The second air ear owes none.
+func test_montage_retest_on_the_first_air_ear_only() -> void:
+	var src := FileAccess.get_file_as_string((LevelMike as Script).resource_path)
+	assert_eq(src.count("\"montage\": true, \"skip_hoot_retest\": true"), 2, "both ears: Hoot's montage, no AudiOtron retest")
+	Engine.time_scale = 8.0
+	var screen: CanvasLayer = (load("res://ui/audiometer/audiometer_screen.tscn") as PackedScene).instantiate()
+	add_node(screen)
+	screen.set("quick_visit", true)
+	var shown: Dictionary = {}
+	var watch := func() -> void:
+		var q: Node = screen.get("_quest")
+		for it: Dictionary in q.get("items"):
+			if String(it.get("label", "")) == "1k R":
+				shown[String(q.get("ear"))] = true
+	tree.process_frame.connect(watch)
+	var r: Dictionary = {}
+	for ear: String in ["right", "left"]:
+		screen.call("start_test", _mike(), ear, false, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true})
+		r = await screen.test_finished
+	tree.process_frame.disconnect(watch)
+	var s: AudiometrySession = screen.get("session")
+	assert_eq(s.air_ear_order, ["right", "left"] as Array[String], "right is the first air ear")
+	assert_true(shown.is_empty(), "the test plan never shows 1k R (%s)" % [shown])
+	for ear: String in ["right", "left"]:
+		assert_true((s.retest[ear] as Dictionary).is_empty(), "the AudiOtron retests no %s 1 kHz" % ear)
+	assert_false(s.retest_required("left"), "the second air ear owes no retest")
+	var lv: Node = LevelMike.new()
+	lv.set("tones", r)
+	lv.set("tone_retest", LevelMike.retest_1k(r))
+	lv.call("_record_retest")
+	var ears: Dictionary = (lv.get("tones") as Dictionary)["ears"]
+	assert_false(((ears["right"] as Dictionary).get("retest_1k", {}) as Dictionary).is_empty(), "Hoot's retest on the right")
+	assert_true(((ears["left"] as Dictionary).get("retest_1k", {}) as Dictionary).is_empty(), "and none on the left")
+	lv.free()
+	Engine.time_scale = 1.0
+
+
 func test_hoot_lines_fit() -> void:
 	var src := FileAccess.get_file_as_string((LevelMike as Script).resource_path)
 	var re := RegEx.create_from_string("_say\\(\"Hoot\", \"((?:[^\"\\\\]|\\\\.)*)\"")
