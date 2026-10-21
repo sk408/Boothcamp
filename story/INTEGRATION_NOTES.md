@@ -312,3 +312,7 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   (`abg_red_flag`, `ABG_RED_FLAG_DB`, `ac_masking_needed` and `bc_masking_needed` for charting, `combo_multiplier`, `required_interoctaves`),
   the Audiogram (`show_gap` for the gap tell), `CasePortraits.register` and `Portraits.draw`.
 - **No new data files**, so the Web preset's include_filter needs nothing.
+- **Shift 3 (DOCTOR TODAY), a later PR:** arcade-owned files only. The third stamp opens, every shift 3 file
+  carries the alarm-clock card (anchor `desk_sudden`; `desk_prove` can now carry target {kind: "sudden"}), two
+  missed same-day patients close the desk, and `ArcadeScores.BOARD_SEEDS` gains `ears_please:table_3`. No shared
+  file changes and no new data files.
