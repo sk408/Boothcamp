@@ -353,6 +353,8 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `speech` **(Speech)** | SPEECH screen (§9.7) | {ear, test, action, mouse: {click: anchor}}; solver sends the recommended action |
 | `familiarize_cards`, `objection_present` **(Speech)** | level_mike (§9.8) | {mouse}; {targets, mouse: {drag: [clue, target]}} |
 | `fitting_target` **(Day 14)** | level_fitting (target match, §13) | {}; solver raises each band straight to its target (one move each) and presses Done |
+| `probe_tube` **(Day 14)** | level_fitting (probe tube, §13) | {}; solver slides the tube straight into the zone (within 5 mm of the eardrum) and locks it |
+| `loud_check` **(Day 14)** | level_fitting (loud-sound check, §13) | {}; solver turns the loud limit straight to the right notch and drops the pan once |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -3784,7 +3786,26 @@ has its own patient id because `Game.chapter_for_patient` returns the first matc
 the chapter id is the patient id, as on every day (tests begin a visit by chapter id).
 The clinic draws Gus by default (no `patient_id` set).
 
-**Phases.** `intro`, `aid_style` (new), `real_ear` (new), `fitting` (the payoff), `results`.
+**Phases.** `intro`, `aid_style` (new), `probe_tube` (new), `real_ear` (new), `loud_check` (new), `fitting` (the
+payoff), `counselling` (what to tell Gus; Days 4-5's phase), `results`.
+
+**The probe tube** (`story/games/probe_tube.gd`, `ProbeTube`): the beat `probe_tube` (§3.2), before the aids go
+in. The tip starts 17 mm from the eardrum and moves 3 mm a step; it locks within 5 mm (`zone_of(mm)`: "shallow",
+"zone", "touch"). Statics `dip_hz(mm)` (a quarter wavelength from the drum) and `reading_error(mm, freq)` draw
+what the probe mic reads. `result()` = {ear, depth, mistakes, shallow, touched}. Signals `touched` (the first
+touch only; the level takes a comfort point) and `mistake(kind)`. For the mouse bot: `presses_needed()`,
+`in_button()`, `lock_button()`.
+
+**The loud-sound check** (`story/games/loud_check.gd`, `LoudCheck`): the beat `loud_check` (§3.2), after the
+match. A five-notch loud limit; the first drop plays by itself at notch 4 and stings; notch 3 is right
+(`verdict(n)`: "squashed", "right", "ouch"). The clang always plays at the same quiet level (AudioSafety: the
+loudness is only drawn). `result()` = {notch, drops, squashed, ouch}. Signals `ouch` (the first drop at notch 5
+only; the level takes a comfort point) and `dropped(notch)`. For the mouse bot: `presses_needed()`,
+`turn_button(up)`, `drop_button()`.
+
+**The counselling** (`LevelFitting.COUNSEL`): a choice loop that ends when the three right tips of five are found
+(all-day wear, a few weeks to get used to sound, a follow-up to fine-tune); a wrong pick gets Gus's line and
+Hoot's correction and leaves the list.
 
 **The target match** (`story/games/target_match.gd`, `TargetMatch`): the beat `fitting_target` (§3.2). Statics, all
 tested: `target_gain(thresholds, freq)` (a public textbook formula standing in for the fitting software's
@@ -3795,13 +3816,17 @@ accuracy, efficiency}. Signals `matched_changed(count)` (the level sets `set_wor
 `overshoot(kind)` (the first of each kind; the level takes a comfort point). For the mouse bot:
 `presses_needed(i)`, `arrow_button(i, up)`, `done_button()`.
 
-**Results.** `Game.set_audiometry_results(LevelFitting.results_for(right, style_tries, left))`: accuracy, technique
-(0.6 style + 0.4 clean), efficiency, and `fitting` (the right ear's result plus style, style_tries, left_by_hoot,
-left). No `ears`: the bot checks the fitting instead (`_check_fitting`: every band within 5 dB, the open style,
-Hoot's left ear). The summary carries its own headlines, subheads, medal_beats (style, match), weather and
-`sports_script` (`story/papers/paper_fitting.gd`, THE FITTING CARD).
+**Results.** `Game.set_audiometry_results(LevelFitting.results_for(right, picks, left))`, stored after the match
+and again after the loud check and the counselling. picks = {style_tries, probe_mistakes, loud_drops,
+counsel_slips}. Accuracy, technique (`TECHNIQUE_WEIGHTS`: 0.25 style + 0.2 probe + 0.2 loud + 0.15 counsel + 0.2
+clean; each slip part is 1.0 right first time, 0.5 after one slip, 0.2 after more), efficiency, and `fitting` (the
+right ear's result plus style, style_tries, probe_mistakes, loud_drops, counsel_slips, left_by_hoot, left). No
+`ears`: the bot checks the fitting instead (`_check_fitting`: every band within 5 dB, the open style, Hoot's left
+ear, and a probe, loud and counsel medal). The summary carries its own headlines, subheads, medal_beats (style,
+probe, match, loud, counsel), weather and `sports_script` (`story/papers/paper_fitting.gd`, THE FITTING CARD).
 
 **Tests.** `story/tests/test_fitting.gd`: the chapter and its patient, the prescription for Gus, what Gus hears,
 the band and move scores, the first guess and par, the Done gate, the bot's solver at par, overshoots once per
 kind, the keys, the visit's results and paper, the style options (unique bot prefixes, similar lengths) and
-Hoot's lines at 18 words or fewer.
+Hoot's lines at 18 words or fewer; the probe tube's zone, mic dip, solver, mistakes and keys; the loud check's
+verdicts, solver and slips; the technique weights and parts; the counselling options and lines.

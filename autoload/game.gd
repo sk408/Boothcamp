@@ -33,6 +33,8 @@ const PHASES: Array[StringName] = [
 	&"counselling",
 	# the fitting (Day 14, docs/FITTING.md): picking the aid style, matching the target in the real ear
 	&"aid_style", &"real_ear",
+	# the fitting, PR 2: placing the probe tube, the loud-sound check (the counselling uses &"counselling")
+	&"probe_tube", &"loud_check",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
