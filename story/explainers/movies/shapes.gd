@@ -1,6 +1,6 @@
 extends RefCounted
 ## Hoot's audiogram movie, "Slopes, Notches & Cookie Bites" (clinical review C12). Plays just before
-## the player names the chart's shape on their first case day (any of Days 6 to 11), after Hoot's
+## the player names the chart's shape on their first case day (any of Days 6 to 12), after Hoot's
 ## lead-in (story/level_case.gd CASE_MOVIES); replay from the pause menu on any case day, or the title.
 ## DATA ONLY: the scenes are drawn by this movie's own sets, story/case_movies/shapes_sets.gd.
 ## Facts (Steve reviews), the game's own rules (autoload/clinic_rules.gd classify_shape and
@@ -17,7 +17,7 @@ const MOVIE: Dictionary = {
 	"title": "Hoot's audiogram movie",
 	"subtitle": "Slopes, Notches & Cookie Bites",
 	"chapter": "rocco",
-	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye"],
+	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan"],
 	"narrator": "Hoot",
 	"stage": "res://story/case_movies/shapes_sets.gd",
 	"seen_at": "door",

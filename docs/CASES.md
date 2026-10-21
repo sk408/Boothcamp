@@ -29,16 +29,19 @@ game spot patterns and refer; doctors diagnose.
 | 9 | `cookie_bite` | Ginger Snapp, 41, ventriloquist (and Chip, her cookie puppet) | Hereditary mid-frequency ("cookie-bite") sensorineural loss, both ears, stable for years | **FIT** (+ offer a genetic counselling referral, yearly test) |
 | 10 | `wax` | Barnaby Bumble, 61, beekeeper (forty thousand bees, all called Gerald) | Wax impaction, right: conductive, bone normal | **REFER** (a doctor or trained clinician clears the wax), then a live **retest** a week later: normal |
 | 11 | `fluid` | Skye Tailwind, 33, long-haul cabin crew | Middle-ear fluid after a cold and a flight, left: conductive, bone normal | **REFER** (a doctor this week, before her Friday flight) |
+| 12 | `dead_ear` | Morgan Gale, 58, keeper of the Gullrock light (Captain Marina's sibling) | A deaf right ear since mumps at seven, checked by an ear doctor, unchanged: its unmasked air is the left ear's shadow; masked, no response | **FIT** (a CROS: the right side's sound sent to the left ear; guard the left ear, a yearly test) |
 
 Day numbers start at 6 because the speech chapters take Days 3-5. Chapter ids are the patient ids, like `gus` and
 `bonnie`: `rocco`, `marina`, `dash`, `ginger`. No acoustic-neuroma case: the speech chapters' Day 4 patient (Nora)
 already teaches "one-sided loss with poor words: refer before fitting". No otosclerosis case: Bonnie (Day 2) already
 teaches a stiff middle ear, masking and the Carhart notch, so batch 2 keeps bone flat and teaches canal against
-middle ear plus the retest. Batch 2's chapter ids: `barnaby`, `skye`.
+middle ear plus the retest. Batch 2's chapter ids: `barnaby`, `skye`. The advanced cases (clinical review C10, C9;
+`/mnt/project-files/boothcamp/cases/ADVANCED_CASES.md`) come next: Day 12's chapter id is `morgan`.
 
 **Day picker text** names the person or the joke, never the pattern, condition or call (28 characters or fewer):
 rocco "Case file: ringing ears", marina "Case file: the ferry captain", dash "Case file: the pizza rush", ginger
-"Case file: the ventriloquist", barnaby "Case file: the beekeeper", skye "Case file: the cabin crew".
+"Case file: the ventriloquist", barnaby "Case file: the beekeeper", skye "Case file: the cabin crew", morgan
+"Case file: the lighthouse".
 
 **Each case has a beat only it has:** Rocco picks the drummer's earplugs (cotton wool / foam / musicians'); Marina
 compares today with her spring test and her referral letter folds into a paper boat that sails to a lighthouse
@@ -47,7 +50,9 @@ Ginger's puppet Chip heckles (her lips don't move), her nine-year-old chart prov
 family history is the tempting wrong clue. Barnaby brings his wallet ("hearing aid time!"), the otoscope finds a
 wall of wax, and a week later he walks back in with the plug in a jar ("EXHIBIT A") for a retest whose chart flies
 up over the waxy one; his bee Gerald waits outside during the tests. Skye talks in in-flight announcements, tries to
-pop her ear ("Hnnnngh!"), and her referral folds into a paper plane that lands on an EAR DOCTOR runway.
+pop her ear ("Hnnnngh!"), and her referral folds into a paper plane that lands on an EAR DOCTOR runway. Morgan
+brings the ear doctor's letter, and their deaf right ear "answers" at 55-70 dB (75-90 with inserts) until the noise goes in: the shadow
+curve, with a ghost on the chart.
 
 **The four "where is it stuck" days** (Hoot's framing for the conductive cases):
 
@@ -60,10 +65,10 @@ pop her ear ("Hnnnngh!"), and her referral folds into a paper plane that lands o
 | Onset | muffly for months, then all at once in the shower | crept in after a cold and a flight | slow, years | overnight |
 | Call | REFER: wax out, then retest | REFER: a doctor this week | REFER | DOCTOR TODAY |
 
-## 2. Truth tables (dB HL; sensorineural, Days 6-9: bone = air; conductive, Days 10-11: their own bone data)
+## 2. Truth tables (dB HL; sensorineural, Days 6-9 and 12: bone = air; conductive, Days 10-11: their own bone data)
 
-Frequencies 250, 500, 750, 1k, 1.5k, 2k, 3k, 4k, 6k, 8k. Every case uses the default real interaural attenuation
-(phones 60, inserts 75, bone 0), so no unmasked AIR reading is ever a cross-heard shadow, but every unmasked BONE
+Frequencies 250, 500, 750, 1k, 1.5k, 2k, 3k, 4k, 6k, 8k. Days 6-11 use the default real interaural attenuation
+(phones 60, inserts 75, bone 0), so no unmasked AIR reading is ever a cross-heard shadow (Day 12's is, on purpose), but every unmasked BONE
 reading is the better cochlea answering, wherever the buzzer sits (the Ghost from Day 2). So one-sided cases put
 unmasked bone on the better ear only (Steve's convention, as on Day 2), compare the poorer ear's air with it, and the
 runner adds masked bone on the poorer ear wherever the rules ask. Every shape below survives any single 5 dB wobble
@@ -185,6 +190,30 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
   (left oscillator, noise in the right ear); no masked air with phones or inserts.
 - Tympanograms: right A (-15 daPa, 0.7 mL, canal 1.2 mL), left B with a normal 1.1 mL canal (fluid) (tip medium).
 
+### 2.7 Morgan (a deaf right ear: the shadow curve; clinical review C10)
+
+| Hz | 250 | 500 | 750 | 1k | 1.5k | 2k | 3k | 4k | 6k | 8k |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Right air (O), true | 110 | 130 | 135 | 140 | 140 | 140 | 140 | 140 | 130 | 120 |
+| Left air (X) | 10 | 10 | 10 | 5 | 5 | 10 | 10 | 15 | 15 | 20 |
+
+- No bone data: bone = air in both ears. The right ear sits 20 dB past the dial everywhere (`ClinicRules.max_db` + 20;
+  `PatientProfile.validate` now allows up to + 30, as it already did for bone), so its own cochlea never answers.
+- Real interaural attenuation phones 50, inserts 70, bone 0 (ADVANCED_CASES question 2): below the defaults and above
+  the masking rules' 40 / 55, so unmasked right air is the left ear's bone plus 50 (about 55-70 dB; 75-90 with
+  inserts): the left ear's shape, just louder. That is the shadow, and the rules always ask for masked air.
+- Unmasked bone on the left (Hoot's montage), so it never fakes a conductive gap on the right. Masked bone on the right
+  at 500, 1k, 2k, 4k: each noise step pushes the answer up 5 dB, no plateau, then no response at the bone limit (60 /
+  70 / 70 / 65). Then masked air at every routine frequency (250 to 8k with 1.5k, 3k and 6k; clinical review E1):
+  the same climb, then no response at the dial's limit (90 at 250, 110 at 500 and 6k, 120 from 1k to 4k, 100 at
+  8k). Masked bone must come first (the runner's order): its no-response stamps lift
+  the overmasking limit, so masked air never fills its window (no purple ?) and E9's dilemma never trips
+  (`test_dead_ear_plan_masks_both_ways`, with phones and inserts).
+- Right shape `flat`, left normal, asymmetric: a FIT anyway, for a known cause (section 7). The raw chart would type the
+  right ear "mixed" (the best-thresholds code ignores no-response flags), so the case types it with
+  `CaseData.measured_type`: no-response bone drops out, and with no bone left and the air abnormal the ear reads
+  sensorineural, as the truth does. Tympanograms A both ears (tip large).
+
 ## 3. Beat by beat (one runner for every case)
 
 Every choice (history questions, the tymp question, the shape question, the earplugs, the clue cards) is
@@ -198,9 +227,9 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 | 3 | `otoscopy` | A quick look at the other ear ("Fresh speculum. <name>'s <OTHER EAR> ear first: a clear canal, a healthy eardrum.": both ears are looked at before any probe or insert goes in), then the case's ear (`CaseOtoscopy.show_view`: the healthy drum, a wax plug, or fluid behind the drum); its caption names the canal size (roomy / average-sized / narrow). Clue card (red for wax: "a lot of wax" is a red flag). A wax view keeps the air tests on headphones. | dialogue |
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
 | 5 | `instructions` | Hoot's routine line first, every case ("This morning's listening check: every beep clean, the button works. Dials stay out of view.", clinical review A1), then one line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. Rocco's ringing gets Hoot's tinnitus lesson here (clinical review C8): a steady beep near his ring's pitch hides in it; "Which beep stands out from Rocco's ringing?" (PULSED and WARBLE both right, TONE hides; repeats until right); the audiometer starts on PULSED and the chip switches to WARBLE or TONE; some clinics prefer warble. Marina keeps a one-line tip. | dialogue, choice (Rocco) |
-| 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. Before the visit's first masked test, while Day 2's masking movie is unseen, the 12-second masking recap card plays, then Hoot says where the full movie lives (clinical review A2, as Freestyle does). | the AudiOtron's tone beats, explainer (recap) |
+| 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. Before the visit's first masked test, while Day 2's masking movie is unseen, the 12-second masking recap card plays, then Hoot says where the full movie lives (clinical review A2, as Freestyle does). When every masked air stamp on an ear is no response (Morgan), Hoot says: "No plateau, just a climb, then nothing at the limit." (It names no ear: the evidence question asks who answered.) | the AudiOtron's tone beats, explainer (recap) |
 | 7 | `reveal` | The case board: the audiogram stamps in. Hoot: "What shape do you see?" | dialogue |
-| 8 | `evidence` | The shape question (for Dash and Barnaby, the type of loss; for Skye, where the sound is stuck). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file: a card with a `when` shows only when the measured chart says so (symmetric, asymmetric, conductive, or the air-bone-gap flag), and if any of them read differently on the truth tables Hoot says once: "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!" Medal `evidence`. | choice |
+| 8 | `evidence` | The shape question (for Dash and Barnaby, the type of loss; for Skye, where the sound is stuck; for Morgan, who answered the right ear's unmasked beeps). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file: a card with a `when` shows only when the measured chart says so (symmetric, asymmetric, conductive, the air-bone-gap flag, the shadow, or no response), and if any of them read differently on the truth tables Hoot says once: "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!" Medal `evidence`. | choice |
 | 9 | `decision` | Three rubber stamps: FIT / REFER / DOCTOR TODAY. A wrong stamp gets Hoot's reason and another try. Then "present the clue that proves it" from up to nine shuffled cards; each wrong card can have its own reply. Medal `decision`. | choice (stamp tray), choice (clue cards) |
 | 10 | (payoff) | FIT: hearing aids pop on + counselling (Rocco also picks his earplugs). REFER: the letter flies off (Marina's folds into a paper boat, Skye's into a paper plane). TODAY: Hoot phones the ear doctor and books this afternoon. The patient waves goodbye. | dialogue, choice |
 | 11 | `retest` | Only a case with a `retest` block (Barnaby). The HUD's Retest pill. "A WEEK LATER" flips over the empty door; he walks back in with the wax in a jar; a clear look, a tymp recheck (the tip seals, both curves draw, no question), a prediction ("Where will his right-ear air land now?", repeats until right), then right air on a fresh AudiOtron. The new chart flies up over the first visit's air, dashed and labelled WITH WAX, with "+25" arrows and the title UNPLUGGED!; the patient's lines play only when the measured ear types as the story says (else a neutral recheck line). No medal; the first visit's results stay the scored set. Visit flags `retested`, `retest_type`. | dialogue, choice, the AudiOtron's tone beats |
@@ -215,7 +244,7 @@ Three in-engine cartoons (CONTRACTS.md §3.4), each played just before the step 
 played first. Gated like the briefing: on the player's first case (`LevelCase.first_case()`) each plays after its
 lead-in line; on a later case Hoot offers one that was never watched to its `seen_at` scene ("Roll the film!" /
 "Not now"); once watched, it is never forced again and lives in the pause menu (Hoot's Movies, on every case day
-through `also_chapters`) and the title's list, labelled "Days 6-11". Esc skips one ("Skipped! Rewatch it any time:
+through `also_chapters`) and the title's list, labelled "Days 6-12". Esc skips one ("Skipped! Rewatch it any time:
 pause menu, "Hoot's Movies"."). The lines are `LevelCase.CASE_MOVIES`; `docs/CASE_SCRIPTS.md` prints them.
 
 | Movie | Plays | Teaches |
@@ -230,8 +259,8 @@ The data is `story/explainers/movies/<id>.gd`, the drawing `story/case_movies/<i
 
 Per case, `audiometry` in the JSON is a list of tests; the runner adds the masked follow-ups itself:
 
-1. Air. One-sided cases (Marina, Dash, Barnaby, Skye): Hoot runs the better ear first ("better ear first, like the
-   pros"; at x8, or as Hoot's montage for Barnaby and Skye: `"montage": true` with `hoot_turn_after` 0 fills the ear
+1. Air. One-sided cases (Marina, Dash, Barnaby, Skye, Morgan): Hoot runs the better ear first ("better ear first, like the
+   pros"; at x8, or as Hoot's montage for Barnaby, Skye and Morgan: `"montage": true` with `hoot_turn_after` 0 fills the ear
    in a few seconds), then the player tests the poorer ear. Symmetric cases (Rocco, Ginger): the player tests the right ear first and Hoot
    runs the left at x8.
 2. The player's ear: the player stamps the first N measurements, then Hoot finishes. The screen goes to the next
@@ -240,9 +269,9 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
    N = 7 (1k up to the 8k recovery). Marina: left ear, N = 10 (the whole ear, with room for a retest). Dash:
    right ear, N = 3 (he's in a hurry). Ginger: right ear, N = 10 (1k to 8k, retest, 500, 750: the bite's
    low edge is the player's, and once 750 is on her chart Hoot says why it was tested). Barnaby: right ear, N = 2 (1k and 1.5k); on the retest, N = 1 (1k, where he was 35 a week
-   ago). Skye: left ear, N = 2.
+   ago). Skye: left ear, N = 2. Morgan: right ear, N = 4 (1k to 3k: the shadow is in the player's own stamps).
 3. Unmasked bone (Hoot). One-sided cases: on the better ear only (Steve's convention, as on Day 2; x8 for Marina
-   and Dash, a montage for Barnaby and Skye), since it answers for the better cochlea wherever it sits;
+   and Dash, a montage for Barnaby, Skye and Morgan), since it answers for the better cochlea wherever it sits;
    `CaseData.validate` checks it. Symmetric cases (Rocco, Ginger): the right ear only; their
    unmasked bone sits within 5 dB of the air in both ears (under the 10 dB bone-masking gap), so no bone masking is
    needed.
@@ -252,7 +281,8 @@ Per case, `audiometry` in the JSON is a list of tests; the runner adds the maske
    case ever needs it in the shipped cases (pinned by a test).
 5. Masked air on each air-tested ear where `masked_freqs_needed(results, ear, &"ac_masked")` is not empty (Hoot).
    Checking every ear changes nothing for the shipped cases: the better ear never needs it (pinned by a test).
-   When masked bone ran and no ear needed masked air (Barnaby, Skye), Hoot says why.
+   When masked bone ran and no ear needed masked air (Barnaby, Skye), Hoot says why. Morgan's right ear is the one
+   case that needs masked air (every routine frequency, phones or inserts), and it runs after masked bone (section 2.7).
 
 The air transducer is the inserts once that upgrade is owned, except while the canal is full of wax (Barnaby's first
 visit): headphones then, and the masking rules read the same transducer.
@@ -314,14 +344,19 @@ normal canal (1.1 mL: fluid). The retest rechecks Barnaby's tymp: right A, and t
 | Barnaby | the gap pattern: bridge posts from bone up to air with the gap in dB, the left ear fades, the gap shades in, red dots on the 15+ posts at 500 / 1k / 2k, and a lumpy waxy cork with a wick slams into the gap (THUNK) with a "PLUGGED! ~25 dB" sticker (the measured average gap) | "Bone near normal, air about 25 dB worse: an air-bone gap. Sound is stuck at the door." |
 | Barnaby's retest | the new chart flies up; the first visit's right air is dashed behind it ("WITH WAX") with mint "+25" arrows; title UNPLUGGED! | Barnaby: "The BEES! I can hear the bees again!" |
 | Skye | the gap pattern filled with water: bubbles rise, a rubber duck bobs at the waterline, "BLUB! ~25 dB" | "Bone near normal, air about 25 dB worse: an air-bone gap, full of bubbles." |
+| Morgan | the shadow: the right ear's unmasked answers come back as a dashed line of open circles (the chart hides them under the masked marks), the left ear's shape just louder, above the no-response arrows; the Ghost floats up beside it with a "SHADOW" sticker | "Dashed: the shadow. The left ear heard those beeps across the head." |
 
 Before the answer, Hoot only asks: "Here's the chart. What shape do you see?" (Dash: "One ear down overnight.
-Now: where did the masked bone land?"). No title, line or card names the answer before the player does.
+Now: where did the masked bone land?"; Morgan: "Masked, the right ear shows only arrows. Yet unmasked, it answered you!"). Morgan's
+audiometry lines stay a suspicion ("Is that really the right ear hearing? Masking will tell."); the engine's own
+Ghost tip (E4's `cross_hearing_air`, once per visit) does hint at the answer during the test, so the evidence question
+is partly a recap there. No title, line or card names the answer before the player does.
 
 ## 7. Decisions and clues (the full lines are in `docs/CASE_SCRIPTS.md`)
 
 The rule (`CaseRules.DECISIONS`): **fit** = no red flag and no asymmetry, and a loss hearing aids can help (+
-counselling, hearing protection). **refer** = any red flag or asymmetry that is not an emergency: a doctor
+counselling, hearing protection); an asymmetry with a known cause, already checked by an ear doctor and unchanged, is
+a fit too (Steve's rule; Morgan, `decision.asymmetry_known_cause`). **refer** = any red flag or asymmetry with no known cause that is not an emergency: a doctor
 soon (days to about two weeks), before any fitting (not same-day). **today** = sudden hearing loss (came on over 72 hours or less, within
 the last 30 days) not explained by wax or the middle ear; it overrides refer. A sudden loss longer ago than that is
 an urgent refer.
@@ -334,6 +369,7 @@ an urgent refer.
 | Ginger: her dad and grandma have it too; why is it still safe to fit? | No pain, drainage, dizziness or sudden change; Both ears match; Both ears, about the same; Found at school, the same ever since; Right ear matches nine years ago | the family card ("That's family history, not a red flag"), the exam and chart cards (credited, as for Rocco), the complaint and the shape |
 | Barnaby: what shows something is blocking the sound? | the wax plug; flat tymp, tiny canal volume; the gap card ("bone normal, air down"); the gap of 15+ at 500, 1k and 2k | his wallet (why he WANTS aids), the cotton buds (how it got packed in), "sudden" (the wax explains it), "one ear only" (a reason for a doctor, not what shows the sound is blocked) |
 | Skye: what shows the trouble is in the middle ear? (her normal bone is why it's this week, not today, and Hoot's lines say so) | flat tymp, normal canal volume; the dull amber drum; the gap card ("bone normal") | her Friday flight (her deadline, not an emergency), "after a cold" (a cold can come before an inner-ear loss too), the 15+ gap card (mixed losses have gaps too), one ear only |
+| Morgan: why can Morgan be fitted without a referral? | the ear doctor's letter (mumps, checked, no change); no change in the right ear since childhood | the deaf right ear (the problem, not the reason), where the trouble is (what the aid helps), the shadow and no-response cards (how it was found), "right ear only" (usually a REFER), the red-flag sweep, the exam cards, the earmuffs |
 
 Counselling that ships: Rocco's payoff opens with why he is a FIT and not a "not yet" ("We fit because his hearing
 trips him up at the pub." "Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year.", clinical review
@@ -354,12 +390,15 @@ the retest, "if it hadn't come back with the wax out, the doctor would look deep
 wax". Skye, an ear doctor this week; in grown-ups, one-sided fluid gets a doctor's look, back of the nose too; it
 often clears by itself, or the doctor can drain it; ask the doctor before flying; pain, fever, drips, dizziness or
 worse hearing mean a doctor that day; once it clears, a retest, and back to the doctor first if it's still down.
+Morgan, a CROS: a microphone on the right sends that side's sound to the left ear; it helps at dinners but can't tell
+where the foghorn is ("Direction takes two hearing ears"); guard the left ear (earmuffs, a yearly test), and if the
+left ear ever changes, come straight back.
 
 ## 8. Clinical rules (`CaseRules`, teaching defaults for Steve to check)
 
 | Rule | Value |
 |---|---|
-| Decisions | see section 7; refer = soon, days to about two weeks; today = the same day |
+| Decisions | see section 7; refer = soon, days to about two weeks; today = the same day; an asymmetry with a known, doctor-checked, unchanged cause is a fit (`decision.asymmetry_known_cause`; a test keeps every other FIT symmetric) |
 | Red flags (US FDA prescription hearing aid labeling, 21 CFR 801.422, since October 2022: advise a doctor, preferably an ear specialist, before fitting) | a visible deformity of the ear, from birth or injury; fluid, pus or blood from the ear in the last 6 months; ear pain or discomfort; a lot of wax, or something in the canal; dizziness, recent or long-standing; sudden, quickly worsening or fluctuating hearing loss in the last 6 months; hearing loss or ringing in only one ear, or a clear difference between the ears; an air-bone gap of 15 dB or more at 500, 1000 and 2000 Hz. The 2022 OTC rule removed the old requirement that adults get a medical evaluation or sign a waiver before buying; the red flags remain dispenser guidance and good practice. Under-18s still see a doctor first, and some states still require referral. |
 | Asymmetry (the measurable "difference between the ears") | 15 dB or more between the ears at two or more neighbouring test frequencies (`is_asymmetric`) |
 | Sudden loss | 30 dB or more at 3+ neighbouring frequencies, coming on over 72 hours or less (`SUDDEN_ONSET_MAX_H`: the definition, not a deadline). Same-day referral: an ENT, or the emergency department if no ENT can see them today, with the audiogram. Treatment works best when it starts early, but doctors still treat for weeks, so a late patient still goes TODAY. Hoot says the definition on Dash's day: "Sudden means over three days or less. Within a month, no wax or fluid to blame? Doctor today." (NICE NG98, 1.1.2: a sudden loss not explained by an outer or middle ear cause). |
@@ -368,6 +407,7 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
 | Canal volume with a flat tymp | under 0.6 mL reads "blocked" (`TYMP_BLOCKED_ECV`); 0.6-2.0 "fluid"; over 2.0 "a hole". Every other type sits inside the adult band (`CaseData.validate`) |
 | Bone order | one-sided cases: unmasked bone on the better ear only, then masked bone on the poorer ear wherever its air sits over that bone (Steve's convention, as on Day 2; `CaseData.validate` checks it) |
 | Wax and the earphones | while the canal is full of wax, air goes through headphones, never a foam insert |
+| No response (Day 12) | an ear past the dial: masked runs climb 5 dB with every noise step, never plateau, and store no response at the limit; a no-response stamp scores when the truth lies past the limit. The finding `shadow` shows when most of the ear's masked air stamps are no response where its unmasked air answered (on the truth tables: a dead ear whose other-ear bone plus the patient's phones attenuation is within the dial); `no_response` when every masked air stamp, and every masked bone stamp if run, is no response |
 | Retest | a case's `retest` patient (`<id>_after.tres`) is the ear after treatment: the same bone, air back to bone. It belongs to no chapter and never starts a visit; the retest is unscored |
 | Tympanogram curve (drawing only) | compliance(p) = peak / (1 + ((p - peak pressure) / half-width)^2), compensated (canal volume removed, as tympanometers display); half-widths A 37.5 daPa (tympanometric width 75), C 45, As 40, Ad 30; B is flat near 0 |
 
@@ -435,3 +475,11 @@ worse hearing mean a doctor that day; once it clears, a retest, and back to the 
 19. Follow-up wording for Days 6-9: Hoot's tinnitus lesson for Rocco and Marina's tip (pulsed or warble, never a
     steady tone near the ring; some clinics prefer warble; section 3, row 5), "Filtered musicians' earplugs" with "A filter turns pitches down more evenly
     than foam", and the wrong-first-stamp headlines for all six cases (`docs/CASE_SCRIPTS.md`, The Daily Decibel).
+
+**Advanced cases (Day 12; ADVANCED_CASES.md questions 1-2, defaults stand):**
+
+20. Morgan: FIT with a CROS for an old, explained, doctor-checked dead ear (the "one ear only" card reads as a clue,
+    not a red flag, because the letter explains it), or REFER anyway? And the CROS counselling: helps at dinners, no
+    direction, guard the left ear, a yearly test, come straight back if the left ear changes.
+21. Morgan's real interaural attenuation, phones 50 / inserts 70, so the shadow sits around 55-70 with phones (75-90
+    with inserts); and masked bone before masked air, both climbing to no response at the limit.

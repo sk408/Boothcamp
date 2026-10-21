@@ -382,9 +382,13 @@ func _segment_ready(key: String) -> bool:
 
 func _refresh_segments(p_ear: String, freq: int, animate: bool) -> void:
 	var pts: Dictionary = points[p_ear]
+	var masked := _layer(&"ac_masked", p_ear)
 	var fl: Array = []
 	for f: int in pts:
-		if not bool(pts[f]["no_response"]):
+		# no line through a no-response mark; where masked air is stamped, its mark decides (Day 12's
+		# deaf ear: the unmasked shadow answered, the masked marks are no response)
+		var nr: bool = bool(masked[f]["no_response"]) if masked.has(f) else bool(pts[f]["no_response"])
+		if not nr:
 			fl.append(f)
 	fl.sort()
 	var keep: Dictionary = {}

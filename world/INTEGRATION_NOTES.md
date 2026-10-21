@@ -98,7 +98,7 @@ Tests: `test_day3_mike_extras` in `world/tests/test_clinic.gd`.
 - Tests: `world/tests/test_clinic.gd` (API, every reaction, walk/sit/ear projection with right ear on
   the screen's left, muffle amount with no bus-effect changes, story extras, every SHOTS entry).
 
-## Cases (Days 6 to 11, cases branch; CONTRACTS.md §11)
+## Cases (Days 6 to 12, cases branch; CONTRACTS.md §11)
 
 **Additive hook in `clinic.gd`: `var patient_spec: Dictionary`.** Set it before `add_child`. When it is not
 empty the patient bean is built from it (instead of `patient_id`'s built-in look) and
