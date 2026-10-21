@@ -93,15 +93,17 @@ tools_used, par, ask_tries, ups}`.
 
 ---------------------------------------------------------------------------------------------
 
-## 5. PR 2
+## 5. PR 2 (built)
 
 - **Hoot's movie before the day** ("The Tune-Up"), with Hoot's lead-in as on every movie day: why the first weeks
   feel loud (the brain re-learning sound), the aid's diary, a whistle as the aid hearing itself, and forward mics in
   a crowd.
-- **The listening check.** The right aid "went quiet on Tuesday". The player listens through a listening tube,
-  finds the clogged wax guard and swaps it (a small hands-on game).
-- **The next visit.** When Gus comes back: in a few months for a check, and a hearing test every year (or sooner if
-  anything changes).
+- **The listening check** (after the ask, `story/games/wax_guard.gd`). The right aid "went quiet on Tuesday". The
+  player listens through a listening tube, checks a part (battery, mic cover, wax guard: a wrong one is explained
+  and greyed), finds the plugged wax guard and clicks in a new one. Medal `check`.
+- **The next visit** (after the desk). "When should Gus come back?": a check in a few months and a hearing test every
+  year, sooner if anything changes (right); only when they break, or every week (wrong). Medal `plan`. Both picks
+  show on the paper; the three scores are unchanged.
 
 ---------------------------------------------------------------------------------------------
 

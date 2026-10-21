@@ -376,6 +376,9 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **Clinic and CaseProps**, used as is: `walk_in`, `put_on_hearing_aids`, `doris_enter`, `doris_react`,
   `gus_look`, `hoot_emote`, the `fitting` shot, and CaseProps' `later` card ("TWO WEEKS LATER").
 - **No new data files** (.tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
+- **Part 2**: **Movies.MOVIES** gains `tuneup` (one line). **Game.PHASES** gains `listening_check` (additive).
+  **New beat** `wax_guard` {step} with a mouse route in the bot; `_check_tuneup` also wants the `check` and `plan`
+  medals. Still no new data files.
 
 ## The career-fair demo (cases branch; docs/DEMO.md, CONTRACTS.md §14)
 

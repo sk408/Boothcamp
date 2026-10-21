@@ -890,6 +890,14 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 				_mouse_misses.append("tune desk")
 				return
 			await _click((td.call("tool_button", td.call("right_tool")) as Control).get_global_rect().get_center())
+		&"wax_guard":
+			# (Day 15 part 2) the wax guard, then "Click in a new guard"
+			var wg := _find_script_node("story/games/wax_guard.gd")
+			if wg == null:
+				_mouse_misses.append("wax guard")
+				return
+			var id := "guard" if String(info.get("step", "find")) == "find" else "swap"
+			await _click((wg.call("part_button", id) as Control).get_global_rect().get_center())
 		_:
 			if info.get("mouse", null) is Dictionary:
 				await _mouse_route(info["mouse"] as Dictionary)
@@ -1143,11 +1151,12 @@ func _check_fitting(res: Dictionary, report: Dictionary, problems: PackedStringA
 
 
 ## (Day 15, docs/TUNEUP.md) The tune-up: both medals, every ticket fixed on the first tool (the bot
-## always picks the right one), the right question first, no WHOLE AID UP.
+## always picks the right one), the right question first, no WHOLE AID UP; (part 2) the wax guard
+## and the next-visit plan on the first pick.
 func _check_tuneup(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var tune: Dictionary = res.get("tuneup", {})
 	var medals: Dictionary = _summary.get("medals", {})
-	for m: String in ["ask", "tune"]:
+	for m: String in ["ask", "check", "tune", "plan"]:
 		if not medals.has(m):
 			problems.append("tune-up: no %s medal (the beat never finished)" % m)
 	var tickets: Array = tune.get("tickets", [])
@@ -1158,8 +1167,10 @@ func _check_tuneup(res: Dictionary, report: Dictionary, problems: PackedStringAr
 			problems.append("tune-up: ticket %s fixed=%s in %d tries" % [t.get("id", "?"), t.get("fixed", false), int(t.get("tries", 0))])
 	if int(tune.get("ask_tries", 0)) != 1 or int(tune.get("ups", -1)) != 0:
 		problems.append("tune-up: ask_tries %d, ups %d" % [int(tune.get("ask_tries", 0)), int(tune.get("ups", -1))])
+	if int(tune.get("check_tries", 0)) != 1 or int(tune.get("plan_tries", 0)) != 1:
+		problems.append("tune-up: check_tries %d, plan_tries %d" % [int(tune.get("check_tries", 0)), int(tune.get("plan_tries", 0))])
 	report["tuneup"] = {"tools_used": tune.get("tools_used", 0), "par": tune.get("par", 0), "ask_tries": tune.get("ask_tries", 0),
-		"ups": tune.get("ups", -1), "medals": medals}
+		"ups": tune.get("ups", -1), "check_tries": tune.get("check_tries", 0), "plan_tries": tune.get("plan_tries", 0), "medals": medals}
 
 
 ## (career-fair demo, docs/DEMO.md) The demo: its four medals, the right ear's match in the green,

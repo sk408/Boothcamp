@@ -4,9 +4,12 @@ extends TestCase
 
 const TuneDesk := preload("res://story/games/tune_desk.gd")
 const BingoNight := preload("res://story/games/bingo_night.gd")
+const WaxGuard := preload("res://story/games/wax_guard.gd")
 const LevelTuneup := preload("res://story/level_tuneup.gd")
 const PaperTuneup := preload("res://story/papers/paper_tuneup.gd")
 const TargetMatch := preload("res://story/games/target_match.gd")
+const Movies := preload("res://story/explainers/movies.gd")
+const Stage2D := preload("res://story/explainers/explainer_stage.gd")
 
 const SAVE := "user://test_tuneup_save.json"
 const BOT_PREFIX := 18   # the mouse bot clicks an option by its first 18 characters
@@ -60,7 +63,7 @@ func test_day_15_is_gus_tune_up() -> void:
 	assert_true(tune.validate().is_empty(), "the profile validates")
 	for ear: String in ["right", "left"]:
 		assert_eq(tune.get_thresholds(ear), gus.get_thresholds(ear), "%s: Gus's own thresholds" % ear)
-	for p: StringName in [&"datalog", &"tune_desk"]:
+	for p: StringName in [&"datalog", &"tune_desk", &"listening_check"]:
 		assert_has(Game.PHASES, p, "tune-up phase")
 
 
@@ -223,3 +226,112 @@ func test_bingo_night_draws() -> void:
 	b.call("call_ball", 22)
 	b.set("_bingo_t", 0.5)
 	await wait_frames(2)
+
+
+## (part 2) Hoot's tune-up movie: registered, valid and quiet, listed as "Day 15", with short lines,
+## and the diary scene shows Gus's own hours.
+func test_tuneup_movie() -> void:
+	var id := LevelTuneup.MOVIE_ID
+	assert_eq(id, "tuneup")
+	var bad := Movies.validate(id, Stage2D.SETS)
+	assert_true(bad.is_empty(), "%s: %s" % [id, ", ".join(bad)])
+	assert_false(Movies.is_short(id), "a full movie")
+	assert_has(Movies.replay_ids(), id, "on the title's list")
+	assert_eq(Movies.day_label(id), "Day 15")
+	assert_has(Movies.for_level("gus_tune", true), id, "Day 15's pause menu")
+	var player_script: GDScript = load("res://story/explainers/explainer_player.gd")
+	var cue_max := float(player_script.get_script_constant_map()["CUE_MAX_DB"])
+	var m := Movies.movie(id)
+	assert_true(float((m["scenes"][0] as Dictionary).get("duration", 0.0)) >= 7.0, "the lead-in card holds")
+	for sc: Dictionary in m["scenes"]:
+		for cue: Dictionary in sc.get("cues", []):
+			assert_has(Sfx.SOUNDS, StringName(String(cue["sfx"])), "%s: a known Sfx" % sc["id"])
+			assert_true(float(cue.get("vol_db", 0.0)) <= cue_max, "%s: %s is quiet" % [sc["id"], cue["sfx"]])
+		if String(sc["id"]) == "diary":
+			var p: Dictionary = sc["params"]
+			assert_eq(p["hours"], TuneDesk.DATALOG_HOURS as Array, "Gus's own diary")
+			assert_eq(float(p["goal"]), TuneDesk.DATALOG_GOAL_H)
+	for l: String in [LevelTuneup.MOVIE_NEW, LevelTuneup.MOVIE_AGAIN, LevelTuneup.MOVIE_SKIPPED]:
+		assert_true(_words(l) <= Hoot.MAX_WORDS, l)
+
+
+func test_tuneup_movie_draws_every_scene() -> void:
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	var m := Movies.movie("tuneup")
+	st.call("use_movie", m)
+	for sc: Dictionary in m["scenes"]:
+		st.call("show_scene", sc)
+		var d := float(sc["duration"])
+		for tt: float in [0.0, d * 0.2, d * 0.45, d * 0.7, d * 0.9, d]:
+			st.set("t", tt)
+			st.queue_redraw()
+			await wait_frames(1)
+	st.queue_free()
+
+
+## (part 2) The listening check: one right part (the wax guard), short findings, the bot's path.
+func test_wax_guard_check() -> void:
+	var right := 0
+	for p: Array in WaxGuard.PARTS:
+		if bool(p[3]):
+			right += 1
+			assert_eq(String(p[0]), WaxGuard.RIGHT_PART)
+		assert_true(_words(String(p[2])) <= Hoot.MAX_WORDS, String(p[2]))
+	assert_eq(right, 1)
+	assert_true(WaxGuard.is_right("guard"))
+	assert_false(WaxGuard.is_right("battery"))
+	var g: Control = add_node(WaxGuard.new())
+	await wait_frames(1)
+	var picked: Array = []
+	var pick_it := func() -> void: picked.append(await g.call("pick"))
+	pick_it.call()
+	await wait_frames(1)
+	g.call("_click", "battery")
+	await wait_frames(1)
+	assert_eq(picked, ["battery"])
+	g.call("mark_checked", "battery")
+	pick_it.call()
+	await wait_frames(1)
+	g.call("_click", "battery")
+	await wait_frames(1)
+	assert_eq(picked.size(), 1, "a checked part is greyed")
+	g.call("solve")
+	await wait_frames(1)
+	assert_eq(picked, ["battery", "guard"])
+	assert_eq(g.call("result"), {"tries": 2, "wrong": ["battery"]})
+	var done := [false]
+	var swap_it := func() -> void:
+		await g.call("swap")
+		done[0] = true
+	swap_it.call()
+	await wait_frames(1)
+	assert_true((g.call("part_button", "swap") as Button).visible)
+	g.call("solve")
+	await wait_seconds(1.6)
+	assert_true(done[0], "the new guard clicked in")
+	assert_true(bool(g.get("_swapped")))
+
+
+## (part 2) The next-visit plan: one right option, told apart by the mouse bot, short lines.
+func test_next_visit_plan() -> void:
+	var seen := {}
+	var right := 0
+	var lengths: Array[int] = []
+	for p: Array in LevelTuneup.PLANS:
+		var prefix := String(p[0]).substr(0, BOT_PREFIX)
+		assert_false(seen.has(prefix), prefix)
+		seen[prefix] = true
+		lengths.append(String(p[0]).length())
+		if String(p[1]) == LevelTuneup.RIGHT_PLAN:
+			right += 1
+		for k in [2, 3]:
+			assert_true(_words(String(p[k])) <= Hoot.MAX_WORDS, String(p[k]))
+	assert_eq(right, 1)
+	assert_true(lengths.max() - lengths.min() <= 12, "about as long, so length gives nothing away")
+	assert_eq(LevelTuneup._plan_index(LevelTuneup.RIGHT_PLAN), 1)
+	var tune: Dictionary = LevelTuneup.results_for({"tickets": [], "tools_used": 4, "par": 4}, 1, 0, {"check_tries": 2, "plan_tries": 1})["tuneup"]
+	var lines := PaperTuneup.lines(tune)
+	assert_true(lines.has("Listening check: a plugged wax guard, found on the second pick."), str(lines))
+	assert_true(lines.has("Next visit: a check in a few months, a test every year (first pick)."), str(lines))
