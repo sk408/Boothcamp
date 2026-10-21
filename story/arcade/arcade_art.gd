@@ -12,6 +12,8 @@ const COOKIE := Color("#d99a5b")
 const CHIP := Color("#6b3f22")
 const WAVE := Color("#36a3e7")
 const SKIER := Color("#e5383b")
+## The rainbow's bands, outside in.
+const RAINBOW: Array[Color] = [Color("#e5383b"), Color("#ff9f1c"), Color("#f2d335"), Color("#5bc8a3"), Color("#36a3e7")]
 
 
 static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> void:
@@ -25,10 +27,12 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_cookie(ci, c, s, 1.0)
 		&"rising":
 			_wave(ci, c, s, 0.0)
+		&"reverse_bite":
+			_rainbow(ci, c, s, 0.0)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
-## rolls over.
+## rolls over, the rainbow sparkles.
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -50,6 +54,8 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_cookie(ci, c, s, 1.0 + t * 1.6)
 		&"rising":
 			_wave(ci, c, s, t)
+		&"reverse_bite":
+			_rainbow(ci, c, s, t)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -109,3 +115,25 @@ static func _wave(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 	fill.append(c + Vector2(-s * 0.6, s * 0.5))
 	ci.draw_colored_polygon(fill, Color(WAVE, 0.85))
 	ci.draw_polyline(pts, SNOW, 4.0, true)
+
+
+## A rainbow: high in the middle, down at both ends, like a reverse bite on the chart (better in
+## the middle). t > 0: it brightens and sparkles from end to end.
+static func _rainbow(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var base := c + Vector2(0, s * 0.32)
+	var band := s * 0.09
+	for i in RAINBOW.size():
+		var r := s * 0.62 - i * band
+		ci.draw_arc(base, r, PI, TAU, 32, RAINBOW[i], band + 1.0, true)
+	# a cloud at each foot
+	for side: float in [-1.0, 1.0]:
+		var foot := base + Vector2(side * s * 0.5, s * 0.02)
+		for p: Vector2 in [Vector2(-0.14, 0.02), Vector2(0.0, -0.05), Vector2(0.14, 0.02)]:
+			ci.draw_circle(foot + p * s, s * 0.12, SNOW)
+	if t > 0.0:
+		for i in 5:
+			var a := PI + PI * clampf(t * 1.2 - i * 0.05, 0.0, 1.0) * (i + 1) / 5.0
+			var p := base + Vector2(cos(a), sin(a)) * s * 0.52
+			var k := s * 0.07 * (1.0 - t * 0.6)
+			ci.draw_line(p - Vector2(k, 0), p + Vector2(k, 0), Color(SNOW, 1.0 - t * 0.5), 3.0)
+			ci.draw_line(p - Vector2(0, k), p + Vector2(0, k), Color(SNOW, 1.0 - t * 0.5), 3.0)

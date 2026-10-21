@@ -11,7 +11,7 @@ const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 const WARMUP_CARDS := 3
 const RUN_S := 60.0
 ## When each chute opens (seconds into the run).
-const UNLOCK_AT: Dictionary[StringName, float] = {&"sloping": 0.0, &"notch": 0.0, &"cookie_bite": 10.0, &"rising": 25.0}
+const UNLOCK_AT: Dictionary[StringName, float] = {&"sloping": 0.0, &"notch": 0.0, &"cookie_bite": 10.0, &"rising": 25.0, &"reverse_bite": 35.0}
 ## The ramp inside the run.
 const LEFT_FROM_S := 30.0       ## left-ear (blue) cards join
 const BOTH_FROM_S := 40.0       ## two-ear cards: sort the colour the card names

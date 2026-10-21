@@ -53,6 +53,7 @@ recent score ("NEW!" until you have played it).
 | 10 s | the COOKIE BITE chute opens ("NEW CHUTE!", and the NEXT card is its first chart) |
 | 25 s | the RISING chute opens |
 | 30 s | left-ear charts join (blue X): same shapes |
+| 35 s | the REVERSE BITE chute opens, key 5 (section 16) |
 | 40 s | two-ear charts ("SORT THE RED O" / "SORT THE BLUE X": the other ear has a different shape and is dimmed) and lookalikes (the same shape with a trap in it) |
 | 50 s | one story patient's own chart, worth x3 (gold card, "STORY CHART x3") |
 
@@ -152,7 +153,7 @@ Reads are defensive, because JSON brings numbers back as floats (`story/arcade/a
 
   - Policies:
     - `careful`: the solver.
-    - `keys`: real 1-4 keys, with KEY as the initials, then T back to the arcade hall.
+    - `keys`: real 1-5 keys, with KEY as the initials, then T back to the arcade hall.
     - `mouse`: real clicks only, with BAA as the initials, then Back to the arcade.
     - `guess`: a random open chute every time.
     - `help`: HOOT HELP every time.

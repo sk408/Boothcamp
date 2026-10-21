@@ -124,7 +124,7 @@ class Cabinet extends Control:
 			draw_string(f, Vector2(-30, 7), "NEW!", HORIZONTAL_ALIGNMENT_CENTER, 60, 18, Palette.PAPER)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	## A chart card with a sloping line over the four chute pictures.
+	## A chart card with a sloping line over the five chute pictures.
 	func _draw_chute_screen(r: Rect2) -> void:
 		var card := Rect2(r.position + Vector2(r.size.x * 0.5 - 90, 12), Vector2(180, 96))
 		UiDraw.rounded_rect(self, card, Color("#ffffff"), 10, 3, Palette.INK)
@@ -134,9 +134,9 @@ class Cabinet extends Control:
 		draw_polyline(pts, Palette.RIGHT_RED, 3.0, true)
 		for p: Vector2 in pts:
 			UiDraw.ear_symbol(self, p, "right", 9.0, 2.5)
-		var shapes := [&"sloping", &"notch", &"cookie_bite", &"rising"]
+		var shapes := [&"sloping", &"notch", &"cookie_bite", &"rising", &"reverse_bite"]
 		for i in shapes.size():
-			ArcadeArt.picture(self, shapes[i], r.position + Vector2(48 + i * (r.size.x - 96) / 3.0, 152), 34.0)
+			ArcadeArt.picture(self, shapes[i], r.position + Vector2(44 + i * (r.size.x - 88) / (shapes.size() - 1.0), 152), 30.0)
 
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:

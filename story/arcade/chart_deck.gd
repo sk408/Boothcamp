@@ -1,7 +1,7 @@
 extends RefCounted
 ## ChartDeck (arcade, story-internal): seeded audiograms for Chart Chute (docs/ARCADE.md). Every
-## chart is labelled by ClinicRules.classify_shape, the same rule the story's reveals use, and kept
-## clear of its edges: the shape still holds if any one frequency is 5 dB off, so a right answer is
+## chart is labelled by shape_of (ClinicRules.classify_shape, the same rule the story's reveals use,
+## plus the reverse cookie bite) and kept clear of its edges: the shape still holds if any one frequency is 5 dB off, so a right answer is
 ## never a coin toss. Pure and static apart from the RandomNumberGenerator it is handed.
 ##   const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 ##   var card := ChartDeck.make_card(rng, &"notch", {"ear": "right", "lookalike": false}, 7)
@@ -10,10 +10,14 @@ extends RefCounted
 ##   ChartDeck.stable(thresholds, shape)    # the margin check every card passes
 ##   ChartDeck.golden_card(&"notch", 3)     # a story patient's own chart (Rocco's notch)
 
-## The chutes, in key order (1-4).
-const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"rising"]
+## The chutes, in key order (1-5).
+const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"rising", &"reverse_bite"]
 ## One word under each chute's picture.
-const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING"}
+const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING",
+	&"reverse_bite": "REVERSE BITE"}
+## A reverse cookie bite: the lows (250 / 500) and the highs (4k / 8k) each this much worse than
+## the middle (1k / 2k), on average (docs/ARCADE.md section 16).
+const REVERSE_BITE_DB := 15.0
 ## The chart's test frequencies (plus 750 / 1500 where ClinicRules.required_interoctaves asks).
 const FREQS: Array[int] = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
 const MARGIN_DB := 5
@@ -44,6 +48,12 @@ const ARCH: Dictionary[StringName, Dictionary] = {
 		# gentle: only the lowest pitches are clearly worse
 		"lookalike": [[45, 40, 35, 25, 20, 15, 15, 15], [50, 45, 35, 25, 25, 20, 20, 20]],
 	},
+	&"reverse_bite": {
+		"plain": [[50, 40, 25, 25, 30, 40, 50, 55], [50, 45, 30, 25, 30, 40, 50, 55], [55, 45, 30, 30, 35, 45, 55, 60]],
+		# one end only just worse: it looks rising (the top barely turns down) or sloping (the
+		# bottom barely turns up), but both ends are past the line
+		"lookalike": [[60, 50, 30, 25, 30, 40, 50, 50], [45, 40, 25, 25, 40, 50, 60, 65]],
+	},
 }
 
 ## The story patients whose charts turn up as golden cards (x3). Marina's rising loss is in her
@@ -63,6 +73,7 @@ const LINES: Dictionary = {
 	&"notch": ["Thirty years of loud gigs...", "My workshop is LOUD.", "Jet engines, every day.", "I never wore earplugs."],
 	&"cookie_bite": ["Mum's chart looks like this too!", "Middle voices just vanish.", "Grandad had the same bite."],
 	&"rising": ["The fridge hum is gone!", "Deep voices are hard.", "Low notes went missing."],
+	&"reverse_bite": ["Mid voices are fine, the rest fades.", "Low hum AND birdsong are gone.", "I hear you best in the middle."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -71,6 +82,7 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"notch": {"text": "Dips at 3-6k, comes back up at 8k", "freq_lo": 3000, "freq_hi": 8000},
 	&"cookie_bite": {"text": "Worst in the middle, better at both ends", "freq_lo": 500, "freq_hi": 4000},
 	&"rising": {"text": "The low pitches are the worst", "freq_lo": 250, "freq_hi": 1000},
+	&"reverse_bite": {"text": "Better in the middle, worse at both ends", "freq_lo": 250, "freq_hi": 8000},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -133,7 +145,7 @@ static func golden_card(shape: StringName, serial: int) -> Dictionary:
 ## finished (a story chart shows the day's pattern and, for Marina, a clue to her call), and of
 ## those the ones not found yet; once all of those are found they come round again.
 static func golden_pool(found: PackedStringArray) -> Array:
-	var done: Array = SHAPES.filter(func(s: StringName) -> bool: return Game.is_chapter_done(String(GOLDEN[s]["patient"])))
+	var done: Array = SHAPES.filter(func(s: StringName) -> bool: return GOLDEN.has(s) and Game.is_chapter_done(String(GOLDEN[s]["patient"])))
 	var left: Array = done.filter(func(s: StringName) -> bool: return not found.has(String(s)))
 	return left if not left.is_empty() else done
 
@@ -156,11 +168,29 @@ static func make_chart(rng: RandomNumberGenerator, shape: StringName, lookalike:
 	return {}
 
 
-## The margin check: classify_shape says `shape`, it still says so with any one frequency 5 dB
+## The belt's label for one ear's chart: ClinicRules.classify_shape, except that a chart it calls
+## sloping, rising or flat is a reverse bite when both ends are REVERSE_BITE_DB worse than the
+## middle (classify_shape has no reverse bite and mostly calls one flat).
+static func shape_of(t: Dictionary) -> StringName:
+	var base := ClinicRules.classify_shape(t)
+	if base != &"sloping" and base != &"rising" and base != &"flat":
+		return base
+	for f: int in [250, 500, 1000, 2000, 4000, 8000]:
+		if not t.has(f):
+			return base
+	var mid := (float(t[1000]) + float(t[2000])) * 0.5
+	var low := (float(t[250]) + float(t[500])) * 0.5
+	var high := (float(t[4000]) + float(t[8000])) * 0.5
+	if low - mid >= REVERSE_BITE_DB and high - mid >= REVERSE_BITE_DB:
+		return &"reverse_bite"
+	return base
+
+
+## The margin check: shape_of says `shape`, it still says so with any one frequency 5 dB
 ## better or worse, the chart is clearly not normal, a notch bottoms out at NOTCH_FLOOR_MIN, and a
 ## slope never recovers 10 dB at 6k.
 static func stable(t: Dictionary, shape: StringName) -> bool:
-	if ClinicRules.classify_shape(t) != shape:
+	if shape_of(t) != shape:
 		return false
 	var worst := -999
 	for f: int in FREQS:
@@ -177,7 +207,7 @@ static func stable(t: Dictionary, shape: StringName) -> bool:
 		for d: int in [-MARGIN_DB, MARGIN_DB]:
 			var p := t.duplicate()
 			p[f] = int(t[f]) + d
-			if ClinicRules.classify_shape(p) != shape:
+			if shape_of(p) != shape:
 				return false
 	return true
 

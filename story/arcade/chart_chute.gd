@@ -1,11 +1,12 @@
 extends Control
 ## ChartChute (arcade, story-internal): the Chart Chute arcade mode (docs/ARCADE.md). Audiograms ride
 ## a belt; drop each one down the chute whose picture it looks like (SLOPE, NOTCH, COOKIE BITE,
-## RISING) as fast as you can read them. A run is three untimed warm-up charts, then 60 seconds where
+## RISING, REVERSE BITE) as fast as you can read them. A run is three untimed warm-up charts, then 60 seconds where
 ## the next chart arrives the moment you sort one. A wrong drop jams the belt, shows the tell and
 ## sends the chart back three cards later; HOOT HELP shows the tell and sorts it for no points but
-## keeps the streak. Every chart is labelled by ClinicRules.classify_shape (ChartDeck).
-## Controls: keys 1-4 or click a chute; H or the HOOT HELP button; on the results, Enter or Space
+## keeps the streak. Every chart is labelled by ChartDeck.shape_of (ClinicRules.classify_shape plus
+## the reverse cookie bite).
+## Controls: keys 1-5 or click a chute; H or the HOOT HELP button; on the results, Enter or Space
 ## plays again and T goes back to the arcade hall. A key pressed while a chart is still sliding in is
 ## kept for a moment and used once it lands. Pausable game time throughout.
 ## The playfield is 1280x720, centred in wider or taller windows; the wall, floor and belt fill the
@@ -39,6 +40,7 @@ const LINE_Y := 488.0
 ## Points float up in the empty corner under the NEXT card, clear of the chart and the streak.
 const POINTS_AT := Vector2(1090, 404)
 const CHUTE_GAP := 20.0
+const CHUTE_MARGIN := 20.0   ## the least room left and right of the chute row
 const HOOT_HINT := Rect2(16, 96, 300, 150)
 ## A key pressed this long before the chart is ready still counts (input buffer).
 const BUFFER_S := 0.35
@@ -339,7 +341,10 @@ class ChuteView extends Control:
 			ArcadeArt.picture(self, shape, c, 46.0)
 		_draw_mini_chart(Rect2(mouth.position.x + 26, mouth.end.y - 42, mouth.size.x - 52, 36))
 		var word := ChartDeck.CHUTE_WORDS[shape]
-		draw_string(_font, Vector2(0, size.y - 22 + lift), word, HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.PAPER)
+		var fs := 28
+		while fs > 18 and _font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > size.x - 16:
+			fs -= 1
+		draw_string(_font, Vector2(0, size.y - 22 + lift), word, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, Palette.PAPER)
 		# the key chip
 		UiDraw.rounded_rect(self, Rect2(8, 6 + lift, 34, 34), Palette.SUNNY, 10, 3, Palette.INK)
 		draw_string(_font, Vector2(8, 32 + lift), str(key), HORIZONTAL_ALIGNMENT_CENTER, 34, 22, Palette.INK)
@@ -446,10 +451,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	var digit := code
 	if (digit < KEY_1 or digit > KEY_9) and (digit < KEY_KP_1 or digit > KEY_KP_9):
 		digit = k.physical_keycode   # AZERTY and friends: the digit row by position
-	if digit >= KEY_1 and digit <= KEY_4:
+	var n := ChartDeck.SHAPES.size()
+	if digit >= KEY_1 and digit < KEY_1 + n:
 		sort_into(ChartDeck.SHAPES[digit - KEY_1])
 		get_viewport().set_input_as_handled()
-	elif digit >= KEY_KP_1 and digit <= KEY_KP_4:
+	elif digit >= KEY_KP_1 and digit < KEY_KP_1 + n:
 		sort_into(ChartDeck.SHAPES[digit - KEY_KP_1])
 		get_viewport().set_input_as_handled()
 	elif code == KEY_H:
@@ -872,11 +878,17 @@ func _build() -> void:
 	_preview = UiKit.full_rect()
 	_preview.draw.connect(_draw_preview)
 	_field.add_child(_preview)
-	for i in ChartDeck.SHAPES.size():
+	# the chutes share the width: 4 at full size, 5 a little narrower with a smaller gap
+	var n := ChartDeck.SHAPES.size()
+	var gap := CHUTE_GAP if n <= 4 else CHUTE_GAP * 0.7
+	var w := minf(CHUTE_SIZE.x, (FIELD.x - 2.0 * CHUTE_MARGIN - gap * (n - 1)) / n)
+	var x0 := (FIELD.x - (w * n + gap * (n - 1))) * 0.5
+	for i in n:
 		var s: StringName = ChartDeck.SHAPES[i]
 		var c := ChuteView.new(s, i + 1)
-		var x0 := (FIELD.x - (CHUTE_SIZE.x * 4 + CHUTE_GAP * 3)) * 0.5
-		c.position = Vector2(x0 + i * (CHUTE_SIZE.x + CHUTE_GAP), CHUTE_Y)
+		c.size = Vector2(w, CHUTE_SIZE.y)
+		c.pivot_offset = c.size * 0.5
+		c.position = Vector2(x0 + i * (w + gap), CHUTE_Y)
 		c.locked = not ChuteRules.unlocked(-1.0).has(s)
 		c.picked.connect(sort_into)
 		_field.add_child(c)
@@ -1103,12 +1115,12 @@ func _show_results() -> void:
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
 	var found := ArcadeScores.found(MODE)
-	var total := ChartDeck.SHAPES.size()
+	var total := ChartDeck.GOLDEN.size()
 	var line := "Story charts found: %d of %d" % [found.size(), total]
 	if _golden_seen != "":
 		line += "  (%s today!)" % _golden_seen
 	var days_left: Array[int] = []
-	for s: StringName in ChartDeck.SHAPES:
+	for s: StringName in ChartDeck.GOLDEN:
 		var id := String(ChartDeck.GOLDEN[s]["patient"])
 		if not Game.is_chapter_done(id):
 			days_left.append(_day_of(id))
