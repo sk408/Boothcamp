@@ -431,7 +431,8 @@ func _set_practice() -> void:
 # ---------------------------------------------------------------- 6. agree
 
 ## The ruler (soft at the top): the beep drops in at the tone average, the word at the SRT; the band
-## grows 10 dB either side of the beep, a dashed line joins them, THEY AGREE!
+## grows params.agree.within (6 dB, AGREE_GOOD_DB) either side of the beep, a dashed line joins them,
+## THEY AGREE!
 func _set_agree() -> void:
 	var p: Dictionary = params.get("agree", {})
 	var pta := float(p.get("pta", 40))
@@ -443,7 +444,7 @@ func _set_agree() -> void:
 	var bandk := Stage2D._ease_out(_k(2.6, 3.2))
 	_band(col, pta, within * bandk, bandk)
 	if bandk > 0.5:
-		s._chip("within about %d dB" % int(within), Vector2(col.end.x + 120, _ry(col, pta + within) + 24), BAND, 16, Stage2D.INK, _pop(3.0))
+		s._chip("within %d dB" % int(within), Vector2(col.end.x + 120, _ry(col, pta + within) + 40), BAND, 16, Stage2D.INK, _pop(3.0))
 	var bp := Vector2(col.position.x - 90, _ry(col, pta))
 	var wp := Vector2(col.end.x + 100, _ry(col, srt))
 	_beep_marker(bp, col.position.x, _marker_k(0.8, still), "tone average: %d" % int(pta), -1.0, 1.5)

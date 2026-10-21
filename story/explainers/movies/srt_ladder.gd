@@ -15,10 +15,11 @@ extends RefCounted
 ## SRT_UP_DB (5) after a miss, and Hoot calls it one common way, not the only one.
 ## Facts (Steve reviews; story/tests/test_movie_srt_ladder.gd pins them): the halfway board's SRT is
 ## what SpeechRules.srt_candidate gives for its dots; the ladder's levels follow srt_next_level; the
-## agreeing pair is within about 10 dB (SpeechRules.agreement: good or fair), the two that disagree
-## are "poor" both ways, and the recheck brings the beeps back within 10 dB. Every word shown is one
-## of core/speech/material/spondee_a.json's own (three of them, in our own order), never a word or
-## order from a published list. Every sound is a quiet cue: the words are drawn, never played.
+## agreeing pair is within 6 dB (AGREE_GOOD_DB; SpeechRules.agreement: good), the two that disagree
+## are "poor" both ways, and the recheck brings the beeps back within 6 dB (AGREE_GOOD_DB). Every
+## word shown is one of core/speech/material/spondee_a.json's own (three of them, in our own order),
+## never a word or order from a published list. Every sound is a quiet cue: the words are drawn,
+## never played.
 
 const MOVIE: Dictionary = {
 	"id": "srt_ladder", "title": "Hoot's spondee movie", "subtitle": "The Spondee Ladder",
@@ -91,13 +92,13 @@ const MOVIE: Dictionary = {
 		},
 		{
 			"id": "agree", "set": "agree", "title": "Words check the beeps", "duration": 8.0,
-			"captions": ["The SRT usually lands within about 10 dB of the tone average. Beeps and words agree!"],
+			"captions": ["The SRT usually lands within 6 dB of the tone average: good agreement. Within 12 is fair."],
 			"caption_at": [0.3],
-			"teaches": "PTA/SRT agreement: the SRT usually lands within about 10 dB of the pure-tone average, so the words double-check the beeps.",
-			"board": "A tall dB ruler down the middle, soft at the TOP as on an audiogram. A beep (a music note) drops in on the left at the tone average, 40; a little two-block word drops in on the right at the SRT, 35. A mint band grows 10 dB either side of the beep: 'within about 10 dB'. A dashed line joins the two ('5 dB apart'), and a big sign pops: THEY AGREE! Hoot cheers. Reduced motion: the markers fade in.",
+			"teaches": "PTA/SRT agreement: the SRT usually lands within 6 dB of the pure-tone average (good; within 12 fair), so the words double-check the beeps.",
+			"board": "A tall dB ruler down the middle, soft at the TOP as on an audiogram. A beep (a music note) drops in on the left at the tone average, 40; a little two-block word drops in on the right at the SRT, 35. A mint band grows 6 dB either side of the beep: 'within 6 dB'. A dashed line joins the two ('5 dB apart'), and a big sign pops: THEY AGREE! Hoot cheers. Reduced motion: the markers fade in.",
 			"params": {"heading": "Words check the beeps", "icon": "note", "tint": "#e8f7e4",
-				"lines": ["Tone average: 500, 1k, 2k Hz", "The SRT lands near it", "Within about 10 dB: they agree"],
-				"agree": {"pta": 40, "srt": 35, "within": 10}},
+				"lines": ["Tone average: 500, 1k, 2k Hz", "The SRT lands near it", "Within 6 dB: good agreement"],
+				"agree": {"pta": 40, "srt": 35, "within": 6}},
 			"cues": [{"t": 0.8, "sfx": "pop", "pitch": 1.0, "vol_db": -12.0}, {"t": 1.6, "sfx": "pop", "pitch": 1.2, "vol_db": -12.0}, {"t": 2.6, "sfx": "whoosh", "pitch": 1.1, "vol_db": -14.0}, {"t": 4.4, "sfx": "ding", "pitch": 1.2, "vol_db": -12.0}],
 		},
 		{
@@ -109,7 +110,7 @@ const MOVIE: Dictionary = {
 			"board": "Two panels, each with its own small ruler (soft at the top). Left, 'words much BETTER': the beep sits at 45, the word floats way up at 10, far above the mint band; a question mark pops. Hoot steps in with a kind face and holds up a card ('Every beep, even the faint ones!'): 're-instruct, kindly'. The beep is rechecked and slides up to 15, into the band: a tick, and a heart chip 'never accuse'. Then Hoot hops to the right panel, 'words much WORSE': the beep at 40, the word sinks to 65. Chips: 'instructions clear?', 'words in their language?'. Reduced motion: the markers fade, Hoot cuts across.",
 			"params": {"heading": "When they disagree", "icon": "", "tint": "#f6e3ff",
 				"lines": ["Words much better: re-instruct,", "recheck the beeps, kindly", "Words much worse: check the", "instructions and the language"],
-				"mismatch": {"better": {"pta": 45, "srt": 10, "recheck": 15}, "worse": {"pta": 40, "srt": 65}, "within": 10}},
+				"mismatch": {"better": {"pta": 45, "srt": 10, "recheck": 15}, "worse": {"pta": 40, "srt": 65}, "within": 6}},
 			"cues": [{"t": 1.6, "sfx": "boing", "pitch": 1.1, "vol_db": -14.0}, {"t": 2.2, "sfx": "pop", "pitch": 1.0, "vol_db": -12.0}, {"t": 3.4, "sfx": "whoosh", "pitch": 1.0, "vol_db": -14.0}, {"t": 4.6, "sfx": "ding", "pitch": 1.2, "vol_db": -12.0}, {"t": 6.0, "sfx": "whoosh", "pitch": 0.8, "vol_db": -14.0}, {"t": 7.0, "sfx": "boing", "pitch": 0.8, "vol_db": -14.0}, {"t": 7.6, "sfx": "pop", "pitch": 1.0, "vol_db": -12.0}, {"t": 8.4, "sfx": "pop", "pitch": 1.1, "vol_db": -12.0}],
 		},
 		{

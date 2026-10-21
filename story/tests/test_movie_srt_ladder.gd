@@ -502,15 +502,16 @@ func test_srt_ladder_ladder_is_the_games_steps() -> void:
 	assert_true(String(caps[1]).contains("one common way") and String(caps[1]).contains("not the only one"), "one common way, not the only one: %s" % caps[1])
 
 
-## Agreement within about 10 dB; better words than beeps (poor) re-instructed and rechecked until they
-## agree, kindly; worse words (poor) mean checking the instructions and the language.
+## Agreement within 6 dB (the game's own band, AGREE_GOOD_DB, as beat 7b and the paper grade it); better
+## words than beeps (poor) re-instructed and rechecked until they agree, kindly; worse words (poor) mean
+## checking the instructions and the language.
 func test_srt_ladder_agreement_is_speech_rules() -> void:
 	var a := _data("agree")
 	var within := int(a["within"])
-	assert_eq(within, 10, "about 10 dB")
+	assert_eq(within, SpeechRules.AGREE_GOOD_DB, "the game's good band")
 	assert_true(absi(int(a["srt"]) - int(a["pta"])) <= within, "the agreeing pair sits inside the band")
 	assert_has([&"good", &"fair"], SpeechRules.agreement(int(a["srt"]), float(a["pta"])), "SpeechRules agrees they agree")
-	assert_true(String(_caps("agree")[0]).contains("within about %d dB" % within), "the caption says it")
+	assert_true(String(_caps("agree")[0]).contains("within %d dB" % within), "the caption says it")
 	var m := _data("mismatch")
 	assert_eq(int(m["within"]), within, "the same band")
 	var b: Dictionary = m["better"]
