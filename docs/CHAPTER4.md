@@ -253,9 +253,9 @@ scored).
 | 0 | `explainer` | If the masking movie is unseen and `bonnie` is not done, Hoot offers it once (§4.4). Then "The Letter Choir" (§4): until it has been seen (reached its `count` scene) Hoot announces it ("New trick today: WORD SCORES. A quick cartoon first, then our next patient!") and it plays; after that Hoot offers it ("Hoot's word movie again? Popcorn's on me!"; the best answer is to skip). A skip gets H-MOV-3. | the player's own `explainer` beat; `choice` on replays | 1:15 |
 | 1 | `intro` | Nora hums in. The tuning gag with the A-flat setup (§1), her "radio between stations" line. Hoot: "Day 4, trainee: word scores! Loud enough is easy. CLEAR enough is the question." | dialogue | 0:40 |
 | 2 | `history` | Two rounds (§1). Nora's onset aside or Hoot's red-flag sweep fills any gap. Medal `history`. | `choice` x2 | 1:00 |
-| 3 | `otoscopy` | Clear canals, healthy eardrums. The tuning-fork-in-her-hair gag. | dialogue | 0:20 |
+| 3 | `otoscopy` | Clear canals, healthy eardrums (the card opens with a fresh speculum, clinical review A1). The tuning-fork-in-her-hair gag. | dialogue | 0:20 |
 | 4 | `instructions` | Pick the right instruction. Wrong picks are removed one by one (the Day 3 loop). Medal `instructions`. | `choice` | 0:30 |
-| 5 | `audiometry` {right, ac}, {left, ac}, {right, bc}, {left, bc_masked} | Hoot runs right and left air, unmasked bone on her right at 1k and 4k, then masked bone on her left there. "Masked bone sits right on her air lines: sensorineural. Left 20 to 30 dB worse." When `bonnie` is not done, the Ghost gets its own line before the masked run (§11). | (AudiOtron, Hoot) | 1:00 |
+| 5 | `audiometry` {right, ac}, {left, ac}, {right, bc}, {left, bc_masked} | Hoot's routine line first (clinical review A1, H-TON-0). Hoot runs right and left air, unmasked bone on her right at 1k and 4k, then masked bone on her left there. While the masking movie is unseen, the 12-second recap card and H-TON-R come before the masked run (clinical review A2, as on the case days). "Masked bone sits right on her air lines: sensorineural. Left 20 to 30 dB worse." When `bonnie` is not done, the Ghost gets its own line before the masked run (§11). | (AudiOtron, Hoot) | 1:00 |
 | 6 | `speech` {right, srt}, {left, srt} | "Now the words. First her SRT in both ears: the softest level for words." Quick visit on: the hidden run and one line. Quick visit off: the player's SRTs. | (speech beats when the player runs them) | 0:15 |
 | 7 | `speech` {right, wrs} | The recorded-list line (A5). **Word list 1, coached.** WORD mode opens with the card, the score strip, the level chip and the NOISE box. Hold to 55; no noise this ear. After word 2, Nora's opera glasses (`lens_try`), and the Banana Board slides in. "Call it" #1 on the first faint-letter word. Hoot finishes: **96%, excellent**, about what her tones predict. | `speech`, `lens_try`, `call_it` | 1:15 |
 | 8 | `speech` {left, wrs} | **Word list 2, solo.** The tea demo at 50, then the player sets the level and decides about noise. The BOO chip if unmasked. One self-correction, chatty answers, the "Mike?" aside. "Call it" #2 and the AUDIBLE, BUT MISSED stamp. **52%**: "Is that her best?" The ear compare appears. If the list cannot count: the coached redo. | `speech`, `call_it` | 1:30 |
@@ -394,6 +394,10 @@ built-in sets itself and hands these to the script; a set nobody draws falls bac
 - **Replays.** On Day 4 the pause menu offers "Watch Hoot's word movie" (the movies whose `chapter` is `nora`; the
   masking movie belongs to `bonnie`). The title's Options and its "Hoot's Movies" list offer every movie, and the case
   days and walk-ins (which can mask, E19) offer them all too, so the Letter Choir is listed there as well.
+- **The masking recap** (clinical review A2): the day-start offer stays. When the masking movie is still unseen at
+  Hoot's masked bone (the offer declined or skipped, or Day 2 played without it), the one-card `masking_recap` plays
+  first, once a visit (the `explainer` beat), then H-TON-R. From then on the level is in `MASKING_LEVEL_GROUP`, so its
+  pause menu lists every replay movie (E19), the masking movie among them. A watched masking movie changes nothing.
 - If `Movies.has("letter_choir")` is false (a broken registry), the day starts at the intro.
 
 ## 5. The SPEECH screen in WORD mode
@@ -833,7 +837,7 @@ tables (`WrsTest.TIPS`, `MISSCORED_WRS`, `VERDICTS`, `SpModeWord.LINES`) are quo
 | N-HIS-8 | onset not asked (after round 2) | Nora: "Oh, and it crept up slowly, over about a year. Nothing sudden." |
 | H-HIS-5 | the sweep (red flags not asked) | "Always ask about red flags: one-sided ringing, dizziness, pain, discharge, sudden change." |
 | H-HIS-6 | after the history | "One-sided hiss, one-sided mush, wobbly stairs. We measure carefully, then decide who she sees." |
-| H-OTO-1 | otoscopy | "Look before you test! Clear canals, healthy eardrums. Nothing blocking the left." (the otoscope card: "Nora's LEFT ear: clear canal, healthy eardrum.") |
+| H-OTO-1 | otoscopy | "Look before you test! Clear canals, healthy eardrums. Nothing blocking the left." (the otoscope card: "Fresh speculum. Nora's LEFT ear: clear canal, healthy eardrum.", clinical review A1) |
 | H-OTO-2 | otoscopy gag | "...You have a tuning fork in your hair." Nora: "Middle C. For emergencies." |
 | H-INS-0 | the prompt | "What do we tell Nora before the words?" |
 | H-INS-1 | best: "Repeat each word you hear. Guess if you're not sure." | "Perfect. Guesses count: a word list should catch everything she can make out." |
@@ -855,9 +859,11 @@ tables (`WrsTest.TIPS`, `MISSCORED_WRS`, `VERDICTS`, `SpModeWord.LINES`) are quo
 
 | id | When | Line |
 |---|---|---|
+| H-TON-0 | seated, before the first tone test (clinical review A1) | "This morning's listening check: every beep clean, the button works. Dials stay out of view." (`LevelMike.ROUTINE_LINE`, the case days' words) |
 | H-TON-1 | earphones on | "Earphones on! I'll run the beeps at top speed. Better ear first: right." |
 | (banners) | Hoot's montages (no time added) | right air: "Better ear first: the right. Watch the stamps fly in!" / "My montage! Right ear at top speed."; left air: "Left ear, Hoot speed!" / "Left ear at top speed. Same dance, other ear!"; right bone: "Bone on her better ear first: 1k and 4k, at Hoot speed." |
 | H-TON-2 | masked bone on the left (the banner) | "Now masked bone on her left, at 1k and 4k. Noise in the right keeps the Ghost out." |
+| H-TON-R | after the masking recap card (masking movie unseen, clinical review A2) | "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen." |
 | H-TON-G | before the masked bone, `bonnie` not done | "Loud sounds can cross the skull to the other ear. That's the Cross-Hearing Ghost!" |
 | H-TON-3 | bone done | "Masked bone sits right on her air lines: sensorineural. Left {gap} dB worse." ({gap} = "20 to 30" from her chart, `tone_gap`; a chart that does not read sensorineural: "Bone's in. Left {gap} dB worse than right in the air.") |
 | N-TON-4 | reply | Nora: "{gap} worse? Sounds like a modern opera." |
