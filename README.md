@@ -81,6 +81,16 @@ About 12 minutes.
 F11 or Alt+Enter toggles fullscreen. Esc or P pauses (volume, key style, text speed, comfort
 options). Closing the window saves and quits.
 
+### The career-fair demo
+
+For a booth: double-click `BoothCamp-Demo.cmd` next to the exe (or start `BoothCamp.exe -- --demo`;
+on the web page, add `?demo` to the address). The title is one **Play** button, and the visit is
+Grandpa Gus in about seven minutes: one question, the sesame seed, the earphones, a few beeps,
+the chart, then his hearing aids matched until Doris's "dishes" comes through. The paper's
+**Next visitor** button wipes the visitor for the next one; a visitor who walks off is reset
+after two minutes. The demo keeps its own save, so it never touches anyone's game.
+`docs/DEMO.md` has the details.
+
 ## How to play
 
 ### Keyboard (default layout)
@@ -305,6 +315,7 @@ tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Day
 tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
 tools/autoplay_check.sh --day=4                     # ...Day 4 (word recognition)
 tools/autoplay_check.sh --day=5                     # ...Day 5 (speech in noise)
+tools/autoplay_check.sh --demo                      # ...the career-fair demo
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
