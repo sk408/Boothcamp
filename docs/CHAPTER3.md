@@ -150,7 +150,7 @@ on Day 3, and a fresh save must start `srt_ladder`.
 | The dance | "Got it: down 10. Missed: up 5. Another word at the same level is fine too!" (the wrong-step tip: "...Another word here is fine too!") |
 | One way | "Down 10, up 5 is one common way, not the only method." |
 | Start window | "Start at his PTA plus 15, plus 40 at most: easy words first, then work down." (the `srt_start` tip: a first word below PTA + 10 or above PTA + 40) |
-| Low start | "Starting below his beeps and coming up: smart when answers look exaggerated." (the first step up after a first word at least 10 dB below the PTA, once the whisper has been on screen: `low_start_ok`) |
+| Low start | "Starting below his beeps and coming up: smart when answers look exaggerated." (the first step after a first word at least 10 dB below the PTA, when it goes up, once the whisper has been on screen: `low_start_ok`) |
 | Scoring | "Score what he SAID. Half a word, a different word, or silence: all misses." |
 | SRT rule | "SRT: the softest level with two right and half or more. Check the trail!" |
 | Bracket (coach) | "Bracketed! 30 dB: the softest level with half or more right. Press S to STORE." |
@@ -224,8 +224,9 @@ words or fewer (`story/tests/test_level_mike.gd::test_hoot_lines_fit`).
    recommended start stays PTA + 15, and the `srt_start` tip says "plus 40 at most". For Mike the dial's top
    (100) is his PTA + 28. An ascending start (a first word at least 10 dB below the PTA) is clean once the whisper
    is on screen (`low_start_ok`), and **(S2)** Hoot's praise, "Starting below his beeps and coming up: smart when
-   answers look exaggerated.", comes with the first step up after it, never on the low first word alone: a first
-   word at 60 (about 12 below his right PTA) that he still repeats steps down first, and the praise waits. Is
+   answers look exaggerated.", comes with the first step after it, when it goes up, never on the low first word
+   alone: a first word at 60 (about 12 below his right PTA) that he still repeats steps down, and earns no
+   praise. Is
    starting 10+ dB below the PTA the right trigger, or should it be lower (nearer the expected SRT)?
 3. Agreement bands 6 / 12 dB (good / fair / poor) with the 3-frequency PTA (best two when the three spread 20+).
 4. Is the next step right: re-instruct, retest (an ascending retest?), objective tests that don't need his answers

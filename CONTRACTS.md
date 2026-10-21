@@ -1299,8 +1299,8 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
 - Setup: `SpeechSession.new(profile, seed)`, `configure(plan)` (keys below: `test`, `list`, `words`, `exclude`,
   `tones`, `transducer`, `level`, `low_start_ok`), `begin(ear, coached)` (the dial goes to the PTA rounded to 5 dB,
   or `level`). `low_start_ok` (bool, default false): a first SRT word at least 10 dB below the PTA
-  (`SRT_LOW_START_BELOW_PTA_DB`) is a clean start instead of an `srt_start` error, and the first step up after it
-  the clean `srt_low_start` (clinical review S2; an ascending start;
+  (`SRT_LOW_START_BELOW_PTA_DB`) is a clean start instead of an `srt_start` error, and the first step after it, when it
+  goes up, the clean `srt_low_start` (clinical review S2; an ascending start;
   the dial's default at the PTA does not count); the level sets it once suspicion of a
   non-organic loss is on screen, never from the hidden `non_organic` tag. A start above the window stays an error.
 - Controls: `step_level(dir)`, `set_level(db)`, `set_mask(on)`, `toggle_mask()`, `present() -> trial` (`{}` when
@@ -1341,7 +1341,7 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
 | `srt_store_wrong_level` | error | stored a level other than that one (candidate) |
 | `speech_marathon` | error | more than 3x par words in one measurement (once) |
 | `speech_textbook`, `srt_good_start`, `srt_store_ok` | clean | combo +1, points |
-| `srt_low_start` | clean | the first step up after a first word at least 10 dB below the PTA with plan `low_start_ok`, in place of that step's `speech_textbook` (the low first word itself is `srt_good_start`): combo +1, 10 points, Hoot's line in `message` ("Starting below his beeps and coming up: smart when answers look exaggerated.") |
+| `srt_low_start` | clean | the first step after a first word at least 10 dB below the PTA with plan `low_start_ok`, when it goes up, in place of that step's `speech_textbook` (the low first word itself is `srt_good_start`): combo +1, 10 points, Hoot's line in `message` ("Starting below his beeps and coming up: smart when answers look exaggerated.") |
 | `birdie` / `eagle` / `albatross` | observation | the SRT hole's golf |
 | `srt_stored`, `srt_agreement` | observation | after a store (agreement, diff, pta); `srt_agreement` carries Hoot's verdict line |
 | `half_word`, `cross_heard_speech`, `speech_mask_needed`, `score_first` | observation | lessons (once each) |

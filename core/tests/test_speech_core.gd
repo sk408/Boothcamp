@@ -493,8 +493,9 @@ func test_low_start_ok() -> void:
 	assert_false((got_good[0][1] as Dictionary).has("message"), "a plain clean kind has no line")
 
 
-## S2: after a low first word (low_start_ok) the praise comes with the first step up, whenever that
-## is: straight after a miss, or after the dial first went down. A wrong step up spends it.
+## S2: after a low first word (low_start_ok) the praise comes with the first step after it, when it
+## goes up (straight after a miss). A step down first (a descending search) spends it, as does a wrong
+## step up.
 func test_low_start_praise_waits_for_the_ascent() -> void:
 	var praise := "Starting below his beeps and coming up: smart when answers look exaggerated."
 	var up := _session(_mike(), 11, {"low_start_ok": true})
@@ -517,7 +518,7 @@ func test_low_start_praise_waits_for_the_ascent() -> void:
 	up.set_level(70)
 	up.present()
 	assert_eq(_kinds(got_up).count(&"srt_low_start"), 1, "once per ear")
-	# he repeats the low first word: down first, and the praise waits for the first step up
+	# he repeats the low first word: down first, a descending search, and no praise follows later
 	var down := _session(_mike(), 11, {"low_start_ok": true})
 	var got_down := _record(down)
 	down.begin("right")
@@ -530,7 +531,7 @@ func test_low_start_praise_waits_for_the_ascent() -> void:
 	down.score(false)
 	down.set_level(55)
 	down.present()
-	assert_true(_kinds(got_down).has(&"srt_low_start"), "the first step up")
+	assert_false(_kinds(got_down).has(&"srt_low_start"), "a descent first spends it")
 	# a wrong step up (up 10 after a miss) is the wrong-step slip, and no praise follows later
 	var wrong := _session(_mike(), 11, {"low_start_ok": true})
 	var got_wrong := _record(wrong)

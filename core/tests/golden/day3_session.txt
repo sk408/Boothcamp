@@ -1063,12 +1063,11 @@
 "multiplier": 3,
 "points": 30,
 "test": "srt"
-}], ["combo", 10, 5], ["technique", &"srt_low_start", {
+}], ["combo", 10, 5], ["technique", &"speech_textbook", {
 "combo": 10,
 "db": 25,
 "ear": "left",
 "freq": -1,
-"message": "Starting below his beeps and coming up: smart when answers look exaggerated.",
 "multiplier": 5,
 "points": 50,
 "test": "srt"

@@ -34,8 +34,8 @@ const TIPS: Dictionary[StringName, String] = {
 	&"cross_heard_speech": "Loud speech can cross the skull to the other ear. Mask the other ear!",
 	&"speech_mask_needed": "This loud, speech can cross to the other ear. Speech noise on: press M.",
 	&"score_first": "Score that word first: did {he} say the whole word?",
-	# a clean kind: the first step up after a first word below the PTA, once the plan allows that
-	# start (low_start_ok; clinical review S2: the praise waits for the ascent)
+	# a clean kind: the first step after a first word below the PTA, when it goes up, once the plan
+	# allows that start (low_start_ok; clinical review S2: the praise waits for the ascent)
 	&"srt_low_start": "Starting below {his} beeps and coming up: smart when answers look exaggerated.",
 }
 ## misscored, by what the patient actually said.
@@ -115,7 +115,7 @@ var _queue: Array[Dictionary] = []
 var _next: Dictionary = {}
 var _last_item_id := ""
 var _meas_errors: Dictionary = {}    ## "test:ear" -> Array of error kinds
-var _low_start: Dictionary = {}      ## "test:ear" -> true: a low first word waits for its first step up
+var _low_start: Dictionary = {}      ## "test:ear" -> true: a low first word waits for its first step
 var _once: Dictionary = {}
 
 
@@ -130,8 +130,8 @@ func _init(p: PatientProfile, seed_value: int = 0) -> void:
 ## Plan keys (all optional, §9.4): test, list, words (item ids to use), exclude (ids to drop),
 ## tones (§5.1 results), transducer, level (the dial's starting level), low_start_ok (bool, default
 ## false: a first word at least SRT_LOW_START_BELOW_PTA_DB below the PTA is a clean start, not an
-## srt_start error, and the first step up after it is the clean &"srt_low_start"; the level sets it
-## once suspicion of a non-organic loss is on screen).
+## srt_start error, and the first step after it, when it goes up, is the clean &"srt_low_start"; the
+## level sets it once suspicion of a non-organic loss is on screen).
 func configure(p: Dictionary) -> void:
 	plan = p.duplicate(true)
 	test = StringName(String(plan.get("test", "srt")))
@@ -734,9 +734,11 @@ func _check_step(prev: Dictionary) -> void:
 	var ok: bool = prev["scored"] if prev["scored"] != null else bool(prev["correct"])
 	var here := _words_at(int(prev["db"]))
 	var v := SpeechRules.srt_step_verdict(int(prev["db"]), ok, db, here)
-	# the first step up after a low first word: the ascent earns the praise (a wrong step spends it)
+	# the first step after a low first word, when it goes up: the ascent earns the praise (a wrong step
+	# spends it)
 	var ascent := db > int(prev["db"]) and _low_start.has(_mkey())
-	if ascent:
+	# a step down first is a descending search, not an ascending start: it spends the praise
+	if ascent or db < int(prev["db"]):
 		_low_start.erase(_mkey())
 	if v == &"wrong":
 		# staying put once a level has its words gets its own line (the plain tip says "another word here is fine")
