@@ -17,16 +17,19 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"instructions", "audiometry", "reveal", "evidence", "findings", "decision", "clue_pick", "payoff", "paper",
 ]
 const PATTERNS: PackedStringArray = ["notch", "rising", "flat_one", "cookie", "gap", "shadow"]   # each has a CaseBoard animation
-## What fills a "gap" pattern's air-bone gap on the board: a waxy cork, or water and a rubber duck.
-const PLUGS: PackedStringArray = ["wax", "fluid"]
+## What fills a "gap" pattern's air-bone gap on the board: a waxy cork, water and a rubber duck, or
+## (Day 13) a tiny stirrup bone padlocked in place ("stiff").
+const PLUGS: PackedStringArray = ["wax", "fluid", "stiff"]
 const BURSTS: PackedStringArray = ["", "firework", "cymbal"]
 const ACTIONS: PackedStringArray = ["react", "hoot", "do", "choose"]
 const DOS: PackedStringArray = ["hearing_aids", "letter", "boat", "phone", "wax_jar", "plane"]
 ## A finding's "when": always, or only when the chart (the truth when unmeasured) is symmetric,
 ## asymmetric, conductive on the case ear, or shows the air-bone-gap red flag there; "shadow" when
 ## the case ear answered unmasked but not masked (the other ear heard it across the head), and
-## "no_response" when its masked bone and masked air found nothing at the audiometer's limits.
-const WHENS: PackedStringArray = ["", "symmetric", "asymmetric", "conductive", "abg_flag", "shadow", "no_response"]
+## "no_response" when its masked bone and masked air found nothing at the audiometer's limits;
+## (Day 13) "no_plateau" when a masked stamp on either ear was stored with no room left for a plateau
+## (no_plateau_shows).
+const WHENS: PackedStringArray = ["", "symmetric", "asymmetric", "conductive", "abg_flag", "shadow", "no_response", "no_plateau"]
 ## The otoscope's look (CaseOtoscopy): a healthy drum, a wax plug, or fluid behind the drum.
 const VIEWS: PackedStringArray = ["clear", "wax", "fluid"]
 ## A clue card's colour: a plain clue or a red flag.
@@ -47,7 +50,7 @@ const TOP_TYPES: Dictionary = {
 	"clue_pick": TYPE_DICTIONARY, "payoff": TYPE_ARRAY, "paper": TYPE_DICTIONARY,
 	"voice": TYPE_DICTIONARY, "voices": TYPE_DICTIONARY, "always_clues": TYPE_ARRAY, "joke_line": TYPE_STRING,
 	"after_history": TYPE_ARRAY, "after_audiometry": TYPE_ARRAY, "sudden_clock": TYPE_DICTIONARY,
-	"retest": TYPE_DICTIONARY,
+	"retest": TYPE_DICTIONARY, "on_dilemma": TYPE_ARRAY, "lend_inserts": TYPE_BOOL,
 }
 ## Sub-keys the runner reads directly, with their types (ANY_TEXT: a line or a list of lines).
 const ANY_TEXT := -1
@@ -241,7 +244,7 @@ static func no_response_shows(res: Dictionary, p: PatientProfile, ear: String) -
 ## validate(). Missing or mistyped sections are skipped (validate reports them).
 static func scripts(c: Dictionary) -> Array:
 	var out: Array = []
-	for key: String in ["intro", "after_history", "instructions", "after_audiometry", "payoff"]:
+	for key: String in ["intro", "after_history", "instructions", "on_dilemma", "after_audiometry", "payoff"]:
 		if c.has(key):
 			out.append([key, c[key]])
 	_section_scripts(c, "", out)
@@ -484,6 +487,11 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("decision line missing for " + String(d))
 	if dec.has("asymmetry_known_cause") and not dec["asymmetry_known_cause"] is bool:
 		out.append("decision.asymmetry_known_cause must be true or false")
+	if bool(c.get("lend_inserts", false)):
+		if canal_blocked(c):
+			out.append("lend_inserts: never an insert into a canal full of wax")
+		if not c.has("on_dilemma"):
+			out.append("lend_inserts needs on_dilemma (the lines that say why)")
 	var cp: Dictionary = c["clue_pick"]
 	var guaranteed := false
 	for a: Variant in cp["answers"]:
@@ -677,10 +685,70 @@ static func canal_blocked(c: Dictionary) -> bool:
 	return c.get("otoscopy", null) is Dictionary and String((c["otoscopy"] as Dictionary).get("view", "clear")) == "wax"
 
 
-## The air transducer for a case's tests: the inserts once owned, else headphones; always headphones
-## while the canal is blocked. Used by level_case.gd, tools/autoplay_bot.gd and tools/monkey.gd.
-static func air_transducer(blocked: bool) -> StringName:
-	return &"inserts" if Game.has_upgrade("insert_earphones") and not blocked else &"phones"
+## The air transducer for a case's tests: the inserts once owned (or, Day 13, lent by Hoot for the
+## visit), else headphones; always headphones while the canal is blocked. A loan never touches the
+## save's upgrades. Used by level_case.gd, tools/autoplay_bot.gd and tools/monkey.gd.
+static func air_transducer(blocked: bool, lent: bool = false) -> StringName:
+	return &"inserts" if (Game.has_upgrade("insert_earphones") or lent) and not blocked else &"phones"
+
+
+## (Day 13) One masked bone measurement's noise window, from the stamps, as the session will open it
+## with this masker (initial_mask_db, overmask_limit_db and the masked start of AudiometrySession):
+## {initial, limit, raises (safe 5 dB noise raises after the start), dilemma}. {} when the ear has no
+## bone to start from or the other ear no air at freq. Read before the test opens, since the session's
+## own helpers read its CURRENT transducer.
+static func bone_mask_window(res: Dictionary, ear: String, f: int, masker: StringName) -> Dictionary:
+	var other := "left" if ear == "right" else "right"
+	var n_ac := ClinicRules.best_thresholds(res, other, false)
+	var start: Variant = ClinicRules.sheet_thresholds(res, ear, &"bc").get(f, ClinicRules.unmasked_bone(res, f))
+	if start == null or not n_ac.has(f):
+		return {}
+	var nb: Variant = ClinicRules.nontest_bone_estimate(res, ear, f)
+	var gap := 0 if nb == null else maxi(0, int(n_ac[f]) - int(nb))
+	var init := ClinicRules.initial_masking(int(n_ac[f]), f, &"bc_masked", gap, masker)
+	var limit := ClinicRules.overmask_limit(int(start), &"bc_masked", 0, masker)
+	var safe := maxi(ClinicRules.MASK_MIN_DB, limit - ClinicRules.MASK_STEP_DB)
+	return {"initial": init, "limit": limit, "dilemma": ClinicRules.masking_dilemma(init, limit),
+		"raises": maxi(0, (safe - mini(init, safe)) / ClinicRules.MASK_STEP_DB)}
+
+
+## (Day 13) The frequencies of an ear's masked bone test that open in a masking dilemma with this
+## masker (the safe noise is too weak to mask the other ear), in the test's order.
+static func dilemma_freqs(res: Dictionary, ear: String, masker: StringName) -> Array[int]:
+	var out: Array[int] = []
+	for f: int in ClinicRules.masked_freqs_needed(res, ear, &"bc_masked"):
+		if bool(bone_mask_window(res, ear, f, masker).get("dilemma", false)):
+			out.append(f)
+	return out
+
+
+## (Day 13) The finding "no_plateau": a masked stamp on either ear was stored with no room left for a
+## plateau (the purple ?). res = {} reads the truth: on some ear, at a bone frequency that needs
+## masking, even the inserts' window leaves fewer than PLATEAU_STEPS safe raises.
+static func no_plateau_shows(res: Dictionary, p: PatientProfile) -> bool:
+	if res.has("ears"):
+		for ear: String in ["right", "left"]:
+			var e: Dictionary = (res["ears"] as Dictionary).get(ear, {})
+			for sheet: String in ["bc_masked", "ac_masked"]:
+				var t: Dictionary = e.get(sheet, {})
+				for f: int in t:
+					if bool((t[f] as Dictionary).get("plateau_not_reached", false)):
+						return true
+		return false
+	if p == null:
+		return false
+	for ear: String in ["right", "left"]:
+		var other := "left" if ear == "right" else "right"
+		for f: int in ClinicRules.BC_REQUIRED:
+			var bone := mini(p.get_bc_threshold(ear, f), p.get_bc_threshold(other, f))
+			if not ClinicRules.bc_masking_needed(p.get_threshold(ear, f), bone):
+				continue
+			var n_gap := maxi(0, p.get_threshold(other, f) - p.get_bc_threshold(other, f))
+			var init := ClinicRules.initial_masking(p.get_threshold(other, f), f, &"bc_masked", n_gap, &"inserts")
+			var limit := ClinicRules.overmask_limit(bone, &"bc_masked", 0, &"inserts")
+			if limit - ClinicRules.MASK_STEP_DB - mini(init, limit - ClinicRules.MASK_STEP_DB) < ClinicRules.PLATEAU_STEPS * ClinicRules.MASK_STEP_DB:
+				return true
+	return false
 
 
 ## paper.wrong_first: {decision: {headline, subhead?}} for each wrong first stamp (never the answer).

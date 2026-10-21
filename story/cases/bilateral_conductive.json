@@ -1,0 +1,193 @@
+{
+	"id": "bilateral_conductive",
+	"patient_id": "bev",
+	"speaker": "Bev",
+	"case_title": "BEV BINGHAM'S CASE",
+	"look": {
+		"face": "doris", "skin": "#f2c9a5", "skin_shade": "#d6a682", "nose": "#e6b08c",
+		"cardigan": "#7b2cbf", "pants": "#2e2442", "shirt": "#fff3b0", "accent": "#ffd23f", "shoes": "#c1121f",
+		"hair": "#e56fb0", "hair_style": "beehive", "mustache": false, "brows": false,
+		"glasses": "round", "glasses_color": "#d4a017", "walker": false, "prop": "clipboard",
+		"extras": ["neck_scarf"],
+		"portrait_bg": "#f3e1ff", "name_color": "#7b2cbf", "neck_scarf": "#ffd23f"
+	},
+	"voice": {"f0": 212.0, "wobble": 0.07, "roll": 0.66, "vowels": ["a", "e", "o", "i", "a", "o"]},
+	"intro": [
+		["Bev", "Eyes down, look in! Bev Bingham, caller at the town hall bingo. Number one: you, owl!"],
+		{"hoot": "wing_up"},
+		["Hoot", "Called first! Welcome, Bev. What brings you in?"],
+		{"react": "confused"},
+		["Bev", "Both ears have been fading for about ten years. Slowly, like a pair of old slippers."],
+		["Bev", "The hall's fine. It's home that's gone quiet. My sister says I nod at the wrong bits."],
+		{"hoot": "nod"},
+		["Hoot", "Both ears, slowly. Let's find out where the sound is getting lost."]
+	],
+	"always_clues": [
+		{"tag": "fading_both", "text": "Both ears fading slowly for ten years"}
+	],
+	"history": [
+		{
+			"prompt": "Ask Bev a question:",
+			"options": [
+				["Where do you have the most trouble?", 2, "Quiet places! Home, or a whisper at the bank. In the noisy hall I catch every word.", "Trouble in quiet; hears BETTER in the noisy hall", "better_in_noise", "Better in noise! A classic clue. Keep it in mind for the chart."],
+				["Does anyone in your family have it?", 1, "My mum! Same thing, same age. She had an operation on one ear and swore by it.", "Mum had the same, and an operation", "family_op", "Family history is worth telling the doctor. Noted!"],
+				["What's your favourite bingo call?", 0, "Two little ducks, 22! The whole hall quacks back. Quack quack!", "", ""]
+			]
+		},
+		{
+			"prompt": "Next question:",
+			"options": [
+				["Any pain, drainage, dizziness, or sudden change?", 2, "No pain, no drips, no spins. Nothing sudden. Just slow and steady, both sides.", "No pain, drainage, dizziness or sudden change", "red_flag_check"],
+				["Any ringing in your ears?", 1, "A low hum now and then, like the tea urn warming up. Both sides.", "A low hum in both ears, now and then", "hum", "Noted. A hum alone isn't a red flag, but we write it down."],
+				["Ever called a full house?", 0, "Every Thursday! Eyes down... and today's prize is one slightly startled owl.", "", ""]
+			]
+		}
+	],
+	"joke_line": "Bingo later! Ask about Bev's ears.",
+	"red_flags": {
+		"tag": "red_flag_check",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
+		"answer": "No pain, no drips, no spins. Nothing sudden. Just slow and steady, both sides.",
+		"clue": "No pain, drainage, dizziness or sudden change",
+		"card": "Pain, drainage, dizziness, sudden, one ear: NONE.\nThe chart gets a say too.",
+		"card_kind": "clue",
+		"clue_kind": "clue"
+	},
+	"after_history": [
+		["Bev", "Legs eleven! That's how many questions you've asked. Feels like it, anyway."],
+		["Hoot", "Nearly done! A look inside, then the beeps."]
+	],
+	"otoscopy": {
+		"ear": "right",
+		"view": "clear",
+		"caption": "Bev's RIGHT ear: a clear canal, a pearly eardrum.",
+		"lines": [
+			["Hoot", "Clean canals, healthy-looking eardrums. Nothing in the way."],
+			["Bev", "Not even a stray bingo ball?"],
+			["Hoot", "Not one. Now, how well do those eardrums move?"]
+		],
+		"clue": "Canals clear, eardrums normal",
+		"tag": "ear_clear"
+	},
+	"tymp": {
+		"tip": "medium",
+		"canal": "average-sized",
+		"right": {"type": "As", "peak_daPa": -10, "peak_ml": 0.2, "ecv_ml": 1.3},
+		"left": {"type": "As", "peak_daPa": -5, "peak_ml": 0.2, "ecv_ml": 1.2},
+		"clue": "Tymp: type As both ears (shallow, stiff)",
+		"tag": "tymp_as",
+		"after": [
+			["Hoot", "Both shallow: type As. The eardrums move, but stiffly. Remember that for the chart."]
+		]
+	},
+	"instructions": [
+		["Hoot", "Tell her: press for every beep, in either ear, even the faint ones."],
+		["Bev", "Eyes down, ears open! I'll press like it's the last number for the jackpot."]
+	],
+	"audiometry": [
+		{"ear": "right", "test": "ac", "hoot_turn_after": 4, "intro": "Right ear's yours. Start at 1k and call the numbers!"},
+		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed. Same as the right?"},
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "montage": true, "intro": "Hoot's montage: bone on her right.",
+			"before": [["Hoot", "The ears match, so either side will do for bone. Right it is."]]}
+	],
+	"on_dilemma": [
+		["Hoot", "Wait. Her other ear needs loud noise to mask it. Loud enough to cross right back!"],
+		{"hoot": "gasp"},
+		["Hoot", "Then the noise hushes the very ear we're testing. That's the masking dilemma!"]
+	],
+	"lend_inserts": true,
+	"after_audiometry": [
+		["Bev", "Look at all those marks! FULL HOUSE! Do I win a prize?"],
+		["Hoot", "You win a good look at your chart. To the board!"]
+	],
+	"reveal": {
+		"pattern": "gap",
+		"plug": "stiff",
+		"ear": "both",
+		"title": "BOTH EARS STUCK",
+		"ask": [
+			["Hoot", "Here's Bev's chart. Look at the bone in both ears, then the air."]
+		],
+		"lines": [
+			["Hoot", "Bone near normal, air far worse: an air-bone gap in BOTH ears."],
+			["Bev", "Two gaps? Like my grandson's front teeth!"],
+			["Hoot", "Clear canals and stiff eardrums. Something in the middle ear isn't moving freely."]
+		]
+	},
+	"evidence": {
+		"prompt": "What type of loss do Bev's ears have?",
+		"options": ["Sensorineural: bone is down with the air.", "Conductive: bone near normal, air blocked.", "Mixed: bone down AND a gap."],
+		"answer": 1,
+		"answer_from_type": "right",
+		"wrong": ["Look at the bone: near normal in both ears. Only the air is down.", "", "Mixed needs bone down too. Hers sits near normal, apart from a dip at 2k."],
+		"right": "Conductive, both sides: sound is stopped before it reaches healthy inner ears."
+	},
+	"findings": [
+		{"tag": "gaps", "text": "Both ears: bone near normal, air down: gaps"},
+		{"tag": "abg_flag", "text": "Gaps of 15+ dB at 500, 1k and 2k", "when": "abg_flag", "kind": "flag"},
+		{"tag": "no_plateau", "text": "Purple ?: masking ran out of room", "when": "no_plateau"},
+		{"tag": "symmetric", "text": "Left and right ears match", "when": "symmetric"}
+	],
+	"decision": {
+		"prompt": "Make the call for Bev:",
+		"answer": "refer",
+		"lines": {
+			"refer": "REFER! Gaps in both ears: an ear doctor first. Middle-ear trouble can often be treated.",
+			"fit": "Not yet! Gaps that size need an ear doctor's look first. Aids can come after.",
+			"today": "Ten slow years, no pain, nothing sudden: a doctor soon, not today."
+		}
+	},
+	"clue_pick": {
+		"prompt": "Present the evidence: what sends Bev to an ear doctor first?",
+		"answers": ["gaps", "abg_flag"],
+		"decoys": ["family_op", "better_in_noise"],
+		"wrong_line": "True, but what sends her to a doctor? Look for the red flag!",
+		"wrong_lines": {
+			"family_op": "Family history helps the doctor think. But what's the red flag?",
+			"better_in_noise": "A great clue to what's wrong. But which card is the red flag?",
+			"no_plateau": "Those ? marks show the test's limits, not her ears'. What sends her to a doctor?",
+			"tymp_as": "Stiff eardrums, yes. Together with the chart, which card is the red flag?",
+			"symmetric": "Matching ears are reassuring. What sends her to a doctor anyway?",
+			"red_flag_check": "Her story's clear. But the chart raised a flag. Which card?",
+			"ear_clear": "Clear canals: nothing to scoop out. So what sends her to a doctor?",
+			"fading_both": "Slow and in both ears: reassuring. What sends her to a doctor anyway?",
+			"hum": "Noted, but a hum isn't the red flag here. Look at the chart."
+		},
+		"right_lines": {
+			"gaps": "Yes! Big air-bone gaps in both ears: an ear doctor first.",
+			"abg_flag": "Yes! The air-bone gap red flag, in both ears. A doctor first."
+		},
+		"right_line": "Exactly! The gaps send her to an ear doctor before any hearing aids."
+	},
+	"payoff": [
+		{"do": "letter"},
+		["Hoot", "A letter to the ear doctor: gaps in both ears, stiff eardrums, and Mum's history."],
+		["Bev", "Mum's operation! Will I need one too?"],
+		["Hoot", "Maybe, maybe not. The doctor checks the tiny bones that carry sound."],
+		["Hoot", "Hearing aids often work very well for this. Some people choose an operation."],
+		["Hoot", "That little bone dip at 2k has a name: Carhart's notch. The doctor will spot it."],
+		["Hoot", "Doctor first, then back here. Aids, an operation, or both: your choice, with good advice."],
+		{"react": "cheer"},
+		["Bev", "Eyes down for the doctor, then. Bingo!"]
+	],
+	"paper": {
+		"headlines": {
+			"S": "BINGO! TRAINEE CALLS A FULL HOUSE ON THE MASKING DILEMMA",
+			"A": "BOTH EARS STUCK, BOTH EARS SPOTTED; BEV OFF TO THE EAR DOCTOR",
+			"B": "GAPS CALLED IN BOTH EARS; A FEW NUMBERS MISSED",
+			"C": "SOME BEEPS LOST IN THE BINGO HALL, CONFIRMS OWL",
+			"Do-over": "EYES DOWN, TRAINEE: ANOTHER GAME CALLED"
+		},
+		"subheads": {
+			"S": "Gaps in both ears, honest purple ?s where masking ran out of room, and a referral.",
+			"A": "Air-bone gaps in both ears: an ear doctor first. Aids often work well after.",
+			"B": "The gaps showed up; a few stamps wandered.",
+			"C": "Bone near normal under poor air, in both ears, is a gap. Refer.",
+			"Do-over": "When masking runs out of room, mark it ? and read the gaps anyway."
+		},
+		"wrong_first": {
+			"fit": {"headline": "TRAINEE JUMPS THE QUEUE: AIDS BEFORE THE EAR DOCTOR", "subhead": "Air-bone gaps in both ears: an ear doctor first. Aids can follow."},
+			"today": {"headline": "BINGO CALLER RUSHED TO DOCTOR; TEN-YEAR EMERGENCY DECLARED", "subhead": "Slow, both ears, no pain: a doctor soon, not today."}
+		}
+	}
+}

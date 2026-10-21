@@ -1114,6 +1114,7 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 	if case_id != "":
 		_check_conductive_case(case_id, res, report, problems)
 		_check_dead_ear_case(case_id, res, report, problems)
+		_check_dilemma_case(case_id, res, report, problems)
 		# (cases, clinical review C12) Hoot's three case movies start on a fresh save (level_case.gd _movie)
 		report["movies"] = _movies
 		if not Game.cli_flag("keep-save"):
@@ -1176,6 +1177,66 @@ func _check_dead_ear_case(case_id: String, res: Dictionary, report: Dictionary, 
 			problems.append("%s: %s masked air missing at %d Hz" % [case_id, ear, f])
 	if CaseData.measured_type(res, ear) != &"sensorineural":
 		problems.append("%s: the %s ear should read sensorineural, got %s" % [case_id, ear, CaseData.measured_type(res, ear)])
+
+
+## (cases, clinical review C9) Gaps in both ears (Day 13): each ear reads conductive with the
+## air-bone-gap red flag and masked bone at 500-4k; the purple ? ("plateau not reached") at 500 Hz and
+## 1 kHz on each ear, and at 2k or 4k only after a missed beep in that run; masked air exactly where
+## the rules ask from the stamps (headphone stamps keep the headphones' rule); the dilemma lines said;
+## Hoot's inserts lent when none were owned, and not when they were.
+func _check_dilemma_case(case_id: String, res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var c := CaseData.load_case(case_id)
+	if not c.has("on_dilemma"):
+		return
+	var ears: Dictionary = res.get("ears", {})
+	var tr := StringName(String(res.get("air_transducer", "phones")))
+	var marks := {}
+	for ear: String in ["right", "left"]:
+		var e: Dictionary = ears.get(ear, {})
+		if CaseData.measured_type(res, ear) != &"conductive":
+			problems.append("%s: the %s ear should be conductive, got %s" % [case_id, ear, CaseData.measured_type(res, ear)])
+		if not bool(e.get("abg_red_flag", false)):
+			problems.append("%s: no air-bone gap red flag on the %s ear" % [case_id, ear])
+		var bm: Dictionary = e.get("bc_masked", {})
+		var got: Array[int] = []
+		for f: int in [500, 1000, 2000, 4000]:
+			if not bm.has(f):
+				problems.append("%s: %s masked bone missing at %d Hz" % [case_id, ear, f])
+				continue
+			var info: Dictionary = bm[f]
+			if not bool(info.get("plateau_not_reached", false)):
+				continue
+			got.append(f)
+			var missed := false
+			for r: Array in info.get("responses", []):
+				if r.size() >= 2 and not bool(r[1]):
+					missed = true
+			if (f == 2000 or f == 4000) and not missed:
+				problems.append("%s: %s %d Hz has room for a plateau, yet no plateau and no missed beep" % [case_id, ear, f])
+		for f: int in [500, 1000]:
+			if bm.has(f) and not got.has(f):
+				problems.append("%s: no purple ? at %s %d Hz (no room for a plateau there)" % [case_id, ear, f])
+		marks[ear] = got
+		var need := ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", tr)
+		var stamped: Dictionary = e.get("ac_masked", {})
+		for f: int in need:
+			if not stamped.has(f):
+				problems.append("%s: %s masked air missing at %d Hz" % [case_id, ear, f])
+		for f: int in stamped:
+			if not need.has(f):
+				problems.append("%s: %s masked air at %d Hz where no masking was needed" % [case_id, ear, f])
+	report["no_plateau"] = marks
+	report["air_transducer"] = String(tr)
+	var lent := bool(Game.get_visit_flag("lent_inserts", false))
+	report["lent_inserts"] = lent
+	if not bool(Game.get_visit_flag("dilemma_told", false)):
+		problems.append("%s: the dilemma lines never played" % case_id)
+	if bool(c.get("lend_inserts", false)):
+		var owned := Game.has_upgrade("insert_earphones")
+		if owned and lent:
+			problems.append("%s: inserts lent to a player who owns them" % case_id)
+		if not owned and (not lent or tr != &"inserts"):
+			problems.append("%s: the inserts were never lent" % case_id)
 
 
 func _fail(code: int, why: String) -> void:

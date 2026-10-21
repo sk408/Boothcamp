@@ -63,6 +63,9 @@ const CHAPTERS: Array[Dictionary] = [
 	# advanced cases (clinical review C10): masked air and the shadow curve
 	{"id": "morgan", "day": 12, "title": "Day 12: Morgan Gale", "patient_id": "morgan", "teaches": "Case file: the lighthouse",
 		"scene": "res://story/level_case.tscn", "requires": "skye", "case": "dead_ear", "face": "Morgan", "tint": Color("#d9ecf2")},
+	# (clinical review C9) the masking dilemma: big gaps in both ears
+	{"id": "bev", "day": 13, "title": "Day 13: Bev Bingham", "patient_id": "bev", "teaches": "Case file: the bingo caller",
+		"scene": "res://story/level_case.tscn", "requires": "morgan", "case": "bilateral_conductive", "face": "Bev", "tint": Color("#f3e1ff")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to

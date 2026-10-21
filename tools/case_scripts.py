@@ -23,6 +23,9 @@ WHEN_LABELS = {
     "asymmetric": "if the ears differ",
     "conductive": "only when the chart reads conductive",
     "abg_flag": "only with a gap of 15+ at 500, 1k and 2k",
+    "shadow": "when the unmasked answers were the other ear's",
+    "no_response": "when masked found no response",
+    "no_plateau": "when a masked stamp carries the purple ?",
 }
 
 
@@ -178,8 +181,9 @@ def render(c):
             asks = [f"What type are both of {sp}'s tympanograms?"]
         else:
             asks = [f"What type is the {e.upper()} ear's tympanogram?" for e in ("right", "left")]
+        pool = "A / B / C / As" if "As" in (ty["right"]["type"], ty["left"]["type"]) else "A / B / C"
         for q in asks:
-            out.append(f"Question: **{q}** (A / B / C, shuffled)")
+            out.append(f"Question: **{q}** ({pool}, shuffled)")
         out.append("- A wrong pick: Hoot: Type X would be (its shape). Look where the peak sits, and how tall.")
     out.append("")
     script(ty.get("after", []), out)
@@ -190,12 +194,21 @@ def render(c):
     out.append("")
     out.append("### Test plan")
     plan(c["audiometry"], out)
+    if c.get("on_dilemma"):
+        out.append("- Before the first masked bone test that would open in a masking dilemma (the stamps say "
+                   "the safe noise is too weak), once:")
+        for e in c["on_dilemma"]:
+            if isinstance(e, list) and len(e) == 2:
+                out.append(f"  - **{e[0]}:** {e[1]}")
+        if c.get("lend_inserts"):
+            out.append(f"  - When the player owns no inserts, Hoot lends his for the visit: **Hoot:** {runner_line('LEND_INSERTS')}")
     if c["reveal"].get("pattern") == "shadow":
         out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When every masked air stamp on "
                    f"an ear is no response: **Hoot:** {runner_line('NO_PLATEAU')}")
     else:
         out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no "
                    f"ear needed masked air: **Hoot:** {runner_line('NO_MASKED_AIR')}")
+    out.append(f"- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** {runner_line('NO_ROOM')}")
     out.append("")
     out.append("After the tests (said when every ear with bone agrees with the case; "
                "otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):")

@@ -20,6 +20,7 @@ const EXPECTED: Dictionary = {
 	"wax": [&"refer", &"flat", &"normal", true, &"conductive"],
 	"fluid": [&"refer", &"normal", &"flat", true, &"conductive"],
 	"dead_ear": [&"fit", &"flat", &"normal", true, &"sensorineural"],
+	"bilateral_conductive": [&"refer", &"rising", &"rising", false, &"conductive"],
 }
 ## The conductive cases: case id -> the ear with the gap.
 const CONDUCTIVE: Dictionary = {"wax": "right", "fluid": "left"}
@@ -202,6 +203,8 @@ func test_pick_case_follows_the_chapter() -> void:
 	assert_eq(LevelCase.pick_case_id(), "fluid")
 	Game.current_chapter_id = "morgan"
 	assert_eq(LevelCase.pick_case_id(), "dead_ear")
+	Game.current_chapter_id = "bev"
+	assert_eq(LevelCase.pick_case_id(), "bilateral_conductive")
 
 
 func test_shuffles_are_permutations_and_reproducible() -> void:
@@ -289,18 +292,22 @@ func _patient(id: String) -> PatientProfile:
 
 func test_masking_plans_unchanged_for_shipped_cases() -> void:
 	# the runner checks every air-tested ear for masked bone and every ear for masked air: with perfect
-	# stamps only a one-sided case's reveal ear needs masked bone, and the better ear never needs
-	# masked air, so no case gains a test it shouldn't run
+	# stamps only a one-sided case's reveal ear (or, Day 13, an ear whose truth has a gap) needs masked
+	# bone, and the better ear never needs masked air, so no case gains a test it shouldn't run
 	for id: String in CaseData.chapter_case_ids():
 		var c := _case(id)
 		var p := _patient(id)
 		var bc_ears := CaseData.plan_ears(c["audiometry"], "bc")
 		var case_ear := String((c["reveal"] as Dictionary).get("ear", "both"))
+		var gap_ears := PackedStringArray()
+		for ear: String in ["right", "left"]:
+			if ear == case_ear or [&"conductive", &"mixed"].has(CaseData.truth_type(p, ear)):
+				gap_ears.append(ear)
 		var res := _perfect(p, bc_ears, PackedStringArray())
 		var masked_ears := PackedStringArray()
 		for ear: String in CaseData.masked_bone_ears(c["audiometry"]):
 			var need := ClinicRules.masked_freqs_needed(res, ear, &"bc_masked")
-			if ear == case_ear:
+			if gap_ears.has(ear):
 				assert_false(need.is_empty(), "%s: masked bone on the %s (reveal) ear" % [id, ear])
 				masked_ears.append(ear)
 			else:
@@ -308,7 +315,7 @@ func test_masking_plans_unchanged_for_shipped_cases() -> void:
 		for m: PackedStringArray in [PackedStringArray(), masked_ears]:
 			var r2 := _perfect(p, bc_ears, m)
 			for ear: String in CaseData.plan_ears(c["audiometry"], "ac"):
-				if ear == case_ear or (case_ear == "both" and bc_ears.has(ear)):
+				if gap_ears.has(ear) or (case_ear == "both" and bc_ears.has(ear)):
 					continue
 				for tr: StringName in [&"phones", &"inserts"]:
 					assert_eq(ClinicRules.masked_freqs_needed(r2, ear, &"ac_masked", tr), [] as Array[int],
@@ -344,6 +351,102 @@ func test_case_air_transducer() -> void:
 		Game.progress["upgrades"] = saved
 	assert_true(CaseData.canal_blocked(_case("wax")), "Barnaby's canal is full of wax")
 	assert_false(CaseData.canal_blocked(_case("fluid")), "Skye's canal is clear")
+
+
+## (Clinical review C9) Day 13 lends Hoot's inserts for the visit: a runner flag, never the save's
+## upgrades, never into a canal full of wax, and only where a case says so (with its lines).
+func test_inserts_lent_for_the_visit_only() -> void:
+	var saved: Variant = Game.progress.get("upgrades", null)
+	Game.progress["upgrades"] = []
+	assert_eq(CaseData.air_transducer(false, true), &"inserts", "lent")
+	assert_eq(CaseData.air_transducer(true, true), &"phones", "never a lent insert into wax")
+	assert_eq(CaseData.air_transducer(false, false), &"phones")
+	var lc: Node = LevelCase.new()
+	lc.set("_lent_inserts", true)
+	assert_eq(lc.call("_air_transducer"), &"inserts", "the runner's tests follow the loan")
+	lc.free()
+	assert_false(Game.has_upgrade("insert_earphones"), "a loan is not an upgrade")
+	if saved == null:
+		Game.progress.erase("upgrades")
+	else:
+		Game.progress["upgrades"] = saved
+	for id: String in CaseData.chapter_case_ids():
+		assert_eq(bool(_case(id).get("lend_inserts", false)), id == "bilateral_conductive", "%s lends inserts" % id)
+	var wax := _case("wax").duplicate(true)
+	wax["lend_inserts"] = true
+	var bad := CaseData.validate(wax)
+	assert_has(bad, "lend_inserts: never an insert into a canal full of wax")
+	assert_has(bad, "lend_inserts needs on_dilemma (the lines that say why)")
+
+
+## (C9) Masked air follows each stamp's own earphone: air measured through headphones before Hoot
+## lent his inserts still needs masking by the headphones' rule (Bev's 500 Hz and 1 kHz).
+func test_masked_air_follows_each_stamps_transducer() -> void:
+	var p := _patient("bilateral_conductive")
+	var res := _perfect(p, PackedStringArray(["right"]), PackedStringArray(["right", "left"]))
+	var both: Array[int] = [1000, 500]
+	for ear: String in ["right", "left"]:
+		assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", &"phones"), both, "%s, headphones" % ear)
+		assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", &"inserts"), [] as Array[int], "%s, inserts" % ear)
+		for f: int in ((res["ears"] as Dictionary)[ear]["freqs"] as Dictionary):
+			((res["ears"] as Dictionary)[ear]["freqs"][f] as Dictionary)["transducer"] = "phones"
+		assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", &"inserts"), both,
+			"%s: headphone stamps keep the headphones' rule after the loan" % ear)
+
+
+## (C9) Bev's windows, with perfect stamps and with any one stamp 5 dB off: masked bone through
+## headphones opens in a dilemma at 1 kHz (the loan's trigger, the first frequency); through inserts
+## there is no room for a plateau at 500 Hz and 1 kHz, but room at 2k and 4k; both ears need masked
+## bone and show the air-bone-gap red flag.
+func test_dilemma_case_windows() -> void:
+	var p := _patient("bilateral_conductive")
+	var wobbles: Array = [[]]
+	for f: int in ClinicRules.BC_REQUIRED:
+		for d: int in [-5, 5]:
+			wobbles.append(["right", "bc", f, d])
+			for ear: String in ["right", "left"]:
+				wobbles.append([ear, "freqs", f, d])
+	for w: Array in wobbles:
+		var res := _perfect(p, PackedStringArray(["right"]), PackedStringArray(), w)
+		var tag := str(w)
+		assert_eq(ClinicRules.masked_freqs_needed(res, "right", &"bc_masked")[0], 1000, "1 kHz first " + tag)
+		assert_true(CaseData.dilemma_freqs(res, "right", &"phones").has(1000), "headphones: a dilemma at 1 kHz " + tag)
+		for ear: String in ["right", "left"]:
+			assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").size(), 4, "%s masked bone %s" % [ear, tag])
+			for f: int in ClinicRules.BC_REQUIRED:
+				var room := int(CaseData.bone_mask_window(res, ear, f, &"inserts")["raises"])
+				if f == 500 or f == 1000:
+					assert_true(room < ClinicRules.PLATEAU_STEPS, "%s %d: no room with inserts %s" % [ear, f, tag])
+				else:
+					assert_true(room >= ClinicRules.PLATEAU_STEPS, "%s %d: room with inserts %s" % [ear, f, tag])
+			var masked := _perfect(p, PackedStringArray(["right"]), PackedStringArray(["right", "left"]), w)
+			assert_true(ClinicRules.abg_red_flag(ClinicRules.best_thresholds(masked, ear, false), CaseData.answered_bone(masked, ear)),
+				"%s: the red flag %s" % [ear, tag])
+
+
+## (C9) Every Bev finding shows on her truth and on a clean run (no MISMATCH); the purple-? card only
+## once a masked stamp carries it; no other case's truth runs out of room. Hoot's ? gets the runner's line.
+func test_dilemma_case_findings_show() -> void:
+	var c := _case("bilateral_conductive")
+	var p := _patient("bilateral_conductive")
+	var clean := _perfect(p, PackedStringArray(["right"]), PackedStringArray(["right", "left"]))
+	assert_false(LevelCase.finding_shows("no_plateau", clean, p, "right", false), "no ? on the chart, no card")
+	assert_false(LevelCase.hoot_left_no_room(clean))
+	var res := clean.duplicate(true)
+	for ear: String in ["right", "left"]:
+		for f: int in [500, 1000]:
+			var info: Dictionary = (res["ears"] as Dictionary)[ear]["bc_masked"][f]
+			info["plateau_not_reached"] = true
+	assert_false(LevelCase.hoot_left_no_room(res), "the player's own ? gets the screen's line")
+	((res["ears"] as Dictionary)["left"]["bc_masked"][500] as Dictionary)["by_hoot"] = true
+	assert_true(LevelCase.hoot_left_no_room(res), "Hoot's ? gets the runner's line")
+	for fd: Dictionary in c["findings"]:
+		var when := String(fd.get("when", ""))
+		assert_true(LevelCase.finding_shows(when, {}, p, "right", false), "%s on the truth" % fd["tag"])
+		assert_true(LevelCase.finding_shows(when, res, p, "right", false), "%s on a clean run" % fd["tag"])
+	for id: String in CaseData.chapter_case_ids():
+		if id != "bilateral_conductive":
+			assert_false(CaseData.no_plateau_shows({}, _patient(id)), "%s: room for a plateau" % id)
 
 
 func test_conductive_truth_survives_a_wobble() -> void:
@@ -533,6 +636,9 @@ func test_validate_survives_broken_files() -> void:
 		func(c: Dictionary) -> void: c["tymp"]["quiz"]["options"][0][1] = "true",
 		func(c: Dictionary) -> void: c["red_flags"]["extra_clues"] = null,
 		func(c: Dictionary) -> void: c["decision"]["asymmetry_known_cause"] = "yes",
+		func(c: Dictionary) -> void: c["lend_inserts"] = "yes",
+		func(c: Dictionary) -> void: c["on_dilemma"] = "x",
+		func(c: Dictionary) -> void: c["lend_inserts"] = true,
 	]
 	for i in breaks.size():
 		var got := _wax_problems(breaks[i])
@@ -708,12 +814,12 @@ func test_hoot_lines_cover_the_retest_and_runner() -> void:
 	for w: String in ["retest.intro", "retest.otoscopy.lines", "retest.tymp.after", "retest.before.choose", "retest.payoff"]:
 		assert_true(wheres.has(w), "Hoot's %s lines are counted" % w)
 	for line: String in [LevelCase.NO_MASKED_AIR, LevelCase.MISMATCH, LevelCase.RETEST_NEUTRAL, LevelCase.BRIEFING,
-			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU]:
+			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU, LevelCase.NO_ROOM, LevelCase.LEND_INSERTS]:
 		assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
 
 
 func test_new_patients_get_portraits() -> void:
-	for who: String in ["Barnaby", "Skye", "Morgan"]:
+	for who: String in ["Barnaby", "Skye", "Morgan", "Bev"]:
 		assert_true(CasePortraits.has(who), who)
 
 
@@ -756,7 +862,7 @@ func test_case_movies_registered_everywhere() -> void:
 		assert_true(bad.is_empty(), "%s: %s" % [id, ", ".join(bad)])
 		assert_false(Movies.is_short(id), "%s is a full movie" % id)
 		assert_has(Movies.replay_ids(), id, "%s on the title's list" % id)
-		assert_eq(Movies.day_label(id), "Days 6-12", id)
+		assert_eq(Movies.day_label(id), "Days 6-13", id)
 		var m := Movies.movie(id)
 		assert_true(float((m["scenes"][0] as Dictionary).get("duration", 0.0)) >= 7.0, "%s: the lead-in card holds" % id)
 		for sc: Dictionary in m["scenes"]:

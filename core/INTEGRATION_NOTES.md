@@ -47,3 +47,14 @@ func _notification(what: int) -> void:
 the audiometer's limit so masked tests store no response (at exactly 120, a masked run plateaus at 120 instead).
 The cap is now `ClinicRules.max_db(f) + 30`, the same rule bone already used. No existing patient is near it, so
 nothing else changes; `story/tests/test_cases.gd` validates every case patient.
+
+## Cases, Day 13: masked air by each stamp's own earphone (`autoload/clinic_rules.gd`, done, small)
+
+`ClinicRules.masked_freqs_needed(results, ear, &"ac_masked", phones)` used the one transducer passed in for every
+air stamp. On Day 13 (clinical review C9) Hoot lends his inserts mid-visit, after the air was measured through
+headphones; judged by the inserts' rule, that air would skip masking the headphones' rule asks for (Bev's 500 Hz
+and 1 kHz). Each stamp already records its tone's transducer (`_make_info` "transducer"), so the rule now reads
+that ("phones" / "inserts") and uses the param only for stamps without one (hand-built results in tests). A visit
+that keeps one transducer, which is every other day and Freestyle (the deck toggles only between that transducer
+and bone), gets the same answers as before; `story/tests/test_cases.gd`
+`test_masked_air_follows_each_stamps_transducer` pins the new case.
