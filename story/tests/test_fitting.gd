@@ -1,10 +1,13 @@
 extends TestCase
 ## The fitting (Day 14, docs/FITTING.md): the chapter and its patient, the target match's rules (the
-## prescription, the zone, moves and par, overshoots, what Gus hears), the visit's scores and the paper.
+## prescription, the zone, moves and par, overshoots, what Gus hears), the probe tube, the loud-sound
+## check, the counselling, the visit's scores and the paper.
 
 const TargetMatch := preload("res://story/games/target_match.gd")
 const LevelFitting := preload("res://story/level_fitting.gd")
 const PaperFitting := preload("res://story/papers/paper_fitting.gd")
+const ProbeTube := preload("res://story/games/probe_tube.gd")
+const LoudCheck := preload("res://story/games/loud_check.gd")
 
 const SAVE := "user://test_fitting_save.json"
 const BOT_PREFIX := 18   # the mouse bot clicks an option by its first 18 characters
@@ -58,7 +61,7 @@ func test_day_14_is_gus_coming_back() -> void:
 		assert_eq(fit.get_thresholds(ear), gus.get_thresholds(ear), "%s: Gus's own thresholds" % ear)
 		for f: int in ClinicRules.BC_FREQS:
 			assert_eq(fit.get_bc_threshold(ear, f), fit.get_threshold(ear, f), "%s %d: bone matches air" % [ear, f])
-	for p: StringName in [&"aid_style", &"real_ear"]:
+	for p: StringName in [&"aid_style", &"real_ear", &"probe_tube", &"loud_check", &"counselling"]:
 		assert_has(Game.PHASES, p, "fitting phase")
 
 
@@ -182,9 +185,9 @@ func test_visit_scores_and_paper() -> void:
 	g.set("_accepting", true)
 	g.call("solve")
 	var left: Control = _game("left")
-	var res := LevelFitting.results_for(g.call("result"), 2, left.call("result"))
+	var res := LevelFitting.results_for(g.call("result"), {"style_tries": 2}, left.call("result"))
 	assert_eq(float(res["accuracy"]), 1.0)
-	assert_near(float(res["technique"]), 0.6 * 0.5 + 0.4, 0.001, "second pick, clean fit")
+	assert_near(float(res["technique"]), 0.25 * 0.5 + 0.2 + 0.2 + 0.15 + 0.2, 0.001, "second pick, the rest clean")
 	assert_eq(float(res["efficiency"]), 1.0)
 	var fit: Dictionary = res["fitting"]
 	assert_eq(String(fit["style"]), "ric_open")
@@ -205,6 +208,7 @@ func test_visit_scores_and_paper() -> void:
 	var lines := PaperFitting.lines(fit)
 	assert_eq(lines[0], "Moves: 3, par 3: PAR")
 	assert_true(lines[1].contains("second pick"), lines[1])
+	assert_eq(lines[2], "Tube: first try. Loud limit: first drop. Talk: three of three, no slips.")
 	var c2: VBoxContainer = add_node(VBoxContainer.new())
 	PaperFitting.new().build(c2, res, s)
 	assert_true(c2.get_child_count() >= 3, "the header, the card and the lines")
@@ -230,4 +234,161 @@ func test_style_options_and_lines() -> void:
 		assert_true(m.get_string(1).split(" ", false).size() <= Hoot.MAX_WORDS, m.get_string(1))
 	assert_true(n >= 10, "found Hoot's lines (%d)" % n)
 	for tip: String in [TargetMatch.START_TIP, TargetMatch.LOUD_TIP, TargetMatch.WHISTLE_TIP]:
+		assert_true(tip.split(" ", false).size() <= Hoot.MAX_WORDS, tip)
+
+
+func _probe() -> Control:
+	var g: Control = add_node(ProbeTube.new())
+	g.call("setup", "right")
+	g.set("_accepting", true)
+	return g
+
+
+func _loud() -> Control:
+	var g: Control = add_node(LoudCheck.new())
+	g.set("_accepting", true)
+	return g
+
+
+func test_probe_tube_rules() -> void:
+	assert_eq(ProbeTube.zone_of(17), "shallow")
+	assert_eq(ProbeTube.zone_of(6), "shallow")
+	assert_eq(ProbeTube.zone_of(5), "zone", "within 5 mm of the eardrum")
+	assert_eq(ProbeTube.zone_of(1), "zone")
+	assert_eq(ProbeTube.zone_of(0), "touch")
+	assert_near(ProbeTube.dip_hz(17), 5044.0, 1.0, "a quarter wavelength from the drum: c / 4d")
+	assert_true(ProbeTube.reading_error(17, 4000.0) < -5.0, "too shallow: the highs read low")
+	assert_true(ProbeTube.reading_error(5, 8000.0) > -0.5, "within 5 mm: flat up to 8k")
+	assert_true(ProbeTube.reading_error(17, 500.0) > -0.5, "the lows read right either way")
+	for mm: int in [17, 14, 11, 8]:
+		assert_true(ProbeTube.highs_read_low(mm), "%d mm: the strip says the highs read low" % mm)
+	assert_false(ProbeTube.highs_read_low(5), "in the zone the highs read right")
+	assert_false(ProbeTube.highs_read_low(2))
+
+
+func test_probe_tube_bot_solver() -> void:
+	var g := _probe()
+	assert_eq(int(g.call("depth")), ProbeTube.START_MM)
+	assert_eq(int(g.call("presses_needed")), 4, "17 -> 14 -> 11 -> 8 -> 5")
+	g.call("solve")
+	assert_true(bool(g.get("_done")))
+	var r: Dictionary = g.call("result")
+	assert_eq(int(r["depth"]), 5)
+	assert_eq(int(r["mistakes"]), 0)
+	assert_false(bool(r["touched"]))
+
+
+func test_probe_tube_mistakes() -> void:
+	var g := _probe()
+	var touches := [0]
+	var kinds: Array[String] = []
+	g.connect("touched", func() -> void: touches[0] += 1)
+	g.connect("mistake", func(k: String) -> void: kinds.append(k))
+	g.call("_lock")
+	assert_false(bool(g.get("_done")), "locking short of the zone is refused")
+	assert_eq(kinds, ["shallow"] as Array[String])
+	for i in 6:
+		g.call("_slide", -1)   # 17 ... 5, 2, then -1: the drum
+	assert_eq(kinds, ["shallow", "touch"] as Array[String])
+	assert_eq(touches[0], 1)
+	assert_eq(int(g.call("depth")), ProbeTube.RECOIL_MM, "the tube springs back out of the zone")
+	for i in 3:
+		g.call("_slide", -1)   # 8, 5, 2, then the drum again
+	assert_eq(touches[0], 1, "only the first touch costs comfort")
+	assert_eq(kinds.count("touch"), 2, "every touch is a mistake")
+	g.call("_slide", -1)
+	g.call("_lock")
+	var r: Dictionary = g.call("result")
+	assert_true(bool(g.get("_done")))
+	assert_eq(int(r["mistakes"]), 3)
+	assert_eq(int(r["shallow"]), 1)
+	assert_true(bool(r["touched"]))
+
+
+func test_probe_tube_keys() -> void:
+	var g := _probe()
+	g.call("_unhandled_input", _key(&"ui_right"))
+	assert_eq(int(g.call("depth")), 14, "Right slides it in")
+	g.call("_unhandled_input", _key(&"ui_left"))
+	assert_eq(int(g.call("depth")), 17, "Left slides it out")
+	g.call("_unhandled_input", _key(&"ui_accept"))
+	assert_eq(int((g.call("result") as Dictionary)["shallow"]), 1, "Enter locks")
+
+
+func test_loud_check_rules() -> void:
+	var v: Array[String] = []
+	for n in range(1, LoudCheck.NOTCHES + 1):
+		v.append(LoudCheck.verdict(n))
+	assert_eq(v, ["squashed", "squashed", "right", "ouch", "ouch"] as Array[String])
+	assert_eq(LoudCheck.verdict(LoudCheck.START_NOTCH), "ouch", "the first guess stings")
+	assert_eq(LoudCheck.verdict(LoudCheck.RIGHT_NOTCH), "right")
+	assert_eq(LoudCheck.LINES.size(), LoudCheck.NOTCHES)
+	var g := _loud()
+	assert_eq(int(g.call("presses_needed")), -1)
+	g.call("solve")
+	assert_true(bool(g.get("_done")))
+	assert_eq(g.call("result"), {"notch": 3, "drops": 1, "squashed": 0, "ouch": false})
+	assert_eq(LevelFitting.loud_medal(1), "gold")
+
+
+func test_loud_check_slips() -> void:
+	var g := _loud()
+	var ouches := [0]
+	g.connect("ouch", func() -> void: ouches[0] += 1)
+	g.call("_unhandled_input", _key(&"ui_right"))
+	assert_eq(int(g.call("notch")), 5, "Right turns the limit up")
+	g.call("_drop")
+	g.call("_drop")
+	assert_eq(ouches[0], 1, "only the first painful clang costs comfort")
+	for i in 4:
+		g.call("_turn", -1)
+	assert_eq(int(g.call("notch")), 1, "the dial stops at 1")
+	g.call("_drop")
+	assert_false(bool(g.get("_done")))
+	g.call("_turn", 1)
+	g.call("_turn", 1)
+	g.call("_unhandled_input", _key(&"ui_accept"))
+	assert_true(bool(g.get("_done")), "just right finishes")
+	assert_eq(g.call("result"), {"notch": 3, "drops": 4, "squashed": 1, "ouch": true})
+	assert_eq(LevelFitting.loud_medal(3), "silver")
+	assert_eq(LevelFitting.loud_medal(4), "bronze")
+
+
+func test_technique_parts() -> void:
+	var g := _game()
+	g.set("_accepting", true)
+	g.call("solve")
+	var r: Dictionary = g.call("result")
+	var w := 0.0
+	for k: String in LevelFitting.TECHNIQUE_WEIGHTS:
+		w += float(LevelFitting.TECHNIQUE_WEIGHTS[k])
+	assert_near(w, 1.0, 0.0001, "the weights add up to 1")
+	assert_near(float(LevelFitting.results_for(r, {})["technique"]), 1.0, 0.0001, "every part right first time")
+	var worst := LevelFitting.results_for(r, {"style_tries": 3, "probe_mistakes": 4, "loud_drops": 6, "counsel_slips": 2})
+	assert_near(float(worst["technique"]), 0.25 * 0.2 + 0.2 * 0.2 + 0.2 * 0.2 + 0.15 * 0.2 + 0.2, 0.0001, "every slip part at 0.2, still a clean fit")
+	var fit: Dictionary = worst["fitting"]
+	assert_eq([int(fit["probe_mistakes"]), int(fit["loud_drops"]), int(fit["counsel_slips"])], [4, 6, 2])
+	var lines := PaperFitting.lines(fit)
+	assert_eq(lines[2], "Tube: 4 slips. Loud limit: 6 drops. Talk: three of three, 2 slips.")
+
+
+func test_counsel_options_and_lines() -> void:
+	var seen := {}
+	var lengths: Array[int] = []
+	var right := 0
+	for c: Array in LevelFitting.COUNSEL:
+		var prefix := String(c[0]).substr(0, BOT_PREFIX)
+		assert_false(seen.has(prefix), "the mouse bot can tell %s apart" % prefix)
+		seen[prefix] = true
+		lengths.append(String(c[0]).length())
+		if bool(c[2]):
+			right += 1
+			assert_eq(String(c[3]), "", "a right tip needs no joke")
+		else:
+			assert_true(String(c[3]) != "", "a wrong tip gets Gus's line")
+		assert_true(String(c[4]).split(" ", false).size() <= Hoot.MAX_WORDS, String(c[4]))
+	assert_eq(right, 3, "three right tips: all-day wear, a few weeks, the follow-up")
+	assert_eq(seen.size(), 5)
+	assert_true(lengths.max() - lengths.min() <= 8, "tips about as long, so length gives nothing away")
+	for tip: String in [ProbeTube.START_TIP, ProbeTube.SHALLOW_TIP, ProbeTube.TOUCH_TIP, LoudCheck.START_TIP, LoudCheck.SQUASH_TIP, LoudCheck.OUCH_TIP]:
 		assert_true(tip.split(" ", false).size() <= Hoot.MAX_WORDS, tip)

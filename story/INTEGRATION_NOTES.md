@@ -340,5 +340,10 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **The Daily Decibel**, used as is: the summary's headlines, subheads, medal_beats, weather and
   `sports_script` (`story/papers/paper_fitting.gd`).
 - **No new data files** (a .tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
-- **PR 2** (later): the probe-tube placement, the loud-sound check and the counselling choice.
+- **PR 2** (the probe tube, the loud-sound check, the counselling): **Game.PHASES** gains `probe_tube` and
+  `loud_check` (additive; the counselling uses Days 4-5's `counselling`). **New beats** `probe_tube` and
+  `loud_check` (CONTRACTS.md §3.2), each with a mouse route in the bot (the In button then Lock; the dial's - or
+  + then Drop). `_check_fitting` also wants a probe, loud and counsel medal; the report gains probe_mistakes,
+  loud_drops and counsel_slips. `LevelFitting.results_for(right, picks, left)` now takes a picks dictionary.
+  Still no new data files.
 
