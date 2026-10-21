@@ -17,7 +17,7 @@ const MOVIE: Dictionary = {
 	"title": "Hoot's audiogram movie",
 	"subtitle": "Slopes, Notches & Cookie Bites",
 	"chapter": "rocco",
-	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan"],
+	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan", "bev"],
 	"narrator": "Hoot",
 	"stage": "res://story/case_movies/shapes_sets.gd",
 	"seen_at": "door",

@@ -87,6 +87,7 @@ Question: **What type are both of Rocco's tympanograms?** (A / B / C, shuffled)
   - before:
     - **Hoot:** Now the bone buzzer, on his right: is it the middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -214,6 +215,7 @@ Question: **Her ear feels full. Is it fluid behind the eardrum?**
   - before:
     - **Hoot:** Bone buzzer on her better ear first: the right. Unmasked bone answers for her better cochlea.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -336,6 +338,7 @@ Question: **Dash says it's wax. Does the tymp agree?**
   - before:
     - **Hoot:** Wax would block air, not bone: bone settles it. Buzzer on his better ear first: the left.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -461,6 +464,7 @@ Question: **Is her middle ear the problem?**
   - before:
     - **Hoot:** Now the bone buzzer: middle ear, or deeper?
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -588,6 +592,7 @@ Question: **His right is flat. What does the canal volume say?**
   - before:
     - **Hoot:** Bone mostly skips the canal and middle ear. Better ear first: the buzzer goes on his left.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -756,6 +761,7 @@ Question: **Skye says it just needs a good pop. What does the tymp say?**
   - before:
     - **Hoot:** Bone mostly skips the middle ear. Better ear first: the buzzer goes on her right.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -881,6 +887,7 @@ Question: **What type are both of Morgan's tympanograms?** (A / B / C, shuffled)
     - **Hoot:** Is that really the right ear hearing? Masking will tell.
     - **Hoot:** Bone first, on the better left ear. Then we mask.
 - Then masked bone and masked air wherever the rules ask (Hoot). When every masked air stamp on an ear is no response: **Hoot:** No plateau, just a climb, then nothing at the limit.
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
 
 After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
 
@@ -898,7 +905,7 @@ After the tests (said when every ear with bone agrees with the case; otherwise *
 - **Hoot:** Very loyal. Masked, the right ear shows the truth: no response at all.
 - **Hoot:** The left ear! Same shape, just louder: a shadow cast across the head.
 
-Cards from the chart: *Right unmasked: a shadow of the left ear* (shadow); *Right ear, masked: no response at all* (no_response); *Right ear only: a big difference* (if the ears differ)
+Cards from the chart: *Right unmasked: a shadow of the left ear* (when the unmasked answers were the other ear's); *Right ear, masked: no response at all* (when masked found no response); *Right ear only: a big difference* (if the ears differ)
 
 If the chart and the truth disagree on any of those: **Hoot:** Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!
 
@@ -942,3 +949,135 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - Do-over: **FOGHORN SOUNDS: TRAINEE ROWS BACK FOR ANOTHER LOOK** When one ear answers far louder than the other ear's bone, mask before you believe it.
 - First stamp REFER (S to C): **TRAINEE SENDS FIFTY-YEAR-OLD NEWS TO THE EAR DOCTOR; DOCTOR SENDS IT BACK** Old, explained and checked by an ear doctor: no referral needed. A CROS helps.
 - First stamp DOCTOR TODAY (S to C): **EMERGENCY DECLARED FOR 1975; OWL CHECKS THE CALENDAR** Nothing sudden: quiet since age seven. Fit a CROS and check the left ear every year.
+
+## Bev Bingham's Case (`bilateral_conductive`)
+
+**The call:** REFER
+
+### Intro
+- **Bev:** Eyes down, look in! Bev Bingham, caller at the town hall bingo. Number one: you, owl!
+- *(Hoot: wing up)*
+- **Hoot:** Called first! Welcome, Bev. What brings you in?
+- *(patient: confused)*
+- **Bev:** Both ears have been fading for about ten years. Slowly, like a pair of old slippers.
+- **Bev:** The hall's fine. It's home that's gone quiet. My sister says I nod at the wrong bits.
+- *(Hoot: nod)*
+- **Hoot:** Both ears, slowly. Let's find out where the sound is getting lost.
+
+Always on the notes: *Both ears fading slowly for ten years*
+
+### History (pick one per round)
+
+| Question | Pts | Answer | Clue card | Hoot |
+|---|---|---|---|---|
+| R1: Where do you have the most trouble? | 2 | Quiet places! Home, or a whisper at the bank. In the noisy hall I catch every word. | Trouble in quiet; hears BETTER in the noisy hall | Better in noise! A classic clue. Keep it in mind for the chart. |
+| R1: Does anyone in your family have it? | 1 | My mum! Same thing, same age. She had an operation on one ear and swore by it. | Mum had the same, and an operation | Family history is worth telling the doctor. Noted! |
+| R1: What's your favourite bingo call? | 0 | Two little ducks, 22! The whole hall quacks back. Quack quack! |  | Bingo later! Ask about Bev's ears. |
+| R2: Any pain, drainage, dizziness, or sudden change? | 2 | No pain, no drips, no spins. Nothing sudden. Just slow and steady, both sides. | No pain, drainage, dizziness or sudden change |  |
+| R2: Any ringing in your ears? | 1 | A low hum now and then, like the tea urn warming up. Both sides. | A low hum in both ears, now and then | Noted. A hum alone isn't a red flag, but we write it down. |
+| R2: Ever called a full house? | 0 | Every Thursday! Eyes down... and today's prize is one slightly startled owl. |  | Bingo later! Ask about Bev's ears. |
+
+Red-flag sweep (if skipped): **Hoot:** Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only. **Bev:** No pain, no drips, no spins. Nothing sudden. Just slow and steady, both sides.
+
+Red-flag card: *Pain, drainage, dizziness, sudden, one ear: NONE. / The chart gets a say too.*
+
+- **Bev:** Legs eleven! That's how many questions you've asked. Feels like it, anyway.
+- **Hoot:** Nearly done! A look inside, then the beeps.
+
+### Otoscopy
+First caption: *Fresh speculum. Bev's LEFT ear first: a clear canal, a healthy eardrum.*
+
+Caption: *Bev's RIGHT ear: a clear canal, a pearly eardrum.*
+
+- **Hoot:** Clean canals, healthy-looking eardrums. Nothing in the way.
+- **Bev:** Not even a stray bingo ball?
+- **Hoot:** Not one. Now, how well do those eardrums move?
+- Card: *Canals clear, eardrums normal*
+
+### Tympanometer
+Tip: medium (average-sized canal). Right: type As, peak -10 daPa, 0.2 mL, canal 1.3 mL. Left: type As, peak -5 daPa, 0.2 mL, canal 1.2 mL.
+
+Question: **What type are both of Bev's tympanograms?** (A / B / C / As, shuffled)
+- A wrong pick: Hoot: Type X would be (its shape). Look where the peak sits, and how tall.
+
+- **Hoot:** Both shallow: type As. The eardrums move, but stiffly. Remember that for the chart.
+
+### Instructions
+- **Hoot:** This morning's listening check: every beep clean, the button works. Dials stay out of view.
+- **Hoot:** Tell her: press for every beep, in either ear, even the faint ones.
+- **Bev:** Eyes down, ears open! I'll press like it's the last number for the jackpot.
+
+### Test plan
+- Right AC (player for 4 stamps, then Hoot): "Right ear's yours. Start at 1k and call the numbers!"
+- Left AC (Hoot at x8): "Left ear at Hoot speed. Same as the right?"
+- Right BC (Hoot's montage): "Hoot's montage: bone on her right."
+  - before:
+    - **Hoot:** The ears match, so either side will do for bone. Right it is.
+- Before the first masked bone test that would open in a masking dilemma (the stamps say the safe noise is too weak), once:
+  - **Hoot:** Wait. Her other ear needs loud noise to mask it. Loud enough to cross right back!
+  - **Hoot:** Then the noise hushes the very ear we're testing. That's the masking dilemma!
+  - When the player owns no inserts, Hoot lends his for the visit: **Hoot:** Headphones leak too much noise for this. Borrow my insert earphones today: a deeper seal.
+- Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
+- When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
+
+After the tests (said when every ear with bone agrees with the case; otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):
+
+- **Bev:** Look at all those marks! FULL HOUSE! Do I win a prize?
+- **Hoot:** You win a good look at your chart. To the board!
+
+### The chart, the shape question, the reveal
+- **Hoot:** Here's Bev's chart. Look at the bone in both ears, then the air.
+- **Question:** What type of loss do Bev's ears have?
+  - Sensorineural: bone is down with the air.: Hoot: Look at the bone: near normal in both ears. Only the air is down.
+  - (right) Conductive: bone near normal, air blocked.
+  - Mixed: bone down AND a gap.: Hoot: Mixed needs bone down too. Hers sits near normal, apart from a dip at 2k.
+  - (graded against the type of loss in the right ear)
+- *(the gap comes alive, with the stiff in the gap: BOTH EARS STUCK)*
+- **Hoot:** Bone near normal, air far worse: an air-bone gap in BOTH ears.
+- **Bev:** Two gaps? Like my grandson's front teeth!
+- **Hoot:** Clear canals and stiff eardrums. Something in the middle ear isn't moving freely.
+- **Hoot:** Conductive, both sides: sound is stopped before it reaches healthy inner ears.
+
+Cards from the chart: *Both ears: bone near normal, air down: gaps*; *Gaps of 15+ dB at 500, 1k and 2k* (red card) (only with a gap of 15+ at 500, 1k and 2k); *Purple ?: masking ran out of room* (when a masked stamp carries the purple ?); *Left and right ears match* (if the ears match)
+
+If the chart and the truth disagree on any of those: **Hoot:** Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!
+
+### The call
+- **FIT**: Not yet! Gaps that size need an ear doctor's look first. Aids can come after.
+- **REFER** (right): REFER! Gaps in both ears: an ear doctor first. Middle-ear trouble can often be treated.
+- **DOCTOR TODAY**: Ten slow years, no pain, nothing sudden: a doctor soon, not today.
+
+**Present the evidence: what sends Bev to an ear doctor first?**
+- Proof cards (tags): gaps, abg_flag. Right: Exactly! The gaps send her to an ear doctor before any hearing aids.
+  - gaps: Yes! Big air-bone gaps in both ears: an ear doctor first.
+  - abg_flag: Yes! The air-bone gap red flag, in both ears. A doctor first.
+- Wrong card (default): True, but what sends her to a doctor? Look for the red flag!
+  - family_op: Family history helps the doctor think. But what's the red flag?
+  - better_in_noise: A great clue to what's wrong. But which card is the red flag?
+  - no_plateau: Those ? marks show the test's limits, not her ears'. What sends her to a doctor?
+  - tymp_as: Stiff eardrums, yes. Together with the chart, which card is the red flag?
+  - symmetric: Matching ears are reassuring. What sends her to a doctor anyway?
+  - red_flag_check: Her story's clear. But the chart raised a flag. Which card?
+  - ear_clear: Clear canals: nothing to scoop out. So what sends her to a doctor?
+  - fading_both: Slow and in both ears: reassuring. What sends her to a doctor anyway?
+  - hum: Noted, but a hum isn't the red flag here. Look at the chart.
+
+### Payoff
+- *(letter)*
+- **Hoot:** A letter to the ear doctor: gaps in both ears, stiff eardrums, and Mum's history.
+- **Bev:** Mum's operation! Will I need one too?
+- **Hoot:** Maybe, maybe not. The doctor checks the tiny bones that carry sound.
+- **Hoot:** Hearing aids often work very well for this. Some people choose an operation.
+- **Hoot:** That little bone dip at 2k has a name: Carhart's notch. The doctor will spot it.
+- **Hoot:** Doctor first, then back here. Aids, an operation, or both: your choice, with good advice.
+- *(patient: cheer)*
+- **Bev:** Eyes down for the doctor, then. Bingo!
+
+### The Daily Decibel
+- S: **BINGO! TRAINEE CALLS A FULL HOUSE ON THE MASKING DILEMMA** Gaps in both ears, honest purple ?s where masking ran out of room, and a referral.
+- A: **BOTH EARS STUCK, BOTH EARS SPOTTED; BEV OFF TO THE EAR DOCTOR** Air-bone gaps in both ears: an ear doctor first. Aids often work well after.
+- B: **GAPS CALLED IN BOTH EARS; A FEW NUMBERS MISSED** The gaps showed up; a few stamps wandered.
+- C: **SOME BEEPS LOST IN THE BINGO HALL, CONFIRMS OWL** Bone near normal under poor air, in both ears, is a gap. Refer.
+- Do-over: **EYES DOWN, TRAINEE: ANOTHER GAME CALLED** When masking runs out of room, mark it ? and read the gaps anyway.
+- First stamp FIT (S to C): **TRAINEE JUMPS THE QUEUE: AIDS BEFORE THE EAR DOCTOR** Air-bone gaps in both ears: an ear doctor first. Aids can follow.
+- First stamp DOCTOR TODAY (S to C): **BINGO CALLER RUSHED TO DOCTOR; TEN-YEAR EMERGENCY DECLARED** Slow, both ears, no pain: a doctor soon, not today.

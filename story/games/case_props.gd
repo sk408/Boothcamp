@@ -435,8 +435,9 @@ func _draw_wax_jar() -> void:
 	if shine > 0.0:
 		for i in JAR_SPARKLES.size():
 			var tw := maxf(0.0, sin(_t * 7.0 + i * 1.9))
-			if tw > 0.05:
-				var rad := (6.0 + 10.0 * tw) * shine
+			var rad := (6.0 + 10.0 * tw) * shine
+			# a sparkle only a speck wide makes a polygon too thin to triangulate (an engine error)
+			if tw > 0.05 and rad >= 1.0:
 				UiDraw.star(c, JAR_SPARKLES[i], rad + 3.0, Palette.INK, 4)
 				UiDraw.star(c, JAR_SPARKLES[i], rad, Palette.SUNNY, 4)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

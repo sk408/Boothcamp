@@ -121,7 +121,7 @@ It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (
 the Hoot bubble, the pause menu and its key-style label, the results continue beat, the title beats, and
 the voice ceiling.
 
-## Cases (Days 6 to 12, cases branch; CONTRACTS.md §11, docs/CASES.md)
+## Cases (Days 6 to 13, cases branch; CONTRACTS.md §11, docs/CASES.md)
 
 The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
 Requests for the integrator and the title owner:
@@ -129,7 +129,7 @@ Requests for the integrator and the title owner:
 - **Day picker.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and
   `tint` (the card colour), which the Days grid uses. `Portraits` draws every case speaker (it falls back to
   `CasePortraits`).
-- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 12) both append to `Game.CHAPTERS`
+- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 13) both append to `Game.CHAPTERS`
   and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`, `retest`). Keep both blocks,
   speech first, and keep the exact `"case": "<id>"` spelling (`tools/case_scripts.py` finds the case order with a
   regex).
@@ -157,7 +157,7 @@ Requests for the integrator and the title owner:
 - **Hoot's case movies (clinical review C12).** Three movies (`case_files`, `tymp`, `shapes`) for every case day.
   Additive changes to shared files: `story/explainers/movies.gd` registers them, gains an optional movie key
   `also_chapters` (`for_chapter` lists a movie on those chapters too; new `chapters_of(movie)`), and `day_label`
-  reads "Days 6-12" for a movie on several days (one-day movies still read "Day 2"). `tools/autoplay_bot.gd` checks
+  reads "Days 6-13" for a movie on several days (one-day movies still read "Day 2"). `tools/autoplay_bot.gd` checks
   that a fresh save's case day starts all three (they play through the existing `explainer` beat, keys and mouse).
   Their sets live in `story/case_movies/`, so the stage is untouched. The title now has more than one movie, so
   its button opens the movie list (the existing `title_screen._on_movies` path): `tests/test_contracts_v4.gd`
@@ -189,7 +189,19 @@ Requests for the integrator and the title owner:
   truth lies past it, and `_check_dead_ear_case` reports `shadow` and `case_ear_type` and checks the masked sheets.
   The case movies list Morgan in `also_chapters`. Freestyle and Days 1-11 are unchanged: no other patient goes past
   the dial, and only a masked no-response mark changes a line.
-- **Tests:** `story/tests/test_cases.gd` (45 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Day 13, the masking dilemma (clinical review C9).** Bev has big air-bone gaps in both ears, so masked bone opens
+  in a dilemma; before the first one the runner says the case's `on_dilemma` lines and, when the player owns none,
+  lends Hoot's inserts for the visit (a runner flag and visit flags `dilemma_told` / `lent_inserts`; the save's
+  upgrades never change). One shared-file change, small: `ClinicRules.masked_freqs_needed` judges each air stamp
+  with the transducer it records (`info.transducer`), the param only as the fallback, so headphone-measured air
+  still needs masking by the headphones' rule after the loan (see `core/INTEGRATION_NOTES.md`). A visit that keeps
+  one transducer, which is every other day and Freestyle, gets the same answers as before. `tools/autoplay_bot.gd`
+  (additive): `_check_dilemma_case` checks both ears conductive with the red flag, the purple ? at 500 Hz and 1 kHz
+  (at 2k / 4k only after a missed beep), masked air where the rules ask, the dilemma lines and the loan.
+  `tools/monkey.gd` mirrors the loan. The case movies list Bev. `story/games/case_props.gd`: a wax-jar sparkle under
+  a pixel wide is skipped (its star polygon could fail to triangulate, an engine error that flaked
+  `test_new_gadgets_draw_every_view`).
+- **Tests:** `story/tests/test_cases.gd` (49 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
   a warning without python3).
 
