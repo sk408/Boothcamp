@@ -190,8 +190,12 @@ def render(c):
     out.append("")
     out.append("### Test plan")
     plan(c["audiometry"], out)
-    out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no "
-               f"ear needed masked air: **Hoot:** {runner_line('NO_MASKED_AIR')}")
+    if c["reveal"].get("pattern") == "shadow":
+        out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When every masked air stamp on "
+                   f"an ear is no response: **Hoot:** {runner_line('NO_PLATEAU')}")
+    else:
+        out.append("- Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no "
+                   f"ear needed masked air: **Hoot:** {runner_line('NO_MASKED_AIR')}")
     out.append("")
     out.append("After the tests (said when every ear with bone agrees with the case; "
                "otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):")

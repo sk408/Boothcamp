@@ -1,6 +1,6 @@
 extends RefCounted
 ## Hoot's case files movie, "Three Stamps and the Red Flags" (clinical review C12). Plays before the
-## first patient knocks on the player's first case day (any of Days 6 to 11), after Hoot's lead-in
+## first patient knocks on the player's first case day (any of Days 6 to 12), after Hoot's lead-in
 ## (story/level_case.gd CASE_MOVIES); replay from the pause menu on any case day, or the title.
 ## DATA ONLY (like masking.gd): the player types the captions and fires the cues; the scenes are drawn
 ## by this movie's own sets, story/case_movies/case_files_sets.gd.
@@ -16,7 +16,7 @@ const MOVIE: Dictionary = {
 	"title": "Hoot's case files movie",
 	"subtitle": "Three Stamps and the Red Flags",
 	"chapter": "rocco",
-	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye"],
+	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan"],
 	"narrator": "Hoot",
 	"stage": "res://story/case_movies/case_files_sets.gd",
 	## Watching up to this scene counts as seen (a skip before it offers the movie again next case).

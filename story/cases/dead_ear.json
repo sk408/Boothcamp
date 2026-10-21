@@ -1,0 +1,187 @@
+{
+	"id": "dead_ear",
+	"patient_id": "morgan",
+	"speaker": "Morgan",
+	"case_title": "MORGAN GALE'S CASE",
+	"look": {
+		"face": "gus", "skin": "#e8c4a0", "skin_shade": "#c9a07c", "nose": "#d9a982",
+		"cardigan": "#1d3557", "pants": "#1d3557", "shirt": "#f1faee", "accent": "#ffd23f", "shoes": "#3a2a22",
+		"hair": "#b8b8b8", "hair_style": "quiff", "mustache": false, "brows": true,
+		"glasses": "none", "walker": false, "prop": "",
+		"extras": ["neck_scarf"],
+		"portrait_bg": "#d9ecf2", "name_color": "#1d3557", "neck_scarf": "#ffd23f"
+	},
+	"voice": {"f0": 165.0, "wobble": 0.05, "roll": 0.6, "vowels": ["o", "a", "e", "o", "u", "a"]},
+	"intro": [
+		["Morgan", "Ahoy! Morgan Gale, keeper of the Gullrock light. My sister Marina says you're the best owl ashore."],
+		{"hoot": "wing_up"},
+		["Hoot", "Captain Marina's family! Welcome ashore, Morgan. What brings a lighthouse keeper inland?"],
+		{"react": "confused"},
+		["Morgan", "Society dinners. Anyone on my right sounds like the sea. And I never know where the foghorn is."],
+		["Morgan", "My right ear's been off duty since mumps at seven. I brought the ear doctor's letter."],
+		{"hoot": "nod"},
+		["Hoot", "A letter! Lovely. We still test both ears properly, though."]
+	],
+	"always_clues": [
+		{"tag": "dead_right", "text": "Right ear hears nothing, says Morgan"},
+		{"tag": "known_cause", "text": "Ear doctor's letter: mumps, checked, no change"}
+	],
+	"history": [
+		{
+			"prompt": "Ask Morgan a question:",
+			"options": [
+				["Where do you have the most trouble?", 2, "Society dinners, when the chatterbox sits on my right. And working out where the foghorn is.", "Trouble: talkers on the right, and where sounds come from", "where_trouble", "One good ear can't tell where a sound comes from. That takes two!"],
+				["Has your right ear changed lately?", 2, "Not a whisper since I was seven. The ear doctor checked it again three years ago. Same.", "No change in the right ear since childhood", "no_change"],
+				["How many steps up the lighthouse?", 0, "Two hundred and twelve. I count them every night. My knees count them twice.", "", ""]
+			]
+		},
+		{
+			"prompt": "Next question:",
+			"options": [
+				["Any pain, drainage, dizziness, or sudden change?", 2, "None of those. No spins, no drips. The right's been quiet for fifty years, not fifty days.", "No pain, drainage, dizziness or sudden change", "red_flag_check"],
+				["Do you protect your ears from the foghorn?", 1, "Earmuffs, always! I've only got one good ear. I'm not lending it to a foghorn.", "Wears earmuffs by the foghorn", "earmuffs", "Smart. Guard that one good ear like treasure."],
+				["Seen any mermaids?", 0, "Only on the society's tea towels. Very disappointing.", "", ""]
+			]
+		}
+	],
+	"joke_line": "Sea stories later! Ask about Morgan's ears.",
+	"red_flags": {
+		"tag": "red_flag_check",
+		"ask_line": "Always check the red flags: pain, drainage, dizziness, sudden or fluctuating change, one ear only.",
+		"answer": "Only the one ear, and you've seen the letter. No pain, no drips, no spins.",
+		"clue": "No pain, drainage, dizziness or sudden change",
+		"card": "One ear only: YES, since mumps at 7.\nKnown cause, doctor-checked, no change.",
+		"card_kind": "clue",
+		"clue_kind": "clue"
+	},
+	"after_history": [
+		["Hoot", "One ear, but no mystery: a cause, a doctor's letter, no change. Let's look."]
+	],
+	"otoscopy": {
+		"ear": "right",
+		"view": "clear",
+		"caption": "Morgan's RIGHT ear: a roomy canal, no wax, a healthy eardrum.",
+		"lines": [
+			["Hoot", "Clear canal, pearly drum. Whatever's wrong sits deeper than we can see."]
+		],
+		"clue": "Right canal and eardrum look healthy",
+		"tag": "clear_drum"
+	},
+	"tymp": {
+		"tip": "large",
+		"canal": "roomy",
+		"right": {"type": "A", "peak_daPa": -10, "peak_ml": 0.8, "ecv_ml": 1.5},
+		"left": {"type": "A", "peak_daPa": -5, "peak_ml": 0.9, "ecv_ml": 1.6},
+		"clue": "Tymp: type A both ears (no fluid, no blockage)",
+		"tag": "tymp_a",
+		"after": [
+			["Hoot", "Type A both sides: both middle ears move fine. Now the beeps."]
+		]
+	},
+	"instructions": [
+		["Hoot", "Tell them: press for every beep, in either ear, even faint ones."],
+		["Morgan", "Either ear? My right one's retired, but I'll press for anything. Aye aye!"]
+	],
+	"audiometry": [
+		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "montage": true, "intro": "Better ear first: Hoot's montage on the left. Shipshape!"},
+		{"ear": "right", "test": "ac", "hoot_turn_after": 4, "intro": "Right ear's yours: the quiet one. Start at 1k and watch."},
+		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "montage": true, "intro": "Hoot's montage: bone on the good left ear.",
+			"before": [
+				["Hoot", "Hold on. A deaf ear just answered! Same shape as the left ear, only louder."],
+				["Hoot", "Is that really the right ear hearing? Masking will tell."],
+				["Hoot", "Bone first, on the better left ear. Then we mask."]
+			]}
+	],
+	"after_audiometry": [
+		["Hoot", "Masked, the right ear's bone found nothing, even at the audiometer's limit."]
+	],
+	"reveal": {
+		"pattern": "shadow",
+		"ear": "right",
+		"title": "THE SHADOW CURVE",
+		"ask": [
+			["Hoot", "Here's Morgan's chart. Masked, the right ear shows only arrows. Yet unmasked, it answered you!"]
+		],
+		"lines": [
+			["Hoot", "Dashed: the shadow. The left ear heard those beeps across the head."],
+			["Morgan", "So my good ear was covering for my bad one? Loyal little thing."],
+			["Hoot", "Very loyal. Masked, the right ear shows the truth: no response at all."]
+		]
+	},
+	"evidence": {
+		"prompt": "Who answered the right ear's unmasked beeps?",
+		"options": ["The left ear, across the head.", "The right ear: a moderate loss.", "The right's middle ear: a gap."],
+		"answer": 0,
+		"wrong": ["", "Masked, the right ear gave no response at all. Those beeps went somewhere else.", "Tymp A, and masked bone found nothing: that cochlea isn't hearing. No middle-ear gap to blame."],
+		"right": "The left ear! Same shape, just louder: a shadow cast across the head."
+	},
+	"findings": [
+		{"tag": "shadow", "text": "Right unmasked: a shadow of the left ear", "when": "shadow"},
+		{"tag": "no_response", "text": "Right ear, masked: no response at all", "when": "no_response"},
+		{"tag": "right_only", "text": "Right ear only: a big difference", "when": "asymmetric"}
+	],
+	"decision": {
+		"prompt": "Make the call for Morgan:",
+		"answer": "fit",
+		"asymmetry_known_cause": true,
+		"lines": {
+			"fit": "FIT! Old, explained and doctor-checked. A CROS aid sends the right side's sound to the left ear.",
+			"refer": "Not this time. It's old, explained and checked. A NEW difference would be a REFER.",
+			"today": "Nothing sudden here: quiet since age seven. No emergency, and no referral needed."
+		}
+	},
+	"clue_pick": {
+		"prompt": "Present the evidence: why can Morgan be fitted without a referral?",
+		"answers": ["known_cause", "no_change"],
+		"decoys": ["dead_right", "where_trouble"],
+		"wrong_line": "True, but why is a referral not needed? Look again!",
+		"wrong_lines": {
+			"dead_right": "That's the problem, not the reason. Why is no referral needed?",
+			"where_trouble": "That's what the aid will help. Why is no referral needed?",
+			"shadow": "That's how we found it. But why is it safe to fit without a referral?",
+			"no_response": "That shows how deaf the right ear is. Why is no referral needed?",
+			"right_only": "One ear worse usually means REFER. What makes Morgan's different?",
+			"red_flag_check": "Good news, but one ear is still far worse. What explains it?",
+			"clear_drum": "Healthy on the outside. Why is the inside safe to fit without a doctor?",
+			"tymp_a": "Middle ears fine. But why no referral for the inner ear?",
+			"earmuffs": "A smart habit. Not a reason to skip a referral, though."
+		},
+		"right_lines": {
+			"known_cause": "Yes! A known cause, checked by an ear doctor, no change: no referral needed.",
+			"no_change": "Yes! Unchanged for fifty years and doctor-checked. A NEW change would mean REFER."
+		},
+		"right_line": "Exactly: old, explained and checked. Fit the CROS!"
+	},
+	"payoff": [
+		{"do": "hearing_aids"},
+		["Hoot", "This is a CROS: a little microphone sits on the right ear."],
+		["Hoot", "It sends the right side's sound across to a receiver on the good left ear."],
+		["Morgan", "So the chatterbox on my right lands in my left? Brilliant."],
+		["Hoot", "It helps at dinners. It can't tell you where the foghorn is, though."],
+		["Hoot", "Direction takes two hearing ears. A CROS moves sound across; it can't add a second ear."],
+		["Hoot", "Guard that left ear: earmuffs on, and a hearing check every year."],
+		["Hoot", "If the left ear ever changes, come straight back. It's doing all the work."],
+		{"react": "cheer"},
+		["Morgan", "Aye aye, owl. I'll keep a light on for you."]
+	],
+	"paper": {
+		"headlines": {
+			"S": "GHOST CAUGHT AT LIGHTHOUSE; TRAINEE SHINES A LIGHT ON THE SHADOW CURVE",
+			"A": "MASKING CHASES OFF THE SHADOW; CROS AID SIGNALS ACROSS THE HEAD",
+			"B": "SHADOW SPOTTED THROUGH THE FOG; A FEW STAMPS LOST AT SEA",
+			"C": "SOME BEEPS ADRIFT, REPORTS OWL; LEFT EAR STILL ON DUTY",
+			"Do-over": "FOGHORN SOUNDS: TRAINEE ROWS BACK FOR ANOTHER LOOK"
+		},
+		"subheads": {
+			"S": "Unmasked right air was the left ear's shadow. Masked: no response. Known cause: fit a CROS.",
+			"A": "Masking showed the truth: no response on the right. Old and checked: fit.",
+			"B": "The shadow showed up; a few stamps drifted.",
+			"C": "A loud ear that copies the good ear's shape is a shadow. Mask it.",
+			"Do-over": "When one ear answers far louder than the other ear's bone, mask before you believe it."
+		},
+		"wrong_first": {
+			"refer": {"headline": "TRAINEE SENDS FIFTY-YEAR-OLD NEWS TO THE EAR DOCTOR; DOCTOR SENDS IT BACK", "subhead": "Old, explained and checked by an ear doctor: no referral needed. A CROS helps."},
+			"today": {"headline": "EMERGENCY DECLARED FOR 1975; OWL CHECKS THE CALENDAR", "subhead": "Nothing sudden: quiet since age seven. Fit a CROS and check the left ear every year."}
+		}
+	}
+}

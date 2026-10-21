@@ -121,7 +121,7 @@ It is not part of the game flow. `story/dev_day2.tscn` does the same for Day 2 (
 the Hoot bubble, the pause menu and its key-style label, the results continue beat, the title beats, and
 the voice ceiling.
 
-## Cases (Days 6 to 11, cases branch; CONTRACTS.md §11, docs/CASES.md)
+## Cases (Days 6 to 12, cases branch; CONTRACTS.md §11, docs/CASES.md)
 
 The case files run in their own runner (`story/level_case.gd`) and touch other story files only additively.
 Requests for the integrator and the title owner:
@@ -129,7 +129,7 @@ Requests for the integrator and the title owner:
 - **Day picker.** Each case chapter in `Game.CHAPTERS` carries `face` (the portrait speaker, e.g. `"Rocco"`) and
   `tint` (the card colour), which the Days grid uses. `Portraits` draws every case speaker (it falls back to
   `CasePortraits`).
-- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 11) both append to `Game.CHAPTERS`
+- **Merge order.** The speech chapters (Days 3 to 5) and the cases (Days 6 to 12) both append to `Game.CHAPTERS`
   and `Game.PHASES` (speech: `familiarize`, `speech`; cases: `tymp`, `decision`, `retest`). Keep both blocks,
   speech first, and keep the exact `"case": "<id>"` spelling (`tools/case_scripts.py` finds the case order with a
   regex).
@@ -157,7 +157,7 @@ Requests for the integrator and the title owner:
 - **Hoot's case movies (clinical review C12).** Three movies (`case_files`, `tymp`, `shapes`) for every case day.
   Additive changes to shared files: `story/explainers/movies.gd` registers them, gains an optional movie key
   `also_chapters` (`for_chapter` lists a movie on those chapters too; new `chapters_of(movie)`), and `day_label`
-  reads "Days 6-11" for a movie on several days (one-day movies still read "Day 2"). `tools/autoplay_bot.gd` checks
+  reads "Days 6-12" for a movie on several days (one-day movies still read "Day 2"). `tools/autoplay_bot.gd` checks
   that a fresh save's case day starts all three (they play through the existing `explainer` beat, keys and mouse).
   Their sets live in `story/case_movies/`, so the stage is untouched. The title now has more than one movie, so
   its button opens the movie list (the existing `title_screen._on_movies` path): `tests/test_contracts_v4.gd`
@@ -181,7 +181,15 @@ Requests for the integrator and the title owner:
 - **Screenshots:** `case_<id>_intro`, `_otoscopy`, `_tymp_sweep`, `_tymp_curves`, `_reveal`, `_pattern`,
   `_case_file`, `_stamp`, `_exhibit`, `_hearing_aids` / `_letter` / `_boat` / `_wax_jar` / `_plane`, `_goodbye`;
   Barnaby's retest adds `_retest_later`, `_retest_otoscopy`, `_retest_tymp`, `_retest_chart`, `_retest_goodbye`.
-- **Tests:** `story/tests/test_cases.gd` (40 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Day 12, the shadow curve (clinical review C10).** Morgan's deaf right ear sits past the dial, so masked bone and
+  masked air store no response; the unmasked air is the left ear's shadow. Shared-file changes, both small:
+  `core/patient_profile.gd` validate allows air up to `max_db(f) + 30` (see `core/INTEGRATION_NOTES.md`), and
+  `ui/audiogram/audiogram.gd` draws no pen line through a frequency whose masked air mark is no response (see
+  `ui/INTEGRATION_NOTES.md`). `tools/autoplay_bot.gd` (additive): `_check_v3` accepts a no-response stamp when the
+  truth lies past it, and `_check_dead_ear_case` reports `shadow` and `case_ear_type` and checks the masked sheets.
+  The case movies list Morgan in `also_chapters`. Freestyle and Days 1-11 are unchanged: no other patient goes past
+  the dial, and only a masked no-response mark changes a line.
+- **Tests:** `story/tests/test_cases.gd` (45 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
   a warning without python3).
 

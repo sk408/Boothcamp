@@ -1063,6 +1063,8 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 					not_reached.append("%s %s %d" % [ear, key, f])
 					if int(info["stored_db"]) <= int(info["true_db"]):
 						continue  # (E9) a full window: the true threshold may be poorer, that is the "?"
+				if bool(info.get("no_response", false)) and int(info["true_db"]) > int(info["stored_db"]):
+					continue  # (Day 12) no response at the limit, and the truth lies past it: right
 				if absi(int(info["stored_db"]) - int(info["true_db"])) > 10:
 					problems.append("%s %s %d Hz off by more than 10 dB" % [ear, key, f])
 			sheets["%s_%s" % [ear, key]] = t
@@ -1111,6 +1113,7 @@ func _check_v3(res: Dictionary, report: Dictionary, problems: PackedStringArray)
 	var case_id := String(Game.chapter(String(_summary.get("chapter_id", ""))).get("case", ""))
 	if case_id != "":
 		_check_conductive_case(case_id, res, report, problems)
+		_check_dead_ear_case(case_id, res, report, problems)
 		# (cases, clinical review C12) Hoot's three case movies start on a fresh save (level_case.gd _movie)
 		report["movies"] = _movies
 		if not Game.cli_flag("keep-save"):
@@ -1148,6 +1151,31 @@ func _check_conductive_case(case_id: String, res: Dictionary, report: Dictionary
 				problems.append("%s: %s masked air missing at %d Hz" % [case_id, chk, f])
 		if need.is_empty() and not stamped.is_empty():
 			problems.append("%s: %s masked air stamped where no masking was needed" % [case_id, chk])
+
+
+## (cases, clinical review C10) A deaf case ear (Day 12): its unmasked air answered (the shadow, heard
+## by the other ear), then masked bone at 500-4k and masked air at every routine frequency found no response.
+func _check_dead_ear_case(case_id: String, res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var c := CaseData.load_case(case_id)
+	var ear := String((c.get("reveal", {}) as Dictionary).get("ear", "right"))
+	var p := Game.load_patient(String(c.get("patient_id", ""))) as PatientProfile
+	if (ear != "right" and ear != "left") or not CaseData.dead_truth(p, ear):
+		return
+	var e: Dictionary = (res.get("ears", {}) as Dictionary).get(ear, {})
+	report["case_ear_type"] = String(CaseData.measured_type(res, ear))
+	report["shadow"] = CaseData.shadow_shows(res, p, ear)
+	if not CaseData.shadow_shows(res, p, ear):
+		problems.append("%s: no shadow on the %s ear (unmasked answers, masked no response)" % [case_id, ear])
+	if not CaseData.no_response_shows(res, p, ear):
+		problems.append("%s: the %s ear's masked marks are not all no response" % [case_id, ear])
+	for f: int in [500, 1000, 2000, 4000]:
+		if not (e.get("bc_masked", {}) as Dictionary).has(f):
+			problems.append("%s: %s masked bone missing at %d Hz" % [case_id, ear, f])
+	for f: int in ClinicRules.ROUTINE_FREQS:
+		if not (e.get("ac_masked", {}) as Dictionary).has(f):
+			problems.append("%s: %s masked air missing at %d Hz" % [case_id, ear, f])
+	if CaseData.measured_type(res, ear) != &"sensorineural":
+		problems.append("%s: the %s ear should read sensorineural, got %s" % [case_id, ear, CaseData.measured_type(res, ear)])
 
 
 func _fail(code: int, why: String) -> void:

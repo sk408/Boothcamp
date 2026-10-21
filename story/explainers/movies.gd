@@ -132,7 +132,7 @@ static func replay_ids() -> Array[String]:
 	return out
 
 
-## The chapter's day label for the replay list ("Day 2"; "Days 6-11" with "also_chapters"), ""
+## The chapter's day label for the replay list ("Day 2"; "Days 6-12" with "also_chapters"), ""
 ## when unknown.
 static func day_label(id: String) -> String:
 	var days: Array[int] = []

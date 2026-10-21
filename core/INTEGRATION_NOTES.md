@@ -40,3 +40,10 @@ func _notification(what: int) -> void:
 		while _retired.size() > RETIRED_KEEP:
 			_retired.pop_front()
 ```
+
+## Cases, Day 12: an ear past the dial (`core/patient_profile.gd`, done, one line)
+
+`validate()` rejected any air threshold above 120 dB. Morgan's deaf right ear (clinical review C10) has to sit past
+the audiometer's limit so masked tests store no response (at exactly 120, a masked run plateaus at 120 instead).
+The cap is now `ClinicRules.max_db(f) + 30`, the same rule bone already used. No existing patient is near it, so
+nothing else changes; `story/tests/test_cases.gd` validates every case patient.
