@@ -253,8 +253,12 @@ func test_routine_and_masking_recap_when_unseen() -> void:
 		assert_true(at > timeline.find("audiometry:bc") and at < first, "after unmasked bone, before the masked bone")
 		assert_true(timeline.find(hint) > at and timeline.find(hint) < first, "right after the card")
 		assert_true(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "the pause menu offers every replay movie now (E19)")
-	await lv.call("_recap")
-	assert_true(timeline.count(recap) <= 1, "never twice a visit")
+		# a second call plays nothing (only once the card has played: with no gap a call here would
+		# play it for real, and nobody answers its beats once _play_until_test returns)
+		await lv.call("_recap")
+		assert_eq(timeline.count(recap), 1, "never twice a visit")
+	else:
+		assert_false(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "no gap: the pause menu keeps the day's own movie")
 	lv.queue_free()
 	await wait_seconds(0.5)
 
