@@ -9,6 +9,10 @@ extends Control
 ## Quit quits. Keyboard: Up/Down + Enter/Space (Days: arrows move in the grid, Esc = Back).
 ## Mouse: click, wheel scrolls the grid. The notice shows once per session; the footer
 ## "This is a game, not a hearing test." is always on screen.
+## (career-fair demo, docs/DEMO.md) In demo mode (Game.is_demo()) the menu is one Play button for
+## the short demo level, the notice greets every visitor, and each title starts a fresh visitor.
+## Nobody at the demo's title for ATTRACT_S seconds (in the menu or the notice) starts the booth's
+## attract loop (story/demo_attract.gd); a key, click or mouse movement ends it and shows the notice.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
@@ -18,6 +22,12 @@ const Movies := preload("res://story/explainers/movies.gd")
 const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
 ## (arcade, docs/ARCADE.md) The arcade hall: a cabinet per game (Chart Chute, Ears, Please!).
 const ARCADE_SCENE := "res://story/arcade/arcade_hall.tscn"
+## (demo) The career-fair demo's level, and the line under its Play button.
+const DEMO_SCENE := "res://story/level_demo.tscn"
+const DEMO_TAGLINE := "Find out what Gus can't hear, then help him hear it. About 7 minutes."
+const DemoAttract := preload("res://story/demo_attract.gd")
+## (demo) Seconds with nobody at the title before the attract loop; --attract-after=N sets another.
+const ATTRACT_S := 30.0
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -36,6 +46,9 @@ var _font: Font
 var _starting := false
 var _idle := 0.0
 var _reset_armed := false
+## (demo) The booth's attract loop (never under autoplay) and the seconds with nobody at the title.
+var _attract: Control
+var _attract_idle := 0.0
 ## (v4) "Hoot's Movies": a small mouse shortcut to the cartoon explainers (keyboard: Options).
 var _movies_btn: Button
 # v3: the day picker (polish: a scrolling grid for any number of days)
@@ -74,14 +87,21 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("title_screen")
 	_font = UiKit.font(700)
+	if Game.is_demo():
+		Game.reset_demo_visitor()   # (demo) every title is a new visitor
 	if ResourceLoader.exists(CLINIC_SCENE):
 		_clinic = (load(CLINIC_SCENE) as PackedScene).instantiate()
 		add_child(_clinic)
 		if _clinic.has_method("set_title_mode"):
 			_clinic.call("set_title_mode", true)
 	_build()
+	if Game.is_demo() and not Game.is_autoplay():
+		_attract = DemoAttract.new()
+		_attract.set("tagline", DEMO_TAGLINE)
+		add_child(_attract)
+		_attract.connect("dismissed", _on_attract_dismissed)
 	Sfx.music_start()
-	if _notice_seen_this_session:
+	if _notice_seen_this_session and not Game.is_demo():
 		_notice_layer.visible = false
 		_show_title.call_deferred()
 	else:
@@ -90,12 +110,18 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _state == &"menu" and not get_tree().paused:
+	if _state == &"menu" and not get_tree().paused and not _attract_running():
 		_idle += delta
 		if _idle > IDLE_NOTICE_S:
 			_idle = 0.0
 			_notice_layer.modulate.a = 1.0
 			_show_disclaimer()
+	if _attract != null and not _attract_running() and (_state == &"menu" or _state == &"notice") and not get_tree().paused:
+		_attract_idle += delta
+		if _attract_idle > attract_after():
+			_attract.call("start")
+			_menu_card.visible = false
+			_notice_layer.visible = false
 	_logo.queue_redraw()
 	queue_redraw()
 	if _movies_btn != null:
@@ -145,11 +171,41 @@ func _show_title() -> void:
 	_menu_card.visible = true
 	Juice.bounce_in(_menu_card, 0.5)
 	_set_hl(0, false)
-	Events.awaiting_input.emit(&"title_start", {}, _on_start)
+	Events.awaiting_input.emit(&"title_start", {}, _on_demo_start if Game.is_demo() else _on_start)
 
 
 func _on_start() -> void:
 	_start_chapter(Game.next_chapter_id(), &"title_start")
+
+
+## (demo) Play: the career-fair demo level.
+func _on_demo_start() -> void:
+	if _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"fanfare")
+	if not _buttons.is_empty():
+		Juice.pop(_buttons[0], 1.15, 0.25)
+	Events.input_resolved.emit(&"title_start")
+	Events.goto_scene.emit(DEMO_SCENE)
+
+
+## (demo) Seconds with nobody at the title before the attract loop starts.
+static func attract_after() -> float:
+	return float(Game.cli.get("attract-after", ATTRACT_S))
+
+
+func _attract_running() -> bool:
+	return _attract != null and bool(_attract.call("is_running"))
+
+
+## (demo) A visitor walked up: the attract loop is gone, and the safety notice greets them.
+func _on_attract_dismissed() -> void:
+	_idle = 0.0
+	_attract_idle = 0.0
+	_notice_layer.modulate.a = 1.0
+	_show_disclaimer()
 
 
 ## (v3) Start a chapter (falls back to Day 1's scene if it is unknown or missing).
@@ -449,6 +505,7 @@ func _on_movies() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event.is_pressed():
 		_idle = 0.0
+		_attract_idle = 0.0
 	# (polish) Esc on the Days card means Back (before the pause menu turns it into Options)
 	if _state == &"days" and event.is_action_pressed(&"ui_cancel") and not event.is_echo():
 		var pm := get_tree().get_first_node_in_group("pause_menu")
@@ -533,6 +590,8 @@ func _build() -> void:
 		specs.append(["New player", _on_new_player])
 	specs.append(["Options", _on_options])
 	specs.append(["Quit", _on_quit])
+	if Game.is_demo():
+		specs = [["Play", _on_demo_start]]   # (demo) nothing else: no days, no quitting the booth
 	# (freestyle) Options and Quit share the last row, so a returning player's six buttons still
 	# clear the safety footer (Up/Down still walk them in order)
 	var pair := HBoxContainer.new()
@@ -564,7 +623,13 @@ func _build() -> void:
 		_buttons.append(b)
 	v.add_child(pair)
 	_menu_buttons = _buttons.duplicate()
-	if not Movies.replay_ids().is_empty():
+	if Game.is_demo():
+		var tag := UiKit.label(DEMO_TAGLINE, 18, Palette.INK_SOFT, 600)
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		tag.custom_minimum_size = Vector2(340, 0)
+		v.add_child(tag)
+	if not Movies.replay_ids().is_empty() and not Game.is_demo():
 		_movies_btn = UiKit.button("Hoot's Movies", &"", Vector2(214, 46))
 		_movies_btn.name = "MoviesButton"
 		_movies_btn.add_theme_font_size_override("font_size", 20)
@@ -584,7 +649,7 @@ func _build() -> void:
 		var hr := UiKit.hint_row([["Up", "Down"], "+", ["Enter"], "or click"], 15)
 		hr.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_child(hr)
-	var stats := _stats_text()
+	var stats := "" if Game.is_demo() else _stats_text()
 	if stats != "":
 		var sl := UiKit.label(stats, 15, Palette.INK_SOFT, 500)
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

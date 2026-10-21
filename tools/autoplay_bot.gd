@@ -864,6 +864,25 @@ func _mouse_beat(beat: StringName, info: Dictionary) -> void:
 				for k in absi(n):
 					await _click(b.get_global_rect().get_center())
 			await _click((tm.call("done_button") as Control).get_global_rect().get_center())
+		&"probe_tube":
+			# (Day 14) "In" until the tip is in the zone, then "Lock it"
+			var pt := _find_script_node("story/games/probe_tube.gd")
+			if pt == null:
+				_mouse_misses.append("probe tube")
+				return
+			for k in int(pt.call("presses_needed")):
+				await _click((pt.call("in_button") as Control).get_global_rect().get_center())
+			await _click((pt.call("lock_button") as Control).get_global_rect().get_center())
+		&"loud_check":
+			# (Day 14) the dial's - or + to the right notch, then "Drop the pan"
+			var lc := _find_script_node("story/games/loud_check.gd")
+			if lc == null:
+				_mouse_misses.append("loud check")
+				return
+			var n := int(lc.call("presses_needed"))
+			for k in absi(n):
+				await _click((lc.call("turn_button", n > 0) as Control).get_global_rect().get_center())
+			await _click((lc.call("drop_button") as Control).get_global_rect().get_center())
 		_:
 			if info.get("mouse", null) is Dictionary:
 				await _mouse_route(info["mouse"] as Dictionary)
@@ -1032,6 +1051,8 @@ func _finish() -> void:
 	var fitting_day := String(_summary.get("chapter_id", Game.current_chapter_id)) == "gus_fit"
 	if fitting_day:
 		_check_fitting(res, report, problems)
+	if bool(_summary.get("demo", false)):
+		_check_demo(res, report, problems)
 	var ear_list: Array = [] if fitting_day else ["right", "left"]
 	for ear: String in ear_list:
 		if not ears.has(ear) or not bool((ears[ear] as Dictionary).get("complete", false)):
@@ -1084,7 +1105,7 @@ func _finish() -> void:
 
 
 ## (Day 14, docs/FITTING.md) The fitting: every band of the right ear in the green, the style picked,
-## and Hoot's left ear done.
+## Hoot's left ear done, the probe tube, the loud check and the counselling all played.
 func _check_fitting(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var fit: Dictionary = res.get("fitting", {})
 	if fit.is_empty():
@@ -1101,8 +1122,34 @@ func _check_fitting(res: Dictionary, report: Dictionary, problems: PackedStringA
 		problems.append("fitting: style %s" % fit.get("style", ""))
 	if not bool(fit.get("left_by_hoot", false)):
 		problems.append("fitting: Hoot never did the left ear")
+	var medals: Dictionary = _summary.get("medals", {})
+	for m: String in ["probe", "loud", "counsel"]:
+		if not medals.has(m):
+			problems.append("fitting: no %s medal (the beat never finished)" % m)
 	report["fitting"] = {"errs": errs, "moves": fit.get("moves", 0), "par": fit.get("par", 0), "style_tries": fit.get("style_tries", 0),
-		"overshoots": fit.get("overshoots", []), "medals": _summary.get("medals", {})}
+		"overshoots": fit.get("overshoots", []), "probe_mistakes": fit.get("probe_mistakes", -1), "loud_drops": fit.get("loud_drops", -1),
+		"counsel_slips": fit.get("counsel_slips", -1), "medals": medals}
+
+
+## (career-fair demo, docs/DEMO.md) The demo: its four medals, the right ear's match in the green,
+## no next day on the paper and "Next visitor" (the ears are checked like any visit's).
+func _check_demo(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var medals: Dictionary = _summary.get("medals", {})
+	for m: String in ["history", "otoscopy", "earphones", "match"]:
+		if not medals.has(m):
+			problems.append("demo: no %s medal (the beat never finished)" % m)
+	var errs := {}
+	for b: Dictionary in (res.get("fitting", {}) as Dictionary).get("bands", []):
+		errs[str(b.get("freq", 0))] = int(b.get("err", 99))
+		if absi(int(b.get("err", 99))) > 5:
+			problems.append("demo: %s Hz left %+d dB off target" % [str(b.get("freq", 0)), int(b.get("err", 99))])
+	if errs.size() != 3:
+		problems.append("demo: %d matched bands, expected 3" % errs.size())
+	if String(_summary.get("next_chapter_id", "")) != "":
+		problems.append("demo: the paper offers %s next" % _summary.get("next_chapter_id", ""))
+	if String(_summary.get("continue_text", "")) != "Next visitor":
+		problems.append("demo: the paper's button says %s" % _summary.get("continue_text", ""))
+	report["demo"] = {"medals": medals, "errs": errs}
 
 
 ## (v3) Bone / masked sheets: every stamp within 10 dB of the truth; on Day 2 the right ear must

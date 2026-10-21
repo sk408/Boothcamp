@@ -2,8 +2,9 @@ extends RefCounted
 ## (Day 14) The Daily Decibel's sports column for the fitting: THE FITTING CARD (docs/FITTING.md §3).
 ## daily_decibel.gd loads this script from the summary's "sports_script" and calls
 ## build(c2, audiometry, summary). One row per band of the right ear (Band . Target . Fit . Off by .
-## Result), then the moves against par, the style and how many picks it took, the left ear (Hoot's),
-## a tip and Hoot's line. Every number comes from the visit's "fitting" results.
+## Result), then the moves against par, the style and how many picks it took, one line for the probe
+## tube, the loud limit and the talk, the left ear (Hoot's), a tip and Hoot's line. Every number comes
+## from the visit's "fitting" results.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const PaperWordGolf := preload("res://story/papers/paper_word_golf.gd")
@@ -76,6 +77,10 @@ static func lines(fit: Dictionary) -> Array[String]:
 	out.append("Moves: %d, par %d: %s" % [moves, par, golf_word(moves, par)])
 	var tries := clampi(int(fit.get("style_tries", 1)), 1, PICKS.size())
 	out.append("Style: %s (%s)." % [String(STYLE_NAMES.get(String(fit.get("style", "")), "open fit")), PICKS[tries - 1]])
+	if fit.has("probe_mistakes"):
+		var drops := int(fit.get("loud_drops", 1))
+		out.append("Tube: %s. Loud limit: %s. Talk: three of three, %s." % [_slips(int(fit["probe_mistakes"]), "first try"),
+			"first drop" if drops <= 1 else "%d drops" % drops, _slips(int(fit.get("counsel_slips", 0)), "no slips")])
 	var over: Array = fit.get("overshoots", [])
 	if not over.is_empty():
 		var kinds: Array[String] = []
@@ -87,6 +92,12 @@ static func lines(fit: Dictionary) -> Array[String]:
 	out.append(TIP)
 	out.append(HOOT_SAYS)
 	return out
+
+
+static func _slips(n: int, none: String) -> String:
+	if n <= 0:
+		return none
+	return "1 slip" if n == 1 else "%d slips" % n
 
 
 static func _table(fit: Dictionary) -> GridContainer:

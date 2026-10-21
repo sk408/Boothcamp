@@ -166,3 +166,8 @@ optional and additive:
 - **(C13, done, small) `SpeechScreen.run_hidden` names the patient.** Only `start_test` set the bubble's speaker, so a
   hidden run before any `start_test` (Day 5's montage, the cases' words check) labelled the bubble "Mike says".
   `run_hidden` now sets it from `patient.short_name()` too. Nothing else changes.
+- **(Career-fair demo, done, small) Plan key `montage_after`.** On a quick visit, when the player's stamps run out
+  (`hoot_turn_after`), Hoot fills in the rest of the ear in a montage instead of the x8 turn, saying the plan's
+  `hoot_turn_text` (default "Nice work! I'll fill in the rest in a flash."). Both places that started Hoot's
+  turn now call `_hoot_takes_over()`, which starts the x8 turn exactly as before unless the plan has the key, so
+  every existing plan plays as it did. Used by `story/level_demo.gd`'s right ear (docs/DEMO.md).

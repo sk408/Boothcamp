@@ -122,3 +122,13 @@ Examples: `speech_right_wrs_words_1_first_word`, `speech_left_wrs_words_3_stored
 
 `tools/autoplay_check.sh --day=4` and `--day=5`, each with keys, with `--mouse`, with `--via-days --pick=nora` /
 `--pick=marco` (and `--save=<abs path>`), and once with `--full` (Day 5: Hoot's SRT and WRS stay his).
+
+## The career-fair demo (cases branch; docs/DEMO.md, CONTRACTS.md §14)
+
+- `_finish()` calls `_check_demo` when the summary has `demo: true`: the four medals (history, otoscopy,
+  earphones, match), each of the right ear's three bands within 5 dB (`audiometry.fitting.bands`), an empty
+  `next_chapter_id` and the continue text "Next visitor". The ears are checked like any visit's. The report gains
+  `demo` {medals, errs}.
+- Runs to add to the checks: `tools/autoplay_check.sh --demo` and `--demo --mouse --seed=3`.
+- `tools/export_win.sh` puts `tools/booth/BoothCamp-Demo.cmd` in the delivery zip (it starts the exe with
+  `-- --demo`).

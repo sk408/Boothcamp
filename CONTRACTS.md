@@ -161,6 +161,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `finish_visit() -> Dictionary` | Scores the visit, awards coins, saves, and returns the summary (§5.3). Called once, on results (**(cases)** a case with a retest calls it just before the retest, §11). |
 | `add_coins(n)`, `has_upgrade(id)`, `buy_upgrade(id, cost) -> bool` | Shop |
 | `cli: Dictionary`, `cli_flag(name)`, `cli_value(name, default)`, `is_autoplay()` | User args after `--` (§7.1) |
+| **(demo)** `is_demo()`, `reset_demo_visitor()`, `DEMO_SAVE_PATH`, `WEB_FLAGS` | The career-fair demo (§14): `--demo`, or `?demo` in the web page's address (only the names in `WEB_FLAGS` are read from it). Its own save `user://demo_save.json` (after `--autoplay` and `--scene=`; `--save=` wins); quick visit forced unless `--full`. `reset_demo_visitor()` puts `progress` back to `DEFAULT_PROGRESS` and keeps `settings` |
 | `rng: RandomNumberGenerator` | Seeded (`--seed`, default 1234 in autoplay). Use it for anything that should replay the same way. |
 | `clock: float` | Game seconds. Pauses with the tree and follows `Engine.time_scale`. |
 | `PHASES` | Phase ids (§3.1). **(v4)** adds `explainer` and `ghost_demo`; **(Speech)** `familiarize`, `speech` (§9.8); **(cases)** `tymp`, `decision` (§11) |
@@ -353,6 +354,8 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `speech` **(Speech)** | SPEECH screen (§9.7) | {ear, test, action, mouse: {click: anchor}}; solver sends the recommended action |
 | `familiarize_cards`, `objection_present` **(Speech)** | level_mike (§9.8) | {mouse}; {targets, mouse: {drag: [clue, target]}} |
 | `fitting_target` **(Day 14)** | level_fitting (target match, §13) | {}; solver raises each band straight to its target (one move each) and presses Done |
+| `probe_tube` **(Day 14)** | level_fitting (probe tube, §13) | {}; solver slides the tube straight into the zone (within 5 mm of the eardrum) and locks it |
+| `loud_check` **(Day 14)** | level_fitting (loud-sound check, §13) | {}; solver turns the loud limit straight to the right notch and drops the pan once |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -561,6 +564,7 @@ How the screen behaves:
 | `intro`, `hoot_turn_text`, `done_title` | Hoot's opening tip, his take-over line, the quest panel's done title |
 | `intro_full` **(polish)** | the opening tip used instead of `intro` when quick visit is off (no "I'll run the rest") |
 | `montage` **(polish)** | with quick visit and `hoot_turn_after` 0: Hoot fills the ear as a stamp montage (`AudiometrySession.instant_measure`, no tones played, input locked, scoring off) instead of the x8 turn |
+| `montage_after` **(demo)** | with quick visit: when the player's `hoot_turn_after` stamps run out, Hoot fills in the rest of the ear as a montage (as `montage` does) instead of the x8 turn, saying `hoot_turn_text` (default "Nice work! I'll fill in the rest in a flash."). Plans without it are unchanged (§14) |
 | `skip_hoot_retest` **(polish)** | Hoot's turn / montage waives the 1 kHz retest of that ear (`session.retest_waived`); the player's own runs still need it. (E2) Only the first air ear of a visit owes the retest anyway. (FS-07) The waiver lasts for that ear for the rest of the session: a later air run on it, whoever runs it, owes no retest, so a non-air plan never sets it |
 | `nothing_title` **(polish)** | the done title when the goal sheet needs nothing (default "NOTHING TO MASK!") |
 | `start_db` **(polish)** | the first level of a non-air plan instead of the textbook start (Day 2's optional 250 Hz bone "bonus hole" starts at 40, so the vibrotactile tickle lands) |
@@ -1060,6 +1064,8 @@ New kinds go through `world/INTEGRATION_NOTES.md`.
 | `--unlock-all` **(v3)** | **(polish)** accepted and ignored: every chapter is always open |
 | `--keep-save` **(v3, integrator)** | with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 with the same `--save=`) |
 | `--upgrades=a,b` **(polish)** | own these shop items for this run (e.g. `insert_earphones`), after the save reset |
+| `--demo` **(demo)** | the career-fair demo (§14, docs/DEMO.md); on the web, `?demo` in the page's address |
+| `--attract-after=N` **(demo)** | with `--demo`: the title's attract loop starts after N seconds with nobody there (default 30) |
 | `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days must be on the grid, in that order; other days may sit between or after them), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
 
 ### §7.2 What the bot relies on (must keep working)
@@ -3791,7 +3797,26 @@ has its own patient id because `Game.chapter_for_patient` returns the first matc
 the chapter id is the patient id, as on every day (tests begin a visit by chapter id).
 The clinic draws Gus by default (no `patient_id` set).
 
-**Phases.** `intro`, `aid_style` (new), `real_ear` (new), `fitting` (the payoff), `results`.
+**Phases.** `intro`, `aid_style` (new), `probe_tube` (new), `real_ear` (new), `loud_check` (new), `fitting` (the
+payoff), `counselling` (what to tell Gus; Days 4-5's phase), `results`.
+
+**The probe tube** (`story/games/probe_tube.gd`, `ProbeTube`): the beat `probe_tube` (§3.2), before the aids go
+in. The tip starts 17 mm from the eardrum and moves 3 mm a step; it locks within 5 mm (`zone_of(mm)`: "shallow",
+"zone", "touch"). Statics `dip_hz(mm)` (a quarter wavelength from the drum) and `reading_error(mm, freq)` draw
+what the probe mic reads. `result()` = {ear, depth, mistakes, shallow, touched}. Signals `touched` (the first
+touch only; the level takes a comfort point) and `mistake(kind)`. For the mouse bot: `presses_needed()`,
+`in_button()`, `lock_button()`.
+
+**The loud-sound check** (`story/games/loud_check.gd`, `LoudCheck`): the beat `loud_check` (§3.2), after the
+match. A five-notch loud limit; the first drop plays by itself at notch 4 and stings; notch 3 is right
+(`verdict(n)`: "squashed", "right", "ouch"). The clang always plays at the same quiet level (AudioSafety: the
+loudness is only drawn). `result()` = {notch, drops, squashed, ouch}. Signals `ouch` (the first drop at notch 5
+only; the level takes a comfort point) and `dropped(notch)`. For the mouse bot: `presses_needed()`,
+`turn_button(up)`, `drop_button()`.
+
+**The counselling** (`LevelFitting.COUNSEL`): a choice loop that ends when the three right tips of five are found
+(all-day wear, a few weeks to get used to sound, a follow-up to fine-tune); a wrong pick gets Gus's line and
+Hoot's correction and leaves the list.
 
 **The target match** (`story/games/target_match.gd`, `TargetMatch`): the beat `fitting_target` (§3.2). Statics, all
 tested: `target_gain(thresholds, freq)` (a public textbook formula standing in for the fitting software's
@@ -3802,13 +3827,53 @@ accuracy, efficiency}. Signals `matched_changed(count)` (the level sets `set_wor
 `overshoot(kind)` (the first of each kind; the level takes a comfort point). For the mouse bot:
 `presses_needed(i)`, `arrow_button(i, up)`, `done_button()`.
 
-**Results.** `Game.set_audiometry_results(LevelFitting.results_for(right, style_tries, left))`: accuracy, technique
-(0.6 style + 0.4 clean), efficiency, and `fitting` (the right ear's result plus style, style_tries, left_by_hoot,
-left). No `ears`: the bot checks the fitting instead (`_check_fitting`: every band within 5 dB, the open style,
-Hoot's left ear). The summary carries its own headlines, subheads, medal_beats (style, match), weather and
-`sports_script` (`story/papers/paper_fitting.gd`, THE FITTING CARD).
+**Results.** `Game.set_audiometry_results(LevelFitting.results_for(right, picks, left))`, stored after the match
+and again after the loud check and the counselling. picks = {style_tries, probe_mistakes, loud_drops,
+counsel_slips}. Accuracy, technique (`TECHNIQUE_WEIGHTS`: 0.25 style + 0.2 probe + 0.2 loud + 0.15 counsel + 0.2
+clean; each slip part is 1.0 right first time, 0.5 after one slip, 0.2 after more), efficiency, and `fitting` (the
+right ear's result plus style, style_tries, probe_mistakes, loud_drops, counsel_slips, left_by_hoot, left). No
+`ears`: the bot checks the fitting instead (`_check_fitting`: every band within 5 dB, the open style, Hoot's left
+ear, and a probe, loud and counsel medal). The summary carries its own headlines, subheads, medal_beats (style,
+probe, match, loud, counsel), weather and `sports_script` (`story/papers/paper_fitting.gd`, THE FITTING CARD).
 
 **Tests.** `story/tests/test_fitting.gd`: the chapter and its patient, the prescription for Gus, what Gus hears,
 the band and move scores, the first guess and par, the Done gate, the bot's solver at par, overshoots once per
 kind, the keys, the visit's results and paper, the style options (unique bot prefixes, similar lengths) and
-Hoot's lines at 18 words or fewer.
+Hoot's lines at 18 words or fewer; the probe tube's zone, mic dip, solver, mistakes and keys; the loud check's
+verdicts, solver and slips; the technique weights and parts; the counselling options and lines.
+
+## §14 The career-fair demo (docs/DEMO.md)
+
+`--demo` (or `?demo` in the web page's address) turns on `Game.is_demo()`. The title (`story/title_screen.gd`) then
+shows one Play button (`_on_demo_start()`, the `title_start` solver) that goes to `TitleScreen.DEMO_SCENE`
+(`res://story/level_demo.tscn`), with `DEMO_TAGLINE` under it; no Days, modes, Options, New player, Quit, movies
+button or stats. The safety notice shows for every visitor, and each title calls `Game.reset_demo_visitor()`.
+
+`story/level_demo.gd` (`LevelDemo`) plays patient `gus` (chapter `gus` in the demo's own save) in six HUD steps
+(chat, peek, phones, beeps, chart, fit) with existing phases and beats only: Day 1's first history round
+(`LevelGus.HISTORY[0]`), otoscopy, earphones and reveal; the right ear coached with `RIGHT_PLAN`
+(`hoot_turn_after` 2, `montage_after`), the left with `LEFT_PLAN` (`hoot_turn_after` 0, `montage`); Day 14's
+TargetMatch on the right ear (`real_ear` phase, beat `fitting_target`) and Hoot's left ear. Medals: history,
+otoscopy, earphones, match. The results are the audiometry results plus `fitting` (the right ear's match).
+`LevelDemo.apply_summary(summary)` adds `demo: true`, headlines, subheads, medal_beats, weather,
+`next_chapter_id: ""` and `continue_text: "Next visitor"`. The paper's "again" replays the demo; anything else goes
+to the title. An inner `Watchdog` (PROCESS_MODE_ALWAYS, real time) sends the demo to the title after
+`IDLE_RESET_S` (120 s) without input; never under autoplay.
+
+**The paper** (`story/daily_decibel.gd`, additive): a summary with `demo: true` hides the Decibucks and the shop
+(B buys nothing) and moves the WANTED ad into their place on the bottom row, next to the buttons.
+
+**The attract loop** (`story/demo_attract.gd`, `DemoAttract`, a Control the title adds in demo mode, never under
+autoplay): after `TitleScreen.attract_after()` seconds (`ATTRACT_S` = 30, or `--attract-after=N`) with nobody at the
+title (menu or notice state, not paused), `start()` fades in over the clinic, hiding the menu and the notice: Hoot
+(waving) and Gus, Hoot's `LINES` one every `LINE_S` (4.5 s) round and round, `PROMPT` ("Press a key or click to
+play") pulsing, and the tagline; the safety footer stays uncovered. Any key, click or mouse movement of
+`MOTION_MIN_PX` (6 screen px) or more ends it (the event is consumed) and emits `dismissed`; the title then shows the
+safety notice. Silent; reduced motion calms the bob, wave and pulse.
+
+**Bot.** `_check_demo` (when the summary has `demo: true`): the four medals, each band within 5 dB, no next day,
+"Next visitor"; the ears are checked as usual. **Tests.** `story/tests/test_demo.gd`: the flag and the web address
+(only `WEB_FLAGS`), the visitor reset keeping settings, the Play-only title, the scene and plans, the paper, Hoot's
+lines at 18 words or fewer, and `montage_after` (a montage after two stamps, no x8, every hole stamped);
+**(demo polish)** the paper without Decibucks or shop, the attract loop (starts with nobody there, a mouse nudge
+leaves it, a key ends it with the notice) and no attract loop outside demo mode or under autoplay.

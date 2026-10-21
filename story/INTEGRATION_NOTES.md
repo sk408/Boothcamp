@@ -350,5 +350,36 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **The Daily Decibel**, used as is: the summary's headlines, subheads, medal_beats, weather and
   `sports_script` (`story/papers/paper_fitting.gd`).
 - **No new data files** (a .tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
-- **PR 2** (later): the probe-tube placement, the loud-sound check and the counselling choice.
+- **PR 2** (the probe tube, the loud-sound check, the counselling): **Game.PHASES** gains `probe_tube` and
+  `loud_check` (additive; the counselling uses Days 4-5's `counselling`). **New beats** `probe_tube` and
+  `loud_check` (CONTRACTS.md §3.2), each with a mouse route in the bot (the In button then Lock; the dial's - or
+  + then Drop). `_check_fitting` also wants a probe, loud and counsel medal; the report gains probe_mistakes,
+  loud_drops and counsel_slips. `LevelFitting.results_for(right, picks, left)` now takes a picks dictionary.
+  Still no new data files.
 
+
+## The career-fair demo (cases branch; docs/DEMO.md, CONTRACTS.md §14)
+
+- **Game** (additive): `is_demo()` (`--demo`, or `?demo` in the web page's address: `_parse_cli()` reads
+  `window.location.search` on the web only, and only the names in `WEB_FLAGS`), `reset_demo_visitor()`
+  (progress back to `DEFAULT_PROGRESS`, settings kept), `DEMO_SAVE_PATH` (`user://demo_save.json`, after autoplay
+  and `--scene=` in the save-path order; `--save=` still wins). Demo mode sets `cli["quick"]` unless `--full`.
+- **title_screen.gd** (additive): in demo mode the menu is one Play button (`_on_demo_start()`, the `title_start`
+  solver, goes to `DEMO_SCENE` = `res://story/level_demo.tscn`), with `DEMO_TAGLINE` under it, no movies button
+  and no stats; the safety notice shows for every visitor; `_ready()` calls `Game.reset_demo_visitor()`. Outside
+  demo mode nothing changes.
+- **New level** `story/level_demo.gd` (patient `gus`, so it scores as Day 1 in the demo's own save). Reuses
+  `LevelGus.HISTORY[0]`, Day 1's otoscopy, earphones and reveal, and Day 14's TargetMatch and
+  `LevelFitting.match_medal` / `SAT_BY_MATCHED`, unchanged. Phases: intro, history, otoscopy, earphones,
+  audiometry, reveal, real_ear, results (all existing). No new beats.
+- **Audiometer plan key** `montage_after` (ui/INTEGRATION_NOTES.md).
+- **tools/autoplay_bot.gd** (additive): `_check_demo` when the summary has `demo: true` (the four medals, the
+  right ear's bands within 5 dB, no next day, "Next visitor"); the report gains `demo` {medals, errs}.
+- **tools/export_win.sh**: the delivery zip also carries `BoothCamp-Demo.cmd` (from `tools/booth/`). Steve's
+  build folder needs it next to `BoothCamp.exe` to start the demo with a double-click.
+- **No new data files** (.gd, .tscn and a .cmd outside the export), so the Web preset needs nothing.
+- **(demo polish)** **daily_decibel.gd** (additive): a summary with `demo: true` hides the coins and the shop (B buys
+  nothing) and moves the WANTED ad to the bottom row. **title_screen.gd** (additive): in demo mode (not under
+  autoplay) the title adds `story/demo_attract.gd` and starts it after `attract_after()` seconds with nobody there
+  (`ATTRACT_S` 30, `--attract-after=N`), hiding the menu and the notice; a key, click or mouse movement ends it and the
+  notice shows. CONTRACTS.md §14.

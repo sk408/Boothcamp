@@ -9,6 +9,11 @@ extends Node
 const SAVE_VERSION := 1
 const DEFAULT_SAVE_PATH := "user://save.json"
 const AUTOPLAY_SAVE_PATH := "user://save_autoplay.json"
+## (career-fair demo, docs/DEMO.md) --demo (or ?demo in the web page's address): its own save, so a
+## booth never touches a player's progress.
+const DEMO_SAVE_PATH := "user://demo_save.json"
+## The page-address flags the web build reads (?demo); anything else in the address is ignored.
+const WEB_FLAGS: PackedStringArray = ["demo"]
 const PATIENT_DIR := "res://core/patients/"
 ## (Clinical review D1-7) Visit flag: a safety slip in the story; finish_visit() caps the grade at A.
 const NO_S_FLAG := "no_s_grade"
@@ -33,6 +38,8 @@ const PHASES: Array[StringName] = [
 	&"counselling",
 	# the fitting (Day 14, docs/FITTING.md): picking the aid style, matching the target in the real ear
 	&"aid_style", &"real_ear",
+	# the fitting, PR 2: placing the probe tube, the loud-sound check (the counselling uses &"counselling")
+	&"probe_tube", &"loud_check",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -150,6 +157,10 @@ func _ready() -> void:
 		save_path = AUTOPLAY_SAVE_PATH
 	elif cli.has("scene"):
 		save_path = "user://save_scene.json"  # dev scene runs (monkey, shots) never touch the player's save
+	elif is_demo():
+		save_path = DEMO_SAVE_PATH
+	if is_demo() and not cli.has("full"):
+		cli["quick"] = true   # (demo) Hoot always takes his turn: the visit fits a booth stop
 	if cli.has("save"):
 		save_path = String(cli["save"])
 	# --keep-save (integrator): an autoplay run that continues an earlier run's save (Day 1 then Day 2)
@@ -228,6 +239,20 @@ func _parse_cli() -> void:
 			cli[body.substr(0, eq)] = body.substr(eq + 1)
 		else:
 			cli[body] = true
+	if OS.has_feature("web"):
+		var search: Variant = JavaScriptBridge.eval("window.location.search", true)
+		if search is String:
+			_parse_web_query(search)
+
+
+## (demo) The web build has no command line: "?demo" (or "?demo=1&...") in the page's address sets
+## the WEB_FLAGS it names. A flag already set stays as it is.
+func _parse_web_query(search: String) -> void:
+	for part: String in search.trim_prefix("?").split("&", false):
+		var eq := part.find("=")
+		var key := part.substr(0, eq) if eq >= 0 else part
+		if key in WEB_FLAGS and not cli.has(key):
+			cli[key] = part.substr(eq + 1) if eq >= 0 else true
 
 
 func cli_flag(name: String) -> bool:
@@ -246,6 +271,18 @@ func cli_value(name: String, default_value: String = "") -> String:
 
 func is_autoplay() -> bool:
 	return cli_flag("autoplay")
+
+
+## (career-fair demo, docs/DEMO.md) The short booth version: --demo, or ?demo on the web.
+func is_demo() -> bool:
+	return cli_flag("demo")
+
+
+## (demo) A fresh start for the next visitor: every record and coin goes, the settings stay (the
+## booth's volume and key style).
+func reset_demo_visitor() -> void:
+	progress = DEFAULT_PROGRESS.duplicate(true)
+	save_game()
 
 
 # ---------------------------------------------------------------- settings

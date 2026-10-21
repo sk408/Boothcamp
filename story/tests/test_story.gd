@@ -1,6 +1,6 @@
 extends TestCase
 ## Story (story/): dialogue box keys + solvers, mini-game solvers, Hoot bubble, pause menu,
-## results paper, title beats and the voice synth's safety ceiling.
+## results paper, title beats, the voice synth's safety ceiling and Hoot's line length on Days 1-2.
 
 const Otoscopy := preload("res://story/games/otoscopy.gd")
 const Evidence := preload("res://story/games/evidence.gd")
@@ -476,3 +476,19 @@ func test_title_day3_card_face() -> void:
 	var mike := Game.chapter("mike")
 	assert_eq(ts.call("card_face", mike), "Mike")
 	assert_eq(ts.call("card_tint", mike), Color("#fff0a6"))
+
+
+## Hoot's lines on Days 1 and 2 stay at 18 words or fewer (a reader's count; "%s" is one word).
+func test_day1_and_day2_hoot_lines_are_short() -> void:
+	var re := RegEx.create_from_string("_say\\(\"Hoot\", \"((?:[^\"\\\\]|\\\\.)*)\"")
+	var letters := RegEx.create_from_string("[A-Za-z0-9]")
+	for path: String in ["res://story/level_gus.gd", "res://story/level_bonnie.gd"]:
+		var found := 0
+		for m: RegExMatch in re.search_all(FileAccess.get_file_as_string(path)):
+			found += 1
+			var words := 0
+			for w: String in m.get_string(1).split(" ", false):
+				if letters.search(w) != null:
+					words += 1
+			assert_true(words <= 18, "%s, %d words: %s" % [path.get_file(), words, m.get_string(1)])
+		assert_true(found >= 20, "found Hoot's lines in %s (%d)" % [path.get_file(), found])
