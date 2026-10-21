@@ -31,6 +31,8 @@ const PHASES: Array[StringName] = [
 	&"freestyle_room", &"freestyle_tray", &"freestyle_chart", &"freestyle_debrief",
 	# Speech, Days 4-5 (CONTRACTS.md §9.21): talking the results through with the patient
 	&"counselling",
+	# the fitting (Day 14, docs/FITTING.md): picking the aid style, matching the target in the real ear
+	&"aid_style", &"real_ear",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -73,6 +75,10 @@ const CHAPTERS: Array[Dictionary] = [
 	# (clinical review C9) the masking dilemma: big gaps in both ears
 	{"id": "bev", "day": 13, "title": "Day 13: Bev Bingham", "patient_id": "bev", "teaches": "Case file: the bingo caller",
 		"scene": "res://story/level_case.tscn", "requires": "morgan", "case": "bilateral_conductive", "face": "Bev", "tint": Color("#f3e1ff")},
+	# the finale (docs/FITTING.md): Gus comes back for his hearing aids. Its own patient (gus_fit, Gus's
+	# thresholds), because chapter_for_patient("gus") is Day 1; the chapter id is the patient id, as on every day
+	{"id": "gus_fit", "day": 14, "title": "Day 14: Gus's Fitting", "patient_id": "gus_fit", "teaches": "Fitting the hearing aids",
+		"scene": "res://story/level_fitting.tscn", "requires": "bev", "face": "Gus", "tint": Color("#c9f0dc")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to

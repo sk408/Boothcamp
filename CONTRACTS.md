@@ -352,6 +352,7 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `referral_stamp` **(v3)** | level_bonnie (Day 2 board) | {targets: ["referral_stamp"]}; solver stamps. **(Speech)** level_mike reuses it |
 | `speech` **(Speech)** | SPEECH screen (§9.7) | {ear, test, action, mouse: {click: anchor}}; solver sends the recommended action |
 | `familiarize_cards`, `objection_present` **(Speech)** | level_mike (§9.8) | {mouse}; {targets, mouse: {drag: [clue, target]}} |
+| `fitting_target` **(Day 14)** | level_fitting (target match, §13) | {}; solver raises each band straight to its target (one move each) and presses Done |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -3774,3 +3775,33 @@ screen, an unmasked gap is never an accepted chart type, the title's menu ends a
 frequency leaves 20 dB between the starting noise and the overmasking line on headphones, no true bone reaches
 55 dB at 500 Hz, the debrief's extra lines go where they belong, a visit's pause menu offers the masking movie
 after a day with its own movie, and Hoot's bone montage before air leaves the first air ear its 1 kHz retest.
+
+## §13 The fitting (Day 14, the finale; docs/FITTING.md)
+
+Gus comes back for his hearing aids. `story/level_fitting.gd` (scene `res://story/level_fitting.tscn`) plays the
+chapter `gus_fit` with the patient `gus_fit` (`core/patients/gus_fit.tres`: Gus's own thresholds, bone = air). It
+has its own patient id because `Game.chapter_for_patient` returns the first match, so `gus` would score as Day 1;
+the chapter id is the patient id, as on every day (tests begin a visit by chapter id).
+The clinic draws Gus by default (no `patient_id` set).
+
+**Phases.** `intro`, `aid_style` (new), `real_ear` (new), `fitting` (the payoff), `results`.
+
+**The target match** (`story/games/target_match.gd`, `TargetMatch`): the beat `fitting_target` (§3.2). Statics, all
+tested: `target_gain(thresholds, freq)` (a public textbook formula standing in for the fitting software's
+prescription; play never names it), `targets(thresholds)` (1k, 2k, 4k, whole dB), `heard(line, matched)` (the
+sounds of unmatched bands become "_"), `band_accuracy(err)`, `efficiency(moves, par)`, `curve_at(f, gains)`.
+`result()` = {ear, bands: [{freq, target, start, final, err}], moves, par, overshoots ("loud" / "whistle"),
+accuracy, efficiency}. Signals `matched_changed(count)` (the level sets `set_world_saturation`) and
+`overshoot(kind)` (the first of each kind; the level takes a comfort point). For the mouse bot:
+`presses_needed(i)`, `arrow_button(i, up)`, `done_button()`.
+
+**Results.** `Game.set_audiometry_results(LevelFitting.results_for(right, style_tries, left))`: accuracy, technique
+(0.6 style + 0.4 clean), efficiency, and `fitting` (the right ear's result plus style, style_tries, left_by_hoot,
+left). No `ears`: the bot checks the fitting instead (`_check_fitting`: every band within 5 dB, the open style,
+Hoot's left ear). The summary carries its own headlines, subheads, medal_beats (style, match), weather and
+`sports_script` (`story/papers/paper_fitting.gd`, THE FITTING CARD).
+
+**Tests.** `story/tests/test_fitting.gd`: the chapter and its patient, the prescription for Gus, what Gus hears,
+the band and move scores, the first guess and par, the Done gate, the bot's solver at par, overshoots once per
+kind, the keys, the visit's results and paper, the style options (unique bot prefixes, similar lengths) and
+Hoot's lines at 18 words or fewer.

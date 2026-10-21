@@ -324,3 +324,21 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   carries the alarm-clock card (anchor `desk_sudden`; `desk_prove` can now carry target {kind: "sudden"}), two
   missed same-day patients close the desk, and `ArcadeScores.BOARD_SEEDS` gains `ears_please:table_3`. No shared
   file changes and no new data files.
+
+## The fitting (Day 14; cases branch; docs/FITTING.md, CONTRACTS.md §13)
+
+- **Game.CHAPTERS** gains `gus_fit` (Day 14, patient `gus_fit`: chapter id = patient id, `requires: "bev"`, face Gus). **Game.PHASES** gains
+  `aid_style` and `real_ear`. Both additive, after every existing entry.
+- **New beat** `fitting_target` (CONTRACTS.md §3.2 table): info {}, the solver matches each band in one move and
+  presses Done.
+- **tools/autoplay_bot.gd** (additive): the mouse route for `fitting_target` (each band's + or - button, then
+  Done), and on the `gus_fit` chapter `_check_fitting` replaces the per-ear check (the day tests no ears). The
+  report gains `fitting` {errs, moves, par, style_tries, overshoots, medals}.
+- **Clinic**, used as is: `put_on_hearing_aids`, `set_world_saturation` (0 to 1 as bands match; the last one
+  crosses 0.6, which plays the birdsong), `doris_enter`, `doris_react`, `gus_look`, the `fitting` and
+  `fitting_close` shots.
+- **The Daily Decibel**, used as is: the summary's headlines, subheads, medal_beats, weather and
+  `sports_script` (`story/papers/paper_fitting.gd`).
+- **No new data files** (a .tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
+- **PR 2** (later): the probe-tube placement, the loud-sound check and the counselling choice.
+
