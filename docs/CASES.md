@@ -240,6 +240,14 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
   plateau (a player who owns inserts and gets a bone stamp of 15 at 500 Hz and 1 kHz), Hoot says the case's
   `on_dilemma` lines (once; also for a player who owns inserts), then, if the player owns none, lends his inserts
   for the rest of the visit (`LEND_INSERTS`; never the save's upgrades, never into wax).
+- Hoot's dilemma movie (`dilemma_movie`, question 26): right after those lines and before the loan, while it is
+  unwatched, **Hoot:** "Both ears blocked: a real puzzle! A quick cartoon on why, then back to work." and "The
+  Masking Dilemma" (79 s; Esc skips it, and it comes back on the next visit until watched to its purple ? scene).
+  Two corks in the head: air needs 55 at 1k, bone shows 10; the noise must reach the other ear's air + 10 = 65, and
+  65 - 40 = 25 crosses back over Righty's 10 (hushed); the window chart: enough from 65, hushed from 50, no room;
+  inserts thicken the wall to 55 and open 55 to 75 at 2k (room for a plateau); Bev's chart gets the purple ? at 500
+  and 1k ("the test's limit, not her ears'"). Every number is the game's own rule on Bev's truth
+  (`test_dilemma_movie_numbers_match_the_rules`). Replays: Day 13's pause menu and the title, as "Day 13".
 - Masked air: the air was measured through headphones before the loan, and each air stamp is judged by its own
   earphone's rule (`ClinicRules.masked_freqs_needed`), so 500 Hz and 1 kHz need masked air (55 - 40 >= 10). Run
   through the lent inserts, those are dilemmas too (initial 65, limit 65): a purple ? at the air level. A player who
@@ -539,7 +547,9 @@ some people choose an operation; Carhart's notch named; doctor first, then back 
     unmasked air through the inserts instead?
 25. The proof card: the gaps (and the 15+ gap red flag). The design accepted "plateau not reached" as support; it is
     a wrong pick here ("Those ? marks show the test's limits, not her ears'"). Agree?
-26. A short dilemma movie (the noise crossing back, inserts making room) stays a later follow-up (the default).
+26. ~~A short dilemma movie stays a later follow-up.~~ Done: Hoot's "The Masking Dilemma" plays on Day 13 before
+    the loan (section 2.8). Its captions and numbers (headphones 40, inserts 55, 65 vs 50 at 1k, 55 to 75 at 2k):
+    keep or change?
 
 **Words before a FIT (clinical review C13 and A4; defaults stand):**
 

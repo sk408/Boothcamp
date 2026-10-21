@@ -3647,6 +3647,11 @@ wax view): before each masked bone test the runner reads the noise window from t
 raises (so before any purple ? can show) it plays `on_dilemma`, then, with
 `lend_inserts` and no inserts owned, lends Hoot's for the rest of the visit (`CaseData.air_transducer(blocked, lent)`,
 `LevelCase.LEND_INSERTS`; never `progress.upgrades`). Visit flags `dilemma_told`, `lent_inserts`.
+**(CASES.md question 26)** `dilemma_movie` (a movie id; needs `on_dilemma` and a registered movie): right after
+`on_dilemma` and before the loan, while that movie is unwatched, the runner's `explainer` phase, Hoot's
+`LevelCase.DILEMMA_MOVIE_LEAD_IN` and the movie (always the lead-in, never an offer; visit flag `movie_<id>`). Day 13
+names `dilemma` (`story/explainers/movies/dilemma.gd`, sets `story/case_movies/dilemma_sets.gd`; chapter `bev`, so
+the replay lists label it "Day 13").
 `findings[].when` `no_plateau` (a masked stamp on either ear carries `plateau_not_reached`; on the truth, an inserts
 window with fewer than `PLATEAU_STEPS` safe raises; `CaseData.no_plateau_shows`); `reveal.plug` `stiff` (the board
 drops a padlocked stirrup into the gap, "STUCK!"); a `gap` reveal with `ear` `both` dims neither ear. After the masked
@@ -3698,7 +3703,8 @@ validate rule and broken file is reported, the retest profile, finding condition
 `merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw; Day 12: the shadow and
 no-response findings, masked bone then masked air to no response with phones and inserts, and the known-cause FIT;
 Day 13: the dilemma windows under any single wobble, masked air by each stamp's transducer, the loan, and Bev's
-findings on the truth and on a clean run. `tools/run_tests.sh` also
+findings on the truth and on a clean run; the dilemma movie valid, quiet, listed as "Day 13", drawing every scene,
+and every number it shows equal to the rules on Bev's truth. `tools/run_tests.sh` also
 fails when `docs/CASE_SCRIPTS.md` is stale.
 
 ---------------------------------------------------------------------------------------------

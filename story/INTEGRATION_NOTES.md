@@ -219,6 +219,14 @@ Requests for the integrator and the title owner:
   `tools/monkey.gd` mirrors the loan. The case movies list Bev. `story/games/case_props.gd`: a wax-jar sparkle under
   a pixel wide is skipped (its star polygon could fail to triangulate, an engine error that flaked
   `test_new_gadgets_draw_every_view`).
+- **Day 13's dilemma movie (CASES.md question 26).** Hoot's "The Masking Dilemma"
+  (`story/explainers/movies/dilemma.gd`, its own sets in `story/case_movies/dilemma_sets.gd`) plays after Bev's
+  `on_dilemma` lines and before the loan, while unwatched. Shared files, additive: one line in `Movies.MOVIES`; a
+  case key `dilemma_movie` (`CaseData.TOP_TYPES`, validated: needs `on_dilemma`, a registered movie; case_data.gd
+  now preloads movies.gd); `LevelCase._movie(id, lead_in)` takes an optional lead-in (always played, never an
+  offer) and `DILEMMA_MOVIE_LEAD_IN`; `tools/autoplay_bot.gd` `_check_dilemma_case` also checks the movie started
+  on a fresh save. Its chapter is `bev`, so it is not one of the "Days 6-13" case movies (`CASE_MOVIES` keeps its
+  three) and the masking-level pause menus list it with the others. No new data files: the Web preset needs nothing.
 - **Words before a FIT (clinical review C13 and A4).** A case with `speech_check` (`{"ears": [...], "after": script}`;
   Rocco and Ginger) adds the HUD's Words step after the tones: Hoot runs the SRT and a word score on each ear, then
   one unaided Party Noise Test list (`SpeechRules.SIN_LISTS[0]`, slot `both`), with `SpeechScreen.run_hidden` (Day 5's

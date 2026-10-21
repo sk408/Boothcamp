@@ -1035,6 +1035,7 @@ Question: **What type are both of Bev's tympanograms?** (A / B / C / As, shuffle
 - Before the first masked bone test that would open in a masking dilemma or with no room for a plateau (the stamps say the safe noise is too weak), once:
   - **Hoot:** Wait. Her other ear needs loud noise to mask it. Loud enough to cross right back!
   - **Hoot:** Then the noise hushes the very ear we're testing. That's the masking dilemma!
+  - While Hoot's `dilemma` movie is unwatched: **Hoot:** Both ears blocked: a real puzzle! A quick cartoon on why, then back to work. Then the movie (Esc skips it; replay from the pause menu or the title).
   - When the player owns no inserts, Hoot lends his for the visit: **Hoot:** Headphones leak too much noise for this. Borrow my insert earphones today: a deeper seal.
 - Then masked bone and masked air wherever the rules ask (Hoot). When masked bone ran and no ear needed masked air: **Hoot:** At these levels, air tones can't cross the head. Only bone needed masking today!
 - When Hoot stored a masked stamp with no room for a plateau (the purple ?): **Hoot:** Purple ? marks: no safe noise level was left for a plateau. True thresholds may be poorer.
