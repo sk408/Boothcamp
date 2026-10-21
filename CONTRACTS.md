@@ -352,6 +352,7 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `referral_stamp` **(v3)** | level_bonnie (Day 2 board) | {targets: ["referral_stamp"]}; solver stamps. **(Speech)** level_mike reuses it |
 | `speech` **(Speech)** | SPEECH screen (§9.7) | {ear, test, action, mouse: {click: anchor}}; solver sends the recommended action |
 | `familiarize_cards`, `objection_present` **(Speech)** | level_mike (§9.8) | {mouse}; {targets, mouse: {drag: [clue, target]}} |
+| `fitting_target` **(Day 14)** | level_fitting (target match, §13) | {}; solver raises each band straight to its target (one move each) and presses Done |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -3643,13 +3644,19 @@ types an ear with no-response bone dropped (the chart's `hearing_type` reads a d
 **(Day 13, clinical review C9)** `on_dilemma` (a script) and `lend_inserts` (bool; needs `on_dilemma`, never with a
 wax view): before each masked bone test the runner reads the noise window from the stamps
 (`CaseData.bone_mask_window(res, ear, f, masker)` -> `{initial, limit, raises, dilemma}`, mirroring the session;
-`CaseData.dilemma_freqs`); the first time one opens in a masking dilemma it plays `on_dilemma`, then, with
+`CaseData.dilemma_freqs`); the first time one opens in a masking dilemma or with fewer than `PLATEAU_STEPS` safe
+raises (so before any purple ? can show) it plays `on_dilemma`, then, with
 `lend_inserts` and no inserts owned, lends Hoot's for the rest of the visit (`CaseData.air_transducer(blocked, lent)`,
 `LevelCase.LEND_INSERTS`; never `progress.upgrades`). Visit flags `dilemma_told`, `lent_inserts`.
 `findings[].when` `no_plateau` (a masked stamp on either ear carries `plateau_not_reached`; on the truth, an inserts
 window with fewer than `PLATEAU_STEPS` safe raises; `CaseData.no_plateau_shows`); `reveal.plug` `stiff` (the board
 drops a padlocked stirrup into the gap, "STUCK!"); a `gap` reveal with `ear` `both` dims neither ear. After the masked
 tests, when Hoot stored a purple ?, he says `LevelCase.NO_ROOM`.
+**(Clinical review C13, A4)** `speech_check` (`{ears: ["right", "left"] (one or both, default both), after: script}`):
+after the tones and before the reveal, the HUD's Words step: Hoot's SRT and word score (`SpeechRules.WRS_LISTS` in order) on
+each ear, then one unaided Party Noise Test list in both ears, run off-screen (`SpeechScreen.run_hidden`, unscored);
+`LevelCase.speech_lines` / `speech_clues` turn the sheets into Hoot's two lines (`SPEECH_WORDS` or `SPEECH_WORD`,
+`SPEECH_NOISE`) and the cards `words` and `sin`. Used before a FIT call only (Rocco, Ginger).
 `CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
 checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
 the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
@@ -3764,6 +3771,8 @@ Masked bone starts from unmasked bone stamped on either mastoid; with none yet t
 first (no unmasked pre-run on the poorer side). Any test begun before the otoscope looked, bone included, is the
 "look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (an ear with a
 middle-ear part whose truth has the notch, shown by the chart's masked bone) and, on every FIT, that a full fitting also checks words in quiet and in noise.
+(The case days' FITs now run the words check themselves, `speech_check` in section 11; freestyle's FS-13 can follow
+the same pattern: see story/INTEGRATION_NOTES.md.)
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in
@@ -3773,3 +3782,33 @@ screen, an unmasked gap is never an accepted chart type, the title's menu ends a
 frequency leaves 20 dB between the starting noise and the overmasking line on headphones, no true bone reaches
 55 dB at 500 Hz, the debrief's extra lines go where they belong, a visit's pause menu offers the masking movie
 after a day with its own movie, and Hoot's bone montage before air leaves the first air ear its 1 kHz retest.
+
+## §13 The fitting (Day 14, the finale; docs/FITTING.md)
+
+Gus comes back for his hearing aids. `story/level_fitting.gd` (scene `res://story/level_fitting.tscn`) plays the
+chapter `gus_fit` with the patient `gus_fit` (`core/patients/gus_fit.tres`: Gus's own thresholds, bone = air). It
+has its own patient id because `Game.chapter_for_patient` returns the first match, so `gus` would score as Day 1;
+the chapter id is the patient id, as on every day (tests begin a visit by chapter id).
+The clinic draws Gus by default (no `patient_id` set).
+
+**Phases.** `intro`, `aid_style` (new), `real_ear` (new), `fitting` (the payoff), `results`.
+
+**The target match** (`story/games/target_match.gd`, `TargetMatch`): the beat `fitting_target` (§3.2). Statics, all
+tested: `target_gain(thresholds, freq)` (a public textbook formula standing in for the fitting software's
+prescription; play never names it), `targets(thresholds)` (1k, 2k, 4k, whole dB), `heard(line, matched)` (the
+sounds of unmatched bands become "_"), `band_accuracy(err)`, `efficiency(moves, par)`, `curve_at(f, gains)`.
+`result()` = {ear, bands: [{freq, target, start, final, err}], moves, par, overshoots ("loud" / "whistle"),
+accuracy, efficiency}. Signals `matched_changed(count)` (the level sets `set_world_saturation`) and
+`overshoot(kind)` (the first of each kind; the level takes a comfort point). For the mouse bot:
+`presses_needed(i)`, `arrow_button(i, up)`, `done_button()`.
+
+**Results.** `Game.set_audiometry_results(LevelFitting.results_for(right, style_tries, left))`: accuracy, technique
+(0.6 style + 0.4 clean), efficiency, and `fitting` (the right ear's result plus style, style_tries, left_by_hoot,
+left). No `ears`: the bot checks the fitting instead (`_check_fitting`: every band within 5 dB, the open style,
+Hoot's left ear). The summary carries its own headlines, subheads, medal_beats (style, match), weather and
+`sports_script` (`story/papers/paper_fitting.gd`, THE FITTING CARD).
+
+**Tests.** `story/tests/test_fitting.gd`: the chapter and its patient, the prescription for Gus, what Gus hears,
+the band and move scores, the first guess and par, the Done gate, the bot's solver at par, overshoots once per
+kind, the keys, the visit's results and paper, the style options (unique bot prefixes, similar lengths) and
+Hoot's lines at 18 words or fewer.

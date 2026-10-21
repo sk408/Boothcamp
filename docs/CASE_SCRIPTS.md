@@ -93,6 +93,15 @@ After the tests (said when every ear with bone agrees with the case; otherwise *
 
 - **Hoot:** Bone sits right on the air: no gap. Not the middle ear.
 
+### Words before the call (Hoot speed)
+
+- **Hoot:** Words next: a word score in each ear, then the Party Noise Test. Hoot speed!
+- Hoot runs the SRT and a word score on the right and left ears, then one Party Noise Test list, off-screen. From his sheets:
+  - **Hoot:** SRTs match the beeps. Words in quiet: right [R]%, left [L]%. [band]! ("sit near" when an SRT and the beeps disagree)
+  - **Hoot:** Party Noise Test: [loss] dB SNR loss. [Little / Mild / Real / Big] trouble in noise.
+  - Cards: "Words in quiet" and "Party Noise Test" join the case file.
+- **Rocco:** Words at a party? Try hearing them over a drum kit, owl!
+
 ### The chart, the shape question, the reveal
 - **Hoot:** Here's Rocco's chart, trainee. What shape do you see?
 - **Question:** What shape is Rocco's hearing loss?
@@ -128,7 +137,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - **Hoot:** We fit because his hearing trips him up at the pub.
 - **Hoot:** Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year.
 - **Hoot:** Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too.
-- **Hoot:** A full fitting also checks words in each ear.
+- **Hoot:** At the fitting, a tiny mic in his ear checks the aids hit their target.
 - *(hearing aids)*
 - *(patient: cheer)*
 - **Rocco:** Whoa. I can hear the hi-hat AND my bandmates' terrible jokes!
@@ -255,6 +264,7 @@ If the chart and the truth disagree on any of those: **Hoot:** Some stamps wande
 - *(boat)*
 - **Hoot:** Today's chart and the spring one, side by side, sailing to the ear doctor.
 - **Hoot:** I'll ask for an ear doctor appointment this week, not someday.
+- **Hoot:** Now and then the hearing nerve is to blame. A doctor checks, sometimes with a scan.
 - **Hoot:** Hearing drops and doesn't come back? Doctor that day. Weakness, numbness, double vision or slurred speech? Emergency!
 - **Marina:** Aye. And then maybe something for the hearing?
 - **Hoot:** Exactly. Hearing aids can help between spells, once the doctor has had a look.
@@ -470,6 +480,15 @@ After the tests (said when every ear with bone agrees with the case; otherwise *
 
 - **Hoot:** Bone sits right on the air: no gap. Not the middle ear.
 
+### Words before the call (Hoot speed)
+
+- **Hoot:** Words next: a word score in each ear, then the Party Noise Test. Hoot speed!
+- Hoot runs the SRT and a word score on the right and left ears, then one Party Noise Test list, off-screen. From his sheets:
+  - **Hoot:** SRTs match the beeps. Words in quiet: right [R]%, left [L]%. [band]! ("sit near" when an SRT and the beeps disagree)
+  - **Hoot:** Party Noise Test: [loss] dB SNR loss. [Little / Mild / Real / Big] trouble in noise.
+  - Cards: "Words in quiet" and "Party Noise Test" join the case file.
+- **Chip:** Words at a party? Buddy, I AM the party.
+
 ### The chart, the shape question, the reveal
 - **Hoot:** Here's her chart. What shape do you see?
 - **Question:** What shape is Ginger's hearing loss?
@@ -504,7 +523,7 @@ Present the evidence: **Her dad and grandma have it too. Why is it still safe to
 
 ### Payoff
 - **Hoot:** Hearing aids tuned for the middle pitches: right where her bite is.
-- **Hoot:** A full fitting also checks words in each ear.
+- **Hoot:** At the fitting we measure in her ear, then score words again with the aids on.
 - *(hearing aids)*
 - *(patient: cheer)*
 - **Ginger:** Oh! I can hear the back row. Even the hecklers!
@@ -1013,7 +1032,7 @@ Question: **What type are both of Bev's tympanograms?** (A / B / C / As, shuffle
 - Right BC (Hoot's montage): "Hoot's montage: bone on her right."
   - before:
     - **Hoot:** The ears match, so either side will do for bone. Right it is.
-- Before the first masked bone test that would open in a masking dilemma (the stamps say the safe noise is too weak), once:
+- Before the first masked bone test that would open in a masking dilemma or with no room for a plateau (the stamps say the safe noise is too weak), once:
   - **Hoot:** Wait. Her other ear needs loud noise to mask it. Loud enough to cross right back!
   - **Hoot:** Then the noise hushes the very ear we're testing. That's the masking dilemma!
   - When the player owns no inserts, Hoot lends his for the visit: **Hoot:** Headphones leak too much noise for this. Borrow my insert earphones today: a deeper seal.

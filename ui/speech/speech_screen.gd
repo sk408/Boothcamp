@@ -1785,6 +1785,9 @@ func run_hidden(patient: PatientProfile, ear: String, plan: Dictionary, show: bo
 	_ensure_session(patient, false)
 	_voice.stop()
 	_voice.stop_noise()
+	# the montage's bubble names this patient, not the standalone default (Mike)
+	_bubble.speaker = patient.short_name()
+	_fx.speaker = _bubble.speaker
 	_plan = plan.duplicate(true)
 	_hidden_run = true
 	_accepting = false

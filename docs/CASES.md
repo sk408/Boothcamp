@@ -236,7 +236,8 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
   2k (55 to 80) and 4k (45 to 70) have room for a full plateau. Pinned for every single 5 dB wobble
   (`test_dilemma_case_windows`).
 - The loan (`lend_inserts`): before the first masked bone test, the runner reads the windows from the stamps
-  (`CaseData.dilemma_freqs`, which mirrors the session). When it opens in a dilemma, Hoot says the case's
+  (`CaseData.dilemma_freqs`, which mirrors the session). When it opens in a dilemma, or with no room for a
+  plateau (a player who owns inserts and gets a bone stamp of 15 at 500 Hz and 1 kHz), Hoot says the case's
   `on_dilemma` lines (once; also for a player who owns inserts), then, if the player owns none, lends his inserts
   for the rest of the visit (`LEND_INSERTS`; never the save's upgrades, never into wax).
 - Masked air: the air was measured through headphones before the loan, and each air stamp is judged by its own
@@ -261,6 +262,7 @@ shuffle. The stamp tray keeps its fixed order FIT / REFER / DOCTOR TODAY.
 | 4 | `tymp` | **The tympanometer gadget** (section 5): pick the tip for the canal the otoscope showed, both curves draw, then the patient's own question ("Her ear feels full. Is it fluid?"). Medal `tymp`. | choice |
 | 5 | `instructions` | Hoot's routine line first, every case ("This morning's listening check: every beep clean, the button works. Dials stay out of view.", clinical review A1), then one line: the player tells the patient "press for every beep, even faint ones" (with the patient's joke), and the earphones go on. No mini-game in cases. Rocco's ringing gets Hoot's tinnitus lesson here (clinical review C8): a steady beep near his ring's pitch hides in it; "Which beep stands out from Rocco's ringing?" (PULSED and WARBLE both right, TONE hides; repeats until right); the audiometer starts on PULSED and the chip switches to WARBLE or TONE; some clinics prefer warble. Marina keeps a one-line tip. | dialogue, choice (Rocco) |
 | 6 | `audiometry` | The case's test plan (section 4), then masked bone and masked air on each ear wherever the rules ask (Hoot; with Quick visit off the player runs them and Hoot's lines say so). The case's after-test line plays only when every ear with bone agrees with the case; otherwise Hoot says a neutral line. Before the visit's first masked test, while Day 2's masking movie is unseen, the 12-second masking recap card plays, then Hoot says where the full movie lives (clinical review A2, as Freestyle does). When every masked air stamp on an ear is no response (Morgan), Hoot says: "No plateau, just a climb, then nothing at the limit." (It names no ear: the evidence question asks who answered.) | the AudiOtron's tone beats, explainer (recap) |
+| 6b | `speech` | Only a case with a `speech_check` (the FIT cases Rocco and Ginger; clinical review C13 and A4). The HUD's Words pill. "Words next: a word score in each ear, then the Party Noise Test. Hoot speed!" Hoot runs the SRT and a word score on each ear, then one unaided Party Noise Test list, off-screen with the SPEECH screen's montage (Day 5's `run_hidden`), unscored. From his sheets: "SRTs match the beeps. Words in quiet: right 92%, left 88%. Excellent!" and "Party Noise Test: 4.5 dB SNR loss. Mild trouble in noise." (no line hints at the call); cards "Words in quiet" and "Party Noise Test" join the case file (the first to leave a full board); then the case's `after` line. | the SPEECH screen's montage |
 | 7 | `reveal` | The case board: the audiogram stamps in. Hoot: "What shape do you see?" | dialogue |
 | 8 | `evidence` | The shape question (for Dash and Barnaby, the type of loss; for Skye, where the sound is stuck; for Morgan, who answered the right ear's unmasked beeps; for Bev, the type of loss). Only after the right answer does the shape come alive with its title (section 6), with any chart on file joining it, dashed. Then the type badge (the patient's true type, like every line around it) and the chart's cards join the case file: a card with a `when` shows only when the measured chart says so (symmetric, asymmetric, conductive, the air-bone-gap flag, the shadow, or no response), and if any of them read differently on the truth tables Hoot says once: "Some stamps wandered, so the chart and the story disagree. In clinic, recheck first!" Medal `evidence`. | choice |
 | 9 | `decision` | Three rubber stamps: FIT / REFER / DOCTOR TODAY. A wrong stamp gets Hoot's reason and another try. Then "present the clue that proves it" from up to nine shuffled cards; each wrong card can have its own reply. Medal `decision`. | choice (stamp tray), choice (clue cards) |
@@ -410,8 +412,10 @@ an urgent refer.
 
 Counselling that ships: Rocco's payoff opens with why he is a FIT and not a "not yet" ("We fit because his hearing
 trips him up at the pub." "Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year.", clinical review
-C14). Every FIT, "A full fitting also checks words in each ear" (word scores per case can follow
-once the speech days are on main). Rocco, aids help though noisy pubs stay tricky; aids often make ringing less
+C14). Every FIT checks words before the call (beat 6b), and the payoff points at the fitting's own check: Rocco
+"At the fitting, a tiny mic in his ear checks the aids hit their target.", Ginger "At the fitting we measure in her
+ear, then score words again with the aids on." Marina's referral says why a one-sided loss sees a doctor: "Now and
+then the hearing nerve is to blame. A doctor checks, sometimes with a scan." (C13). Rocco, aids help though noisy pubs stay tricky; aids often make ringing less
 noticeable; the damage so far is permanent, more is
 preventable; earplugs at every gig and rehearsal; filtered musicians' earplugs (a filter turns pitches down more
 evenly than foam); on stage aids out, earplugs in; a yearly test; and Hoot's tinnitus lesson in the instructions (pulsed or warble
@@ -536,3 +540,13 @@ some people choose an operation; Carhart's notch named; doctor first, then back 
 25. The proof card: the gaps (and the 15+ gap red flag). The design accepted "plateau not reached" as support; it is
     a wrong pick here ("Those ? marks show the test's limits, not her ears'"). Agree?
 26. A short dilemma movie (the noise crossing back, inserts making room) stays a later follow-up (the default).
+
+**Words before a FIT (clinical review C13 and A4; defaults stand):**
+
+27. Hoot's words check (SRT and a word score in each ear, then one Party Noise Test list, at Hoot speed, before the
+    call) runs on the two FIT cases only, Rocco and Ginger (the default). Should every case day run it ("speech in
+    noise on every test"), or the REFER days skip it as they do now? Dash's same-day doctor and Barnaby's wax would
+    skip it in clinic too.
+28. Morgan (FIT with a CROS) has no words check yet: a word score on the hearing left ear only (a CROS needs a strong
+    one) plus the Party Noise Test, which through headphones may read near-normal (a dead ear's trouble in noise
+    is about where the talker sits). Add it, or leave Morgan's day as it is (the default)?
