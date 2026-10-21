@@ -41,7 +41,7 @@ const IDLE_RESET_S := 120.0
 const MEDAL_BEATS: Array = [["history", "Chat"], ["otoscopy", "Peek"], ["earphones", "Phones"], ["match", "Fit"]]
 const WEATHER := "Weather: sunny, with a chance of careers"
 const HEADLINES: Dictionary = {
-	"S": "VISITOR BEEPS LIKE A PRO; OWL ASKS, \"EVER THOUGHT OF DOING THIS FOR REAL?\"",
+	"S": "VISITOR BEEPS LIKE A PRO; OWL SAYS \"DO THIS FOR REAL!\"",
 	"A": "LOCAL GRANDPA HEARS \"DISHES\" FOR FIRST TIME IN YEARS",
 	"B": "VISITOR CRACKS THE CASE OF THE MISSING \"DISHES\"",
 	"C": "BEEPS MOSTLY BEEPED; GUS HEARS BIRDS ANYWAY",

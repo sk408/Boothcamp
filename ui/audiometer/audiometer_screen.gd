@@ -1516,7 +1516,7 @@ func _hoot_takes_over() -> void:
 		_start_hoot_turn()
 		return
 	Hoot.say(String(_plan.get("hoot_turn_text", "Nice work! I'll fill in the rest in a flash.")), Hoot.HIGH, "", "", 2.4)
-	_run_montage.call_deferred()
+	_run_montage()   # like _start_hoot_turn(): locks the controls at once
 
 
 ## (Polish) Hoot's montage: the ear in a few seconds. Each remaining measurement is a whole textbook
