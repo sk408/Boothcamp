@@ -395,13 +395,16 @@ func test_days45_movies_registered() -> void:
 
 
 ## Before its day exists a movie is the S0a stub: three "card" scenes of 16 s, no sets script.
-## (The day's builder replaces the stub and the chapter marker in the same step, W5a / P5a.)
+## (The day's builder replaces the stub and the chapter marker in the same step, W5a / P5a.) A movie
+## built ahead of its day in its own branch (MV4: data, sets script and "stage" line) is no longer
+## the stub; its own test checks it (story/tests/test_movie_<id>.gd) and the replay guard hides it.
 func test_days45_movie_stubs() -> void:
 	for id: String in DAYS45_MOVIES:
 		if not Game.chapter(String(DAYS45_MOVIES[id])).is_empty():
 			continue
 		var m := Movies.movie(id)
-		assert_false(m.has("stage"), "%s: no sets script yet" % id)
+		if m.has("stage"):
+			continue
 		var scenes: Array = m["scenes"]
 		assert_eq(scenes.size(), 3, "%s: three scenes" % id)
 		for sc: Dictionary in scenes:
