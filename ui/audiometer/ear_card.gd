@@ -42,6 +42,7 @@ func _ready() -> void:
 	audiogram = AUDIOGRAM_SCENE.instantiate() as Audiogram
 	audiogram.ear = ear
 	audiogram.custom_minimum_size = Vector2.ZERO
+	audiogram.true_aspect = true   # (E12) one octave as wide as 20 dB is tall
 	add_child(audiogram)
 	resized.connect(_layout)
 	_layout()

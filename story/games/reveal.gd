@@ -61,6 +61,8 @@ func _ready() -> void:
 		ag = (load(AUDIOGRAM_SCENE) as PackedScene).instantiate() as Audiogram
 		ag.ear = "both"
 		ag.show_notes = true   # (E18) transducer, mastoids, reliability under the chart
+		ag.true_aspect = true  # (E12) one octave as wide as 20 dB is tall
+		ag.aspect_align = 1.0  # the plot on the right, the averages chips in the space on its left
 		ag.notes_right = true  # clear of the averages chips (bottom-left)
 		ag.custom_minimum_size = Vector2(820, 400)
 		ag.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -147,6 +149,11 @@ func _empty_title_rect(card_rect: Rect2) -> Rect2:
 	var ts := _title.size
 	var plot := ag.get_region_global_rect(250, 8000, -10, 120).grow_individual(-6.0, -6.0, -6.0, -22.0)
 	var chips := Rect2(card_rect.position + Vector2(80.0, card_rect.size.y - 140.0), Vector2(370.0, 140.0))
+	# (E12) a true-proportion plot leaves room on its left: the stamp goes there, above the chips
+	var side := Rect2(card_rect.position.x + 30.0, card_rect.position.y + 30.0,
+		ag.plot_rect().position.x + ag.global_position.x - card_rect.position.x - 80.0, chips.position.y - card_rect.position.y - 40.0)
+	if side.size.x >= ts.x and side.size.y >= ts.y:
+		return Rect2(side.get_center() - ts * 0.5, ts)
 	var samples: Array[Vector2] = []
 	for ear: String in ["right", "left"]:
 		var fl: Dictionary = _ear_info(ear).get("freqs", {})
