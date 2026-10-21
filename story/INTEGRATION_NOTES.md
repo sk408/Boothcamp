@@ -121,7 +121,7 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Tests:** `story/tests/test_level_mike.gd` (board beats, keyboard paths and solvers, the plans and
   objection cards with real numbers and by sheet, the recheck with and without the screen, every Hoot
   line 18 words or fewer, Hoot's textbook fallback, the Day 3 paper, a smoke run to the instructions).
-- **(Clinical review A1 and A2, Days 3 to 5.)** The cases' routine, in their words: `LevelMike.ROUTINE_LINE`
+- **(Clinical review A1 and A2, all days: Days 3 to 5.)** The cases' routine, in their words: `LevelMike.ROUTINE_LINE`
   (the morning listening check, the button, the dials out of view) once, seated, before the first tone test,
   and `LevelMike.SPECULUM_CAPTION` ("Fresh speculum. ...") on the otoscope card; Days 4 and 5 use both (Day 5
   as `HOOT["routine"]`). Ungraded, no new beat. Days 4 and 5 copy `level_case._recap` (the masking recap before
