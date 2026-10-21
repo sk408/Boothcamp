@@ -15,6 +15,9 @@ extends Control
 ## "arcade_initials" (solver: enter BOT; mouse: click "arcade_initials_ok"), "arcade_results"
 ## (solver: back to the arcade hall). Never a visit: no Game.begin_visit, finish_visit or medals.
 ## Set seed_value (and autostart = false to drive it by hand) before adding it to the tree.
+## belt = &"types" makes it AIR & BONE (air_bone.tscn, docs/ARCADE.md section 17): each chart shows
+## one ear's air and bone, and the three chutes are SENSORINEURAL, CONDUCTIVE and MIXED
+## (ClinicRules.hearing_type); its own board and runs under MODE_TYPES, no story charts.
 
 signal _sorted(pick: StringName)
 
@@ -28,6 +31,7 @@ const ArcadeArt := preload("res://story/arcade/arcade_art.gd")
 const AUDIOGRAM_SCENE := "res://ui/audiogram/audiogram.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const MODE := "chart_chute"
+const MODE_TYPES := "chart_chute_types"
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -58,10 +62,17 @@ const GOLD := Color("#f2b632")
 const WARMUP_HINTS: Dictionary = {
 	&"sloping": "Drop each chart down the chute it matches. This one slopes down: SLOPE!",
 	&"notch": "This one dips at 4k and comes back up: NOTCH!",
+	&"sensorineural": "Each chart shows air AND bone. Here bone sits right on air: SENSORINEURAL!",
+	&"conductive": "Bone is normal, but air is way down. A gap: CONDUCTIVE!",
 }
 
 var seed_value := -1
 var autostart := true
+## &"shapes" (Chart Chute) or &"types" (AIR & BONE): a key of ChartDeck.BELTS.
+@export var belt: StringName = &"shapes"
+
+var _ids: Array = ChartDeck.SHAPES   # the chutes, in key order
+var _mode := MODE                    # the save key (ArcadeScores)
 
 var _rng := RandomNumberGenerator.new()
 var _phase := "intro"          # intro, warmup, countdown, run, tally, results
@@ -162,6 +173,12 @@ class CardView extends Control:
 			var t: Dictionary = c["ac"][ear]
 			for f: int in t:
 				ag.set_point(ear, f, int(t[f]), false, false)
+		for ear: String in (c.get("bc", {}) as Dictionary):
+			var b: Dictionary = c["bc"][ear]
+			var masked: Dictionary = (c.get("bc_masked", {}) as Dictionary).get(ear, {})
+			for f: int in b:
+				ag.set_point(ear, f, int(b[f]), false, false, &"bc_masked" if masked.has(f) else &"bc")
+		ag.show_gap = false
 		ag.dim = {}
 		if String(c["ear"]) == "both":
 			ag.dim = {("left" if String(c["sort_ear"]) == "right" else "right"): 0.45}
@@ -171,6 +188,8 @@ class CardView extends Control:
 	func show_tell(shape: StringName, other_ear := false) -> void:
 		tell = shape
 		tell_t = 0.0
+		# an air-and-bone card's tell bridges the gaps, where there are any
+		ag.show_gap = shape != &"" and card.has("bc")
 		ear_cue = other_ear and shape != &""
 		_over.queue_redraw()
 
@@ -316,7 +335,8 @@ class ChuteView extends Control:
 		UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
 		# the normal band (25 dB HL and better), as on the big chart
 		draw_rect(Rect2(box.position + Vector2(4, 3), Vector2(box.size.x - 8, 2 + (box.size.y - 10) * 25.0 / 70.0)), Color(Palette.MINT, 0.25))
-		var dbs: Array = ChartDeck.ARCH[shape]["plain"][0]
+		var typed := ChartDeck.TYPES.has(shape)
+		var dbs: Array = ChartDeck.TYPE_ARCH[shape]["plain"][0][0] if typed else ChartDeck.ARCH[shape]["plain"][0]
 		var pts := PackedVector2Array()
 		for i in dbs.size():
 			var x := box.position.x + 10 + (box.size.x - 20) * i / float(dbs.size() - 1)
@@ -325,6 +345,14 @@ class ChuteView extends Control:
 		draw_polyline(pts, Palette.INK, 3.0, true)
 		for p: Vector2 in pts:
 			draw_circle(p, 2.5, Palette.INK)
+		if typed:
+			# the bone marks, as little < carets left of the air line
+			var bone: Array = ChartDeck.TYPE_ARCH[shape]["plain"][0][1]
+			for i in ChartDeck.BONE_FREQS.size():
+				var p := pts[ChartDeck.FREQS.find(ChartDeck.BONE_FREQS[i])]
+				var y := box.position.y + 5 + (box.size.y - 10) * clampf(float(bone[i]) / 70.0, 0.0, 1.0)
+				var tip := Vector2(p.x - 7, y)
+				draw_polyline(PackedVector2Array([tip + Vector2(5, -4), tip, tip + Vector2(5, 4)]), Palette.SELECT_ORANGE, 2.5, true)
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
@@ -377,6 +405,8 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rng.seed = seed_value if seed_value >= 0 else Game.rng.randi()
+	_ids = ChartDeck.BELTS[belt]
+	_mode = MODE_TYPES if belt == &"types" else MODE
 	_build()
 	Hoot.clear()
 	get_viewport().size_changed.connect(_layout)
@@ -388,7 +418,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	Hoot.clear_bubble_hint()
 	Hoot.clear()
-	for s: StringName in ChartDeck.SHAPES:
+	for s: StringName in _ids:
 		Hoot.unregister_anchor("chute_" + String(s))
 	Hoot.unregister_anchor("chute_help")
 	Hoot.unregister_anchor("arcade_initials_ok")
@@ -451,12 +481,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	var digit := code
 	if (digit < KEY_1 or digit > KEY_9) and (digit < KEY_KP_1 or digit > KEY_KP_9):
 		digit = k.physical_keycode   # AZERTY and friends: the digit row by position
-	var n := ChartDeck.SHAPES.size()
+	var n := _ids.size()
 	if digit >= KEY_1 and digit < KEY_1 + n:
-		sort_into(ChartDeck.SHAPES[digit - KEY_1])
+		sort_into(_ids[digit - KEY_1])
 		get_viewport().set_input_as_handled()
 	elif digit >= KEY_KP_1 and digit < KEY_KP_1 + n:
-		sort_into(ChartDeck.SHAPES[digit - KEY_KP_1])
+		sort_into(_ids[digit - KEY_KP_1])
 		get_viewport().set_input_as_handled()
 	elif code == KEY_H:
 		press_help()
@@ -518,7 +548,7 @@ func stats() -> Dictionary:
 func _run() -> void:
 	Sfx.music_start()
 	_phase = "warmup"
-	var warm: Array[StringName] = [&"sloping", &"notch", &"notch" if _rng.randf() < 0.5 else &"sloping"]
+	var warm: Array = [_ids[0], _ids[1], _ids[1] if _rng.randf() < 0.5 else _ids[0]]
 	for i in ChuteRules.WARMUP_CARDS:
 		await _serve(ChartDeck.make_card(_rng, warm[i], {"ear": "right"}, _next_serial()), i < 2)
 	_phase = "countdown"
@@ -527,7 +557,7 @@ func _run() -> void:
 	_phase = "run"
 	_t = 0.0
 	# story charts: only patients whose Day is finished, and the ones not found yet first
-	_golden_left = ChartDeck.golden_pool(ArcadeScores.found(MODE))
+	_golden_left = ChartDeck.golden_pool(ArcadeScores.found(_mode)) if belt == &"shapes" else []
 	_next = _deal()
 	while _phase == "run":
 		var c := _next
@@ -561,7 +591,7 @@ func _deal() -> Dictionary:
 		_requeue.remove_at(i)
 		_push_recent(back["shape"])
 		return back
-	var spec := ChuteRules.next_spec(_rng, _t, _recent, _golden_left)
+	var spec := ChuteRules.next_spec(_rng, _t, _recent, _golden_left, belt)
 	var card: Dictionary = {}
 	if bool(spec["golden"]):
 		card = ChartDeck.golden_card(spec["shape"], _next_serial())
@@ -610,7 +640,7 @@ func _serve(card: Dictionary, hint: bool) -> void:
 		if _phase != "run" and _phase != "warmup":
 			_park(view)
 			return
-		var open := ChuteRules.unlocked(_t if _phase == "run" else -1.0)
+		var open := ChuteRules.unlocked(_t if _phase == "run" else -1.0, belt)
 		var shape: StringName = card["shape"]
 		if hint:
 			_chutes[shape].pulse = true
@@ -666,7 +696,7 @@ func _right_drop(view: CardView, card: Dictionary) -> void:
 		var mult := ClinicRules.combo_multiplier(_streak) * (ChuteRules.GOLDEN_FACTOR if golden else 1)
 		Juice.float_text(_field, "+%d%s" % [pts, ("  x%d" % mult) if mult > 1 else ""], POINTS_AT, Palette.MINT if not golden else GOLD, 30)
 		if golden:
-			ArcadeScores.mark_found(MODE, String(shape))
+			ArcadeScores.mark_found(_mode, String(shape))
 			_golden_seen = String(card["who"])
 			Sfx.play(&"sparkle", 1.0, -4.0)
 	Sfx.play(&"thunk", 1.0 + 0.04 * mini(_streak, 10), -2.0)
@@ -730,7 +760,7 @@ func _ramp_tips(card: Dictionary) -> void:
 	if _phase != "run":
 		return
 	if String(card["ear"]) == "left":
-		_say("left", "Blue X is the left ear. Same shapes!", "")
+		_say("left", "Blue X is the left ear. Its bone marks face the other way." if card.has("bc") else "Blue X is the left ear. Same shapes!", "")
 	elif String(card["ear"]) == "both":
 		_say("both", "Two ears? Sort the colour on the tag.", "")
 		_shot_queue.append("chute_both_ears")
@@ -740,7 +770,7 @@ func _ramp_tips(card: Dictionary) -> void:
 
 
 func _refresh_locks() -> void:
-	var open := ChuteRules.unlocked(_t if _phase == "run" or _phase == "tally" else -1.0)
+	var open := ChuteRules.unlocked(_t if _phase == "run" or _phase == "tally" else -1.0, belt)
 	for s: StringName in _chutes:
 		var c := _chutes[s]
 		var lock := not open.has(s)
@@ -773,7 +803,7 @@ func _tally() -> void:
 	Sfx.play(&"fanfare", 1.0, -4.0)
 	_flash_banner("TIME!", Palette.CORAL, 1.2)
 	await get_tree().create_timer(1.3, false).timeout
-	ArcadeScores.add_run(MODE, {"right": _right, "oops": _oops, "score": _score})
+	ArcadeScores.add_run(_mode, {"right": _right, "oops": _oops, "score": _score})
 	_phase = "results"
 	await _show_results()
 
@@ -879,17 +909,17 @@ func _build() -> void:
 	_preview.draw.connect(_draw_preview)
 	_field.add_child(_preview)
 	# the chutes share the width: 4 at full size, 5 a little narrower with a smaller gap
-	var n := ChartDeck.SHAPES.size()
+	var n := _ids.size()
 	var gap := CHUTE_GAP if n <= 4 else CHUTE_GAP * 0.7
 	var w := minf(CHUTE_SIZE.x, (FIELD.x - 2.0 * CHUTE_MARGIN - gap * (n - 1)) / n)
 	var x0 := (FIELD.x - (w * n + gap * (n - 1))) * 0.5
 	for i in n:
-		var s: StringName = ChartDeck.SHAPES[i]
+		var s: StringName = _ids[i]
 		var c := ChuteView.new(s, i + 1)
 		c.size = Vector2(w, CHUTE_SIZE.y)
 		c.pivot_offset = c.size * 0.5
 		c.position = Vector2(x0 + i * (w + gap), CHUTE_Y)
-		c.locked = not ChuteRules.unlocked(-1.0).has(s)
+		c.locked = not ChuteRules.unlocked(-1.0, belt).has(s)
 		c.picked.connect(sort_into)
 		_field.add_child(c)
 		_chutes[s] = c
@@ -948,7 +978,7 @@ func _draw_bg(ci: Control) -> void:
 
 func _draw_top() -> void:
 	var f := UiKit.font(700)
-	_top.draw_string(f, Vector2(22, 52), "CHART CHUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.SUNNY)
+	_top.draw_string(f, Vector2(22, 52), "AIR & BONE" if belt == &"types" else "CHART CHUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.SUNNY)
 	# the clock bar
 	var bar := Rect2(330, 24, 560, 34)
 	UiDraw.rounded_rect(_top, bar, Color("#4a4363"), 17)
@@ -1017,6 +1047,14 @@ func _draw_preview() -> void:
 			pts.append(Vector2(x, y))
 		if pts.size() > 1:
 			_preview.draw_polyline(pts, Color(Palette.ear_color(ear), 0.85 if ear == sort_ear else 0.25), 3.0, true)
+	for ear: String in (_next.get("bc", {}) as Dictionary):
+		var b: Dictionary = _next["bc"][ear]
+		for fr: int in b:
+			var x := plot.position.x + plot.size.x * (log(float(fr) / 125.0) / log(2.0)) / 6.0
+			var y := plot.position.y + plot.size.y * (float(b[fr]) + 10.0) / 130.0
+			var side := -6.0 if ear == "right" else 6.0
+			var tip := Vector2(x + side, y)
+			_preview.draw_polyline(PackedVector2Array([tip + Vector2(-side * 0.7, -5), tip, tip + Vector2(-side * 0.7, 5)]), Color(Palette.ear_color(ear), 0.85), 2.5, true)
 
 
 static func _thousands(n: int) -> String:
@@ -1097,9 +1135,9 @@ func _show_results() -> void:
 	await get_tree().create_timer(0.6, false).timeout
 	_shot_once("chute_results")
 	var placed := -1
-	if ChuteRules.on_board(_right, _oops) and ArcadeScores.qualifies(MODE, _score):
+	if ChuteRules.on_board(_right, _oops) and ArcadeScores.qualifies(_mode, _score):
 		var initials: String = await _enter_initials(board)
-		placed = ArcadeScores.add_score(MODE, initials, _score, float(st["accuracy"]))
+		placed = ArcadeScores.add_score(_mode, initials, _score, float(st["accuracy"]))
 	elif _right > 0 and not ChuteRules.on_board(_right, _oops):
 		board.add_child(UiKit.label("The board takes runs %d%% accurate or better." % roundi(ChuteRules.BOARD_MIN_ACCURACY * 100.0), 17, Palette.CORAL, 600))
 	_fill_board(board, placed)
@@ -1114,7 +1152,9 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
-	var found := ArcadeScores.found(MODE)
+	if belt == &"types":
+		return "Bone shows the inner ear. The gap between air and bone shows the middle ear."
+	var found := ArcadeScores.found(_mode)
 	var total := ChartDeck.GOLDEN.size()
 	var line := "Story charts found: %d of %d" % [found.size(), total]
 	if _golden_seen != "":
@@ -1150,7 +1190,7 @@ func _stat(label: String, value: String, color: Color) -> VBoxContainer:
 
 func _fill_board(board: VBoxContainer, placed: int) -> void:
 	board.add_child(UiKit.label("HIGH SCORES", 20, Palette.INK, 700))
-	var t := ArcadeScores.table(MODE)
+	var t := ArcadeScores.table(_mode)
 	for i in mini(t.size(), 5):
 		var row: Dictionary = t[i]
 		var mine := i == placed
@@ -1167,7 +1207,7 @@ func _draw_speed_chart(c: Control) -> void:
 	var r := Rect2(Vector2(0, 26), c.size - Vector2(0, 30))
 	c.draw_string(UiKit.font(700), Vector2(0, 18), "YOUR SPEED CHART", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
 	UiDraw.rounded_rect(c, r, Color("#ffffff"), 12, 2, Color(Palette.INK, 0.3))
-	var runs := ArcadeScores.runs(MODE)
+	var runs := ArcadeScores.runs(_mode)
 	if runs.is_empty():
 		return
 	if runs.size() < 2:
@@ -1201,7 +1241,7 @@ func _enter_initials(board: VBoxContainer) -> String:
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)
 	var letters: Array[String] = []
-	for c in ArcadeScores.last_initials(MODE):
+	for c in ArcadeScores.last_initials(_mode):
 		letters.append(c)
 	var labels: Array[Label] = []
 	var cursor := [0]

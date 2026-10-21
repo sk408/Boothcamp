@@ -313,3 +313,58 @@ func test_scores_read_numbers_as_text() -> void:
 
 func test_arcade_save_key_is_in_the_defaults() -> void:
 	assert_true(Game.DEFAULT_PROGRESS.has("arcade"), "Game.DEFAULT_PROGRESS has an arcade key, or high scores never load")
+
+
+# ================================================================ AIR & BONE (the type belt)
+
+## Every type card is what the engine's own rule says, with a margin: any one air or bone point
+## 5 dB either way keeps the call; bone is honest (never poorer than air, inside the bone limits).
+func test_every_type_card_has_its_type_with_a_margin() -> void:
+	for type: StringName in ChartDeck.TYPES:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 11 + 3), type, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var ear := String(c["sort_ear"])
+				var ac: Dictionary = c["ac"][ear]
+				var bc: Dictionary = c["bc"][ear]
+				assert_false(bc.is_empty(), "%s: bone drawn (seed %d)" % [type, s])
+				assert_eq(ClinicRules.hearing_type(ac, bc), type, "%s is %s by hearing_type (seed %d, lookalike %s)" % [type, type, s, lookalike])
+				assert_true(ChartDeck.stable_type(ac, bc, type), "%s keeps its type 5 dB either way (seed %d)" % [type, s])
+				assert_has(ChartDeck.TYPE_AIR[type], ChartDeck.shape_of(ac), "%s: the air line has a %s shape" % [type, type])
+				for f: int in bc:
+					assert_true(int(bc[f]) <= int(ac[f]), "%s: bone never poorer than air at %d" % [type, f])
+					assert_true(int(bc[f]) <= int(ClinicRules.BC_MAX_DB[f]), "%s: bone inside the oscillator's range at %d" % [type, f])
+					assert_eq(int(bc[f]) % 5, 0, "5 dB steps")
+					var masked: bool = (c["bc_masked"][ear] as Dictionary).has(f)
+					assert_eq(masked, int(ac[f]) - int(bc[f]) >= ClinicRules.BC_MASK_GAP_DB, "%s: bone masked exactly where a clinician would" % type)
+				assert_eq(String(c["ear"]), ear, "a type card is one ear")
+				assert_eq((c["ac"] as Dictionary).size(), 1, "one ear's air")
+
+
+func test_type_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"types"), [&"sensorineural", &"conductive"], "warm-up: SN and conductive")
+	assert_false(ChuteRules.unlocked(14.9, &"types").has(&"mixed"), "mixed waits for 15 s")
+	assert_eq(ChuteRules.unlocked(15.0, &"types"), ChartDeck.TYPES, "all three at 15 s")
+	var r := _rng(9)
+	for i in 300:
+		var t := r.randf_range(0.0, ChuteRules.RUN_S)
+		var spec := ChuteRules.next_spec(r, t, [], [], &"types")
+		assert_has(ChartDeck.TYPES, spec["shape"], "only types on the type belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear cards on the type belt")
+		assert_false(bool(spec["golden"]), "no story charts on the type belt")
+
+
+func test_type_belt_reads_and_lines() -> void:
+	for type: StringName in ChartDeck.TYPES:
+		assert_true(ChartDeck.CHUTE_WORDS.has(type) and ChartDeck.TELLS.has(type) and ChartDeck.LINES.has(type), "%s has a word, a tell and lines" % type)
+		for pool: String in ["plain", "lookalike"]:
+			for arch: Array in ChartDeck.TYPE_ARCH[type][pool]:
+				var ac := {}
+				for i in ChartDeck.FREQS.size():
+					ac[ChartDeck.FREQS[i]] = int(arch[0][i])
+				var bc := {}
+				for i in ChartDeck.BONE_FREQS.size():
+					bc[ChartDeck.BONE_FREQS[i]] = int(arch[1][i])
+				assert_true(ChartDeck.stable_type(ac, bc, type), "%s %s archetype %s is itself a clean chart" % [type, pool, str(arch)])
+	var gap_free := {250: 20, 500: 25, 1000: 30, 2000: 40, 3000: 50, 4000: 55, 6000: 60, 8000: 65}
+	assert_eq(ClinicRules.hearing_type(gap_free, {500: 25, 1000: 30, 2000: 35, 4000: 55}), &"sensorineural", "bone on air: SN")

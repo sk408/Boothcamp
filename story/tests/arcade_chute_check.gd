@@ -15,6 +15,9 @@ extends Node
 ## --via-title: start on the title, open the arcade from its Arcade button and pick the Chart Chute
 ## cabinet in the hall (a click with --policy=mouse, Down arrows, Enter and key 1 otherwise), as a
 ## player would.
+## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; it has no
+## two-ear cards, so the slip bot slips each left-ear card once (first a wrong open chute) and no
+## story chart ever rides it.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
 ## The results are left with a click on "Back to the arcade" (mouse) or the T key (keys); the arcade
@@ -23,6 +26,7 @@ extends Node
 ## 5 script errors were logged, 6 a mouse target was not found.
 
 const CHUTE_SCENE := "res://story/arcade/chart_chute.tscn"
+const TYPES_SCENE := "res://story/arcade/air_bone.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const ChartDeck := preload("res://story/arcade/chart_deck.gd")
@@ -38,7 +42,8 @@ func _ready() -> void:
 	var d := Driver.new()
 	d.name = "ArcadeChuteDriver"
 	get_tree().root.add_child.call_deferred(d)
-	Events.goto_scene.emit.call_deferred(TITLE_SCENE if Game.cli_flag("via-title") else CHUTE_SCENE)
+	var scene := TYPES_SCENE if Game.cli_value("belt", "shapes") == "types" else CHUTE_SCENE
+	Events.goto_scene.emit.call_deferred(TITLE_SCENE if Game.cli_flag("via-title") else scene)
 
 
 class ErrorCounter extends Logger:
@@ -65,6 +70,10 @@ class Driver extends Node:
 	const MAX_S := 400.0
 
 	var policy := "careful"
+	var belt: StringName = &"shapes"
+	var scene := CHUTE_SCENE
+	var mode := "chart_chute"
+	var ids: Array = ChartDeck.SHAPES
 	var errors := ErrorCounter.new()
 	var misses: PackedStringArray = []
 	var beats := {}
@@ -81,15 +90,20 @@ class Driver extends Node:
 		process_mode = Node.PROCESS_MODE_PAUSABLE
 		OS.add_logger(errors)
 		policy = Game.cli_value("policy", "careful")
+		if Game.cli_value("belt", "shapes") == "types":
+			belt = &"types"
+			scene = TYPES_SCENE
+			mode = "chart_chute_types"
+		ids = ChartDeck.BELTS[belt]
 		_rng.seed = int(Game.cli.get("seed", 1))
 		Events.awaiting_input.connect(_on_awaiting)
 		Events.scene_changed.connect(func(path: String, node: Node) -> void:
 			_last = _clock
-			if path == CHUTE_SCENE:
+			if path == scene:
 				chute = node
 			elif path == HALL_SCENE:
 				at_hall = true)
-		print("ArcadeChuteCheck: policy %s, speed x%s, seed %d" % [policy, str(Engine.time_scale), _rng.seed])
+		print("ArcadeChuteCheck: policy %s, belt %s, speed x%s, seed %d" % [policy, belt, str(Engine.time_scale), _rng.seed])
 
 	func _process(delta: float) -> void:
 		_clock += delta
@@ -136,14 +150,14 @@ class Driver extends Node:
 				Events.screenshot_requested.emit("arcade_hall")
 				await _wait(0.2)
 				if policy == "mouse":
-					await _click(_anchor("arcade_cabinet_chart_chute"))
+					await _click(_anchor("arcade_cabinet_" + mode))
 				else:
-					await _key(KEY_1)
+					await _key(KEY_3 if belt == &"types" else KEY_1)
 				for i in 90:
 					if is_instance_valid(chute):
 						return
 					await _frames(1)
-				_finish(1, "the hall's Chart Chute cabinet never opened Chart Chute")
+				_finish(1, "the hall's %s cabinet never opened it" % mode)
 
 	## The title's Arcade button, like a player: a click, or Down until it is highlighted and Enter.
 	func _open_arcade() -> void:
@@ -186,28 +200,39 @@ class Driver extends Node:
 			"careful":
 				solver.call()
 			"keys":
-				await _key(KEY_1 + ChartDeck.SHAPES.find(shape))
+				await _key(KEY_1 + ids.find(shape))
 			"mouse":
 				await _click(_anchor(String((info["mouse"] as Dictionary)["click"])))
 			"guess":
 				var words: Array = info["options"]
 				var w: String = words[_rng.randi() % words.size()]
-				await _key(KEY_1 + ChartDeck.SHAPES.find(ChartDeck.CHUTE_WORDS.find_key(w)))
+				await _key(KEY_1 + ids.find(ChartDeck.CHUTE_WORDS.find_key(w)))
 			"help":
 				await _key(KEY_H)
 			"slip":
 				var card: Dictionary = chute.get("_card") if is_instance_valid(chute) else {}
 				var other: StringName = card.get("other_shape", &"")
 				var serial := int(card.get("serial", -1))
-				if String(card.get("ear", "")) == "both" and other != &"" and not _slipped.has(serial) and (info["options"] as Array).has(ChartDeck.CHUTE_WORDS[other]):
+				if belt == &"types" and String(card.get("ear", "")) == "left":
+					var wrong: Array = (info["options"] as Array).filter(func(w: String) -> bool: return w != ChartDeck.CHUTE_WORDS[shape])
+					other = ChartDeck.CHUTE_WORDS.find_key(wrong[0]) if not wrong.is_empty() else &""
+					if other != &"" and not _slipped.has(serial):
+						var was := int(chute.get("_oops"))
+						await _key(KEY_1 + ids.find(other))
+						await _frames(2)
+						if String(chute.get("_phase")) == "run" or int(chute.get("_oops")) > was:
+							_slipped[serial] = true
+					else:
+						await _key(KEY_1 + ids.find(shape))
+				elif String(card.get("ear", "")) == "both" and other != &"" and not _slipped.has(serial) and (info["options"] as Array).has(ChartDeck.CHUTE_WORDS[other]):
 					var before := int(chute.get("_oops"))
-					await _key(KEY_1 + ChartDeck.SHAPES.find(other))
+					await _key(KEY_1 + ids.find(other))
 					await _frames(2)
 					# a slip counts as planned unless the clock ran out under the key
 					if String(chute.get("_phase")) == "run" or int(chute.get("_oops")) > before:
 						_slipped[serial] = true
 				else:
-					await _key(KEY_1 + ChartDeck.SHAPES.find(shape))
+					await _key(KEY_1 + ids.find(shape))
 
 	func _initials(solver: Callable) -> void:
 		match policy:
@@ -227,7 +252,7 @@ class Driver extends Node:
 
 	func _results() -> void:
 		var st: Dictionary = chute.call("stats") if is_instance_valid(chute) else {}
-		var table := ArcadeScoresRef.table()
+		var table := ArcadeScoresRef.table(mode)
 		var problems: PackedStringArray = []
 		var right := int(st.get("right", 0))
 		var oops := int(st.get("oops", 0))
@@ -248,7 +273,7 @@ class Driver extends Node:
 					problems.append("a guessing run reached the high-score board")
 			"slip":
 				if oops == 0:
-					problems.append("the slip bot never jammed a two-ear card")
+					problems.append("the slip bot never jammed a card")
 				if oops != _slipped.size():
 					problems.append("%d slips for %d planned (a key landed on the wrong chart?)" % [oops, _slipped.size()])
 			"help":
@@ -263,7 +288,12 @@ class Driver extends Node:
 		if policy == "mouse" and on_board and not table.any(func(r: Dictionary) -> bool: return r["initials"] == "BAA"):
 			problems.append("clicked initials BAA are not on the board")
 		var golden := String(st.get("golden", ""))
-		if Game.cli_flag("days-done"):
+		if belt == &"types":
+			if golden != "":
+				problems.append("story chart %s rode the AIR & BONE belt" % golden)
+			if not st.has("right"):
+				problems.append("no stats")
+		elif Game.cli_flag("days-done"):
 			if policy == "careful" and golden == "":
 				problems.append("every Day was done, but no story chart was sorted")
 		elif golden != "":
@@ -368,5 +398,5 @@ class Driver extends Node:
 class ArcadeScoresRef:
 	const ArcadeScores := preload("res://story/arcade/arcade_scores.gd")
 
-	static func table() -> Array[Dictionary]:
-		return ArcadeScores.table("chart_chute")
+	static func table(mode: String) -> Array[Dictionary]:
+		return ArcadeScores.table(mode)

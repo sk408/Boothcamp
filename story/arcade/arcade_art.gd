@@ -12,6 +12,9 @@ const COOKIE := Color("#d99a5b")
 const CHIP := Color("#6b3f22")
 const WAVE := Color("#36a3e7")
 const SKIER := Color("#e5383b")
+const SHELL := Color("#f4c7d8")
+const CORK := Color("#c98d4f")
+const PIPE := Color("#c9c4bb")
 ## The rainbow's bands, outside in.
 const RAINBOW: Array[Color] = [Color("#e5383b"), Color("#ff9f1c"), Color("#f2d335"), Color("#5bc8a3"), Color("#36a3e7")]
 
@@ -29,10 +32,17 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_wave(ci, c, s, 0.0)
 		&"reverse_bite":
 			_rainbow(ci, c, s, 0.0)
+		&"sensorineural":
+			_snail(ci, c, s, 0.0)
+		&"conductive":
+			_cork(ci, c, s, 0.0)
+		&"mixed":
+			_cork(ci, c + Vector2(-s * 0.42, s * 0.05), s * 0.62, 0.0)
+			_snail(ci, c + Vector2(s * 0.4, 0), s * 0.62, 0.0)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
-## rolls over, the rainbow sparkles.
+## rolls over, the rainbow sparkles, the snail shell spins, the cork pops out.
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -56,6 +66,13 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_wave(ci, c, s, t)
 		&"reverse_bite":
 			_rainbow(ci, c, s, t)
+		&"sensorineural":
+			_snail(ci, c, s, t)
+		&"conductive":
+			_cork(ci, c, s, t)
+		&"mixed":
+			_cork(ci, c + Vector2(-s * 0.42, s * 0.05), s * 0.62, t)
+			_snail(ci, c + Vector2(s * 0.4, 0), s * 0.62, t)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -137,3 +154,50 @@ static func _rainbow(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 			var k := s * 0.07 * (1.0 - t * 0.6)
 			ci.draw_line(p - Vector2(k, 0), p + Vector2(k, 0), Color(SNOW, 1.0 - t * 0.5), 3.0)
 			ci.draw_line(p - Vector2(0, k), p + Vector2(0, k), Color(SNOW, 1.0 - t * 0.5), 3.0)
+
+
+## A snail shell: the cochlea, the inner ear. t > 0: it spins a turn and sends out ripples.
+static func _snail(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var r := s * 0.5
+	ci.draw_circle(c, r + 3.0, INK)
+	ci.draw_circle(c, r, SHELL)
+	var spin := -TAU * t
+	var pts := PackedVector2Array()
+	for i in 49:
+		var a := spin + i * TAU * 2.5 / 48.0
+		var k := r * (0.9 - 0.82 * i / 48.0)
+		pts.append(c + Vector2(cos(a), sin(a)) * k)
+	ci.draw_polyline(pts, INK, 3.0, true)
+	if t > 0.0:
+		for i in 2:
+			var rr := r * (1.15 + 0.5 * t + i * 0.25)
+			ci.draw_arc(c, rr, -0.6, 0.6, 12, Color(SNOW, (1.0 - t) * 0.9), 3.0, true)
+			ci.draw_arc(c, rr, PI - 0.6, PI + 0.6, 12, Color(SNOW, (1.0 - t) * 0.9), 3.0, true)
+
+
+## A cork stuck in a tube: something blocking the way to the inner ear (the middle ear). t > 0:
+## the cork pops out and spins away.
+static func _cork(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var tube := Rect2(c + Vector2(-s * 0.6, -s * 0.2), Vector2(s * 1.2, s * 0.4))
+	ci.draw_rect(tube.grow(3.0), INK)
+	ci.draw_rect(tube, PIPE)
+	ci.draw_rect(Rect2(tube.position + Vector2(0, s * 0.06), Vector2(tube.size.x, s * 0.08)), Color(SNOW, 0.5))
+	var at := c + Vector2(-s * 0.15, 0) + Vector2(-s * 0.9, -s * 0.5) * t
+	var turn := -TAU * 0.75 * t
+	var w := s * 0.3
+	var h := s * 0.46
+	var poly := PackedVector2Array()
+	for v: Vector2 in [Vector2(-w * 0.5, -h * 0.5), Vector2(w * 0.5, -h * 0.42), Vector2(w * 0.5, h * 0.42), Vector2(-w * 0.5, h * 0.5)]:
+		poly.append(at + v.rotated(turn))
+	var ring := poly.duplicate()
+	ring.append(poly[0])
+	ci.draw_polyline(ring, INK, 6.0, true)
+	ci.draw_colored_polygon(poly, CORK)
+	for d: Vector2 in [Vector2(-0.05, -0.12), Vector2(0.06, 0.05), Vector2(-0.04, 0.14)]:
+		ci.draw_circle(at + (d * s).rotated(turn), s * 0.03, CHIP)
+	if t > 0.0 and t < 0.6:
+		var k := t / 0.6
+		for i in 5:
+			var a := PI + (i - 2) * 0.35
+			var o := c + Vector2(-s * 0.55, 0)
+			ci.draw_line(o + Vector2(cos(a), sin(a)) * s * (0.1 + 0.2 * k), o + Vector2(cos(a), sin(a)) * s * (0.25 + 0.3 * k), Color(BRASS, 1.0 - k), 3.0)
