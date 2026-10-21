@@ -356,6 +356,7 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `fitting_target` **(Day 14)** | level_fitting (target match, §13) | {}; solver raises each band straight to its target (one move each) and presses Done |
 | `probe_tube` **(Day 14)** | level_fitting (probe tube, §13) | {}; solver slides the tube straight into the zone (within 5 mm of the eardrum) and locks it |
 | `loud_check` **(Day 14)** | level_fitting (loud-sound check, §13) | {}; solver turns the loud limit straight to the right notch and drops the pan once |
+| `tune_desk` **(Day 15)** | level_tuneup (tune-up desk, §15) | {ticket: ticket id}; solver uses the ticket's right tool |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -3876,3 +3877,35 @@ safety notice. Silent; reduced motion calms the bob, wave and pulse.
 lines at 18 words or fewer, and `montage_after` (a montage after two stamps, no x8, every hole stamped);
 **(demo polish)** the paper without Decibucks or shop, the attract loop (starts with nobody there, a mouse nudge
 leaves it, a key ends it with the notice) and no attract loop outside demo mode or under autoplay.
+
+
+## §15 The tune-up (Day 15, the follow-up visit; docs/TUNEUP.md)
+
+Gus's first follow-up, two weeks after his fitting. `story/level_tuneup.gd` (scene `res://story/level_tuneup.tscn`)
+plays the chapter `gus_tune` (`requires: "gus_fit"`) with the patient `gus_tune` (`core/patients/gus_tune.tres`, a
+copy of `gus_fit.tres` under its own id, as on Day 14).
+
+**Phases.** `intro` (CaseProps' TWO WEEKS LATER card, Gus and Doris arrive), `history` (the opening question, then
+three stories as tickets on the notes board), `datalog` (new: the aids' diary of hours worn), `tune_desk` (new),
+`fitting` (bingo night), `results`.
+
+**The tune-up desk** (`story/games/tune_desk.gd`, `TuneDesk`): a panel left of the fitting shot (`PANEL`, as the
+target match). `show_datalog()` draws the 14-day chart (`DATALOG_HOURS`, mean 3.5, zero on the two bingo nights);
+`show_ticket(i)` shows ticket i of `TICKETS`; `pick()` emits beat `tune_desk` and returns a tool id from `TOOLS`
+(seven; Left / Right and Enter, or a click). The level plays `TuneDesk.lines_for(i, tool)`, then `stamp_fixed()` on
+the right tool or `mark_wrong(tool)` (greyed for that ticket). `HARM_TOOL` (`all_up`) is too loud everywhere: the
+first use costs a comfort point (`tune_all_up`). `result()` = {tickets: [{id, fix, tries, wrong, fixed}],
+tools_used, par}. Bot helpers: `right_tool()`, `tool_button(tool)`.
+
+**Bingo night** (`story/games/bingo_night.gd`, `BingoNight`): a drawn, non-interactive scene over the clinic: `open()`,
+`set_program(true)` (a cone from Gus to Bev, the chatter behind dims), `call_ball(n)`, `bingo()`, `close()`.
+
+**Scores.** `LevelTuneup.results_for(desk, ask_tries, ups)`: accuracy = `TuneDesk.accuracy_of` (per ticket 1.0 /
+0.5 / 0.2 by tries), technique = 0.5 x the opening question (1.0 / 0.5 / 0.2) + 0.5 x safe (no WHOLE AID UP 1.0,
+one 0.5, more 0), efficiency = `TuneDesk.efficiency(tools_used, par)` (0.12 less per extra tool, at least 0.3), plus
+`tuneup` (the desk's result with ask_tries and ups). Medals: `ask` (by picks) and `tune` (gold with no wrong tool,
+silver with one or two). **The paper**: `story/papers/paper_tuneup.gd` (THE TUNE-UP TICKETS).
+
+**Bot.** The mouse route for `tune_desk` clicks the right tool; on the `gus_tune` chapter `_check_tuneup` replaces the
+per-ear check: both medals, four tickets fixed on the first tool, ask_tries 1, ups 0; the report gains `tuneup`.
+**Tests.** `story/tests/test_tuneup.gd`.

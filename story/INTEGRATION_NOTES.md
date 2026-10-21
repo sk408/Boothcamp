@@ -356,6 +356,17 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   Still no new data files.
 
 
+## The tune-up (Day 15; cases branch; docs/TUNEUP.md, CONTRACTS.md §15)
+
+- **Game.CHAPTERS** gains `gus_tune` (Day 15, patient `gus_tune`: chapter id = patient id, `requires: "gus_fit"`,
+  face Gus). **Game.PHASES** gains `datalog` and `tune_desk` (the opening question uses `history`). Both additive.
+- **New beat** `tune_desk` (CONTRACTS.md §3.2): info {ticket}, the solver uses the ticket's right tool.
+- **tools/autoplay_bot.gd** (additive): the mouse route for `tune_desk` (a click on the right tool), and on the
+  `gus_tune` chapter `_check_tuneup` replaces the per-ear check like Day 14's. The report gains `tuneup`.
+- **Clinic and CaseProps**, used as is: `walk_in`, `put_on_hearing_aids`, `doris_enter`, `doris_react`,
+  `gus_look`, `hoot_emote`, the `fitting` shot, and CaseProps' `later` card ("TWO WEEKS LATER").
+- **No new data files** (.tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
+
 ## The career-fair demo (cases branch; docs/DEMO.md, CONTRACTS.md §14)
 
 - **Game** (additive): `is_demo()` (`--demo`, or `?demo` in the web page's address: `_parse_cli()` reads

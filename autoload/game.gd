@@ -40,6 +40,8 @@ const PHASES: Array[StringName] = [
 	&"aid_style", &"real_ear",
 	# the fitting, PR 2: placing the probe tube, the loud-sound check (the counselling uses &"counselling")
 	&"probe_tube", &"loud_check",
+	# the tune-up (Day 15, docs/TUNEUP.md): the aid's datalog, the tune-up desk (the ask uses &"history")
+	&"datalog", &"tune_desk",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -86,6 +88,9 @@ const CHAPTERS: Array[Dictionary] = [
 	# thresholds), because chapter_for_patient("gus") is Day 1; the chapter id is the patient id, as on every day
 	{"id": "gus_fit", "day": 14, "title": "Day 14: Gus's Fitting", "patient_id": "gus_fit", "teaches": "Fitting the hearing aids",
 		"scene": "res://story/level_fitting.tscn", "requires": "bev", "face": "Gus", "tint": Color("#c9f0dc")},
+	# the follow-up (docs/TUNEUP.md): Gus two weeks after his fitting. Its own patient (gus_tune), as above
+	{"id": "gus_tune", "day": 15, "title": "Day 15: Gus's Tune-Up", "patient_id": "gus_tune", "teaches": "The follow-up visit",
+		"scene": "res://story/level_tuneup.tscn", "requires": "gus_fit", "face": "Gus", "tint": Color("#d6ecff")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
