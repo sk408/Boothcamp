@@ -14,6 +14,8 @@ const MOVIES: Dictionary = {
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
 	## (clinical review D2-7) Day 2's two-card short on air, bone and the gap, after the air results
 	"bone_gap": "res://story/explainers/movies/bone_gap.gd",
+	## (clinical review S7 / A3) Day 3's spondee movie: spondees, the SRT and PTA/SRT agreement
+	"srt_ladder": "res://story/explainers/movies/srt_ladder.gd",
 	"letter_choir": "res://story/explainers/movies/letter_choir.gd",
 	"party_noise": "res://story/explainers/movies/party_noise.gd",
 	## (cases, clinical review C12) Hoot's case movies, on every case day (also_chapters)
