@@ -50,6 +50,20 @@ louder makes her worse, not better: rollover. Then the **Red-Flag Roll Call** so
 and you stamp a referral to an ear doctor, soon, with a letter that says what you found, never
 what it is. About 11 minutes.
 
+**Day 5** brings Marco Polenta, a food critic who hears fine one-to-one and gets lost at a busy
+table. It opens with **Hoot's party movie** ("The Party Problem"), a 71-second cartoon in eight
+scenes: why a crowd makes the same voice harder to follow, SNR (how much louder the voice is than
+the noise), why turning everything up doesn't help, SNR loss, the six courses of the **Party Noise
+Test** and the receipt that adds it up (replay it from the pause menu, "Watch Hoot's party movie",
+or **Hoot's Movies**). Hoot runs his beeps, bone, SRTs and words in quiet at top
+speed, then you score party sentences in the SPEECH screen's new PARTY mode: one talker, a party
+that gets louder every sentence (SNR 25 down to 0 dB), and five key words to tick exactly as Marco
+said them. Party list 1 is coached, with a practice sentence; then you work out the bill (SNR loss =
+25.5 minus the key words right), point to its band on the ruler, and set Party list 2 up yourself.
+Serve the clues to Marco's two claims, test his hearing aids in the sound field in a blind tasting
+(programme A, then B), see whether directional microphones really help, and seat him for dinner.
+About 12 minutes.
+
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -71 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
@@ -107,6 +121,18 @@ options). Closing the window saves and quits.
 
 There is no STORE on a word list: it scores itself after word 25.
 
+| Key | SPEECH screen, party sentences (Day 5) |
+|---|---|
+| **Space** | Present the next sentence (the party starts, then the talker) |
+| **Up** / **Down** | Talker louder / softer, before the list's first sentence (unaided lists; Hoot sets the aided level) |
+| **Right**, **+** or **=** | He got the highlighted key word: GOT IT |
+| **Left** or **-** | He missed it: MISSED |
+| **1** to **5** | Flip that key word |
+| **G** | ALL GOT: tick all five |
+| **S** or **Enter** | LOCK IN the sentence (unticked key words count as missed) |
+| **M** | Hoot says why there is nothing to mask (the same mix reaches both ears) |
+| **H** | Show or hide the key hints |
+
 Prefer Up = softer? Click **Up = LOUDER** on the AudiOtron (or use the pause menu) to swap the
 two arrows. Everywhere else: Space or Enter continues dialogue, Up / Down or 1 to 4 picks an
 answer, and every screen says which keys it uses.
@@ -126,6 +152,9 @@ On Day 3, click a word card to drop it, click **PRESENT**, **CORRECT**, **MISSED
 On Day 4, click **PRESENT**, **REPEATED**, **MISSED**, **LOUDER**, **SOFTER**, **NOISE** and
 **NORA-VISION** on the SPEECH screen and the two Call it buttons, then **RED FLAG** or **FINE** for
 each Roll Call card and the stamp.
+On Day 5, click **PRESENT**, **LOUDER**, **SOFTER**, a key-word chip (a click flips it, a right-click
+marks it missed), **GOT IT**, **MISSED**, **ALL GOT** and **LOCK IN** on the SPEECH screen, then a band
+on the bill's ruler, a clue onto a plate (drag, or click then click), the A / B switch and a seat.
 
 ### The AudiOtron in one breath
 
@@ -243,13 +272,22 @@ always lights the NOISE box and the booth squiggles, so Day 2 is playable withou
   for chance, or rollover, with a one-sided loss, a one-sided hiss or unsteadiness, means an ear
   doctor should look further: refer soon, with imaging asked for in the letter, before any hearing
   aid. A sudden change would mean a doctor today. The game never names a diagnosis.
+- **Speech in noise (Day 5):** an audiogram can't tell you how someone copes in noise. The Party
+  Noise Test scores key words (exactly as said; little words never count) in sentences that get
+  noisier, and SNR loss = 25.5 minus the key words right, two lists averaged. Near-normal, mild,
+  moderate or severe points to the technology that helps (good habits, standard settings,
+  directional microphones, a remote microphone). Aided tests go in the sound field at a chatting
+  level, a difference between programmes counts only when it beats the critical difference, and
+  the booth is kinder than a real restaurant.
 
 The words are an original list written for the game, shown on screen as you play: no list, order
 or recording is copied, and every word is checked against ASHA (1988) Appendices A-C and CID W-1.
 Each word plays as a quiet murmur through the same safety limits as the beeps; a recording can
 replace it later, and nothing depends on hearing it. Day 4's "Word list 1" to "Word list 4" were
 written fresh for the game the same way: everyday words, each with rhymes that change only its key
-sound, and no published word list, order or rhyme set copied.
+sound, and no published word list, order or rhyme set copied. Day 5's practice sentence and
+"Party list 1" to "Party list 6" were written fresh for the game too: everyday sentences with
+five key words each, and no published sentence test's sentences, lists, order or recordings copied.
 
 ## Build from source
 
@@ -266,6 +304,7 @@ tools/autoplay_check.sh --day=2 --upgrades=insert_earphones   # ...Day 2 with in
 tools/autoplay_check.sh --via-days --pick=bonnie   # ...picking Day 2 on the Days card
 tools/autoplay_check.sh --day=3                     # ...Day 3 (speech, SRT)
 tools/autoplay_check.sh --day=4                     # ...Day 4 (word recognition)
+tools/autoplay_check.sh --day=5                     # ...Day 5 (speech in noise)
 tools/mouse_check.sh                                # the same with mouse clicks only
 godot --path .                                      # play it
 
@@ -284,8 +323,8 @@ godot --headless --path . --export-release "Windows Desktop" build/BoothCamp.exe
   audiometry, the masking dilemma (both ears with big gaps), and a "something's not right, refer
   to a doctor" case. Day 2's design and rules are in `docs/CHAPTER2.md`.
 - A real fitting level: choosing a target, adjusting gain by frequency, and the follow-up visit.
-- One more speech test: a party-noise test (Day 5, speech in noise) after Day 4's word scores.
-  The speech rules are in `docs/SPEECH.md`, Day 3's and Day 4's designs in `docs/CHAPTER3.md` and
-  `docs/CHAPTER4.md`.
+- The speech days are done (Day 3's SRT, Day 4's word scores, Day 5's speech in noise). The speech
+  rules are in `docs/SPEECH.md`, the designs in `docs/CHAPTER3.md`, `docs/CHAPTER4.md` and
+  `docs/CHAPTER5.md`.
 - Counselling choices that change how the visit ends.
 - More upgrades for the clinic, and a practice booth with random patients.
