@@ -25,6 +25,12 @@ var aside: String = "":
 	set(v):
 		aside = v
 		queue_redraw()
+## (Days 4-5) Room kept clear on the right of the answer for the score badge (a mode's longer
+## answers wrap to two lines); 0 = the answer spans the bubble, as on Day 3.
+var text_inset: float = 0.0:
+	set(v):
+		text_inset = v
+		queue_redraw()
 var _pop := 0.0
 var _mark := 0
 var _mark_t := 0.0
@@ -102,6 +108,13 @@ func _draw() -> void:
 	AoDraw.rbox(self, nr, Palette.SELECT_ORANGE, 11, 3, Palette.INK)
 	AoDraw.text_c(self, nr.get_center(), who, 14, Palette.INK, AoDraw.FONT_BOLD)
 	var mid := Vector2(0, lr.position.y + lr.size.y * 0.54)
+	var max_h := INF
+	if aside != "":
+		# (Days 4-5) the answer sits in the space above the aside's note, never under it
+		var top := lr.position.y + 4.0
+		var bottom := _aside_rect().position.y - c.y - 2.0
+		mid.y = (top + bottom) * 0.5
+		max_h = maxf(20.0, bottom - top)
 	match state:
 		&"idle":
 			AoDraw.text_c(self, mid, "(waiting for a word)", 15, Color(Palette.INK_SOFT, 0.7), AoDraw.FONT_SEMI)
@@ -110,7 +123,10 @@ func _draw() -> void:
 				var b := absf(sin(_t * 6.0 - i * 0.8)) * 8.0
 				draw_circle(mid + Vector2((i - 1) * 26.0, -b), 7.0, Palette.INK_SOFT)
 		&"shown", &"scored":
-			_draw_text(mid, lr.size.x - 40.0, Color(Palette.INK, 0.55 if dim else 1.0))
+			if text_inset > 0.0:
+				_draw_text(mid + Vector2(-text_inset * 0.5, 0.0), lr.size.x - 40.0 - text_inset, Color(Palette.INK, 0.55 if dim else 1.0), max_h)
+			else:
+				_draw_text(mid, lr.size.x - 40.0, Color(Palette.INK, 0.55 if dim else 1.0), max_h)
 	draw_set_transform(Vector2.ZERO)
 	if _mark != 0:
 		_draw_badge(Vector2(size.x - 34.0, TAIL_H + 30.0))
@@ -118,7 +134,8 @@ func _draw() -> void:
 		_draw_aside()
 
 
-func _draw_text(mid: Vector2, max_w: float, col: Color) -> void:
+## (Days 4-5) max_h: the lines' total height must fit it too (INF = no limit, as on Day 3).
+func _draw_text(mid: Vector2, max_w: float, col: Color, max_h: float = INF) -> void:
 	var fs := 34
 	var shown := text
 	if style == &"loud":
@@ -130,7 +147,7 @@ func _draw_text(mid: Vector2, max_w: float, col: Color) -> void:
 		var widest := 0.0
 		for ln: String in lines:
 			widest = maxf(widest, AoDraw.text_size(ln, fs, AoDraw.FONT_BOLD).x)
-		if lines.size() <= 2 and widest <= max_w:
+		if lines.size() <= 2 and widest <= max_w and lines.size() * fs * 1.15 <= max_h:
 			break
 		fs -= 2
 	var lh := fs * 1.15
@@ -150,10 +167,33 @@ func _ghost_tail(tx: float, top: float) -> PackedVector2Array:
 
 ## (Days 4-5) The aside: a small paper note in the bubble's lower-left corner.
 func _draw_aside() -> void:
-	var w := minf(size.x - 24.0, AoDraw.text_size(aside, 13, AoDraw.FONT_SEMI).x + 20.0)
-	var r := Rect2(Vector2(12.0, size.y - 34.0), Vector2(w, 24.0))
+	var r := _aside_rect()
 	AoDraw.rbox(self, r, Palette.CREAM, 10, 2, Color(Palette.INK, 0.5))
-	AoDraw.text_c(self, r.get_center(), aside, 13, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+	if not _aside_wraps():
+		AoDraw.text_c(self, r.get_center(), aside, 13, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+		return
+	# a longer aside: up to two lines at 12 px in a taller note
+	var lines := AoFx._wrap(aside, 12, size.x - 44.0)
+	for i in lines.size():
+		AoDraw.text_c(self, Vector2(r.get_center().x, r.position.y + 12.5 + 15.0 * i), lines[i], 12, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+
+
+## (Days 4-5) The aside's note (local): one line at 13 px, or wrapped at 12 px when it is too wide.
+func _aside_rect() -> Rect2:
+	if not _aside_wraps():
+		var w1 := minf(size.x - 24.0, AoDraw.text_size(aside, 13, AoDraw.FONT_SEMI).x + 20.0)
+		return Rect2(Vector2(12.0, size.y - 34.0), Vector2(w1, 24.0))
+	var lines := AoFx._wrap(aside, 12, size.x - 44.0)
+	var w := 0.0
+	for ln: String in lines:
+		w = maxf(w, AoDraw.text_size(ln, 12, AoDraw.FONT_SEMI).x)
+	w = minf(size.x - 24.0, w + 20.0)
+	var h := 10.0 + 15.0 * lines.size()
+	return Rect2(Vector2(12.0, size.y - 10.0 - h), Vector2(w, h))
+
+
+func _aside_wraps() -> bool:
+	return AoDraw.text_size(aside, 13, AoDraw.FONT_SEMI).x + 20.0 > size.x - 24.0
 
 
 func _draw_badge(c: Vector2) -> void:
