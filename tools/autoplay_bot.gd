@@ -1292,7 +1292,7 @@ func _check_dead_ear_case(case_id: String, res: Dictionary, report: Dictionary, 
 ## air-bone-gap red flag and masked bone at 500-4k; the purple ? ("plateau not reached") at 500 Hz and
 ## 1 kHz on each ear, and at 2k or 4k only after a missed beep in that run; masked air exactly where
 ## the rules ask from the stamps (headphone stamps keep the headphones' rule); the dilemma lines said;
-## Hoot's inserts lent when none were owned, and not when they were.
+## Hoot's inserts lent when none were owned, and not when they were; the dilemma movie started.
 func _check_dilemma_case(case_id: String, res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var c := CaseData.load_case(case_id)
 	if not c.has("on_dilemma"):
@@ -1346,6 +1346,10 @@ func _check_dilemma_case(case_id: String, res: Dictionary, report: Dictionary, p
 			problems.append("%s: inserts lent to a player who owns them" % case_id)
 		if not owned and (not lent or tr != &"inserts"):
 			problems.append("%s: the inserts were never lent" % case_id)
+	# (CASES.md question 26) the case's dilemma movie starts on a fresh save (level_case.gd _dilemma_beat)
+	var dm := String(c.get("dilemma_movie", ""))
+	if dm != "" and not Game.cli_flag("keep-save") and not _movies.has(dm):
+		problems.append("%s: Hoot's %s movie never started on a fresh save" % [case_id, dm])
 
 
 func _fail(code: int, why: String) -> void:

@@ -20,6 +20,8 @@ const MOVIES: Dictionary = {
 	"case_files": "res://story/explainers/movies/case_files.gd",
 	"tymp": "res://story/explainers/movies/tymp.gd",
 	"shapes": "res://story/explainers/movies/shapes.gd",
+	## (cases, CASES.md question 26) Day 13's masking-dilemma movie, as the dilemma first shows
+	"dilemma": "res://story/explainers/movies/dilemma.gd",
 }
 ## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
 ## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.

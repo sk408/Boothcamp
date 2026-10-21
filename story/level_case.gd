@@ -96,6 +96,10 @@ const NO_ROOM := "Purple ? marks: no safe noise level was left for a plateau. Tr
 ## (C9) Day 13: the case lends inserts (lend_inserts) when masked bone would open in a dilemma through
 ## headphones and the player owns none. For this visit only: never an upgrade.
 const LEND_INSERTS := "Headphones leak too much noise for this. Borrow my insert earphones today: a deeper seal."
+## (CASES.md question 26) A case's dilemma_movie (Day 13's "dilemma"): right after its on_dilemma lines,
+## before the loan, Hoot's lead-in and the movie, on every visit until it is watched to its seen_at
+## scene (Esc skips it; then it lives in the pause menu and the title's list).
+const DILEMMA_MOVIE_LEAD_IN := "Both ears blocked: a real puzzle! A quick cartoon on why, then back to work."
 ## (Clinical review C13, A4) Before the call on a FIT case (case key speech_check): Hoot's SRTs, word
 ## scores and one Party Noise Test list at Hoot speed, as on every full test (IHS 2020). Neutral lines:
 ## they never hint at the call. %s: "match" or "sit near"; the band's word score title; the SNR loss.
@@ -373,18 +377,18 @@ func _intro() -> void:
 
 ## (Clinical review C12) One of Hoot's case movies (CASE_MOVIES), unless it was watched before. The
 ## player's first case: Hoot's lead-in, then it plays; a later case: Hoot offers it. Esc skips it
-## (it comes back on the next case until watched to its seen_at scene).
-func _movie(id: String) -> void:
+## (it comes back on the next case until watched to its seen_at scene). (CASES.md question 26) A
+## lead_in of its own (a case's dilemma_movie): always that lead-in while unwatched, never an offer.
+func _movie(id: String, lead_in: String = "") -> void:
 	if not Movies.has(id) or Game.is_movie_seen(id):
 		return
-	var lines: Dictionary = CASE_MOVIES[id]
-	var first := first_case()
-	_phase(&"explainer", {"movie": id, "source": "case", "first_case": first})
+	var first := lead_in != "" or first_case()
+	_phase(&"explainer", {"movie": id, "source": "case", "first_case": first_case()})
 	if first:
-		await _say("Hoot", String(lines["lead_in"]))
+		await _say("Hoot", lead_in if lead_in != "" else String(CASE_MOVIES[id]["lead_in"]))
 	else:
 		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(id) / 10.0) * 10.0), "Not now: on with the case."]
-		var c: int = await dialogue.choose(String(lines["offer"]), opts, 0)
+		var c: int = await dialogue.choose(String(CASE_MOVIES[id]["offer"]), opts, 0)
 		if c != 0:
 			return
 	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
@@ -828,8 +832,8 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 ## (Clinical review C9) Before an ear's masked bone test: when the stamps say it opens in a masking
 ## dilemma, or with no room for a plateau, through today's earphones (CaseData.dilemma_freqs), so
 ## before any purple ? can show, the case's on_dilemma lines, once a
-## visit; then, if the case lends them and the player has no inserts, Hoot's own pair for the rest of
-## the visit (a loan, never an upgrade). Read from the stamps before the test, so Hoot's turns get it
+## visit; then its dilemma_movie while unwatched (CASES.md question 26); then, if the case lends them
+## and the player has no inserts, Hoot's own pair for the rest of the visit (a loan, never an upgrade). Read from the stamps before the test, so Hoot's turns get it
 ## too (the session's masking_dilemma observation fires only on the player's own tones).
 func _dilemma_beat(ear: String) -> void:
 	if _dilemma_told or not case_data.has("on_dilemma"):
@@ -839,6 +843,8 @@ func _dilemma_beat(ear: String) -> void:
 	_dilemma_told = true
 	Game.set_visit_flag("dilemma_told", true)
 	await _play(case_data["on_dilemma"])
+	if case_data.has("dilemma_movie"):
+		await _movie(String(case_data["dilemma_movie"]), DILEMMA_MOVIE_LEAD_IN)
 	if bool(case_data.get("lend_inserts", false)) and _air_transducer() == &"phones" and not _canal_blocked:
 		_lent_inserts = true
 		Game.set_visit_flag("lent_inserts", true)

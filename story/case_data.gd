@@ -12,6 +12,8 @@ extends RefCounted
 ## name_color, voice}}. History options may end with that speaker's name to have them answer.
 
 const CASES_DIR := "res://story/cases/"
+## (CASES.md question 26) dilemma_movie names one of Hoot's movies.
+const Movies := preload("res://story/explainers/movies.gd")
 const REQUIRED_KEYS: PackedStringArray = [
 	"id", "patient_id", "speaker", "case_title", "look", "intro", "history", "red_flags", "otoscopy", "tymp",
 	"instructions", "audiometry", "reveal", "evidence", "findings", "decision", "clue_pick", "payoff", "paper",
@@ -51,6 +53,7 @@ const TOP_TYPES: Dictionary = {
 	"voice": TYPE_DICTIONARY, "voices": TYPE_DICTIONARY, "always_clues": TYPE_ARRAY, "joke_line": TYPE_STRING,
 	"after_history": TYPE_ARRAY, "after_audiometry": TYPE_ARRAY, "sudden_clock": TYPE_DICTIONARY,
 	"retest": TYPE_DICTIONARY, "on_dilemma": TYPE_ARRAY, "lend_inserts": TYPE_BOOL, "speech_check": TYPE_DICTIONARY,
+	"dilemma_movie": TYPE_STRING,
 }
 ## Sub-keys the runner reads directly, with their types (ANY_TEXT: a line or a list of lines).
 const ANY_TEXT := -1
@@ -495,6 +498,11 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("lend_inserts: never an insert into a canal full of wax")
 		if not c.has("on_dilemma"):
 			out.append("lend_inserts needs on_dilemma (the lines that say why)")
+	if c.get("dilemma_movie", null) is String:
+		if not c.has("on_dilemma"):
+			out.append("dilemma_movie needs on_dilemma (it plays right after those lines)")
+		if not Movies.has(String(c["dilemma_movie"])):
+			out.append("dilemma_movie: no such movie in story/explainers/movies.gd")
 	if c.get("speech_check", null) is Dictionary:
 		var sce: Variant = (c["speech_check"] as Dictionary).get("ears", ["right", "left"])
 		if not sce is Array or (sce as Array).is_empty() or (sce as Array).size() > 2:

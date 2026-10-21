@@ -96,6 +96,7 @@
 		["Hoot", "Then the noise hushes the very ear we're testing. That's the masking dilemma!"]
 	],
 	"lend_inserts": true,
+	"dilemma_movie": "dilemma",
 	"after_audiometry": [
 		["Bev", "Look at all those marks! FULL HOUSE! Do I win a prize?"],
 		["Hoot", "You win a good look at your chart. To the board!"]
