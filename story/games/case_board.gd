@@ -44,6 +44,8 @@ const WAVE := Color("#36a3e7")
 const COOKIE := Color("#d99a5b")
 const WAX := Color("#c98a3a")
 const WAX_DARK := Color("#8a5a24")
+const BONE := Color("#f4ead2")
+const STIFF_TAG := Color("#dccbf2")
 const GAP_STEPS := 24                   # samples along the gap band (500-4k)
 
 var case_data: Dictionary = {}
@@ -201,11 +203,19 @@ func show_pattern() -> void:
 				Events.screen_shake.emit(0.25, 0.15))
 		"gap":
 			# the Audiogram's own bridge posts, and the other ear fades so the eye compares bone with air
+			# (both ears stay bright when the gap is in both, Day 13)
 			if ag != null:
 				var other := "left" if _focus_ear() == "right" else "right"
 				ag.show_gap = true
-				create_tween().tween_method(func(a: float) -> void: ag.dim = {other: a}, 1.0, 0.3, 0.5)
-			if String(rv.get("plug", "wax")) == "fluid":
+				if String(rv.get("ear", "right")) != "both":
+					create_tween().tween_method(func(a: float) -> void: ag.dim = {other: a}, 1.0, 0.3, 0.5)
+			if String(rv.get("plug", "wax")) == "stiff":
+				Sfx.play(&"whoosh", 0.6, -6.0)
+				get_tree().create_timer(0.45, false).timeout.connect(func() -> void:
+					Sfx.play(&"thunk", 0.55, -2.0)
+					Events.screen_shake.emit(0.3, 0.15))
+				get_tree().create_timer(0.75, false).timeout.connect(func() -> void: Sfx.play(&"blip", 1.7, -4.0))
+			elif String(rv.get("plug", "wax")) == "fluid":
 				Sfx.play(&"whoosh", 0.45, -6.0)
 				for i in 3:
 					var pitch := 1.0 + 0.25 * i
@@ -977,8 +987,9 @@ func _draw_cookie() -> void:
 
 ## The air-bone gap on the focus ear: the band between the bone line and the air line (500-4k)
 ## shades in, red dots sit on the posts where the gap is 15 or more, and what made the gap shows up
-## in it: a lumpy wax cork slams in between 1k and 2k ("plug": "wax"), or water rises with bubbles
-## and a rubber duck ("plug": "fluid"). The sticker gives the measured average gap, rounded to 5.
+## in it: a lumpy wax cork slams in between 1k and 2k ("plug": "wax"), water rises with bubbles
+## and a rubber duck ("plug": "fluid"), or (Day 13) the tiny stirrup bone drops in and a padlock snaps
+## onto it ("plug": "stiff"). The sticker gives the measured average gap, rounded to 5.
 func _draw_gap() -> void:
 	var s := _sc()
 	var rv: Dictionary = case_data.get("reveal", {})
@@ -990,6 +1001,7 @@ func _draw_gap() -> void:
 		return
 	var bone_line := _gap_line(bone)
 	var fluid := String(rv.get("plug", "wax")) == "fluid"
+	var stiff := String(rv.get("plug", "wax")) == "stiff"
 	# the band's sample positions: where both lines were measured
 	var xs := PackedFloat32Array()
 	if air_line.size() >= 2 and bone_line.size() >= 2:
@@ -1015,6 +1027,8 @@ func _draw_gap() -> void:
 	var y_bone := _line_y(bone_line, x_plug) if not bone_line.is_empty() else y_air - 60.0 * s
 	if fluid:
 		_draw_water(xs, air_line, bone_line, x_plug)
+	elif stiff:
+		_draw_stirrup(Vector2(x_plug, (y_air + y_bone) * 0.5), y_air - y_bone)
 	else:
 		_draw_cork(Vector2(x_plug, (y_air + y_bone) * 0.5), y_air - y_bone)
 	# the red flag, visible: a dot on each post at 500, 1k and 2k with a gap of 15 or more
@@ -1034,11 +1048,11 @@ func _draw_gap() -> void:
 		_fx.draw_circle(dp + Vector2(-0.3, -0.3) * r, r * 0.3, Color(1, 1, 1, 0.6))
 	# the sticker, under the air line (no number when the ear has no bone to measure a gap from)
 	var avg := _avg_gap(gaps)
-	var word := "BLUB!" if fluid else "PLUGGED!"
+	var word := "BLUB!" if fluid else ("STUCK!" if stiff else "PLUGGED!")
 	var txt := word if avg < 0 else "%s ~%d dB" % [word, avg]
-	var since := _pattern_t - (1.0 if fluid else 0.5)
+	var since := _pattern_t - (1.0 if fluid else (0.85 if stiff else 0.5))
 	if since > 0.0:
-		_draw_sticker(Vector2(x_plug, y_air + 46.0 * s), txt, Palette.SKY if fluid else Palette.CORAL, since)
+		_draw_sticker(Vector2(x_plug, y_air + 46.0 * s), txt, Palette.SKY if fluid else (STIFF_TAG if stiff else Palette.CORAL), since)
 
 
 ## One ear's thresholds as chart points, left to right, at 500-4k.
@@ -1116,6 +1130,37 @@ func _draw_cork(rest: Vector2, gap_px: float) -> void:
 	_fx.draw_arc(Vector2(-rx * 0.3, -ry * 0.35), ry * 0.35, PI + 0.3, TAU - 0.6, 8, Color(1, 1, 1, 0.5), 3.0, true)
 	# the tiny wick
 	_fx.draw_polyline(PackedVector2Array([Vector2(0, -ry * 0.9), Vector2(-2, -ry - 5.0), Vector2(2, -ry - 9.0), Vector2(0, -ry - 13.0)]), Palette.INK, 2.5, true)
+	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## (Day 13) What sticks in an otosclerosis-like gap: the stirrup, the smallest bone in the body,
+## stiffened in place. It drops in like the cork, then a padlock snaps onto its footplate.
+func _draw_stirrup(rest: Vector2, gap_px: float) -> void:
+	var s := _sc()
+	var u := clampf((gap_px / s - 10.0) * 0.5, 12.0, 22.0)
+	var k := clampf(_pattern_t / 0.45, 0.0, 1.0)
+	var at := rest + Vector2(0, -(1.0 - k) * (1.0 - k) * 190.0 * s)
+	var lock_t := _pattern_t - 0.75
+	var shake := sin(lock_t * 40.0) * exp(-lock_t * 8.0) * 0.12 if lock_t > 0.0 else 0.0
+	_fx.draw_set_transform(at, shake, Vector2.ONE * s)
+	var foot_y := u * 0.9
+	# the two legs: an arch from the footplate up to the head and down again
+	var arch := PackedVector2Array()
+	for i in 13:
+		var a := PI + PI * i / 12.0
+		arch.append(Vector2(cos(a) * u * 0.75, foot_y + sin(a) * u * 1.6))
+	_fx.draw_polyline(arch, Palette.INK, 9.0, true)
+	_fx.draw_polyline(arch, BONE, 5.0, true)
+	# the head on top, where the next bone meets it, and the footplate in the oval window
+	UiDraw.rounded_rect(_fx, Rect2(Vector2(-u * 0.3, foot_y - u * 2.1), Vector2(u * 0.6, u * 0.6)), BONE, 5, 2, Palette.INK)
+	UiDraw.rounded_rect(_fx, Rect2(Vector2(-u * 1.0, foot_y - u * 0.1), Vector2(u * 2.0, u * 0.4)), BONE, 5, 2, Palette.INK)
+	if lock_t > 0.0:
+		var pop := 1.0 + 0.5 * maxf(0.0, 1.0 - lock_t / 0.2)
+		_fx.draw_set_transform(at + Vector2(u * 0.75, foot_y + u * 0.3) * s, shake, Vector2.ONE * s * pop)
+		_fx.draw_arc(Vector2(0, -u * 0.3), u * 0.26, PI, TAU, 10, Palette.INK_SOFT, 4.0, true)
+		UiDraw.rounded_rect(_fx, Rect2(Vector2(-u * 0.4, -u * 0.32), Vector2(u * 0.8, u * 0.64)), Palette.PLUM, 4, 2, Palette.INK)
+		_fx.draw_circle(Vector2(0, -u * 0.06), u * 0.1, Palette.INK)
+		_fx.draw_line(Vector2(0, -u * 0.04), Vector2(0, u * 0.16), Palette.INK, 3.0, true)
 	_fx.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

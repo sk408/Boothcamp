@@ -16,7 +16,7 @@ const MOVIE: Dictionary = {
 	"title": "Hoot's case files movie",
 	"subtitle": "Three Stamps and the Red Flags",
 	"chapter": "rocco",
-	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan"],
+	"also_chapters": ["marina", "dash", "ginger", "barnaby", "skye", "morgan", "bev"],
 	"narrator": "Hoot",
 	"stage": "res://story/case_movies/case_files_sets.gd",
 	## Watching up to this scene counts as seen (a skip before it offers the movie again next case).

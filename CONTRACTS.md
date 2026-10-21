@@ -21,7 +21,7 @@ Engine: Godot 4.7.2, statically typed GDScript, Compatibility (OpenGL) renderer,
 | `story/**` | builder B | title, level director, dialogue, micro-games, Hoot bubble view, pause menu, results paper |
 | `autoload/**`, `main.tscn`, `main.gd`, `tests/**`, `tools/**`, `project.godot`, `export_presets.cfg`, `assets/**`, `CONTRACTS.md` | foundation, then integrator | shared services, harness, contracts |
 | **(Speech)** `core/speech/**`, `ui/speech/**`, `story/level_mike.*`, `story/games/mike_board.gd` | speech thread | Day 3: the SPEECH screen and its logic (§9) |
-| **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-12: the case files and their runner (§11) |
+| **(cases)** `story/cases/**`, `story/level_case.*`, `story/case_*.gd`, `story/games/case_*.gd`, `core/cases/**` | cases thread | Days 6-13: the case files and their runner (§11) |
 | **(Days 4-5)** `story/level_nora.*`, `story/games/nora_board.gd`, `story/papers/paper_word_golf.gd`, `story/explainers/movies/letter_choir.gd`, `story/explainers/stages/letter_choir_sets.gd`, `core/patients/nora.tres` (Day 5's files come with its PR) | speech thread | Days 4-5: word lists and the Party Noise Test on the SPEECH screen (§9.10-§9.24; every owner in §9.23.1) |
 
 **Export presets.** `export_presets.cfg` has two presets, "Windows Desktop" and "Web" (Steve's, 2026-10-19; `.github/workflows/pages.yml` deploys the web build to GitHub Pages on every push to main). A run-time data file that is not a Godot resource (patient and case JSON, word lists) must be in BOTH presets' `include_filter`, or the exported game runs without it.
@@ -165,7 +165,7 @@ Emit every signal with all its arguments. Use `""`, `{}` or `-1` for "none".
 | `clock: float` | Game seconds. Pauses with the tree and follows `Engine.time_scale`. |
 | `PHASES` | Phase ids (§3.1). **(v4)** adds `explainer` and `ghost_demo`; **(Speech)** `familiarize`, `speech` (§9.8); **(cases)** `tymp`, `decision` (§11) |
 | **(v4)** `is_movie_seen(id) -> bool`, `mark_movie_seen(id)` | `progress.movies_seen`; `mark_movie_seen` adds the id once and saves. The explainer player calls it when a movie ends after reaching its `seen_at` scene (§3.4) |
-| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`); **(Speech)** `mike` (Day 3, `res://story/level_mike.tscn`, §9.8); **(cases)** `rocco`, `marina`, `dash`, `ginger`, `barnaby`, `skye`, `morgan` (Days 6-12, `res://story/level_case.tscn` with the extra key `case`, §11). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
+| **(v3)** `CHAPTERS` | `[{id, day, title, patient_id, teaches, scene, requires}]`: `gus` (Day 1: Grandpa Gus, `res://story/level_gus.tscn`) and `bonnie` (Day 2: Bonnie Bunsworth, `res://story/level_bonnie.tscn`, requires `gus`); **(Speech)** `mike` (Day 3, `res://story/level_mike.tscn`, §9.8); **(cases)** `rocco`, `marina`, `dash`, `ginger`, `barnaby`, `skye`, `morgan`, `bev` (Days 6-13, `res://story/level_case.tscn` with the extra key `case`, §11). **(polish)** `requires` is only a hint: the chapter best played first, which picks the suggested ("UP NEXT") day; it never locks anything. Optional `face` (a `Portraits` speaker id) and `tint` (a `Color` or `"#rrggbb"`) style the title's day card when its `DAY_FACES` / `DAY_TINTS` tables have no entry for the id |
 | **(v3)** `chapters()`, `chapter(id)`, `chapter_for_patient(id)`, `chapter_for_day(day)`, `chapter_scene(id)` | Registry lookups (`{}` / `""` when unknown) |
 | **(v3)** `is_chapter_done(id)`, `is_chapter_unlocked(id)`, `unlocked_chapter_ids()` | **(polish)** Every chapter is open from the start, in any order (Steve's rule): `is_chapter_unlocked()` is always true and `unlocked_chapter_ids()` lists every chapter. Kept so callers need not change |
 | **(polish)** `suggested_chapter_id()`, `static suggested_from(list, done)` | The suggested day (the title's "UP NEXT" badge): the first chapter in day order not done whose `requires` is done, empty or unknown; else the first not done; `""` when every day is done |
@@ -237,6 +237,10 @@ answered by the left cochlea, `cross_heard`).
     better cochlea, wherever the oscillator sat. `masked_freqs_needed(results, ear, &"bc_masked")` now compares the
     test ear's air with `unmasked_bone()` (Day 2 measures unmasked bone on the LEFT mastoid only), and the session
     starts a masked bone measurement there too (`mask_start` check, par, recommended start).
+  - **(cases, Day 13)** `masked_freqs_needed(results, ear, &"ac_masked", phones)` judges each air stamp with the
+    transducer the stamp records (`info.transducer`, "phones" / "inserts"); `phones` is only the fallback for
+    stamps without one. Nothing changes while a visit keeps one transducer; when Hoot lends inserts mid-visit
+    (Day 13), the air measured through headphones still needs masking by the headphones' rule.
 
   The numbers are teaching defaults that the clinical reviewer (Steve) checks. Change them here, not in a copy.
 - **`AudioSafety`**: `hl_to_dbfs`, `hl_to_peak`, `peak_ceiling`, `clamp_sample`, and the bus names `Tones`, `Sfx`, `Music`, `Voice` (§1.3).
@@ -388,8 +392,8 @@ recap "The short version". How to add one: `docs/ADDING_A_CHAPTER.md`, "Hoot's m
 
 | Part | File | What it is |
 |---|---|---|
-| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps and, **(Days 4-5)**, any movie whose `chapter` is not in `Game.CHAPTERS` yet, such as a stub registered before its day), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-12" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
-| Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list), `stage` (the movie's own sets script, below) and **(cases)** `also_chapters` (more Game.CHAPTERS ids whose pause menu lists it: the case movies belong to `rocco` and also to Days 7 to 11) |
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps and, **(Days 4-5)**, any movie whose `chapter` is not in `Game.CHAPTERS` yet, such as a stub registered before its day), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-13" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
+| Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list), `stage` (the movie's own sets script, below) and **(cases)** `also_chapters` (more Game.CHAPTERS ids whose pause menu lists it: the case movies belong to `rocco` and also to Days 7 to 13, labelled "Days 6-13") |
 | Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
 | Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | Fully animated: `SETS` (the built-in set ids: the ten masking sets of `docs/CHAPTER2.md` §16 and `card`), `use_movie(movie)` (the player calls it: loads `MOVIE.stage`), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes, a screenshot repeats and a skipped scene leaves nothing behind. `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. **Fallback:** a `set` nobody knows (neither the stage nor the movie's sets script) draws a card with the scene's title (never an error, never a blank screen) |
 | **(polish) Sets hook** | `story/explainers/explainer_sets.gd` (RefCounted base) | A movie may bring its OWN sets, so a later chapter never edits the stage: `MOVIE.stage = "res://<your folder>/<id>_sets.gd"`, a script that `extends "res://story/explainers/explainer_sets.gd"`, declares `const SETS: Array[StringName]` and one `func _set_<id>() -> void` per set. The stage draws its built-in sets itself and hands any other set to that script (`draw_set(stage, id)`), so it draws in the stage's `_draw()` with the same inputs, refreshed per frame: `t`, `duration`, `params`, `scene_id`, `scene_title`; `s` is the stage (every helper: `s._snail()`, `s._chip()`, `s._text()`, `s._cloud()`, `s._head_open()`, `s.draw_*()`...), `Stage2D.<COLOR>` its palette, and `_k()`, `_pop()`, `_ring()` are on the base. Same rules: a pure function of `t`, sounds only in the cues. `Movies.validate(id, Stage2D.SETS)` accepts a set from either list and reports a missing script, one that is not an explainer_sets.gd with SETS, or a SETS id without its `_set_<id>()`. Working example: `tests/fixtures/fake_movie.gd` + `fake_movie_sets.gd` (test `test_movie_sets_hook`) |
@@ -1503,7 +1507,7 @@ missing-mode path (§9.10.2), `party_noise.gd` is S0a's stub, which no replay li
 and `docs/CHAPTER5.md` comes with the PR.
 
 **Ground rules kept from §1, §3.4 and §9.**
-- Days 1-3, 6-12 and the walk-ins behave exactly as before. Shared files take additive changes only, each one guarded
+- Days 1-3, 6-13 and the walk-ins behave exactly as before. Shared files take additive changes only, each one guarded
   so that a Day 3 SRT session never reaches the new code (`session.mode == null`, `screen._mode == null`). The one
   allowed visible Day 3 change is the "UP NEXT" hint, which now points to Day 4 (§9.21).
 - Original material only. No published test list, sentence, recording, order or rhyme set is copied or closely
@@ -1579,7 +1583,7 @@ requires `mike`) and `marco` (day 5, requires `nora`); `requires` is the suggest
 
 **§9.9 Autoplay (Day 4) (Day 5).** See §9.22. The main thread owns `tools/autoplay_bot.gd`, and the patch request is
 `tools/INTEGRATION_NOTES.md`. Day 4's part is in the bot in blocks marked `# (Days 4-5)` (applied by W5a), none of
-which runs on Days 1-3 or 6-12; Day 5's part is still to do.
+which runs on Days 1-3 or 6-13; Day 5's part is still to do.
 
 **Events, speech block (Day 5).** The doc comments of `speech_presented`, `speech_scored` and `speech_stored` change
 from "ear: right / left" to "ear: right / left, or "both" for a party test". The `item`, `trial` and `sheet`
@@ -3072,7 +3076,7 @@ screen.run_hidden(marco, "left", {test = "wrs", tones = t, list = "words_2"})
 
 The main thread owns `tools/autoplay_bot.gd`. The Days 4-5 builders wrote this section as a patch request in
 `tools/INTEGRATION_NOTES.md`; W5a then applied Day 4's part, in blocks marked `# (Days 4-5)` that run only with a
-`wrs` / `sin` test, a word sheet or the `nora` / `marco` chapter, so Days 1-3 and 6-12 print byte-identical
+`wrs` / `sin` test, a word sheet or the `nora` / `marco` chapter, so Days 1-3 and 6-13 print byte-identical
 `AUTOPLAY_RESULT` lines. The notes list what is applied ("Already in the bot") and what is still to do (Day 5's
 `_check_sin_lists` and its own checks). The notes number the patch's parts 1-8 (speech days, beats, word lists,
 party lists, Day 4, Day 5, screenshots, runs), and the bot's comments cite them as §9.22.1-§9.22.8. Any problem below
@@ -3478,7 +3482,7 @@ Design: `docs/CASES.md`. Full scripts: `docs/CASE_SCRIPTS.md` (generated from th
 | What | Where | Owner |
 |---|---|---|
 | Case data, one per case | `story/cases/<case_id>.json` (the source of truth for every line) | cases |
-| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural cases: no bone data, bone = air; conductive cases carry `bc_right` / `bc_left`; a deaf ear (Day 12) puts its air past the dial, up to `ClinicRules.max_db(f) + 30`, so masked tests store no response). A retest profile `<id>_after.tres` (the ear after treatment) is loaded by the runner and never registered as a chapter | cases |
+| Patient truth tables | `core/patients/<patient_id>.tres` (sensorineural cases: no bone data, bone = air; conductive cases carry `bc_right` / `bc_left`, both for gaps in both ears (Day 13); a deaf ear (Day 12) puts its air past the dial, up to `ClinicRules.max_db(f) + 30`, so masked tests store no response). A retest profile `<id>_after.tres` (the ear after treatment) is loaded by the runner and never registered as a chapter | cases |
 | Runner (one for every case) | `story/level_case.gd` + `.tscn` | cases |
 | Loader and checks | `story/case_data.gd` (`CaseData`, preload by path) | cases |
 | Rules | `core/cases/case_rules.gd` (`class_name CaseRules`): decisions, red flags (2022 labeling), asymmetry, the sudden-loss definition, tympanogram types and curve | cases |
@@ -3521,6 +3525,16 @@ doctor-checked, unchanged cause; a test allows an asymmetric FIT only with it). 
 types an ear with no-response bone dropped (the chart's `hearing_type` reads a deaf ear as mixed); the runner and
 `finding_shows` use it. After masked air, when every masked air stamp on an ear is no response, Hoot says
 `LevelCase.NO_PLATEAU`.
+**(Day 13, clinical review C9)** `on_dilemma` (a script) and `lend_inserts` (bool; needs `on_dilemma`, never with a
+wax view): before each masked bone test the runner reads the noise window from the stamps
+(`CaseData.bone_mask_window(res, ear, f, masker)` -> `{initial, limit, raises, dilemma}`, mirroring the session;
+`CaseData.dilemma_freqs`); the first time one opens in a masking dilemma it plays `on_dilemma`, then, with
+`lend_inserts` and no inserts owned, lends Hoot's for the rest of the visit (`CaseData.air_transducer(blocked, lent)`,
+`LevelCase.LEND_INSERTS`; never `progress.upgrades`). Visit flags `dilemma_told`, `lent_inserts`.
+`findings[].when` `no_plateau` (a masked stamp on either ear carries `plateau_not_reached`; on the truth, an inserts
+window with fewer than `PLATEAU_STEPS` safe raises; `CaseData.no_plateau_shows`); `reveal.plug` `stiff` (the board
+drops a padlocked stirrup into the gap, "STUCK!"); a `gap` reveal with `ear` `both` dims neither ear. After the masked
+tests, when Hoot stored a purple ?, he says `LevelCase.NO_ROOM`.
 `CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
 checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
 the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
@@ -3561,7 +3575,9 @@ survive a wobble and mask bone but not air, no shipped case gains a masked test,
 props, speakers), patients match their chapters and validate, flat tymps read their canal volume, every new
 validate rule and broken file is reported, the retest profile, finding conditions, wrong-first headlines,
 `merge_retest`, the runner's own lines, headphones with wax, and the new gadgets draw; Day 12: the shadow and
-no-response findings, masked bone then masked air to no response with phones and inserts, and the known-cause FIT. `tools/run_tests.sh` also
+no-response findings, masked bone then masked air to no response with phones and inserts, and the known-cause FIT;
+Day 13: the dilemma windows under any single wobble, masked air by each stamp's transducer, the loan, and Bev's
+findings on the truth and on a clean run. `tools/run_tests.sh` also
 fails when `docs/CASE_SCRIPTS.md` is stale.
 
 ---------------------------------------------------------------------------------------------

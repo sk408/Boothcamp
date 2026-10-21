@@ -8,7 +8,7 @@ one block marked `# (Days 4-5)` and lists it under "Already in the bot" below.
 ## Already in the bot
 
 W5a (Day 4) applied the Day 4 part of the patch in `tools/autoplay_bot.gd`, in blocks marked `# (Days 4-5)`. None
-of it runs on Days 1-3 or 6-12: each block needs a `wrs` / `sin` test, a word sheet, or the `nora` chapter.
+of it runs on Days 1-3 or 6-13: each block needs a `wrs` / `sin` test, a word sheet, or the `nora` chapter.
 
 - §1: `speech_day` also holds for `nora` and `marco`.
 - §3: `_check_wrs_lists(sp, report, problems)` on any day with a `speech.wrs` sheet. It also adds

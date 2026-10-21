@@ -5,7 +5,7 @@ enough for every sound, whole-word scoring, the speech banana seen through the p
 ear differences beyond chance, rollover (a louder list scores worse), "her best is worse than her tones predict",
 and a referral for a doctor's check, with imaging requested, before any fitting. The shared speech rules and numbers
 live in `docs/SPEECH.md` §4. The API is `CONTRACTS.md` §9.10-§9.24; where this doc and the contract differ, the
-contract wins, and the decisions D1-D30 there are the ones this doc follows. Days 1-3, 6-12 and the walk-ins do not
+contract wins, and the decisions D1-D30 there are the ones this doc follows. Days 1-3, 6-13 and the walk-ins do not
 change. Steve checks every number and every clinical line (§17).
 
 **Clinical review (2026-10-19).** The project's clinical review changed four Day 4 grading rules and three lines
@@ -1073,7 +1073,7 @@ The takeaway line ("Whole words, both ears, louder once, flags raised...") is on
 | `core/tests/test_speech_wrs.gd`, `ui/tests/test_speech_screen_wrs.gd`, `story/tests/test_level_nora.gd`, `story/tests/test_movie_letter_choir.gd` | tests (§16) |
 
 **Shared files.** Every shared-file change went through the contract's S0a and S0b steps (§9.10.7) and is additive;
-Days 1-3, 6-12 and the walk-ins behave exactly as before. Day 4's own additions to shared files are only these:
+Days 1-3, 6-13 and the walk-ins behave exactly as before. Day 4's own additions to shared files are only these:
 
 | File | Change | Why the other days are safe |
 |---|---|---|
@@ -1196,8 +1196,8 @@ order; right best 88 or more; left comfortable 64 or less; left `best_final`, `b
 louder list with `rollover` and its capped noise; `referral == &"refer"` and the visit's `decision`; a fresh save must
 start `letter_choir` (the result prints `movies` and `wrs_lists`).
 
-**Regression**: every Day 1-3 and 6-12 test passes unchanged, the Day 3 golden snapshots match (A8 changed one Day 3
-tip line, said in its test), and the Day 1-3, 6-12 and walk-in autoplay results match their baselines.
+**Regression**: every Day 1-3 and 6-13 test passes unchanged, the Day 3 golden snapshots match (A8 changed one Day 3
+tip line, said in its test), and the Day 1-3, 6-13 and walk-in autoplay results match their baselines.
 
 ## 17. Open questions for Steve
 

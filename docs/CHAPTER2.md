@@ -269,7 +269,7 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 | Plateau | the same tone level heard through 3 noise raises of 5 dB (15 dB), starting at or above the initial level | `PLATEAU_STEPS`, `plateau_run` |
 | Overmasking | masker - 40 >= test-ear bone (bone: masker >= tone + 40; air: masker >= the test ear's best bone + 40, the nearest measured bone frequency standing in where none was measured, e.g. 500 for 250) | `overmask_limit`, `is_overmasked`, session `overmask_limit_db` |
 | Full window | heard with the noise at or above the initial level and one more step would overmask: store the held level (a narrow window, no plateau error). **(Clinical review E9)** The stamp is recorded as "plateau not reached" (`plateau_not_reached` in the stamp info; a purple "?" badge on the audiogram: the true threshold may be poorer) | session `window_full` |
-| Masking dilemma | initial masking already at the overmasking limit. **(E9)** The coach starts the noise one step short of overmasking (`safe_mask_max_db`, `start_mask_db`), `mask_too_low` is measured against that, the lamp shows "dilemma", Hoot explains once (`masking_dilemma` tip, inserts leak less), and the first heard tone at the safe maximum fills the window: store it, "plateau not reached" (BSA 2018, 8.8 step 5 and 8.9). No current day reaches it; the advanced case C9 will | `masking_dilemma`, session `in_dilemma` |
+| Masking dilemma | initial masking already at the overmasking limit. **(E9)** The coach starts the noise one step short of overmasking (`safe_mask_max_db`, `start_mask_db`), `mask_too_low` is measured against that, the lamp shows "dilemma", Hoot explains once (`masking_dilemma` tip, inserts leak less), and the first heard tone at the safe maximum fills the window: store it, "plateau not reached" (BSA 2018, 8.8 step 5 and 8.9). Day 13 (Bev, clinical review C9) reaches it in both ears; its runner says why before the test and lends inserts | `masking_dilemma`, session `in_dilemma` |
 | Type of loss | normal (air <= 25); conductive (gap > 10 at 2+ of 500-4k, bone average <= 25); mixed (same gaps, poorer bone); sensorineural (no real gap) | `hearing_type` |
 | Carhart notch | **(polish)** bone at 2k at least 10 poorer than the better of 500 and 4k (1k stands in when 500 is missing), at least 5 poorer than 4k (a notch, not a slope) and no better than 1k (the bottom of the dip) | `has_carhart_notch` |
 | Masker range | 0-100 dB EM, 5 dB steps, starts at 10 when switched on | `MASK_MIN_DB`, `MASK_MAX_DB`, `MASK_STEP_DB` |
@@ -437,6 +437,12 @@ bedsheet); the purple "shhh" cloud; a noise dial.
 
 Total 93 s planned (each scene lasts at least its time and long enough to read its last caption, so about 96 s
 at normal text speed).
+
+**(D2-7) Two roads to the cochlea**, `story/explainers/movies/bone_gap.gd` (`short`: never listed for replay): two
+`card` scenes, 20 s, played after the air results ("But WHERE is it stuck?"), before the bone placement. "Two roads to
+the cochlea" (Righty and Lefty wave): "AIR: canal, middle ear, cochlea" / "BONE: a buzz through the skull" / "Bone
+mostly skips the middle ear". "Read the gap": "The gap = air minus bone" / "Big gap, bone normal: CONDUCTIVE" / "No gap,
+both down: SENSORINEURAL" / "Gap AND bone down: MIXED". Esc skips it, and then Hoot says the one-line version.
 
 **(polish) The recap**, `story/explainers/movies/masking_recap.gd` ("The short version", `short`: never listed for
 replay): one `card` scene, 12 s, played when the masking phase opens (about 8 minutes after the movie, right before

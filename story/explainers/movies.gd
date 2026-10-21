@@ -12,6 +12,8 @@ extends RefCounted
 const MOVIES: Dictionary = {
 	"masking": "res://story/explainers/movies/masking.gd",
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
+	## (clinical review D2-7) Day 2's two-card short on air, bone and the gap, after the air results
+	"bone_gap": "res://story/explainers/movies/bone_gap.gd",
 	"letter_choir": "res://story/explainers/movies/letter_choir.gd",
 	"party_noise": "res://story/explainers/movies/party_noise.gd",
 	## (cases, clinical review C12) Hoot's case movies, on every case day (also_chapters)
@@ -135,7 +137,7 @@ static func replay_ids() -> Array[String]:
 	return out
 
 
-## The chapter's day label for the replay list ("Day 2"; "Days 6-12" with "also_chapters"), ""
+## The chapter's day label for the replay list ("Day 2"; "Days 6-13" with "also_chapters"), ""
 ## when unknown.
 static func day_label(id: String) -> String:
 	var days: Array[int] = []

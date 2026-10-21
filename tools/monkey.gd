@@ -538,6 +538,10 @@ func _run_case(case_id: String) -> void:
 		res = await _case_test(patient, String(pd["ear"]), plan)
 	for ear: String in CaseData.masked_bone_ears(c["audiometry"]):
 		if not ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").is_empty():
+			# (C9) the runner's loan: Hoot's inserts from the first masked bone test that would open in
+			# a dilemma through headphones (level_case.gd _dilemma_beat)
+			if bool(c.get("lend_inserts", false)) and tr == &"phones" and not CaseData.dilemma_freqs(res, ear, tr).is_empty():
+				tr = CaseData.air_transducer(CaseData.canal_blocked(c), true)
 			res = await _case_test(patient, ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 2, "air_transducer": tr})
 	for ear: String in CaseData.plan_ears(c["audiometry"], "ac"):
 		if not ClinicRules.masked_freqs_needed(res, ear, &"ac_masked", tr).is_empty():

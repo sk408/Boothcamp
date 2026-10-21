@@ -27,6 +27,7 @@ const PATIENT_ID := "bonnie"
 const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const MOVIE_ID := "masking"
 const RECAP_ID := "masking_recap"   ## (polish) the one-card short version, at the masking phase
+const BONE_GAP_ID := "bone_gap"     ## (D2-7) two cards on air, bone and the gap, after the air results
 ## (v4) The one-tone Ghost demo: 1 kHz, 5 dB above her measured LEFT bone (never above 30).
 const DEMO_FREQ := 1000
 const DEMO_MAX_DB := 30
@@ -161,12 +162,18 @@ func _movie() -> void:
 ## (polish) When the masking phase opens, about 8 minutes after the movie: the short version (one
 ## card, about 12 s, Esc skips it), so the steps are fresh right before the AudiOtron needs them.
 func _recap() -> void:
-	if not Movies.has(RECAP_ID):
-		return
+	await _short_movie(RECAP_ID)
+
+
+## Play a short (a recap card movie) where the level is. True when it played to the end (not skipped).
+func _short_movie(id: String) -> bool:
+	if not Movies.has(id):
+		return false
 	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
 	add_child(player)
-	await player.call("play", RECAP_ID, "recap")
+	var r: Variant = await player.call("play", id, "recap")
 	player.queue_free()
+	return not (r is Dictionary and bool((r as Dictionary).get("skipped", false)))
 
 
 # ---------------------------------------------------------------- 1. intro
@@ -391,7 +398,9 @@ func _air() -> void:
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)
 	await _say("Hoot", "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?")
-	await _say("Hoot", "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea.")
+	# (D2-7) the two roads and how to read the gap, before bone and the gap are used and quizzed
+	if not await _short_movie(BONE_GAP_ID):
+		await _say("Hoot", "Air goes through the ear canal and middle ear. Bone mostly skips both, straight to the cochlea.")
 
 
 # ---------------------------------------------------------------- 7. bone oscillator placement
