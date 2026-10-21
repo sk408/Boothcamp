@@ -20,6 +20,12 @@ var style: StringName = &"normal":
 	set(v):
 		style = v
 		queue_redraw()
+## (Days 4-5) The line while nothing has been said yet (the PARTY test waits for a sentence).
+const IDLE_TEXT := "(waiting for a word)"
+var idle_text: String = IDLE_TEXT:
+	set(v):
+		idle_text = v
+		queue_redraw()
 ## (Days 4-5) A small side note in the bubble's corner ("" = none).
 var aside: String = "":
 	set(v):
@@ -117,7 +123,7 @@ func _draw() -> void:
 		max_h = maxf(20.0, bottom - top)
 	match state:
 		&"idle":
-			AoDraw.text_c(self, mid, "(waiting for a word)", 15, Color(Palette.INK_SOFT, 0.7), AoDraw.FONT_SEMI)
+			AoDraw.text_c(self, mid, idle_text, 15, Color(Palette.INK_SOFT, 0.7), AoDraw.FONT_SEMI)
 		&"listening":
 			for i in 3:
 				var b := absf(sin(_t * 6.0 - i * 0.8)) * 8.0

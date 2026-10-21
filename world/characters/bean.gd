@@ -64,6 +64,20 @@ const NORA := {
 	"glasses": &"none", "glasses_color": Color("#f4efe6"), "walker": false, "prop": &"",
 	"apron": false, "notes_scarf": true, "opera_glasses": true, "baton": true,
 }
+## (Days 4-5) Day 5: Marco Polenta, 54, restaurant critic. Round and dapper: a mustard waistcoat over
+## a cream shirt, a tomato-red cravat, a white napkin tucked into his collar (all day, even in the
+## booth), aubergine trousers, silver hair swept back, a grand curled moustache, half-moon reading
+## glasses on a chain (on his nose, so the clinic takes them off for the head gear), a little black
+## critic's notebook in his pocket and a fork in the breast pocket.
+const MARCO := {
+	"name": "Marco", "face": &"gus",
+	"skin": Color("#e9b48c"), "skin_shade": Color("#c98e66"), "nose": Color("#e09f7a"),
+	"cardigan": Color("#d9a23a"), "pants": Color("#5b2e4f"), "shirt": Color("#fbf1dc"),
+	"accent": Color("#e2412f"), "shoes": Color("#3b2a22"),
+	"hair": Color("#dfe3ea"), "hair_style": &"swept", "mustache": false, "brows": true,
+	"glasses": &"halfmoon", "glasses_color": Color("#b88a3a"), "walker": false, "prop": &"",
+	"apron": false, "cravat": true, "napkin": true, "curled_mustache": true, "notebook": true,
+}
 ## (v3) Pick a bean spec by patient id (unknown ids get Gus).
 static func spec_for(patient_id: String) -> Dictionary:
 	match patient_id:
@@ -73,6 +87,8 @@ static func spec_for(patient_id: String) -> Dictionary:
 			return MIKE
 		"nora":
 			return NORA
+		"marco":
+			return MARCO
 	return GUS
 
 var cfg: Dictionary = {}
@@ -164,6 +180,8 @@ func _build_body() -> void:
 		_build_apron(torso)
 	elif bool(cfg.get("notes_scarf", false)):
 		_build_notes_scarf(torso)
+	elif bool(cfg.get("cravat", false)):
+		_build_cravat(torso)
 	elif String(cfg["face"]) == "gus":
 		# bow tie
 		var bow := Node3D.new()
@@ -183,6 +201,10 @@ func _build_body() -> void:
 		_build_opera_glasses(torso)
 	if bool(cfg.get("baton", false)):
 		_build_baton(torso)
+	if bool(cfg.get("napkin", false)):
+		_build_napkin(torso)
+	if bool(cfg.get("notebook", false)):
+		_build_notebook(torso)
 	# floating mitten hands
 	for side: int in [-1, 1]:
 		var hand := Kit.sphere(body, 0.1, Vector3(0.5 * side, 0.82, 0.12), cfg["skin"], Vector3(0.95, 1.0, 1.1))
@@ -247,6 +269,8 @@ func _build_head() -> void:
 			_build_perched_glasses(neck, hc)
 		&"shades":
 			_build_shades(neck, hc)
+		&"halfmoon":
+			_build_halfmoon_glasses(neck, hc)
 	# mustache
 	if bool(cfg["mustache"]):
 		var mus := Node3D.new()
@@ -256,6 +280,8 @@ func _build_head() -> void:
 		for side: int in [-1, 1]:
 			var half := Kit.sphere(mus, 0.1, Vector3(0.078 * side, 0, 0), cfg["hair"], Vector3(1.2, 0.55, 0.62), {"outline": 0.012})
 			half.rotation.z = -0.32 * side
+	if bool(cfg.get("curled_mustache", false)):
+		_build_curled_mustache(neck, hc)
 	# hair
 	match cfg["hair_style"]:
 		&"tufts":
@@ -281,6 +307,8 @@ func _build_head() -> void:
 			_build_quiff(neck, hc)
 		&"bob":
 			_build_bob(neck, hc)
+		&"swept":
+			_build_swept(neck, hc)
 		&"beehive":
 			var hive := Node3D.new()
 			hive.position = hc
@@ -420,6 +448,123 @@ func _build_baton(torso: Node3D) -> void:
 	Kit.box(b, Vector3(0.12, 0.1, 0.02), Vector3(0, -0.02, 0.0), cfg["cardigan"].darkened(0.12), {"outline": 0.006})
 	Kit.capsule(b, 0.008, 0.24, Vector3(0.01, 0.1, 0.004), Color("#fffbf2"), {"outline": 0.004}, 8)
 	Kit.sphere(b, 0.02, Vector3(0.01, 0.02, 0.006), Color("#c8874b"), Vector3(1.0, 1.4, 1.0), {"outline": 0.004}, 10)
+
+
+## (Days 4-5) Marco's tomato-red cravat: a soft knot at the collar and a puffed fold below it.
+func _build_cravat(torso: Node3D) -> void:
+	var red: Color = cfg["accent"]
+	var c := Node3D.new()
+	c.name = "Cravat"
+	c.position = Vector3(0, 0.74, 0.3)
+	torso.add_child(c)
+	parts["cravat"] = c
+	Kit.sphere(c, 0.05, Vector3.ZERO, red, Vector3(1.2, 0.9, 0.7), {"outline": 0.008}, 12)
+	Kit.sphere(c, 0.07, Vector3(0, -0.09, 0.03), red.darkened(0.08), Vector3(1.0, 1.15, 0.5), {"outline": 0.008}, 12)
+	# a gold pin in the fold
+	Kit.sphere(c, 0.014, Vector3(0.015, -0.09, 0.07), Color("#f2c94c"), Vector3.ONE, {"outline": 0.003}, 8)
+
+
+## (Days 4-5) The napkin tucked into his collar: a white triangle over the waistcoat, point down,
+## two folds and a fork in his breast pocket beside it.
+func _build_napkin(torso: Node3D) -> void:
+	var white := Color("#fffdf8")
+	var n := Node3D.new()
+	n.name = "Napkin"
+	n.position = Vector3(0, 0.6, 0.33)
+	n.rotation.x = -0.16
+	torso.add_child(n)
+	parts["napkin"] = n
+	var tri := PackedVector2Array([Vector2(-0.17, 0.07), Vector2(0.17, 0.07), Vector2(0.0, -0.3)])
+	Kit.flat_shape(n, tri, 0.02, Vector3.ZERO, white, {"outline": 0.008})
+	for x: float in [-0.05, 0.05]:
+		var fold := Kit.box(n, Vector3(0.006, 0.2, 0.004), Vector3(x, -0.06, 0.013), Color("#e7e1d6"), {"outline": 0.0})
+		fold.rotation.z = -x * 2.2
+	# the fork, tines up, in his breast pocket on his left (the viewer's right)
+	var f := Node3D.new()
+	f.name = "Fork"
+	f.position = Vector3(0.2, 0.45, 0.33)
+	f.rotation = Vector3(-0.2, 0.0, -0.1)
+	torso.add_child(f)
+	parts["fork"] = f
+	var steel := Color("#cfd6df")
+	Kit.box(f, Vector3(0.012, 0.13, 0.008), Vector3(0, 0.02, 0), steel, {"outline": 0.003, "rim": 0.5})
+	Kit.box(f, Vector3(0.04, 0.012, 0.008), Vector3(0, 0.09, 0), steel, {"outline": 0.003})
+	for k in 4:
+		Kit.box(f, Vector3(0.006, 0.04, 0.006), Vector3(-0.015 + 0.01 * k, 0.115, 0), steel, {"outline": 0.0})
+	Kit.box(f, Vector3(0.1, 0.07, 0.016), Vector3(0, -0.02, 0.006), cfg["cardigan"].darkened(0.12), {"outline": 0.005})
+
+
+## (Days 4-5) His little black critic's notebook, peeking out of the waistcoat's right pocket.
+func _build_notebook(torso: Node3D) -> void:
+	var b := Node3D.new()
+	b.name = "Notebook"
+	b.position = Vector3(-0.2, 0.13, 0.34)
+	b.rotation = Vector3(-0.1, 0.42, 0.14)
+	torso.add_child(b)
+	parts["notebook"] = b
+	Kit.box(b, Vector3(0.1, 0.13, 0.022), Vector3(0, 0.03, 0), Color("#24202b"), {"outline": 0.005})
+	Kit.box(b, Vector3(0.09, 0.006, 0.024), Vector3(0, 0.07, 0), Color("#fbf1dc"), {"outline": 0.0})
+	Kit.box(b, Vector3(0.012, 0.14, 0.026), Vector3(0.035, 0.03, 0), Color("#e2412f"), {"outline": 0.0})
+
+
+## (Days 4-5) Marco's half-moon reading glasses, low on his nose (he looks over them), on a gold
+## chain that loops under his jaw. All in parts["glasses"], so the clinic takes them off for the
+## earphones and puts them back when he stands up with his head clear.
+func _build_halfmoon_glasses(neck: Node3D, hc: Vector3) -> void:
+	var g := Node3D.new()
+	g.name = "Glasses"
+	# low on the nose: the straight tops cross just under his pupils, the half-moons below
+	g.position = hc + Vector3(0, 0.012, 0.35)
+	neck.add_child(g)
+	parts["glasses"] = g
+	var col: Color = cfg["glasses_color"]
+	for side: int in [-1, 1]:
+		var at := Vector3(0.125 * side, 0.0, 0.0)
+		var rim := Kit.arc_tube(g, 0.084, 0.011, 186.0, 354.0, 12, col, {"outline": 0.005})
+		rim.position = at
+		Kit.box(g, Vector3(0.17, 0.016, 0.016), at + Vector3(0, -0.008, 0), col, {"outline": 0.004})
+		var lens := Kit.flat_shape(g, PackedVector2Array([Vector2(-0.08, -0.01), Vector2(0.08, -0.01), Vector2(0.062, -0.054),
+			Vector2(0.0, -0.08), Vector2(-0.062, -0.054)]), 0.004, at + Vector3(0, 0, -0.004), Color("#dff6ff"), {"alpha": 0.45})
+		lens.name = "Lens"
+		var arm := Kit.box(g, Vector3(0.016, 0.016, 0.34), Vector3(0.225 * side, -0.006, -0.17), col, {"outline": 0.0})
+		arm.rotation.y = -0.18 * side
+	Kit.arc_tube(g, 0.03, 0.01, 20.0, 160.0, 4, col, {"outline": 0.0}).position = Vector3(0, -0.012, 0.004)
+	# the chain: from both hinges, a loose loop that sags under his chin
+	var chain := Kit.arc_tube(g, 0.226, 0.006, 162.0, 378.0, 22, Color("#e0b84f"), {"outline": 0.0})
+	chain.position = Vector3(0, -0.07, -0.04)
+
+
+## (Days 4-5) His grand moustache: two plump wings that sweep out and curl up at the tips.
+func _build_curled_mustache(neck: Node3D, hc: Vector3) -> void:
+	var mus := Node3D.new()
+	mus.name = "Moustache"
+	mus.position = hc + Vector3(0, -0.12, 0.3)
+	neck.add_child(mus)
+	parts["mustache"] = mus
+	for side: int in [-1, 1]:
+		var wing := Kit.sphere(mus, 0.09, Vector3(0.075 * side, 0, 0.01), cfg["hair"], Vector3(1.35, 0.5, 0.62), {"outline": 0.01})
+		wing.rotation.z = -0.22 * side
+		# the tip curls up and over (the left one mirrored: angles 180 - a)
+		var curl := Kit.arc_tube(mus, 0.035, 0.016, -60.0 if side > 0 else 240.0, 200.0 if side > 0 else -20.0, 8, cfg["hair"], {"outline": 0.006})
+		curl.position = Vector3(0.165 * side, 0.035, 0.0)
+
+
+## (Days 4-5) Marco's silver hair, swept back: a smooth cap with three combed ridges running back,
+## a little height at the front and full sides over the ears.
+func _build_swept(neck: Node3D, hc: Vector3) -> void:
+	var cap := Node3D.new()
+	cap.name = "HairCap"
+	cap.position = hc
+	neck.add_child(cap)
+	parts["tuft_r"] = cap
+	parts["tuft_l"] = cap
+	Kit.sphere(cap, 0.345, Vector3(0, 0.12, -0.08), cfg["hair"], Vector3(1.06, 0.78, 1.04), {}, 20)
+	Kit.sphere(cap, 0.16, Vector3(0, 0.3, 0.12), cfg["hair"], Vector3(1.5, 0.55, 1.1), {"outline": 0.01}, 14)
+	for side: int in [-1, 1]:
+		Kit.sphere(cap, 0.11, Vector3(0.3 * side, 0.02, -0.06), cfg["hair"], Vector3(0.75, 1.0, 1.2), {"outline": 0.01}, 12)
+	for x: float in [-0.1, 0.0, 0.1]:
+		var ridge := Kit.capsule(cap, 0.012, 0.34, Vector3(x, 0.38, -0.04), cfg["hair"].darkened(0.12), {"outline": 0.0}, 8)
+		ridge.rotation.x = PI / 2.0 - 0.35
 
 
 ## (v3) A baker's apron with a pocket, a little flour on it and a loaf stitched on the bib.

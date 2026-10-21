@@ -13,11 +13,12 @@ extends Control
 ## "BOTH" draws in ink, with no ear symbol), chips (Array of String, replaces PHONE / SPEECH),
 ## info_line (String, replaces the list-and-words line), big_caption (String, replaces "dB HL" by the
 ## big digits), aux (Array of {label, value}: a row in the THIS LEVEL line's place), start_chip
-## (String, the START chip's text).
+## (String, the START chip's text), noise_note (Array of String: a dim note in the NOISE box's place,
+## for a test with no masking).
 
 signal level_step(direction: int)
 
-const OPTIONAL_KEYS: Array[String] = ["test_chip", "ear_chip", "chips", "info_line", "big_caption", "aux", "start_chip"]
+const OPTIONAL_KEYS: Array[String] = ["test_chip", "ear_chip", "chips", "info_line", "big_caption", "aux", "start_chip", "noise_note"]
 
 var view: Dictionary = {
 	"ear": "right", "db": 40, "talking": false, "test": "srt", "list_title": "", "word_n": 0, "words_left": 0,
@@ -222,7 +223,10 @@ func _draw_info(a: Rect2) -> void:
 	AoDraw.text_l(self, Vector2(x0, y0 + 74), "from the beeps", 11, Color(Palette.LCD_TEXT, 0.45), AoDraw.FONT_SEMI)
 	# NOISE box (speech noise in the other ear)
 	var bw := minf(126.0, a.size.x * 0.48)
-	_draw_noise(Rect2(Vector2(a.end.x - bw, y0 + 8.0), Vector2(bw, 76.0)))
+	if view.has("noise_note"):
+		_draw_noise_note(Rect2(Vector2(a.end.x - bw, y0 + 8.0), Vector2(bw, 76.0)), view["noise_note"])
+	else:
+		_draw_noise(Rect2(Vector2(a.end.x - bw, y0 + 8.0), Vector2(bw, 76.0)))
 	# start chip: PTA + 15
 	var start := int(view.get("start_db", 40))
 	var at_start := int(view["db"]) == start and not bool(view.get("started", false))
@@ -271,6 +275,16 @@ func _draw_aux(at: Vector2, right: float) -> void:
 		AoDraw.text_l(self, Vector2(x, at.y), String(d.get("label", "")), 11, Color(Palette.LCD_TEXT, 0.55), AoDraw.FONT_BOLD)
 		AoDraw.text_l(self, Vector2(x + lw + 8.0, at.y), String(d.get("value", "")), 17, Palette.LCD_TEXT, AoDraw.FONT_BOLD)
 		x += lw + vw + 22.0
+
+
+## (Days 4-5) A mode's note where the NOISE box was (the party test: one mix in both ears, no masking).
+func _draw_noise_note(r: Rect2, note: Variant) -> void:
+	var lines: Array = note if note is Array else [String(note)]
+	AoDraw.rbox(self, r, Color(Palette.PLUM, 0.08), 12, 2, Palette.LCD_DIM)
+	for i in mini(3, lines.size()):
+		var px := 11 if i == 0 else 10
+		var col := Color(Palette.LCD_TEXT, 0.6) if i == 0 else Color(Palette.LCD_TEXT, 0.45)
+		AoDraw.text_l(self, Vector2(r.position.x + 8.0, r.position.y + 15.0 + i * 20.0), String(lines[i]), px, col, AoDraw.FONT_BOLD)
 
 
 func _draw_noise(r: Rect2) -> void:

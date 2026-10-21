@@ -1,0 +1,15 @@
+{
+	"id": "party_5",
+	"title": "Party list 5",
+	"kind": "sentence",
+	"original": true,
+	"note": "Every sentence, key word and mishear here was written fresh for Booth Camp (docs/CHAPTER5.md Appendix A): everyday, low-context sentences of 6-9 words with five key words each, in a fixed order. None copies or paraphrases a published sentence test (HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN, AzBio): no sentence, list, order or recording. core/tests/test_speech_sin.gd checks the structure and that no sentence repeats. Mishears: one group per key word, the first a sound-alike, a second often a plural or tense trap; none is a homophone of its key word.",
+	"items": [
+		{"id": "p5_1", "text": "The queen dropped her golden spoon in the pond.", "key_words": ["queen", "dropped", "golden", "spoon", "pond"], "mishears": [["keen"], ["stopped", "drop"], ["holding"], ["moon", "spoons"], ["bond", "ponds"]]},
+		{"id": "p5_2", "text": "Our neighbour polishes his green helmet every Thursday.", "key_words": ["neighbour", "polishes", "green", "helmet", "thursday"], "mishears": [["labour", "neighbours"], ["punishes", "polished"], ["cream"], ["pelmet", "helmets"], ["Tuesday"]], "key_sounds": [[], ["p", "sh", "z"], [], ["t"], ["th", "z"]]},
+		{"id": "p5_3", "text": "Two pink birds sat on the postbox all morning.", "key_words": ["pink", "birds", "sat", "postbox", "morning"], "mishears": [["ink", "sink"], ["words", "bird"], ["cat", "sit"], ["toolbox", "postboxes"], ["warning", "mornings"]]},
+		{"id": "p5_4", "text": "My sister painted the tall door silver.", "key_words": ["sister", "painted", "tall", "door", "silver"], "mishears": [["blister", "sisters"], ["planted", "paints"], ["ball"], ["floor", "doors"], ["sliver", "slipper"]]},
+		{"id": "p5_5", "text": "The frog slept quietly beside the orange bucket.", "key_words": ["frog", "slept", "quietly", "orange", "bucket"], "mishears": [["dog", "fog"], ["swept", "sleeps"], ["quickly", "quiet"], ["arrange"], ["pocket", "buckets"]]},
+		{"id": "p5_6", "text": "Tomorrow we meet at the old city library.", "key_words": ["tomorrow", "meet", "old", "city", "library"], "mishears": [["borrow"], ["eat"], ["gold"], ["pretty"], ["liberty"]]}
+	]
+}

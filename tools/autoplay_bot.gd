@@ -72,6 +72,7 @@ var _want_title := false
 var _resolved: Dictionary = {}   # beat -> times Events.input_resolved fired
 var _cur_ear := ""               # (v4) the ear of the test on screen (audiometry_started)
 var _movies: Array[String] = []  # (v4) movies that started (Events.explainer_started)
+var _paper_text: PackedStringArray = []   # (Days 4-5) Day 5: the Daily Decibel's words, read before it goes
 var _demo_tones := 0             # (v4) tones held in the Ghost demo
 var _phase_log: Array[StringName] = []
 const MOUSE_ANCHORS: Dictionary = {
@@ -206,6 +207,9 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	if beat == &"results_continue":
 		await _wait(1.2)
 		await _shot("results_final")
+		# (Days 4-5) §9.22.6: Day 5 reads the paper's words while it is on screen
+		if String(_summary.get("chapter_id", "")) == "marco":
+			_paper_text = _visible_texts(get_tree().root)
 		if _mouse:
 			await _mouse_results_continue()
 		_finish()
@@ -1308,6 +1312,15 @@ func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringAr
 		report["movies"] = _movies
 		if not _movies.has("letter_choir") and not Game.cli_flag("keep-save"):
 			problems.append("Day 4: Hoot's letter_choir movie never started on a fresh save")
+	# (Days 4-5) §9.22.4: every party list on any day with a party sheet; Day 5's own checks
+	if not (sp.get("sin", {}) as Dictionary).is_empty():
+		_check_sin_lists(sp, report, problems)
+	if chapter == "marco":
+		_check_marco(sp, problems)
+		# (Days 4-5) Hoot's party movie starts on a fresh save (level_marco._movie, contract §9.20)
+		report["movies"] = _movies
+		if not _movies.has("party_noise") and not Game.cli_flag("keep-save"):
+			problems.append("Day 5: Hoot's party_noise movie never started on a fresh save")
 
 
 ## (Days 4-5) §9.22.3: every counted list the player scored lands near its deal, matches the truth
@@ -1334,6 +1347,100 @@ func _check_wrs_lists(sp: Dictionary, report: Dictionary, problems: PackedString
 			if bool(l.get("masked", false)) != bool(l.get("masking_needed", false)):
 				problems.append("wrs %s %s: masked %s, needed %s" % [e, id, str(l.get("masked", false)), str(l.get("masking_needed", false))])
 	report["wrs_lists"] = rows
+
+
+## (Days 4-5) §9.22.4: every party list has its six sentences and a total that is their sum, no
+## practice sentence is stored, and a two-list sheet lands within 3 dB of the truth. Adds
+## report.sin_lists (slot:list_id:level:total, with :hoot on a list Hoot scored all of).
+func _check_sin_lists(sp: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
+	var sin: Dictionary = sp.get("sin", {})
+	var rows: Array[String] = []
+	for slot: Variant in sin:
+		var sh: Dictionary = sin[slot]
+		for v: Variant in (sh.get("lists", []) as Array):
+			var l: Dictionary = v
+			var id := String(l.get("list_id", ""))
+			rows.append("%s:%s:%d:%d%s" % [slot, id, int(l.get("level_db", 0)), int(l.get("total", -1)),
+				":hoot" if int(l.get("player_sentences", 0)) == 0 else ""])
+			var sentences: Array = l.get("sentences", [])
+			if sentences.size() != 6:
+				problems.append("sin %s %s: %d sentences, expected 6" % [slot, id, sentences.size()])
+			var sum := 0
+			for sv: Variant in sentences:
+				var st: Dictionary = sv
+				sum += int(st.get("count", 0))
+				if bool(st.get("practice", false)) or String(st.get("item_id", "")).begins_with(SpeechRules.SIN_PRACTICE_LIST):
+					problems.append("sin %s %s: a practice sentence was stored" % [slot, id])
+			if sum != int(l.get("total", -1)):
+				problems.append("sin %s %s: total %d is not the sentences' %d" % [slot, id, int(l.get("total", -1)), sum])
+		if int(sh.get("lists_done", 0)) == 2 and absf(float(sh.get("snr_loss", 0.0)) - float(sh.get("true_loss", 0.0))) > 3.0:
+			problems.append("sin %s: SNR loss %.1f is more than 3 dB from the true %.1f" % [slot, float(sh.get("snr_loss", 0.0)), float(sh.get("true_loss", 0.0))])
+	report["sin_lists"] = rows
+
+
+## (Days 4-5) §9.22.6, Day 5 (Marco): Hoot's SRTs and words in quiet, right first, both good; three
+## party sheets of two lists each on six different lists; a moderate unaided band, aided sheets at the
+## chatting level with no band; FOCUS helps (real, or flagged as unsure with a positive benefit); and
+## no "beeps" or "spondees" on the paper.
+func _check_marco(sp: Dictionary, problems: PackedStringArray) -> void:
+	for t: String in ["srt", "wrs"]:
+		var per: Dictionary = sp.get(t, {})
+		for e: String in ["right", "left"]:
+			if not per.has(e):
+				problems.append("Day 5: no %s %s" % [e, t])
+			elif not bool((per[e] as Dictionary).get("by_hoot", false)):
+				problems.append("Day 5: the %s %s is not Hoot's" % [e, t])
+		if per.has("right") and per.has("left") and int((per["right"] as Dictionary).get("seq", 0)) > int((per["left"] as Dictionary).get("seq", 0)):
+			problems.append("Day 5: the left %s came before the right" % t)
+	var wrs: Dictionary = sp.get("wrs", {})
+	for e: String in ["right", "left"]:
+		if wrs.has(e) and not [&"excellent", &"good"].has(StringName(String((wrs[e] as Dictionary).get("band", "")))):
+			problems.append("Day 5: %s words in quiet are %s, expected excellent or good" % [e, str((wrs[e] as Dictionary).get("band", ""))])
+	var sin: Dictionary = sp.get("sin", {})
+	var ids: Array[String] = []
+	for slot: String in ["both", "aided_omni", "aided_directional"]:
+		if not sin.has(slot):
+			problems.append("Day 5: no %s party sheet" % slot)
+			continue
+		var sh: Dictionary = sin[slot]
+		if int(sh.get("lists_done", 0)) != 2:
+			problems.append("Day 5: %s has %d lists, expected 2" % [slot, int(sh.get("lists_done", 0))])
+		for v: Variant in (sh.get("lists", []) as Array):
+			var id := String((v as Dictionary).get("list_id", ""))
+			if ids.has(id):
+				problems.append("Day 5: %s was played twice" % id)
+			ids.append(id)
+			if slot != "both" and int((v as Dictionary).get("level_db", 0)) != SpeechRules.SIN_AIDED_DB:
+				problems.append("Day 5: %s %s at %d dB, expected %d" % [slot, id, int((v as Dictionary).get("level_db", 0)), SpeechRules.SIN_AIDED_DB])
+		if slot == "both" and StringName(String(sh.get("band", ""))) != &"moderate":
+			problems.append("Day 5: the unaided band is %s, expected moderate" % str(sh.get("band", "")))
+		if slot != "both" and String(sh.get("band", "")) != "":
+			problems.append("Day 5: the %s sheet has a band (%s)" % [slot, str(sh.get("band", ""))])
+	var focus: Dictionary = sin.get("aided_directional", {})
+	if not focus.is_empty() and not bool(focus.get("real_change", false)) \
+			and not (bool(Game.get_visit_flag("benefit_unsure", false)) and float(focus.get("benefit_db", 0.0)) > 0.0):
+		problems.append("Day 5: FOCUS is neither a real change nor a flagged positive benefit (%.1f dB)" % float(focus.get("benefit_db", 0.0)))
+	if _paper_text.is_empty():
+		problems.append("Day 5: the paper's words were never read")
+	for t: String in _paper_text:
+		var low := t.to_lower()
+		if low.contains("beeps") or low.contains("spondee"):
+			problems.append("Day 5: the paper says \"%s\"" % t)
+			break
+
+
+## (Days 4-5) Every visible Label's and Button's text under `root` (the paper's words, for Day 5).
+func _visible_texts(root: Node) -> PackedStringArray:
+	var out := PackedStringArray()
+	if root is Control and not (root as Control).is_visible_in_tree():
+		return out
+	if root is Label:
+		out.append((root as Label).text)
+	elif root is Button:
+		out.append((root as Button).text)
+	for c in root.get_children():
+		out.append_array(_visible_texts(c))
+	return out
 
 
 ## (Days 4-5) §9.22.5, Day 4 (Nora): better ear first, the lists in play order, a clear right ear, a

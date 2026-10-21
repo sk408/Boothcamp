@@ -24,9 +24,14 @@ copy. These are teaching defaults: Steve reviews every number before release. Th
   written fresh for the game: no word list, order or rhyme set comes from NU-6, W-22, CID W-1, PB-50, AB /
   Boothroyd, NU-CHIPS, WIPI or the Modified Rhyme Test, and their guard (`core/tests/test_speech_wrs.gd`) checks
   only our own lists (no repeats within or across lists, no reused rhyme set, the banned words, the structure of
-  `CONTRACTS.md` §9.11). The repo never holds a published word list to compare with. The in-game test names are
-  "Spondee list A", "Word list 1-4" and the "Party Noise Test"; real test names only appear in an educational
-  "in real clinics" line, if ever.
+  `CONTRACTS.md` §9.11). The repo never holds a published word list to compare with. The party lists (Day 5,
+  "Practice sentence" and "Party list 1" to "Party list 6") were written fresh for the game too: no sentence, list,
+  order, key-word set or recording comes from HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN or AzBio, every
+  list's `note` says so, and their guard (`core/tests/test_speech_sin.gd`) checks only our own sentences (no repeats
+  within or across lists, at most two key words shared between sentences, our own homophone table, the banned
+  words, no fixed phrases; `CONTRACTS.md` §9.11.2). The in-game test names are "Spondee list A", "Word list 1-4" and
+  the "Party Noise Test"; real test names only appear in an educational "in real clinics" line, if ever (Day 5's
+  Hoot says only "Real clinics use normed tests built like this. Our lists are for practice.").
 - **Text first, audio later.** Every item plays as on-screen text: the clinician's word card shows the target,
   the patient's answer appears in a speech bubble, and the SPEECH lamp lights while it "plays". A quiet
   synthesized murmur stands in for the voice. Drop recordings in later (section 7) and they are used
@@ -203,23 +208,54 @@ sheet per ear (`speech.wrs.<ear>`) holds every list on that ear (the comfortable
 ## 5. The Party Noise Test: speech in babble (Day 5)
 
 Sentences from one talker in four-talker babble. Each list has **6 sentences with 5 key words**; the babble
-rises one step per sentence from **25 dB SNR** (easy) to **0 dB** (as loud as the talker).
+rises one step per sentence from **25 dB SNR** (easy) to **0 dB** (as loud as the talker). Day 5 (`marco`,
+`docs/CHAPTER5.md`) runs it in the SPEECH screen's PARTY mode (`SinTest`, `core/speech/modes/sin_test.gd`;
+`SinModel`, `core/speech/models/sin_model.gd`). The numbers below are teaching defaults that Steve reviews.
 
 | Rule | Value | Constant / function |
 |---|---|---|
-| Level | 70 dB HL when PTA is 45 or less, else "loud but OK" (PTA + 25, at most 90) | `SIN_LEVEL_DB` 70, `sin_level` |
-| SNRs | 25, 20, 15, 10, 5, 0 dB | `SIN_SNRS` |
-| Score | key words right, 0-5 per sentence, 0-30 per list | |
-| **SNR loss** | **25.5 - total key words right** (per list, then averaged) | `SIN_CONSTANT` 25.5, `snr_loss` |
-| Bands | 0-3 normal / near normal; over 3-7 mild; over 7-15 moderate; over 15 severe | `SIN_BANDS`, `sin_band` |
-| What helps | normal: nothing new; mild: hearing aids; moderate: directional microphones; severe: a remote microphone | `SIN_HELP` |
-| Lists | average 2 or more: one list is a guess, two are evidence. Critical difference 3.9 dB (1 vs 1 list), 2.7 dB (2 vs 2) | `SIN_CRIT_DIFF_DB` |
+| Unaided level | 70 dB HL when the PTA is 45 or less (the better ear's for "both"), else "loud but OK": PTA + 25, at most 90 | `SIN_LEVEL_DB`, `SIN_PTA_LIMIT_DB`, `SIN_LOUD_ABOVE_PTA_DB`, `SIN_LOUD_MAX_DB`, `sin_level` |
+| Aided level | 50 dB HL in the sound field (about 65 dB SPL; check your calibration), set by Hoot (`level_by_hoot`) | `SIN_AIDED_DB` |
+| SNRs and courses | 25, 20, 15, 10, 5, 0 dB: Starter, Soup, Fish, Main, Cheese, Dessert | `SIN_SNRS`, `SIN_COURSES`, `sin_snr_for` |
+| Babble level | talker level minus the SNR (the party follows the talker) | `sin_babble_level` |
+| Score | key words right, 0-5 per sentence, 0-30 per list; little words never count; a changed ending (plural, tense, "smell" for "smelly") is a miss | `SIN_KEY_WORDS`, `is_trap` |
+| **SNR loss** | **25.5 - total key words right** (per list, then averaged); the same as key words missed - 4.5 | `SIN_CONSTANT` 25.5, `snr_loss`, `sin_average` |
+| Bands | 0-3 dB **Near-normal** (A7); over 3-7 Mild; over 7-15 Moderate; over 15 Severe; unaided sheets only | `SIN_BANDS`, `sin_band`, `SIN_BAND_NAMES` |
+| What each band points to | Near-normal: good habits; Mild: if aids, standard settings; Moderate: + directional mics; Severe: + a remote mic (the technology, not whether someone needs aids) | `SIN_REMEDIES` |
+| Lists | 2 per condition: one list is a rough guess, two make it solid. Critical difference 3.9 dB (1 vs 1 list), 2.7 dB (2 vs 2); a difference counts only above it | `SIN_LISTS_PER_CONDITION`, `SIN_CRIT_DIFF_DB`, `sin_crit_diff`, `sin_real_change` |
+| Material | `party_practice` (1 sentence, played by Hoot at SNR 25, never scored or stored) and `party_1` to `party_6`, each used once per visit | `SIN_PRACTICE_LIST`, `SIN_PRACTICE_SNR`, `SIN_LISTS` |
 
-**The patient model.** A key word at SNR s is right with probability `logistic((s - SNR50) / SIN_SLOPE_DB)`,
-`SNR50 = SIN_NORMAL_SNR50_DB (2) + snr_loss`, `SIN_SLOPE_DB` 2.2. Each sentence's count is the expected number
-give or take one, so two clean lists land within about 1 dB of the patient's SNR loss (`speech.snr_loss`,
-otherwise estimated from the audiogram). Directional microphones (aided, Day 5's payoff) improve it by
-`speech.directional_benefit` (4 dB by default).
+The 25.5 comes from the Spearman-Kärber estimate over the six steps: SNR-50 = 25 + 5 / 2 - total (one key word = 5
+dB / 5 words = 1 dB), and SNR loss = SNR-50 - the typical SNR-50 of 2 dB (`SIN_NORMAL_SNR50_DB`). `SIN_BAND_TITLES`
+and `SIN_HELP` are the older shared names; no Day 5 file reads them (a test), because Day 5 prints `SIN_BAND_NAMES`
+and `SIN_REMEDIES`.
+
+**Slots and conditions.** A party sheet sits in a slot (`sin_slot`): `"both"` for the unaided test through both
+earphones (or an ear, for a one-ear unaided test), `"aided_omni"` for hearing aids on all-round microphones
+(OMNI, programme A) and `"aided_directional"` for directional microphones (FOCUS, programme B). Nothing is masked:
+the same mix reaches both ears (or the speakers), so MASK is hidden and M only gets Hoot's reason. The talker level
+locks at the list's first presentation (the practice included), and the coach sets it before Hoot plays the practice.
+Aided sheets print no band: the bands are unaided earphone norms.
+
+**The patient model** (`SinModel`, `CONTRACTS.md` §9.12.2). A key word at SNR s is right with probability
+`logistic((s - SNR50) / SIN_SLOPE_DB)`, `SNR50 = SIN_NORMAL_SNR50_DB (2) + snr_loss`, `SIN_SLOPE_DB` 2.2
+(`sin_expected_words`). Each sentence's count is the expected number dithered (`sin_count`: never more than 1 away,
+exact on average), so two clean lists land within about 1.5 dB of the patient's SNR loss (`speech.snr_loss`, else
+`estimated_snr_loss` of the better ear's thresholds: a rough estimate that grows with the 1-4 kHz loss). Which key
+words he misses follows `key_word_miss_weight`: words with soft, high sounds (`SIN_KEY_SOUNDS`) within
+`SIN_PICK_WINDOW_DB` 15 of his thresholds at the talker level go first. A missed word becomes a mishear from the
+item (0.55; a plural or tense trap 1 time in 5 when the item has one), a filler (0.30) or nothing (0.15) (`SIN_MISS_SHARES`); one answer
+in 5 swaps a little word (`SIN_LITTLE_SWAP_SHARE`); when the noise wins (count 0, under 0.25 expected), half the
+answers are one of the patient's own lost lines. OMNI wins nothing; directional microphones improve the loss by
+`speech.directional_benefit` (`SIN_DIRECTIONAL_BENEFIT_DB` 4 dB by default). Marco's numbers: SNR loss 9.0 (Moderate)
+unaided and on OMNI, 5.0 on FOCUS, a 4.0 dB benefit that is real (above 2.7) in about 95% of runs.
+
+**Golf and the sheets.** Each list the player scores is a golf hole (section 6): par is the player's sentences, every
+misscored key word is a slip, and a clean solo list whose talker the player set at the textbook level, uncoached, is
+a birdie (`LIST_TEE_BONUS` 2). The coached list and lists whose level Hoot set top out at par, and Hoot's own
+lists are not scored. One
+sheet per slot (`speech.sin.<slot>`) holds its two lists, and `speech.sin_summary` holds the unaided loss, band and
+remedy, both aided losses, the benefit and whether it is a real change (`CONTRACTS.md` §9.15).
 
 ## 6. Shared scoring
 
@@ -282,12 +318,14 @@ without any of it.
 | `wrs_level` | the first word of a comfortable word list is outside the window (`wrs_level_ok`) |
 | `rollover_level` | the first word of a louder word list is not 15-25 dB above its comfortable list (or past 100) |
 | `wrs_unmasked` | a word list's first word goes out with no noise in the other ear when the rule needs it |
-| `sin_level` | the party test is not at its level |
+| `sin_level` | the player's first scored sentence of a party list plays off the talker target (`target`, `got`, `pta`); never when Hoot set the level |
 | `speech_textbook` | a by-the-book step or score (combo +1) |
 | `srt_low_start` | clean: a first word at least 10 dB below the PTA with plan `low_start_ok` (combo +1, 10 points, Hoot's line in `message`) |
 | `wrs_good_start` | clean: a word list's first word inside its window (a louder list: 15-25 dB above the comfortable one; combo +1, 10 points) |
 | `wrs_mask_ok` | clean: the noise was on before the first word of a list that needs it (combo +1, 20 points) |
-| `srt_stored` / `wrs_done` / `sin_done` | observations at the end of a measurement |
+| `sin_good_level` | clean: that first scored sentence at the target (combo +1, 10 points) |
+| `sin_lock_ok` | clean: all 5 chips right at a party LOCK IN (combo +1, 20 points) |
+| `srt_stored` / `wrs_done` / `sin_done` | observations at the end of a measurement (`sin_done`: `total`, `snr_loss` and `band`, hidden with `hide_loss`; aided: no band) |
 | `half_word` | the patient gave half a word ("Lots of half-words can be a sign of a non-organic loss.") |
 | `cross_heard_speech` | unmasked: the other ear repeated the word |
 | `wrs_verdict` | a word list made the ear's best final: `below_predicted` or `best_ok`, plus the ear difference when it is new (`lines`) |
@@ -302,9 +340,21 @@ without any of it.
 | `wrs_no_store` / `wrs_list_reused` / `score_first` | STORE on a word list; a list id used twice in a visit (refused); PRESENT before the last word was scored |
 | `call_it` | a Call it guess (`word`, `guess`, `outcome`, `moment`): unscored |
 | `aside` | a non-blocking side line (an item's in-joke, the noise, the lens, the loud list), once per visit |
-| `birdie` / `par` / `bogey` ... | a finished player word list's golf name (`ClinicRules.fair_golf`; no eagles on lists) (`golf_strokes`, `golf_par`, `slips`, `tee_bonus`, `points`) |
+| `birdie` / `par` / `bogey` ... | a finished player word list's golf name (`ClinicRules.fair_golf`; no eagles on lists) (`golf_strokes`, `golf_par`, `slips`, `tee_bonus`, `points`); a party list observes only `birdie` (its other golf names are points and the screen's callout) |
+| `sin_aided_level` / `sin_level_locked` | a level key on an aided list Hoot set / on a party list whose level is locked (once per list) |
+| `sin_no_mask` | M on a party list, or just after the coached unaided list's intro (once per visit) |
+| `lock_first` / `sin_list_reused` | PRESENT before the last sentence was locked in; a party list id used twice in a visit (refused) |
+| `blanks` / `little_words` / `noise_won` | the first LOCK IN with a blank chip; the first answer with a little-word swap; the first sentence at SNR 0 (once per visit each) |
+| `practice_done` | the practice sentence was locked in (Marco's aside) |
+| `chef_kiss` | a party list, or the player's part of it, with no slips (100 points, flat) |
+| `sin_benefit` | the compared condition finished its second list (`benefit`, `crit`, `real`, `compared_to`; the real / small / none line) |
+| `party_aside` | the screen's: Marco's aside on the player's first answer of a programme A list (`line`; once per visit) |
 
 Each error, and `srt_low_start`, carries a Hoot `message` of 18 words or fewer (`SpeechSession.TIPS`). The word-list
 kinds take theirs from `WrsTest.TIPS`, `MISSCORED_WRS` (a misscore, by what the patient said) and `VERDICTS`
 (`wrs_done` and the verdicts); their data adds `list_id` and `list_n`. The word-list errors and verdicts are
-Day 4's only (`CONTRACTS.md` §9.13.6).
+Day 4's only (`CONTRACTS.md` §9.13.6). The party kinds take theirs from `SinTest.TIPS`, `MISSCORED_SIN` (one line per
+wrong chip, by what the patient said: a mishear, a trap, a filler or nothing, or the word itself left unticked) and
+`BENEFIT_LINES`; their data adds `slot`, `condition`, `list_id`, `list_n` and `sentence_n`, and a `misscored` chip
+adds `key`, `word`, `said`, `said_kind` and `marked`. The screen names only the first wrong chip of a LOCK IN; the
+others flash (`CONTRACTS.md` §9.14.5-§9.14.6).

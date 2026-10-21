@@ -1,0 +1,15 @@
+{
+	"id": "party_1",
+	"title": "Party list 1",
+	"kind": "sentence",
+	"original": true,
+	"note": "Every sentence, key word and mishear here was written fresh for Booth Camp (docs/CHAPTER5.md Appendix A): everyday, low-context sentences of 6-9 words with five key words each, in a fixed order. None copies or paraphrases a published sentence test (HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN, AzBio): no sentence, list, order or recording. core/tests/test_speech_sin.gd checks the structure and that no sentence repeats. Mishears: one group per key word, the first a sound-alike, a second often a plural or tense trap; none is a homophone of its key word.",
+	"items": [
+		{"id": "p1_1", "text": "The sleepy goat chewed a paper crown.", "key_words": ["sleepy", "goat", "chewed", "paper", "crown"], "mishears": [["leafy"], ["coat", "goats"], ["shoed", "chews"], ["pepper"], ["clown", "crowns"]]},
+		{"id": "p1_2", "text": "My uncle keeps red socks in the freezer.", "key_words": ["uncle", "keeps", "red", "socks", "freezer"], "mishears": [["ankle", "uncles"], ["keep", "leaps"], ["bed"], ["sock", "box"], ["feeder", "freezers"]]},
+		{"id": "p1_3", "text": "A loud trumpet woke the whole street.", "key_words": ["loud", "trumpet", "woke", "whole", "street"], "mishears": [["cloud"], ["crumpet"], ["spoke", "walk"], ["bowl", "goal"], ["sheet", "streets"]]},
+		{"id": "p1_4", "text": "A purple kite landed on the bakery roof.", "key_words": ["purple", "kite", "landed", "bakery", "roof"], "mishears": [["turtle"], ["white", "kites"], ["handed", "lands"], ["battery"], ["proof", "roofs"]]},
+		{"id": "p1_5", "text": "The train left early on a rainy Monday.", "key_words": ["train", "left", "early", "rainy", "monday"], "mishears": [["rain", "trains"], ["lift"], ["curly"], ["brainy"], ["Sunday"]]},
+		{"id": "p1_6", "text": "Two puppies carried a turnip past the fence.", "key_words": ["two", "puppies", "carried", "turnip", "fence"], "mishears": [["few"], ["puppy"], ["married", "carries"], ["parsnip", "turnips"], ["tents", "fences"]]}
+	]
+}

@@ -1,0 +1,15 @@
+{
+	"id": "party_2",
+	"title": "Party list 2",
+	"kind": "sentence",
+	"original": true,
+	"note": "Every sentence, key word and mishear here was written fresh for Booth Camp (docs/CHAPTER5.md Appendix A): everyday, low-context sentences of 6-9 words with five key words each, in a fixed order. None copies or paraphrases a published sentence test (HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN, AzBio): no sentence, list, order or recording. core/tests/test_speech_sin.gd checks the structure and that no sentence repeats. Mishears: one group per key word, the first a sound-alike, a second often a plural or tense trap; none is a homophone of its key word.",
+	"items": [
+		{"id": "p2_1", "text": "Our teacher drew a golden castle on the ceiling.", "key_words": ["teacher", "drew", "golden", "castle", "ceiling"], "mishears": [["preacher", "teachers"], ["grew", "draw"], ["holding"], ["tassel", "castles"], ["feeling"]], "key_sounds": [["t", "ch"], [], [], ["k", "s"], ["s"]]},
+		{"id": "p2_2", "text": "The tiny baby giggled at the spotted pony.", "key_words": ["tiny", "baby", "giggled", "spotted", "pony"], "mishears": [["shiny"], ["maybe", "babies"], ["wiggled", "giggles"], ["potted"], ["bony", "ponies"]]},
+		{"id": "p2_3", "text": "Dad kept his pencils inside a smelly boot.", "key_words": ["dad", "kept", "pencils", "smelly", "boot"], "mishears": [["bad"], ["slept", "keeps"], ["pencil"], ["jelly", "smell"], ["suit", "boots"]]},
+		{"id": "p2_4", "text": "A shy donkey pushed the rusty wagon.", "key_words": ["shy", "donkey", "pushed", "rusty", "wagon"], "mishears": [["pie", "sky"], ["monkey"], ["brushed", "push"], ["dusty"], ["dragon", "wagons"]]},
+		{"id": "p2_5", "text": "She hid six tomatoes behind the tall piano.", "key_words": ["hid", "six", "tomatoes", "tall", "piano"], "mishears": [["kid", "hit"], ["sticks", "fix"], ["tomato"], ["ball", "doll"], ["pianos"]]},
+		{"id": "p2_6", "text": "A hungry bear opened the green suitcase.", "key_words": ["hungry", "bear", "opened", "green", "suitcase"], "mishears": [["angry"], ["chair", "bears"], ["open"], ["cream", "screen"], ["bookcase"]]}
+	]
+}

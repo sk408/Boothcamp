@@ -1501,10 +1501,11 @@ recomputed here:
 
 **Status.** Day 4 is built as this contract says: the S0 seams, `WrsTest` and `WrsModel`, `SpModeWord` and its
 widgets, Nora's level and the Red-Flag Roll Call, the word golf column, the Letter Choir and the bot's Day 4 checks.
-**Day 5 lands with its own PR.** Until then the SIN parts of §9.11-§9.24 are the contract it builds to (A7 folded
-in), and P6 corrects them, in its own commits, to what it built. Without Day 5's files a `sin` plan takes the
-missing-mode path (§9.10.2), `party_noise.gd` is S0a's stub, which no replay list shows (`Movies.replay_ids()`),
-and `docs/CHAPTER5.md` comes with the PR.
+**Day 5 is built too**, and the SIN parts of §9.11-§9.24 now say what was built (A7 folded in): `SinTest` and
+`SinModel`, the party babble, `SpModeParty` and its widgets, Marco's level with the bill, the plates, the blind
+tasting, the seats and the dinner, the party golf column, the Party Problem movie (Steve's lead-in, 71 s) and the
+bot's Day 5 checks. The design as built is `docs/CHAPTER5.md`. Without Day 5's files a `sin` plan would take the
+missing-mode path (§9.10.2), as before.
 
 **Ground rules kept from §1, §3.4 and §9.**
 - Days 1-3, 6-13 and the walk-ins behave exactly as before. Shared files take additive changes only, each one guarded
@@ -1582,8 +1583,8 @@ the phase `&"explainer"`, `Game.is_movie_seen` / `mark_movie_seen`, the explaine
 requires `mike`) and `marco` (day 5, requires `nora`); `requires` is the suggested order only.
 
 **§9.9 Autoplay (Day 4) (Day 5).** See §9.22. The main thread owns `tools/autoplay_bot.gd`, and the patch request is
-`tools/INTEGRATION_NOTES.md`. Day 4's part is in the bot in blocks marked `# (Days 4-5)` (applied by W5a), none of
-which runs on Days 1-3 or 6-13; Day 5's part is still to do.
+`tools/INTEGRATION_NOTES.md`. Day 4's part (applied by W5a) and Day 5's (applied by P5a) are in the bot in blocks
+marked `# (Days 4-5)`, none of which runs on Days 1-3 or 6-13.
 
 **Events, speech block (Day 5).** The doc comments of `speech_presented`, `speech_scored` and `speech_stored` change
 from "ear: right / left" to "ear: right / left, or "both" for a party test". The `item`, `trial` and `sheet`
@@ -1954,8 +1955,12 @@ The explainer signals (`explainer_started(movie_id, source)`, `explainer_finishe
 - `key_words` (5): every one appears in `SpeechMaterial.tokens(text)` in this order. Their token positions are
   derived and never stored. A key word is never repeated within a list.
 - `mishears` (5 groups, each 1 or more words): plausible wrong answers per key word. No mishear equals its key word,
-  and none is a homophone of it. A mishear that shares the key word's stem (`SpeechRules.is_trap`: one starts with
-  the other, "street"/"streets", "drop"/"dropped") is a **trap** (a plural or tense change), and it is still a miss.
+  and none is a homophone of it. A mishear that shares the key word's stem is a **trap**, and it is still a miss.
+  `SpeechRules.is_trap(said, key_word)` (as built): one word starts with the other ("street"/"streets",
+  "smelly"/"smell"), or they share a base after a regular ending is cut (-ies/-ied to -y, -ves to -f/-fe, -es, -s,
+  -ed, -ing, with or without a final e; a doubled consonant before -ed/-ing: "slipped" -> "slip"; bases of 3 letters
+  or more) or through `SIN_IRREGULAR_FORMS` ("sang"/"sing", "left"/"leave"). So any changed ending is a trap, and
+  its line names endings (§9.14.5).
 - `key_sounds` (optional, 5 groups of `SOUND_CUES` ids): overrides the letter-based guess (`key_word_sounds`) where
   spelling misleads ("phone" -> f).
 - **Content** (CHAPTER5 §5.5 and Appendix A): everyday, low-context, 6-9 words, mostly not about food, no homophone
@@ -1963,10 +1968,16 @@ The explainer signals (`explainer_started(movie_id, source)`, `explainer_finishe
   ("pass the salt", "picnic basket", "birthday presents", "caught the ball"), and no sentence is a stock phrase.
   Borderline pairings are listed for Steve (CHAPTER5 §15).
 - **Originality guard** (tests only; amended 2026-10-19, as for the word lists). The repo never holds a published
-  test's sentences, so the guard checks only our own material: every list says it was written fresh for the game and
-  names the published sentence tests it must not copy (HINT, BKB, IEEE/Harvard, QuickSIN, BKB-SIN, SPIN, AzBio); no
-  sentence, and no five-word key set, repeats within or across the lists; and no sentence is a stock phrase. (P6
-  states what Day 5's test checks.)
+  test's sentences, so the guard checks only our own material (`core/tests/test_speech_sin.gd`, as built):
+  - `test_party_notes_say_written_fresh`: every list's `note` says "written fresh for Booth Camp" and names the
+    published sentence tests it must not copy (HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN, AzBio);
+  - `test_party_material_is_our_own`: no sentence repeats within or across the lists (37 different sentences with
+    the practice), no two sentences share more than two key words, no key word appears twice in a list; nothing is
+    its own mishear, a mishear appears once in its group and is one word; our own homophone table (no mishear is a
+    homophone of its key word, and no list holds a homophone of one of its key words); our own banned words (a
+    diagnosis, anything scary or violent, rude words, alcohol) in no sentence and no mishear; at most one food
+    sentence per list; and no sentence holds one of the fixed phrases named above;
+  - `test_party_lists_teach_traps`: every list offers at least 10 plural or tense traps and 25 sound-alikes.
 - Babble recording (optional): `res://assets/speech/babble/babble.wav`.
 
 #### §9.11.3 `SpeechMaterial.validate` additions (S0a)
@@ -2087,16 +2098,28 @@ func respond_sin(snr: int, item: Dictionary, level: int = SpeechRules.SIN_LEVEL_
   the true thresholds (ear "both": the per-frequency minimum). Sounds come from `key_sounds[i]`, else
   `key_word_sounds(word)` (from letters: s, f, th, t, k, sh, ch, z, v, p).
 - **What he says**: the sentence frame with each heard key word as written, and each missed one becomes:
-  - a mishear from its group (0.55; when the group has a trap, the trap 1 time in 5),
-  - a filler ("something", "mm", "the... thing") (0.30),
+  - a mishear from its group (0.55; when the group has both a trap and a sound-alike, the trap 1 time in 5
+    (`SinModel.TRAP_SHARE`), and a group of traps only always gives a trap),
+  - a filler ("something", "mm", "whatsit"; `SinModel.FILLERS`) (0.30; an item without mishears gives a filler),
   - or nothing, with an ellipsis (0.15) (`SIN_MISS_SHARES`).
   One answer in 5 swaps a little word ("the" for "a"; `SIN_LITTLE_SWAP_SHARE`) to show that little words don't count.
+  As built, "a" / "an" follow a changed next word ("an angry bear", "a whatsit balloon"), and an answer with a miss
+  ends as a question.
 - **When the noise wins**: count 0 and `expected < 0.25` give, half the time, one of the plan's `lost_lines`
-  (Marco's, CHAPTER5 Appendix B) as the whole answer. That is kind `&"lost"`, with all 5 missed.
+  (Marco's, CHAPTER5 Appendix B) as the whole answer, never the same line twice in a row. That is kind `&"lost"`,
+  with all 5 missed (`said_kinds` all `&"drop"`).
 - `delay_s = delay_for(expected / 5)`.
-- Returns `{text, heard: Array[bool] (5), said_words: Array[String] (5, "" when dropped), count, expected, kind
-  (&"all" / &"partial" / &"none" / &"lost"), delay_s, snr, loss_eff, little_swap: bool, traps: Array[bool] (5)}`.
-  `heard`, `count`, `expected` and `loss_eff` are truth.
+- Returns `{text, heard: Array[bool] (5), said_words: Array[String] (5, "" when dropped), said_kinds:
+  Array[StringName] (5: &"heard" / &"mishear" / &"trap" / &"filler" / &"drop"), count, expected, kind (&"all" /
+  &"partial" / &"none" / &"lost"), delay_s, snr, loss_eff, little_swap: bool, traps: Array[bool] (5)}`. `heard`,
+  `count`, `expected` and `loss_eff` are truth. `said_kinds` picks the `misscored` line (§9.14.5).
+- **As built**: `SpeechSim.sin_model()` loads `core/speech/models/sin_model.gd` by path on first use and the facade
+  forwards to it, so no shared file names the class; the model holds the sim through a `WeakRef` and draws only from
+  `sim.rng`, so a seed replays a visit. What only the item decides is worked out once per sentence (shared by every
+  model), and the miss weights once per sentence, talker level and ear (truth is fixed for a visit). Truth helpers
+  for the tests and the reveal: `better_ear()` (the lower true speech PTA, "right" on a tie), `thresholds_for(ear)`
+  (an ear's true thresholds; "both" = the better of the two ears at each frequency) and `miss_weights(item, level,
+  ear)`.
 - **Per ear** (an unaided test of one ear, plan `ear`): the same model with that ear's loss. Cross-hearing is ignored
   (open question 12).
 
@@ -2296,7 +2319,8 @@ only), times the combo multiplier. Golf points as `GOLF_POINTS`.
 - `measure_key()` = `"sin:<slot>:<list_id>"`. A list in `used_lists` is refused (`sin_list_reused`).
 - **The practice sentence** (`plan.practice = "party_practice"`): before sentence 1, Hoot plays it at `hoot_speed` 1
   at `SIN_PRACTICE_SNR` 25, ticks the chips and locks in. It is never scored or stored and never fills a plate. It
-  then hands back. The level locks at the practice (it plays at the list's talker level).
+  then hands back. The level locks at the practice (it plays at the list's talker level). As built the coach asks
+  for the talker level first and the practice second (§9.14.4), so the practice plays at the level the player set.
 
 #### §9.14.2 Plan keys
 
@@ -2308,8 +2332,8 @@ only), times the combo multiplier. Golf points as `GOLF_POINTS`.
 | `condition` | "unaided" | §9.14.1 |
 | `transducer` | by condition | §9.14.1 |
 | `level` | unaided: snap5(PTA of "both"); aided: `SIN_AIDED_DB` | where the talker dial starts |
-| `level_by_hoot` | aided: true | the dial is set by Hoot and locked from the start; no `sin_level` check and no tee bonus; the LCD reads "SET BY HOOT" |
-| `programme` | "" | "A" / "B": the blind-tasting label on the LCD condition chip and the plates ("A: OMNI") |
+| `level_by_hoot` | aided: true | the dial is set by Hoot and locked from the start; no `sin_level` check and no tee bonus; as built the start chip reads "AIDED: 50 dB, set by Hoot" (unaided: "TALKER: {n} dB, set by Hoot") and the big caption stays "TALKER" |
+| `programme` | "" | "A" / "B": the blind-tasting label on the LCD condition chip ("PROGRAMME A" until the screen's `revealed`, then "A: OMNI") and the plates |
 | `practice` | "" | the practice list id (§9.14.1) |
 | `hoot_only` | false | Hoot runs the whole list whatever quick visit says (D24) |
 | `hoot_first` | 0 | Hoot runs sentences 1..n at x8, then hands back; gate `hoot_only or quick_visit` |
@@ -2318,18 +2342,24 @@ only), times the combo multiplier. Golf points as `GOLF_POINTS`.
 | `hoot_speed` | 8 | Hoot's time scale |
 | `hide_loss` | false | the SNR loss stays blank on screen until the story's bill beat reveals it |
 | `compare_to` | "" | the slot this condition is compared with (`"aided_omni"` for FOCUS) |
+| `benefit_lines` | {} | (as built) `{real, small, none}` lines that replace `BENEFIT_LINES` for another compare |
 | `lost_lines` | [] | his noise-wins lines |
 | `lens` | false | the lens on the key-word chips (D7) |
 | `intro`, `hoot_turn_text`, `done_title` | "" | screen texts |
+| `revealed` | false | (as built; the screen's) the blind tasting is over: the condition chip names the programme ("B: FOCUS") and the booth draws FOCUS's bright front half |
 
 #### §9.14.3 State and controls
 
 - `present()`: refused while a sentence waits for LOCK IN (observes `lock_first`) or when the list is done. The first
-  presentation (practice included) runs the level check (§9.14.6; skipped with `level_by_hoot`) and locks the level.
+  presentation (practice included) locks the level. As built, the level check (§9.14.6) waits for the player's
+  first scored sentence on a list whose level is the player's (`level_mine`: not `level_by_hoot`, not an off-screen
+  run), because Hoot may play the practice, or the first courses (`hoot_first` with `level_first`), at the level the
+  player set; the check judges the level the list locked at.
   Sentence n plays at `snr = SIN_SNRS[n - 1]` with `babble_db = sin_babble_level(db, snr) = db - snr`. Then
   `respond_sin(snr, item, db, ear, {lost_lines})` gives the trial `{n, list_n, list_id, slot, item_id, text,
   key_words, snr, babble_db, said, said_words, heard[5], traps[5], marks: [null x 5], count, expected, kind,
-  little_swap, by_hoot, delay_s, practice, locked: false}`, and `focus_key` = 0.
+  little_swap, by_hoot, delay_s, practice, locked: false}`, and `focus_key` = 0. As built the trial also carries
+  `condition`, `db`, `word` (the sentence text, for the shared seams) and `said_kinds[5]`.
 - **Marks** (the chips; `marks[i]` is null = blank, true = got, false = missed):
   - `score(correct)` (the walk: Right / Left) sets `marks[focus] = correct`. Focus then moves to the next blank chip
     after it (wrapping), or -1 when none is blank.
@@ -2338,6 +2368,9 @@ only), times the combo multiplier. Golf points as `GOLF_POINTS`.
   - `act(&"mark_key", {key: i, got})` (a right-click is `got: false`): sets that chip; focus moves on as for the walk.
   - `act(&"all_got")`: all 5 become got; focus -1.
   - `act(&"focus_key", {key: i})`: moves the highlight without marking.
+  - `act(&"prompt")` (as built): a set-up hint was shown before the first sentence, so the list earns no tee bonus
+    (returns `{unprompted: false}`, or {} once the level is locked). Day 5's screen never calls it: a coached list
+    never earns the bonus anyway.
   - `store()` = `act(&"lock")`: blanks become missed (false). Then each chip is checked against `heard`: a match is
     `speech_textbook`, a mismatch is `misscored`, and all 5 right adds `sin_lock_ok`. Hoot's marks are the truth and
     are not scored. Sentence 6 locked finishes the list (§9.15.2). The return is the locked trial plus `{count_billed,
@@ -2348,23 +2381,29 @@ only), times the combo multiplier. Golf points as `GOLF_POINTS`.
   list_n, sentence_n, snr, babble_db, talker_db, level_by_hoot, course, courses: [{n, snr, course, count (billed),
   by_hoot}], key_words, marks, focus_key, total_so_far, lists: [{list_id, total, snr_loss}], avg_loss (-1 or
   hidden), band (or &"" when hidden or aided), level_locked, practice_pending, awaiting_lock}`. `heard` is never in
-  it.
+  it. As built it adds `sentences` (6), `target_db` (`textbook_target()`), `text` (the card's sentence), `loss_hidden`,
+  `practice` (the card holds the practice), `done`, `reused`, `aided`, `label`, `transducer`, `compare_to`, `lens`
+  and `slips`; a course also has `locked`. `level_locked` is `not can_set_level()` (true from the start with
+  `level_by_hoot`).
 
 #### §9.14.4 `recommended_action()`
 
-1. List done: `&"none"`.
+1. List done (or a reused list): `&"none"`.
 2. A sentence awaits LOCK IN (once its answer is shown):
    - a marked chip that differs from the truth: `{action: &"key_fix", key: k}` (k = 1..5, the first one);
    - else, when `focus_key >= 0`: `&"key_got"` / `&"key_missed"` from `heard[focus]`;
    - else `&"lock"`.
-3. The practice is pending: `&"present"` (the screen starts Hoot's practice turn).
-4. The list has not started, the level is the player's, and `db != textbook_target()` (= `sin_level(pta_for("both"))`,
-   or the ear's PTA per ear): `&"louder"` / `&"softer"`.
-5. `&"present"`.
+3. (As built, the level comes before the practice.) The list has not started, the level can be set, and `db !=
+   textbook_target()` (= `sin_level(pta_for("both"))`, or the ear's PTA per ear; aided `SIN_AIDED_DB`):
+   `&"louder"` / `&"softer"` with `target_db`. On the screen Hoot never moves a level the player owns: during his
+   own turn with `level_first` or a pending practice he skips this step; off-screen he sets his own.
+4. `&"present"` (with the practice pending, the screen starts Hoot's practice turn).
 
 Inputs: `key_got` -> `speech_correct`, `key_missed` -> `speech_incorrect`, `key_fix` -> `party_word_<k>`, `lock` ->
 `store`, `present` -> `present_tone`, `louder` / `softer` as now. `masking_needed()` is false (the same mix goes to
-both ears, or speakers); `can_mask()` is false and the MASK button hides.
+both ears, or speakers); `can_mask()` is false, `mask_level()` is -1 and the MASK button hides. A refused M
+(`on_mask_refused`) observes `sin_no_mask`; a refused level key (`on_level_refused`) observes `sin_aided_level` on
+an aided list Hoot set, else `sin_level_locked`.
 
 #### §9.14.5 Hoot's TIPS (SIN)
 
@@ -2372,8 +2411,9 @@ both ears, or speakers); `can_mask()` is false and the MASK button hides.
 |---|---|
 | `sin_level` | "Party test: talker at {target} dB HL. The party levels follow by themselves." |
 | `sin_good_level` | "Talker at {target}: just right. The party steps up by itself." |
-| `sin_aided_level` | "Aided tests go at a chatting level: 50. The aids add their own boost." |
+| `sin_aided_level` | "Aided tests go at a chatting level: {aided}. The aids add their own boost." ({aided} = `SIN_AIDED_DB`) |
 | `sin_level_locked` | "The talker stays at one level for the whole list." |
+| `sin_no_mask` | "Both ears hear the same mix, so there's nothing to mask." |
 | `lock_first` | "Lock in that sentence first: {key:store}. Then play the next one." |
 | `blanks` | "Unticked key words count as missed when you lock in." |
 | `little_words` | "Little words don't count, either way. Only the five key words." |
@@ -2382,22 +2422,27 @@ both ears, or speakers); `can_mask()` is false and the MASK button hides.
 | `sin_list_reused` | "Fresh lists every time, or {he} learns the sentences." |
 | `practice` | "A practice sentence first. I'll score it; you watch the chips." |
 | `sin_done` | "List done: {total} key words. SNR loss {loss} dB." |
+| `sin_done_hidden` (with `hide_loss`) | "List done: {total} key words." |
+| `misscored` (generic) | "Score what {he} SAID: only the exact key words count." |
 | `sin_benefit` (real) | "Programme B was FOCUS: {benefit} dB better, two lists each. Real, not luck." |
 | `sin_benefit` (small) | "Programme B was FOCUS: {benefit} dB better. Under {crit}, that could be luck." |
+| `sin_benefit` (none: 0 dB or less) | "Programme B was FOCUS: no better this time. Run another list each." |
 | coach: lock (keys) | "Happy with the ticks? Lock it in: {key:store}." |
 | coach: lock (mouse) | "Click each key word {he} got, then LOCK IN. Unticked words count as missed." |
 | coach: walk | "{key:speech_correct} if {he} got it, {key:speech_incorrect} if {he} missed it. Or click the chips." |
 
 The coach picks the mouse line when the player's last input was a mouse click (`screen.clock()` keeps the last
-device). `sin_benefit` lines are written for a FOCUS-vs-OMNI compare; a plan with another `compare_to` passes its own
-`benefit_lines`.
+device). `sin_benefit` lines are written for a FOCUS-vs-OMNI compare (`SinTest.BENEFIT_LINES`); a plan with another
+`compare_to` passes its own `benefit_lines`. The coach lines are `SinTest.COACH_LINES`. As built, the rest of the
+coach (the level, the practice, the first sentence, "Tick the key words...", the key fix, the Main course and Day 3's
+waiting line) lives in `sp_mode_party.gd`'s `COACH_*` constants (CHAPTER5 §5.4 and §9).
 
 `misscored` messages, one per wrong chip (`MISSCORED_SIN`):
 
 | what he said for that key word | line |
 |---|---|
 | a mishear, ticked | "{He} said '{said}'. Close isn't correct!" |
-| a trap, ticked | "'{said}' isn't '{word}'. Plurals and tenses must match." |
+| a trap, ticked | "'{said}' isn't '{word}'. Word endings must match, plurals and tenses too." (as built: a trap is any changed ending, §9.11.2) |
 | a filler or nothing, ticked | "{He} didn't say '{word}'. Untick it: only exact words count." |
 | the word, missed | "{He} did say '{word}'! Tick it." |
 
@@ -2407,19 +2452,23 @@ Data always includes `{ear: slot, slot, freq: -1, test: "sin", db, condition, li
 
 | kind | type | when |
 |---|---|---|
-| `sin_level` | error | the first sentence of a player list plays off the target (target, got, pta); never with `level_by_hoot` |
+| `sin_level` | error | the player's first scored sentence of a list whose level is theirs plays off the target (target, got, pta); never with `level_by_hoot` |
 | `misscored` | error | one per wrong chip at LOCK IN (key, word, said, said_kind, marked) |
-| `sin_good_level` | clean | the first sentence at the target |
+| `sin_good_level` | clean | that sentence at the target |
 | `speech_textbook` | clean | one per right chip at LOCK IN |
 | `sin_lock_ok` | clean | all 5 chips right at LOCK IN |
 | `lock_first`, `sin_level_locked`, `sin_list_reused` | observation | refused actions (once per list) |
+| `sin_aided_level` | observation | (as built) a level key on an aided list Hoot set (once per list) |
+| `sin_no_mask` | observation | (as built) a refused M, or the screen just after the coached unaided list's intro (once per visit) |
 | `blanks` | observation | the first LOCK IN with a blank chip (once per visit) |
 | `little_words` | observation | the first answer with a little-word swap (once per visit) |
 | `noise_won` | observation | the first sentence at SNR 0 (once per visit) |
 | `practice_done` | observation | the practice sentence is locked |
 | `sin_done` | observation | list finished (total, snr_loss; band hidden when `hide_loss` or aided) |
-| `chef_kiss` | observation | a list (or the player's part of it) with no slips |
-| `sin_benefit` | observation | the `compare_to` condition finished its second list (benefit, crit, real) |
+| `chef_kiss` | observation | a list (or the player's part of it) with no slips; only with player sentences |
+| `birdie` | observation | (as built) a player list's golf is a birdie; other golf names are points only (the screen's callout names them) |
+| `sin_benefit` | observation | the `compare_to` condition finished its second list (benefit, crit, real, compared_to; the real / small / none line) |
+| `party_aside` | observation | (as built; the screen's) Marco's aside on the first player answer of programme A (`line`; once per visit) |
 
 Points (`SinTest.POINTS`): `speech_textbook` 10, `sin_good_level` 10, `sin_lock_ok` 20, `chef_kiss` 100, golf par 50.
 
@@ -2488,18 +2537,20 @@ list = {n (its place in the visit's play order), list_id, list_title, seq, level
 ```
 sheet (SIN) = {ear: "both" (or the ear), slot, test: "sin", condition, condition_title, programme, transducer,
   level_db, aided (bool), label ("unaided, phones" / "aided, sound field"),
-  lists: [{n, list_id, list_title, seq, total, snr_loss, player_sentences, hoot_sentences, slips, by_hoot,
-           level_by_hoot, unprompted, tee_bonus, golf_strokes, golf_par, golf,
-           sentences: [{n, item_id, snr, babble_db, said, said_words, heard[5], marks[5], count, kind,
-                        little_swap, by_hoot, delay_s}]}],
+  lists: [{n, list_id, list_title, seq, condition, programme, level_db, total, snr_loss, true_total,
+           player_sentences, hoot_sentences, key_words, matches, slips, accuracy, by_hoot, coached,
+           level_by_hoot, level_mine, start_ok, unprompted, tee_bonus, golf_strokes, golf_par, golf, errors,
+           sentences: [{n, item_id, snr, babble_db, said, said_words, heard[5], marks[5], count (billed),
+                        true_count, expected, kind, little_swap, by_hoot, delay_s}]}],
   lists_done, snr_loss (sin_average of the lists' losses; -1 before one list),
   band, band_name, remedy                                       # unaided only; &"" / "" on aided sheets (D21)
   true_loss (sim.effective_snr_loss), true_band, estimated_loss (estimated_snr_loss, better ear, measured),
-  stored_db = roundi(snr_loss), true_db = roundi(true_loss),
+  stored_db = roundi(snr_loss), true_db = roundi(true_loss), error_db = |snr_loss - true_loss|,
   key_words (player-judged), misscored, accuracy, units (lists with player sentences),
   strokes, par (both = the player's sentences, D3), golf_strokes, golf_par, golf (newest player list),
   holes [{list_id, golf}], forks, clean, errors, by_hoot, coached, seq,
-  benefit_db, compared_to, crit_diff_db, real_change            # when plan.compare_to is set and both have 2 lists}
+  benefit_db, compared_to, compared_lists, crit_diff_db, real_change
+                       # as built: when plan.compare_to is set and that slot has one list or more}
 ```
 
 - `total` = the sum of the billed marks (the player's for the player's sentences, the truth for Hoot's), and
@@ -2507,14 +2558,19 @@ sheet (SIN) = {ear: "both" (or the ear), slot, test: "sin", condition, condition
   SNR-50 = 25 (the top step) + 5 / 2 (half a step) - total (one key word = 5 dB / 5 words = 1 dB) = 27.5 - total; SNR
   loss = SNR-50 - `SIN_NORMAL_SNR50_DB` 2 = 25.5 - total. Equivalently, SNR loss = key words missed - 4.5.
 - **Golf** (D19): each player list is a hole; `golf_par` = the player's sentences; `slips` = misscored chips;
-  `tee_bonus = LIST_TEE_BONUS` only on a solo list whose level the player set unprompted (never with `level_by_hoot`);
+  `tee_bonus = LIST_TEE_BONUS` only on a solo list (not coached) whose level the player set (`level_mine`, never
+  with `level_by_hoot`), at the textbook level (`start_ok`), unprompted (no `act(&"prompt")`);
   `golf_strokes = golf_par + slips - tee_bonus`; `golf = fair_golf(golf_strokes, golf_par, slips == 0)`. One slip is
   still par, 2-3 are a bogey, 4-5 a double bogey. `forks = sin_forks(condition slips)`: 3 with no slips, 2 for one,
   1 for 2-3, 0 for 4 or more. With no player sentences: `golf: &"hoot"`, `forks: -1`.
 - `band = sin_band(snr_loss)`, `band_name = SIN_BAND_NAMES[band]`, `remedy = SIN_REMEDIES[band]` on unaided sheets
   only. Aided sheets keep `band: &""`, `band_name: ""` and `remedy: ""`: the bands are unaided earphone norms (D21).
-- `benefit_db = <compare_to>.snr_loss - snr_loss`; `crit_diff_db = sin_crit_diff(min(lists_done))` (2.7 for 2 lists);
-  `real_change = sin_real_change(benefit_db, lists)`.
+- `benefit_db = <compare_to>.snr_loss - snr_loss`; `compared_lists = min(lists_done)`; `crit_diff_db =
+  sin_crit_diff(compared_lists)` (3.9 for 1, 2.7 for 2 lists); `real_change = sin_real_change(benefit_db,
+  compared_lists)`. As built these land as soon as the compared slot has one list (a provisional difference); the
+  `sin_benefit` line waits for `compared_lists >= SIN_LISTS_PER_CONDITION` (2).
+- A list's `accuracy` = `matches / key_words` (the player's chips); `true_total` and a sentence's `true_count`,
+  `heard` and `expected` are truth (checks and the reveal only). `errors` are the session's slips so far.
 
 #### §9.15.3 Visit results
 
@@ -2526,9 +2582,12 @@ sheet (SIN) = {ear: "both" (or the ear), slot, test: "sin", condition, condition
   rollover, or below predicted in exactly one ear; else `&""` (both ears below alone adds `&"below_predicted_both"`;
   open question 8). It is never `&"today"`: word scores alone never send a patient to a doctor today
   (`CaseRules.DECISIONS`).
-- `speech.sin_summary` (`SinTest.summarize`): `{unaided: {slot, snr_loss, band, band_name, remedy}, omni: {slot,
-  snr_loss}, directional: {slot, snr_loss}, benefit_db, crit_diff_db, real_change, benefit_unsure (compared, not
-  real), estimated_loss, lists_used: [...]}`. Missing conditions are left out.
+- `speech.sin_summary` (`SinTest.summarize`): `{unaided: {slot, snr_loss, lists, label, band, band_name, remedy},
+  ears: {right, left} (as built: per-ear unaided sheets, same brief), omni: {slot, snr_loss, lists, label},
+  directional: {slot, snr_loss, lists, label}, benefit_db, crit_diff_db, real_change, benefit_unsure (compared, not
+  real), estimated_loss, lists_used: [list ids in play order]}`. Missing conditions are left out. As built it reads
+  whole party sheets only (a stand-in sheet from another test is skipped, so it adds no summary), and with per-ear
+  sheets only, the better (lower) ear stands for `unaided`.
 - `merge_results` is unchanged (a unit weighs `SHEET_WEIGHT` 3 tone stamps).
 
 ### §9.16 SpeechVoice: party babble and SNR (P, `core/speech/speech_voice.gd`, additive)
@@ -2537,7 +2596,7 @@ sheet (SIN) = {ear: "both" (or the ear), slot, test: "sin", condition, condition
 const BABBLE_TRIM_DB := -5.0          # dial dB: puts babble on the words' RMS mapping (below)
 const BABBLE_LEAD_S := 0.6            # the party starts this long before the talker
 const BABBLE_TAIL_S := 0.3
-func play_item(ear: String, list_id: String, it: Dictionary, hl: int) -> float   # ear "both" = both channels
+func play_item(ear: String, list_id: String, it: Dictionary, hl: float) -> float # ear "both" = both channels (signature unchanged)
 func start_babble(ear: String, babble_db: int) -> void    # "right" / "left" / "both"
 func set_babble(babble_db: int) -> void
 func stop_babble() -> void
@@ -2547,10 +2606,13 @@ static func babble_rms(babble_db: int) -> float
 ```
 
 - **The sound, cheaply.** `SpeechBabble.loop()` (`core/speech/speech_babble.gd`, P) builds an 8 s loop from
-  `SpeechVoice`'s cached murmur syllables: four talkers made by resampling them at 4 pitch ratios (105, 130, 190 and
-  225 Hz relative to the murmur f0), each with its own seeded offsets and pauses (seed 7), summed and normalised to
-  unit RMS. No sine synthesis per sample. If it ever needs more, the loop is built on `WorkerThreadPool` at level
-  start (before the movie) and `babble_ready()` gates the first PRESENT. A test builds it in under 150 ms headless.
+  `SpeechVoice`'s cached murmur syllables: four talkers made by resampling them at 4 pitch ratios (`TALKER_F0_HZ`
+  105, 130, 190 and 225 Hz relative to the murmur f0; `SOURCE_SYLLABLES` 3), each with its own seeded start,
+  syllable order, pauses and loudness (seed 7), summed, wrapped so the loop has no seam, and normalised to unit RMS
+  with peaks capped near `CREST` 4.0 times the RMS (about 12 dB). No sine synthesis per sample. As built the loop is
+  built synchronously and cached: `level_marco.gd` calls `SpeechBabble.loop()` in `_ready` (before the movie), so
+  the first PRESENT never hitches; no `WorkerThreadPool` was needed. `babble_ready()` says whether it is built. A
+  test builds it in under 150 ms headless.
   When `res://assets/speech/babble/babble.wav` exists, it is used instead (through `wav_to_mono`, normalised the same
   way).
 - **Level**: `babble_rms(db) = AudioSafety.masker_to_rms(db + BABBLE_TRIM_DB)`. Words use `speech_to_rms(hl)`, and
@@ -2568,8 +2630,10 @@ static func babble_rms(babble_db: int) -> float
   no MASK).
 - **Timing** is the PARTY mode's job (H5): `start_babble(ears, babble_db)` at PRESENT, the talker after
   `BABBLE_LEAD_S`, and `stop_babble()` `BABBLE_TAIL_S` after the sentence ends, at LOCK IN, on stored, on exit and on
-  pause. During Hoot's x8 turn `SpModeParty` keeps both the murmur and the babble silent (it knows
-  `screen.hoot_running()`); the lamps still light. `SpeechVoice` never reads `Engine.time_scale`.
+  pause. As built the babble fades in and out over `NOISE_RAMP_S` (0.05 s), and `SpeechVoice` itself cuts it at once,
+  with no fade, on `NOTIFICATION_PAUSED` and when it leaves the tree. During Hoot's x8 turns `SpModeParty` keeps both
+  the murmur and the babble silent (it knows `screen.hoot_running()`); his practice turn, at speed 1, is audible. The
+  lamps still light. `SpeechVoice` never reads `Engine.time_scale`.
 
 ### §9.17 SPEECH screen: WORD mode (`ui/speech/modes/sp_mode_word.gd`, W)
 
@@ -2684,13 +2748,14 @@ place 1 is never chosen). Unscored; it never changes the deal.
 
 | Area | PARTY mode |
 |---|---|
-| LCD | `ear_chip` "BOTH" (ink) or the ear; `test_chip` "PARTY"; `chips` [PHONES / INSERTS / SPEAKERS, UNAIDED / "A: OMNI" / "B: FOCUS"]; `big_caption` "TALKER" (or "TALKER . SET BY HOOT"); `aux` [{PARTY, 55}, {SNR, 15}]; `info_line` "Party list 1 . sentence 3 of 6 . Fish" |
-| Card | `SpSentenceCard` (replaces the word card) |
+| LCD | `ear_chip` "BOTH" (ink) or the ear; `test_chip` "PARTY"; `chips` [PHONES / INSERTS / SPEAKERS, UNAIDED / "PROGRAMME A" / "PROGRAMME B" (blind; "A: OMNI" / "B: FOCUS" only with the plan's `revealed`)]; `big_caption` always "TALKER"; `start_chip` "TALKER = 70 dB" (or the PTA sum when it applies), "TALKER: {n} dB, set by Hoot" or "AIDED: 50 dB, set by Hoot" (as built: "set by Hoot" lives on the start chip, clear of the TALK knob); `aux` [{PARTY, 55}, {SNR, 15}]; `info_line` "Party list 1 . sentence 3 of 6 . Fish" ("Party list 1 . practice sentence"); `noise_note` ["NO MASKING", "same mix in" / "speakers reach", "both ears"] where the NOISE box was |
+| Card | `SpSentenceCard` (replaces the word card; as built it spans the bottom of the left and middle columns, sized from the list's longest sentence, at most two rows of chips) |
 | Middle | `SpCourses` (six plates and the dining-room strip) |
 | Meter slot | `SpSnrMeter` (the TALKER and PARTY bars and the gap bracket) |
-| Bubble | `SpBubble` (two lines, as now) |
-| Deck | LEVEL + SENTENCE (SOFTER, PRESENT, LOUDER) . KEY WORDS (MISSED, GOT IT, ALL GOT) . BILL (LOCK IN). MASK hidden. |
-| Dance | [TICK WHAT HE SAID] [LITTLE WORDS DON'T COUNT] [LOCK IN, THEN NEXT] |
+| Bubble | `SpBubble` (two lines, as now; it grows down the left column; `idle_text` "(waiting for a sentence)") |
+| Deck | LEVEL + SENTENCE (SOFTER, PRESENT, LOUDER) . KEY WORDS (MISSED, GOT IT, ALL GOT) . BILL (LOCK IN). MASK, STORE, the ladder, the agreement meter, the word card and the LCD's THIS LEVEL line hide. |
+| Dance | as built: [TICK WHAT / HE SAID] [LITTLE WORDS / no score] [LOCK IN / then next] |
+| Perch | during a Hoot turn on a party list: "Hoot is testing: watch the plates!" |
 | Booth window | `SpPartyBooth` overlay: the two speakers in the sound field; with FOCUS, the front half of the room drawn bright and the back half dimmed (never removed) |
 
 - **`SpSentenceCard`** (`ui/speech/sp_sentence_card.gd`): the sentence the next PRESENT will say, with its 5 key words
@@ -2708,6 +2773,11 @@ place 1 is never chosen). Unscored; it never changes the deal.
 - **`SpSnrMeter`** (`ui/speech/sp_snr_meter.gd`): a fixed mint TALKER bar and a grey PARTY bar that rises one step per
   sentence, with the bracket "SNR 25 dB" down to "0 dB!".
 - **`SpBubble`**: the answer, up to two lines (the existing wrap and shrink). An ellipsis shows a dropped word.
+- **Shared-file seams Day 5 added** (all optional, off for Day 3): `SpBubble.idle_text` (the line before anything is
+  said; the SRT's stays "(waiting for a word)"), the LCD view key `noise_note` (in `SpLcd.OPTIONAL_KEYS`, so going
+  back to the SRT drops it), and in `speech_screen.gd`, with a mode only: Hoot's opening lines say "Both ears" for
+  the both-ears channel and count sentences on a party list, and the perch line above. A test checks that no PARTY
+  widget overlaps another at 1280x720 and 1920x1080.
 
 #### §9.18.2 One sentence (CHAPTER5 §5.3) and its keys
 
@@ -2721,6 +2791,8 @@ place 1 is never chosen). Unscored; it never changes the deal.
    - G (`party_all_got`) or ALL GOT: all five got.
    - Chip clicks: as above.
 4. LOCK IN: `{key:store}` (S / Enter) or the button. `Events.party_sentence_locked` follows, and the plate fills.
+   As built, Hoot's line names only the first wrong chip of a LOCK IN (the other wrong chips flash), and while that
+   slip's line shows it replaces the sticky tips.
 5. Space before LOCK IN is refused with `lock_first` and a wiggle of LOCK IN.
 
 After sentence 6, `Events.party_list_done` fires, the course total lands, then `celebrate` and `complete_list`.
@@ -2814,7 +2886,7 @@ caption_at, params, cues, board`; both movies fill every one of them (CHAPTER4 �
 | Movie | id | title / subtitle | Scenes (set ids) | `seen_at` | Total | Day |
 |---|---|---|---|---|---|---|
 | The Letter Choir | `letter_choir` | "Hoot's word movie" / "The Letter Choir" | choir, banana, curtain, mush, louder, crossing, count, tease | `count` | 70 s, 8 scenes (15 + 6 x 8 + 7) | 4 (`nora`) |
-| The Party Problem | `party_noise` | "Hoot's party movie" / "The Party Problem" | quiet, crowd, scale, knob, gap, menu, receipt, tonight | (default: the last, `tonight`) | 65 s, 8 scenes (the contract's; Day 5's PR states its own) | 5 (`marco`) |
+| The Party Problem | `party_noise` | "Hoot's party movie" / "The Party Problem" | quiet, crowd, scale, knob, gap, menu, receipt, tonight | (default: the last, `tonight`) | 71 s, 8 scenes (14 + 8 + 9 + 8 + 9 + 8 + 8 + 7; as built, with Steve's lead-in on `quiet`) | 5 (`marco`) |
 
 **Files and stage sets.** The per-movie sets hook (§3.4, "Sets hook") lets each movie bring its own sets script, so no
 shared movie file changes beyond S0a's registry lines.
@@ -2864,7 +2936,15 @@ the real sets (`--reduced-motion` for the still versions).
   its params have `card_hold` (`_card_scene()`: no iris, and the scene title waits for the card to go); a sets script
   that draws scene 1 reads both keys, as the built-in `_set_meet` does. Day 4's scene 1 (`choir`, 15 s) has the
   chips "Loud enough, so why mushy?" and "How do we score clear words?" and captions at 0.3, 4.4 and 8.4 s: the
-  question, the answer (a WORD SCORE counts clear words, because beeps can't measure clarity), then the choir. The
+  question, the answer (a WORD SCORE counts clear words, because beeps can't measure clarity), then the choir. Day
+  5's scene 1 (`quiet`, 14 s; as built) has the chips "Why is a busy table so hard?" and "How do we test words in
+  noise?" and captions at 0.3, 4.4 and 8.4 s: the question (why someone fine in quiet gets lost at a busy table),
+  the answer (SNR LOSS: quiet beeps can't show it, so we test words in noise), then the quiet cafe. As built its
+  scale caption reads "SNR: how much louder the voice is than the noise. A bigger gap is easier." (the balance is
+  drawn the physical way, the louder voice pan sinking; it needs Steve's OK, CHAPTER5 §15 Q19), and its receipt
+  scene adds the chip "Most ears miss 4 or 5 anyway". Beyond the design's keys its sets read `quiet.title` /
+  `starring` / `line`, `crowd.chatter` / `line`, `scale.at`, `gap.words` / `crisp`, `menu.title` / `key_words`,
+  `receipt.courses` / `key_words` / `band_name` and `tonight.sign` / `chip`; the cue times are CHAPTER5 §4.2's. The
   masking movie and the case movies (`tymp`, `shapes`, `case_files`) carry the same keys. Before the first play
   the level announces the day in one Hoot line (below). The chapter doc's movie table prints the lead-in
   (CHAPTER4 §4.2).
@@ -2936,17 +3016,19 @@ func _play_movie(id: String) -> Dictionary:
 ```
 
 - **The announcement** (Steve's lead-in): before the first play only, one Hoot line names the day's new trick
-  (Day 4: "New trick today: WORD SCORES. A quick cartoon first, then our next patient!"; Day 5 says its own). On a
-  replay visit the offer stands in for it.
+  (Day 4: "New trick today: WORD SCORES. A quick cartoon first, then our next patient!"; Day 5: "New trick today:
+  WORDS IN NOISE. A quick cartoon first, then our next patient!"). On a replay visit the offer stands in for it.
 - Until a movie is seen it just plays; once seen, Hoot offers it with a choice whose best answer is "skip". The offers
-  read their length from `Movies.total_s`, rounded to 10 s: "Roll the film! (about 70 s)" on Day 4, and "about 90 s"
-  for the masking offer.
+  read their length from `Movies.total_s`, rounded to 10 s: "Roll the film! (about 70 s)" on Day 4 and on Day 5
+  (71 s; "Hoot's party movie again? Popcorn's on me!", skip: "Skip it: I know my SNR."), and "about 90 s" for the
+  masking offer.
 - After a day-start skip Hoot says where the movie lives (the same line as Day 2's, 11 words).
 - Replays: the pause menu asks `Movies.for_level(Game.current_chapter_id, masks)`. Day 4's level is not in
   `MASKING_LEVEL_GROUP`, so it offers its own chapter's movie only ("Watch Hoot's word movie"); the case days and the
   walk-ins (in the group) offer every replay movie, the Letter Choir among them. The masking movie belongs to `bonnie`,
-  so Day 4's pause menu does not list it (the title's "Hoot's Movies" does). `Movies.replay_ids()` leaves out a movie
-  whose chapter is not in `Game.CHAPTERS` yet, so Day 5's stub stays hidden until its day exists.
+  so Day 4's pause menu does not list it (the title's "Hoot's Movies" does). Day 5's works the same way ("Watch
+  Hoot's party movie"). `Movies.replay_ids()` leaves out a movie whose chapter is not in `Game.CHAPTERS` yet; both
+  days exist now, so both movies are listed.
 - No `seen_explainers`, `explainer_skipped`, `movie_skipped`, skip anchors, hold-to-skip or `--explainer`: the player
   and `movies_seen` cover them. No `tools/INTEGRATION_NOTES.md` stage note is needed either.
 
@@ -2959,7 +3041,7 @@ func _play_movie(id: String) -> Dictionary:
 - The cards-only step: the same data with `stage` removed (registered through `Movies.extra` in the test) validates
   with no known sets, and every scene falls back to its card.
 - The lead-in: scene 1 holds its card (`card_hold` 8) with two `questions` chips, and its captions name the
-  question and the answer (Day 4: `test_letter_choir_lead_in`).
+  question and the answer (Day 4: `test_letter_choir_lead_in`; Day 5: `test_party_noise_lead_in`).
 - Every cue name is in `Sfx.SOUNDS` with `vol_db <= -8`.
 - Facts match the rules: the count board's 25 tiles = `WRS_WORDS`; the crossing's `ia` = `SPEECH_IA_DB[&"phones"]`;
   the louder slide = `WRS_ABOVE_PTA_DB`; the menu's SNRs = `SIN_SNRS`; the receipt's loss = `snr_loss(25)` (0.5) and
@@ -3025,30 +3107,37 @@ present only with quick visit on. `next_list()` hands out word lists in play ord
   `weather` ("Weather: scattered consonants, fog over the left"), `sports_script =
   "res://story/papers/paper_word_golf.gd"` and `roll_call` ({cards, slips}).
 
-**Day 5, `story/level_marco.gd`** (CHAPTER5 §3):
+**Day 5, `story/level_marco.gd`** (CHAPTER5 §3, as built; `party_plan(n, quick)` builds the plans):
 
 ```gdscript
-# Hoot's montage (whatever quick visit says): tones x8; unmasked bone 500-4000 x8 (masked bone only where a gap
-# over 10 dB appears); then, off-screen, right first:
-screen.run_hidden(marco, "right", {test = "srt", tones = t}); screen.run_hidden(marco, "left", {test = "srt", tones = t})
-screen.run_hidden(marco, "right", {test = "wrs", tones = t, list = "words_1"})
-screen.run_hidden(marco, "left", {test = "wrs", tones = t, list = "words_2"})
-# Unaided list 1: "both", coached, with the practice; the dial starts at 50
-{test = "sin", tones = t, list = "party_1", condition = "unaided", level = 50, practice = "party_practice",
- hide_loss = true, lost_lines = MARCO_LOST}
-# Unaided list 2: solo; the player sets the talker (dial at snap5(PTA) = 20), then Hoot pours 1-3 when quick
-{test = "sin", tones = t, list = "party_2", condition = "unaided", level_first = true, hoot_first = 3 if quick,
- lost_lines = MARCO_LOST}
+# Hoot's montage (whatever quick visit says), all with hoot_turn_after = 0 and montage = true:
+#   air, right then left, in the routine order (E1: 1k, 1.5k, 2k, 3k, 4k, 6k, 8k, the 1 kHz retest, 500, 250;
+#   750 on the 20 dB rule); the right is the visit's first air ear, so it owes the 1 kHz retest (E2);
+#   unmasked bone on the right mastoid at ClinicRules.BC_REQUIRED (1k, 2k, 4k, 500), masking_controls on;
+#   masked bone only on an ear where ClinicRules.masked_freqs_needed(results, ear, &"bc_masked") is not empty;
+# then, off-screen and right first, on the SPEECH screen kept for the whole visit (tr = the air transducer):
+screen.run_hidden(marco, "right", {test = "srt", tones = t, transducer = tr}); then "left"
+screen.run_hidden(marco, "right", {test = "wrs", tones = t, list = "words_1", transducer = tr})
+screen.run_hidden(marco, "left", {test = "wrs", tones = t, list = "words_2", transducer = tr})
+# Every party plan: {test = "sin", tones = t, list = SIN_LISTS[n - 1], lost_lines = MARCO_LOST}; lists 1-2 add
+# transducer = tr. Unaided list 1: "both", coached, with the practice; the dial starts at 50
+{condition = "unaided", level = 50, practice = "party_practice", hide_loss = true, intro = "intro_party1"}
+# Unaided list 2: solo; the player sets the talker (the dial at snap5(PTA)), then Hoot pours 1-3 when quick
+{condition = "unaided", level_first = true}  # + quick: hoot_first = 3, intro = "intro_party2", hoot_turn_text = "pours"
 # Programme A (OMNI), sound field at SIN_AIDED_DB, set by Hoot
-{test = "sin", tones = t, list = "party_3", condition = "omni", programme = "A", hoot_first = 3 if quick,
- lost_lines = MARCO_LOST}
-{test = "sin", tones = t, list = "party_4", condition = "omni", programme = "A", hoot_only = true, hoot_turn_after = 0}
+{condition = "omni", programme = "A", intro = "intro_aided_a"}  # + quick: hoot_first = 3, hoot_turn_text = "pours"
+{condition = "omni", programme = "A", hoot_only = true, hoot_turn_after = 0, hoot_turn_text = "hoot_list"}  # no lost_lines
 # Programme B (FOCUS)
-{test = "sin", tones = t, list = "party_5", condition = "directional", programme = "B", compare_to = "aided_omni",
- hoot_first = 3 if quick, lost_lines = MARCO_LOST}
-{test = "sin", tones = t, list = "party_6", condition = "directional", programme = "B", compare_to = "aided_omni",
- hoot_only = true, hoot_turn_after = 0}
+{condition = "directional", programme = "B", compare_to = "aided_omni", intro = "intro_aided_b"}  # + quick as list 3
+{condition = "directional", programme = "B", compare_to = "aided_omni", hoot_only = true, hoot_turn_after = 0,
+ hoot_turn_text = "hoot_list"}  # no lost_lines
 ```
+(The quoted `intro` / `hoot_turn_text` names are `level_marco.gd` `HOOT` keys; the plan carries their lines.)
+- As built, Hoot's lists 4 and 6 carry no `lost_lines` (`party_plan` erases them), and the coached list 1 is the
+  only one with the practice.
+- Visit flags (as built): `movie_watched`, `asked_red_flags`, `asked_onset`, `instructed`, `instructed_first_try`,
+  `masked_bone`, `bill_tries`, `band_tries`, `plates_slips`, `marco_guess` ("B" when the benefit is real, else
+  "unsure"), `benefit_unsure` and `seat_tries`.
 - Aided lists take `level = SIN_AIDED_DB` and `level_by_hoot = true` by default (§9.14.1).
 - When `aided_directional.real_change` is false, the level sets the visit flag `benefit_unsure` and Hoot says so
   (CHAPTER5 §9).
@@ -3075,10 +3164,9 @@ screen.run_hidden(marco, "left", {test = "wrs", tones = t, list = "words_2"})
 ### §9.22 Autoplay (§9.9 extended; `tools/INTEGRATION_NOTES.md`)
 
 The main thread owns `tools/autoplay_bot.gd`. The Days 4-5 builders wrote this section as a patch request in
-`tools/INTEGRATION_NOTES.md`; W5a then applied Day 4's part, in blocks marked `# (Days 4-5)` that run only with a
-`wrs` / `sin` test, a word sheet or the `nora` / `marco` chapter, so Days 1-3 and 6-13 print byte-identical
-`AUTOPLAY_RESULT` lines. The notes list what is applied ("Already in the bot") and what is still to do (Day 5's
-`_check_sin_lists` and its own checks). The notes number the patch's parts 1-8 (speech days, beats, word lists,
+`tools/INTEGRATION_NOTES.md`; W5a then applied Day 4's part and P5a Day 5's, in blocks marked `# (Days 4-5)` that
+run only with a `wrs` / `sin` test, a word or party sheet or the `nora` / `marco` chapter, so Days 1-3 and 6-13 print
+byte-identical `AUTOPLAY_RESULT` lines. The notes list what is applied ("Already in the bot"): all of it now. The notes number the patch's parts 1-8 (speech days, beats, word lists,
 party lists, Day 4, Day 5, screenshots, runs), and the bot's comments cite them as §9.22.1-§9.22.8. Any problem below
 fails the run with exit 4.
 
@@ -3092,10 +3180,11 @@ fails the run with exit 4.
   - `|pct - expected_pct| <= 8`;
   - `pct == true_pct` when nothing was misscored (`matches == player_words`);
   - `start_ok`, and `masked == masking_needed`.
-- **`_check_sin_lists(sp)`** (any day with `speech.sin`; Day 5, to do):
-  - every list has 6 sentences, and `total` equals the sum of the marks;
+- **`_check_sin_lists(sp, report, problems)`** (any day with `speech.sin`; applied). It adds `report.sin_lists`, one
+  row per list (`slot:list_id:level:total`, with `:hoot` on a list with no player sentences), and checks:
+  - every list has 6 sentences, and `total` equals the sum of the sentences' billed counts;
   - `|snr_loss - true_loss| <= 3` for every sheet with 2 lists;
-  - no `practice` sentence is stored.
+  - no practice sentence is stored.
 - **Day 4 (`nora`)** (`_check_nora`, applied):
   - `wrs.right` and `wrs.left` exist; the right sheet's `seq` is below every left list's (better ear first);
   - the list ids follow play order (one right list, `words_1`; then `words_2`, `words_3`, `words_4` on the left);
@@ -3107,13 +3196,15 @@ fails the run with exit 4.
   - `wrs_summary.referral == &"refer"`; and the visit flag `decision` is `refer` when the visit records one;
   - the movies: the result adds `movies` (the movies that started, as Day 2 and the cases print it), and a fresh save
     (no `--keep-save`) must start `letter_choir`.
-- **Day 5 (`marco`)**:
+- **Day 5 (`marco`)** (`_check_marco`, applied):
   - `srt.right`, `srt.left`, `wrs.right` and `wrs.left` exist, all by Hoot, right first, even with `--full`;
   - WRS bands excellent or good;
   - `sin.both`, `sin.aided_omni` and `sin.aided_directional` each with `lists_done == 2`, and the 6 list ids distinct;
   - unaided band `&"moderate"`; aided sheets at `level_db == SIN_AIDED_DB` with `band == &""`;
   - `aided_directional.real_change == true`, or the visit flag `benefit_unsure` with `benefit_db > 0`;
-  - the paper text contains no "beeps" and no "spondees".
+  - the paper text contains no "beeps" and no "spondees": the bot reads every visible Label's and Button's text
+    (`_visible_texts`) at `results_continue` on `marco`, and a paper it never read is a problem too;
+  - the movies: the result adds `movies`, and a fresh save (no `--keep-save`) must start `party_noise`.
 - **Screenshots** (D26):
   - WORD: `speech_<ear>_wrs_<list_id>_first_word`, `speech_<ear>_wrs_<list_id>_stored`;
   - PARTY: `speech_<slot>_sin_<list_id>_first_word`, `speech_<slot>_sin_<list_id>_stored` (slots `both`, `aided_omni`,
@@ -3122,7 +3213,9 @@ fails the run with exit 4.
   - plus the chapter lists in CHAPTER4 §15 and CHAPTER5 §13.
 - **Runs**: `tools/autoplay_check.sh --day=4` and `--day=5`, each with keys, with `--mouse`, with `--via-days
   --pick=nora` / `--pick=marco` (and `--save=<abs path>`), and once with `--full` (quick visit off; on Day 5 Hoot's SRT
-  and WRS stay his). Each prints one `AUTOPLAY_RESULT` line; grade S with no problems is the bar.
+  and WRS stay his). Each prints one `AUTOPLAY_RESULT` line; grade S with no problems is the bar. As built, Day 5's
+  keyboard run takes about 760 game-seconds and prints `sin_lists` such as `both:party_1:70:15`,
+  `aided_omni:party_4:50:16:hoot` and `aided_directional:party_5:50:19`.
 
 ### §9.23 File ownership and the build plan
 
@@ -3196,8 +3289,11 @@ other's files or the S0 seams. A seam that turns out to be missing goes back thr
 rebase on.
 
 **As built (Day 4).** S0a, S0b, W1-W5b and W6 are done on the Days 4-5 branch, with main merged in twice (E1-E16, then
-Day 12) and the Letter Choir from its movie step; the fallback for a late S0b was not needed. P0-P6 (Day 5) are on
-Day 5's own branch and merge with its PR.
+Day 12) and the Letter Choir from its movie step; the fallback for a late S0b was not needed.
+
+**As built (Day 5).** P0-P6 are done on Day 5's own branch, which builds on Day 4's (with main merged in) and merges
+with its PR: the party model and session mode, the babble, PARTY mode, the Party Problem movie with its own sets,
+Marco's level, boards and paper, the bot's Day 5 checks, and the docs (`docs/CHAPTER5.md`, `docs/SPEECH.md` §5).
 
 ### §9.24 Test plan
 
@@ -3281,36 +3377,38 @@ Every random test uses fixed seeds (`SpeechSim.new(profile, seed)` for `seed in 
   CHAPTER4 §6's order; the audible-word rule; "bike" has the foil "Mike", and "hook" takes exactly "Hoot", "hoof" and
   "hood" (its last sound changes, never its first); the content rules; the own-material originality guard (§9.11.1).
 
-**`core/tests/test_speech_sin_model.gd` (P0, the model's statistics) and `core/tests/test_speech_sin.gd` (P, rules,
-session and material)** (Marco's cases of CHAPTER5 §14, plus):
-- Dithered counts: 4000 simulated lists average 16.49 +- 0.1, and no sentence lands more than 1 from its expected
-  count.
-- Two lists land within 1.5 dB of 9.0 in at least 99% of 2000 seeds; the unaided band is moderate in at least 99.5%;
-  at FOCUS loss 5.0, two lists average within 1.5 dB of 5.0 in at least 99%; the 2-vs-2 benefit is above 2.7 in at
-  least 93% (exactly 95.0% from the dithered count distributions).
-- `snr_loss(t) == (30 - t) - 4.5` for every t (the "missed minus 4.5" identity the bill line teaches).
-- Weighting: over 2000 sentences, key words with high-pitch cues are missed more than words without (ratio at least
-  1.5).
-- Answers: heard words appear verbatim; traps are misses; lost lines come only with count 0.
-- Session:
-  - the present / mark / flip / all-got / lock flow; present refused before LOCK IN; blanks lock as missed;
-  - per-chip misscored messages; the walk's focus rules; `recommended_action` with a wrong mark gives `key_fix`;
-  - the practice is never stored; `hoot_first` unscored; `level_first` starts Hoot's turn at the player's first
-    PRESENT; `level_by_hoot` locks the dial and skips `sin_level` and the tee bonus;
-  - aided sheets have `level_db == 50`, no band, no remedy and the label "aided, sound field";
-  - sheets carry `stored_db` / `true_db`; units; `merge_results` weights; the benefit and `real_change` on FOCUS;
-  - golf: the solo unaided list 2 can birdie; lists 1, 3 and 5 top out at par;
-  - `run_by_textbook` reaches a stored sheet for every Day 5 SIN plan with no screen.
-- No new file reads `SIN_BAND_TITLES` or `SIN_HELP` (a grep test).
-- Material: as CHAPTER5 §14, with the own-material originality guard (§9.11.2).
+**Day 5's core tests, as built** (CHAPTER5 §14 lists them in full):
+- **`core/tests/test_speech_sin.gd` (rules and material)**: `snr_loss(16)` 9.5, `snr_loss(20)` 5.5 and `snr_loss(t)
+  == (30 - t) - 4.5` for every t (the "missed minus 4.5" identity the bill line teaches); `sin_band` at 3.0 / 3.5 /
+  7.0 / 7.5 / 15.0 / 15.5; `sin_level(21.7)` 70; `SIN_AIDED_DB` 50; slots, levels and SNRs; the dithered count; key
+  sounds and miss weights; `is_trap` with the irregular forms (`test_traps`); averages, `real_change`, par and forks;
+  (A7) `SIN_BAND_NAMES[&"normal"]` is "Near-normal", and no Day 5 file reads `SIN_BAND_TITLES` or `SIN_HELP` (a grep
+  test); the material's shape (`test_party_lists_shape`), the `key_sounds` overrides and the originality guard of
+  §9.11.2 (`test_party_notes_say_written_fresh`, `test_party_material_is_our_own`, `test_party_lists_teach_traps`).
+- **`core/tests/test_speech_sin_model.gd` (the model)**: Marco's numbers (PTA 21.7 / 23.3, better ear right,
+  `directional_benefit` 4.0, `snr_loss` 9.0) and the loss sources; `sin_expected_words` at each SNR (to 0.01) for
+  losses 9.0 and 5.0; 4000 dithered lists average 16.49 +- 0.1, never more than 1 from the expected count; two lists
+  land within 1.5 dB of 9.0 in at least 99% of 2000 seeds, the unaided band is moderate in at least 99.5%, FOCUS within
+  1.5 dB of 5.0 in at least 99%, and the 2-vs-2 benefit is above 2.7 in at least 93% and at most 98% (exactly 95.0%
+  from the dithered count distributions; the honest "another list each" path still happens); heavier key words go
+  first (ratio at least 1.5 at SNR 15); answers keep what he heard, traps are misses, lost lines come only with count
+  0; the same seed replays a visit; per ear and both; the model holds its sim weakly.
+- **`core/tests/test_speech_sin_session.gd` (the session mode)**: it loads by path; nothing to mask; `state()` is
+  never truth; the present / mark / flip / all-got / lock flow, present refused before LOCK IN, blanks lock as missed,
+  the walk wraps; per-chip checks and lines; `recommended_action` with a wrong mark gives `key_fix`; the player's level
+  is checked at the first scored sentence; the practice is never stored; `hoot_first` unscored and `level_first`
+  starting Hoot's turn at the player's first PRESENT; `level_by_hoot` locks the dial and skips `sin_level` and the tee
+  bonus; aided sheets at 50 with no band, no remedy and the label "aided, sound field"; units and Hoot's lists at 0;
+  party golf (list 2 can birdie; lists 1, 3 and 5 top out at par); `act(&"prompt")`; the FOCUS benefit and
+  `real_change`; `run_by_textbook` reaches a stored sheet for every Day 5 plan with no screen; a whole Day 5 visit on
+  one session; a list is used once; moments once per visit; the hidden loss; the per-ear summary; the lines fit and
+  name keys; the mode is freed with its session.
 
-**`core/tests/test_speech_voice_babble.gd` (P)**
-- The babble loop builds in under 150 ms headless.
-- The babble RMS is within 1 dB of `masker_to_rms(db - 5)` and of the word RMS at SNR 0.
-- Peaks: babble under `MASKER_CEILING_DBFS`; the mix never above -12 dBFS (a render at the worst case, talker 90, SNR
-  0).
-- "both" writes both channels, "right" and "left" write only theirs (the deliberate `play_item` change).
-- Stops on stop, exit and pause.
+**`core/tests/test_speech_voice_babble.gd` (P)**, as built: the loop builds in under 150 ms headless; unit RMS and
+capped peaks (`CREST`); the party keeps going over the loop; the same seed replays; the recording path and helpers;
+the babble RMS on the masker mapping (`masker_to_rms(db - 5)`, the word RMS at SNR 0); babble under
+`MASKER_CEILING_DBFS` and the mix never above -12 dBFS (talker 90, SNR 0); "both" writes both channels and "right" /
+"left" only theirs; the babble stops on stop, exit and pause.
 
 **`ui/tests/test_speech_screen_wrs.gd` (W)** and **`ui/tests/test_speech_screen_party.gd` (P)**
 - The mode's layout: anchors on screen and clear of Hoot at both resolutions; hidden base widgets; deck groups.
@@ -3325,13 +3423,23 @@ session and material)** (Marco's cases of CHAPTER5 §14, plus):
   lens press; no band ruler before a list ends; the Call it card at the right word with both inputs and both buttons;
   the tea demo neither presents nor locks; asides never emit a blocking beat.
 - PARTY: chip click cycle, right-click misses, 1-5 flips, G all-got, S / Enter lock; MASK hidden; level locked
-  mid-list and from the start with `level_by_hoot`; the mouse coach line after a click.
+  mid-list and from the start with `level_by_hoot`; the mouse coach line after a click. As built
+  (`test_speech_screen_party.gd`): a party list by keys and one by mouse at 1920; no PARTY widget overlaps another at
+  1280x720 or 1920x1080; marks refused before the answer; beat info, solvers and a stale solver; `hoot_first` three
+  courses then hands back, `level_first` then `hoot_first`, the practice by Hoot at x1, `hoot_only`,
+  `hoot_turn_after`; a slip line replaces the little-words tip; a second list on "both" gets its own Hoot turn; no
+  takeover without quick visit; SRT -> PARTY -> SRT restores the layout; a WORD probe then PARTY drops its anchors.
 - Reduced motion: no shake, scramble or waiter ride.
 - **Day 3 regression**: `_mode == null` with an SRT plan, and the Day 3 deck layout snapshot and anchor list are
   unchanged.
 
 **Story and content tests (W and P)**
-- `story/tests/test_level_nora.gd` and `test_level_marco.gd` (CHAPTER4 §16 and CHAPTER5 §14).
+- `story/tests/test_level_nora.gd` and `test_level_marco.gd` (CHAPTER4 §16 and CHAPTER5 §14). As built, Marco's
+  covers the movie announced only when unseen, `party_plan` (lists 1-2 unaided with phones or inserts, A and B in the
+  sound field at 50 by Hoot, `hide_loss` on list 1 only, `hoot_only` on lists 4 and 6, quick visit on and off), a
+  textbook visit's sheets, the bill, the band ruler, the plates (keys, drag, click-then-click, solver), the pizza,
+  the switch and the reveal, the seats, the dinner, the party golf card, the paper fitting the window, and every line
+  (A7's three pinned).
 - The movie tests of §9.20.
 - **Lines**: every Hoot line in the new TIPS tables, levels, boards and movies is 18 words or fewer with tokens at
   their longest; every key named in a line is a `{key:...}` placeholder.
@@ -3428,8 +3536,8 @@ the rollover-index cut-off, critical differences or a fixed cut-off, the WRS lev
    `Game.is_movie_seen` already record it. A second shell would be a third control scheme to keep in step.
 2. **CHAPTER5's shot 7a/7b as one scene with two captions** (engineering 1). Split instead into two scenes (`menu`,
    `receipt`), so each caption gets its own 8 s scene (clinical 22) while the title shot is folded into scene 1 (fun
-   17). The contract's movie is 8 scenes and 65 s, not the 9 shots and 73 s that clinical 22 estimated (Day 5's PR
-   states what it built).
+   17). The contract's movie is 8 scenes and 65 s, not the 9 shots and 73 s that clinical 22 estimated. As built it is 8
+   scenes and 71 s, with Steve's lead-in on scene 1 (§9.20).
 3. **The suggested cues for the topple and the EAR DOCTOR door** (engineering 3). Moot: those scenes were cut (fun 3).
    The rule itself is applied to every remaining cue.
 4. **`hoot_only` for Day 5's two WRS lists** (engineering 8). The key and the gate are added, but Day 5's WRS (and

@@ -354,12 +354,29 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	elif intro != "":
 		Hoot.say(intro, Hoot.NORMAL)
 	elif _hoot_gate() and _hoot_after > 0:
-		Hoot.say("%s ear, all yours for %d word%s! Then I'll take a turn." % [ear.capitalize(), _hoot_after, "" if _hoot_after == 1 else "s"], Hoot.NORMAL)
+		var line := "%s ear, all yours for %d word%s! Then I'll take a turn." % [ear.capitalize(), _hoot_after, "" if _hoot_after == 1 else "s"]
+		if _mode != null:
+			line = "%s, all yours for %d %s%s! Then I'll take a turn." % [_ear_says(ear), _hoot_after, _unit_word(), "" if _hoot_after == 1 else "s"]
+		Hoot.say(line, Hoot.NORMAL)
 	else:
-		Hoot.say("%s ear, all on your own! I'll only chime in if something goes wrong." % ear.capitalize(), Hoot.NORMAL)
+		var line := "%s ear, all on your own! I'll only chime in if something goes wrong." % ear.capitalize()
+		if _mode != null:
+			line = "%s, all on your own! I'll only chime in if something goes wrong." % _ear_says(ear)
+		Hoot.say(line, Hoot.NORMAL)
 	_refresh()
 	if session.is_done():
 		_complete_ear.call_deferred()
+
+
+## (Days 4-5, a mode only) "Right ear" in Hoot's opening lines, or "Both ears" for the PARTY test's
+## both-ears channel.
+static func _ear_says(ear: String) -> String:
+	return "Both ears" if ear == "both" else "%s ear" % ear.capitalize()
+
+
+## (Days 4-5, a mode only) What the player's share is counted in: words, or the PARTY test's sentences.
+func _unit_word() -> String:
+	return "sentence" if session.test == &"sin" else "word"
 
 
 ## The session for `patient` (made on the first call and kept between ears; plan fresh_session parks
@@ -2372,6 +2389,8 @@ func _draw_perch() -> void:
 	var txt := "Hoot is testing: watch the ladder!" if _auto_running else "Hoot's perch: tips pop up here"
 	if _mode != null and _auto_running and session != null and session.test == &"wrs":
 		txt = "Hoot is testing: watch the tiles!"   # (Day 4) the WORD test has no ladder
+	if _mode != null and _auto_running and session != null and session.test == &"sin":
+		txt = "Hoot is testing: watch the plates!"   # (Day 5) the PARTY test has no ladder
 	AoDraw.text_c(_hoot_spot, c + Vector2(0, 18), txt, 13, Color(Palette.INK, 0.32 if not _auto_running else 0.6), AoDraw.FONT_BOLD)
 
 
