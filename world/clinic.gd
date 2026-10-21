@@ -126,6 +126,9 @@ func _ready() -> void:
 	add_child(gus)
 	CaseExtras.attach(gus, patient_spec)
 	gus.position = SPOTS[&"door"]
+	# the patient waits in the hallway until walk_in() opens the door (a level that skips walk_in
+	# gets him back where he always stood, just inside the door, at its first walk_to() or sit())
+	gus.visible = false
 	doris = Bean.new()
 	doris.build(Bean.DORIS)
 	add_child(doris)
@@ -288,6 +291,7 @@ func walk_in() -> void:
 
 ## (coroutine) Walk to a named spot (SPOTS). Routes through the booth door when needed.
 func walk_to(spot: StringName, duration: float = 2.2) -> void:
+	gus.visible = true
 	if bool(gus.get("seated")):
 		await stand()
 	var target: Vector3 = SPOTS.get(spot, gus.position)
@@ -312,6 +316,7 @@ func walk_to(spot: StringName, duration: float = 2.2) -> void:
 
 ## (coroutine) Sit in the booth chair (walks there first if needed).
 func sit() -> void:
+	gus.visible = true
 	if bool(gus.get("seated")):
 		return
 	put_down_basket()
