@@ -209,6 +209,9 @@ def render(c):
         for e in c["on_dilemma"]:
             if isinstance(e, list) and len(e) == 2:
                 out.append(f"  - **{e[0]}:** {e[1]}")
+        if c.get("dilemma_movie"):
+            out.append(f"  - While Hoot's `{c['dilemma_movie']}` movie is unwatched: **Hoot:** {runner_line('DILEMMA_MOVIE_LEAD_IN')} "
+                       "Then the movie (Esc skips it; replay from the pause menu or the title).")
         if c.get("lend_inserts"):
             out.append(f"  - When the player owns no inserts, Hoot lends his for the visit: **Hoot:** {runner_line('LEND_INSERTS')}")
     if c["reveal"].get("pattern") == "shadow":

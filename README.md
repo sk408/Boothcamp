@@ -78,7 +78,8 @@ while you read her nine-year-old chart; Day 10 Barnaby Bumble, a beekeeper with 
 comes back a week later with the plug in a jar for a retest; Day 11 Skye Tailwind, cabin crew with
 fluid behind the eardrum before Friday's flight; Day 12 Morgan Gale, the lighthouse keeper, whose
 deaf ear "answers" until the noise goes in (the shadow curve); and Day 13 Bev Bingham, a bingo
-caller with gaps in both ears that run Hoot out of masking room until he lends his insert earphones.
+caller with gaps in both ears that run Hoot out of masking room until he lends his insert earphones
+(with a Hoot movie on the masking dilemma just before).
 The game never diagnoses: Hoot says what a pattern points to, and a doctor decides.
 
 **Day 14, Gus's Fitting**, is the finale: Gus comes back for his hearing aids. You pick the style
@@ -374,5 +375,4 @@ The designs are in `docs/`: `CHAPTER2.md` to `CHAPTER5.md` and `SPEECH.md` (Days
 - Gus's follow-up visit: fine-tuning after his first weeks with the aids.
 - Real recorded voices for the speech tests (the words are on-screen text with a quiet murmur
   for now).
-- A Hoot movie for Day 13's masking dilemma.
 - More upgrades for the clinic, more walk-ins for Freestyle and more arcade cabinets.
