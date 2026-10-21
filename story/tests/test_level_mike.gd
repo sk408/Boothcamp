@@ -2,22 +2,28 @@ extends TestCase
 ## (Speech) Day 3, Mike (story/level_mike.gd, story/games/mike_board.gd): the board's three beats
 ## and their solvers, the level's SPEECH plans and objection cards with real numbers (and Hoot's
 ## recheck when the player's SRT can't show the mismatch), Hoot's textbook fallback run, Hoot's
-## line lengths, the Daily Decibel's word golf card, a smoke run of the first beats, and (clinical
-## review A1 and A2, all days) the routine lines and why the day has no masking recap.
+## line lengths, the Daily Decibel's word golf card, a smoke run of the first beats, (clinical
+## review A1 and A2, all days) the routine lines and why the day has no masking recap, and (S7)
+## the spondee movie beat (announced only before its first play).
 
 const MikeBoard := preload("res://story/games/mike_board.gd")
 const LevelMike := preload("res://story/level_mike.gd")
 const LevelCase := preload("res://story/level_case.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 var beats: Array = []
 var phases: Array[StringName] = []
+var phase_info: Array[Dictionary] = []
 var resolved: Array[StringName] = []
+var _progress: Dictionary = {}
 
 
 func before_each() -> void:
 	beats.clear()
 	phases.clear()
+	phase_info.clear()
 	resolved.clear()
+	_progress = Game.progress.duplicate(true)
 	Events.awaiting_input.connect(_on_awaiting)
 	Events.phase_changed.connect(_on_phase)
 	Events.input_resolved.connect(_on_resolved)
@@ -28,6 +34,7 @@ func after_each() -> void:
 	Events.awaiting_input.disconnect(_on_awaiting)
 	Events.phase_changed.disconnect(_on_phase)
 	Events.input_resolved.disconnect(_on_resolved)
+	Game.progress = _progress
 	Hoot.clear()
 	Hoot.clear_bubble_hint()
 	Engine.time_scale = 1.0
@@ -39,8 +46,9 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	beats.append({"beat": beat, "info": info, "solver": solver})
 
 
-func _on_phase(p: StringName, _info: Dictionary) -> void:
+func _on_phase(p: StringName, info: Dictionary) -> void:
 	phases.append(p)
+	phase_info.append(info)
 
 
 func _on_resolved(beat: StringName) -> void:
@@ -977,6 +985,76 @@ func test_routine_lines_and_no_masking_recap() -> void:
 			for level in range(SpeechRules.MIN_DB, SpeechRules.MAX_DB + 1, 5):
 				masks = masks or SpeechRules.speech_masking_needed(level, other, tr)
 	assert_false(masks, "no SRT level needs noise with Mike's tones")
+
+
+# ---------------------------------------------------------------- the movie (clinical review S7)
+
+## The level from the top until the phase `stop`, every beat solved as the bot solves it; the
+## dialogue lines land in `said` ("Hoot: ...").
+func _play_until(stop: StringName, said: Array[String], max_ms: int = 60000) -> Node:
+	var on_line := func(speaker: String, text: String) -> void: said.append("%s: %s" % [speaker, text])
+	Events.dialogue_line.connect(on_line)
+	Engine.time_scale = 6.0
+	var lv: Node = (load(LevelMike.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < max_ms and not phases.has(stop):
+		await wait_frames(2)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	Events.dialogue_line.disconnect(on_line)
+	return lv
+
+
+func _count(beat: StringName) -> int:
+	return beats.filter(func(b: Dictionary) -> bool: return b["beat"] == beat).size()
+
+
+## Hoot's spondee movie opens the day: one announcement line before its first play, then the movie
+## (the solver skips it, so Hoot says where it lives); once seen, only the replay offer (best: skip).
+func test_movie_announced_only_when_unseen() -> void:
+	(Game.progress.get("movies_seen", []) as Array).erase(LevelMike.MOVIE_ID)
+	assert_eq(Movies.for_chapter("mike"), [LevelMike.MOVIE_ID] as Array[String], "Day 3's own movie")
+	var said: Array[String] = []
+	var lv := await _play_until(&"intro", said)
+	assert_has(phases, &"intro", "the visit went on to the intro")
+	var announce := "Hoot: New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!"
+	assert_eq(said.count(announce), 1, "the one-line announcement before the first play")
+	assert_eq(_count(&"explainer"), 1, "the movie played (its explainer beat)")
+	var i := phases.find(&"explainer")
+	assert_true(i >= 0 and i < phases.find(&"intro"), "the movie comes before the intro")
+	assert_true(i >= 0 and not bool(phase_info[i].get("seen", true)), "phase explainer, seen false")
+	assert_eq(String(phase_info[i].get("movie", "")) if i >= 0 else "", LevelMike.MOVIE_ID)
+	assert_has(said, "Hoot: Skipped! Rewatch it any time: pause menu, \"Watch Hoot's spondee movie\".", "where it lives")
+	assert_false(bool(Game.get_visit_flag("movie_watched", true)), "an early skip is not watched")
+	assert_false(Game.is_movie_seen(LevelMike.MOVIE_ID), "so it plays again next visit")
+	lv.queue_free()
+	await wait_seconds(0.3)
+	# once seen (watched to its seen_at scene): only the replay choice, no announcement
+	Game.mark_movie_seen(LevelMike.MOVIE_ID)
+	beats.clear()
+	phases.clear()
+	phase_info.clear()
+	said.clear()
+	var lv2 := await _play_until(&"intro", said)
+	assert_false(said.has(announce), "no announcement once the movie is seen")
+	var first: Dictionary = beats[0] if not beats.is_empty() else {}
+	assert_eq(first.get("beat", &""), &"choice", "the first beat is the replay choice")
+	var info: Dictionary = first.get("info", {})
+	assert_eq(String(info.get("prompt", "")), "Hoot's spondee movie again? Popcorn's on me!", "a replay offer")
+	assert_eq(info.get("options", []), ["Roll the film! (about 80 s)", "Skip it: I know my spondees."] as Array[String])
+	assert_eq(int(info.get("best", -1)), 1, "skipping is the best answer")
+	assert_eq(_count(&"explainer"), 0, "the solver skips the replay")
+	var j := phases.find(&"explainer")
+	assert_true(j >= 0 and bool(phase_info[j].get("seen", false)), "phase explainer, seen true")
+	lv2.queue_free()
+	await wait_seconds(0.3)
 
 
 # ---------------------------------------------------------------- smoke: the first beats
