@@ -8,7 +8,8 @@ one block marked `# (Days 4-5)` and lists it under "Already in the bot" below.
 ## Already in the bot
 
 W5a (Day 4) applied the Day 4 part of the patch in `tools/autoplay_bot.gd`, in blocks marked `# (Days 4-5)`. None
-of it runs on Days 1-3 or 6-13: each block needs a `wrs` / `sin` test, a word sheet, or the `nora` chapter.
+of it runs on Days 1-3 or 6-13: each block needs a `wrs` / `sin` test, a word or party sheet, or the `nora` /
+`marco` chapter.
 
 - §1: `speech_day` also holds for `nora` and `marco`.
 - §3: `_check_wrs_lists(sp, report, problems)` on any day with a `speech.wrs` sheet. It also adds
@@ -21,7 +22,14 @@ of it runs on Days 1-3 or 6-13: each block needs a `wrs` / `sin` test, a word sh
 - §7: `_speech_shot_key()` and the `wrs` / `sin` shot names. The `_low` / `_descent` shot is now kept for
   `test == &"srt"` only.
 
-Still to do (Day 5): §4 `_check_sin_lists` and §6.
+P5a (Day 5) applied the rest, in the same kind of blocks. None of it runs before Day 5's chapter or a `sin` sheet:
+
+- §4: `_check_sin_lists(sp, report, problems)` on any day with a `speech.sin` sheet. It also adds `report.sin_lists`
+  (`slot:list_id:level:total`, with `:hoot` on a list Hoot scored all of), which only a day with party lists prints.
+- §6: `_check_marco(sp, problems)`. The paper's words are read while it is on screen (the `results_continue`
+  beat, on `marco` only, before a mouse run clicks it away) and checked for "beeps" and "spondees".
+- Day 5's movie (as Day 4's): on `marco` the result adds `movies`, and a fresh save (no `--keep-save`) must start
+  `party_noise`.
 
 ## The autoplay patch (§9.22)
 
