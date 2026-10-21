@@ -513,17 +513,34 @@ func test_tell_points_at_the_meter_and_the_coach_comes_back() -> void:
 func test_low_start_shows_hoot_s_praise() -> void:
 	Hoot.reset_visit()   # a once-per-visit tip: an earlier test may have used it
 	var s := _screen()
-	# PTA 72: the start window is 82-97, so 40 starts low and comes up
-	s.start_test(_mike(), "right", false, _plan({"low_start_ok": true, "level": 40}))
+	# PTA 72: the start window is 82-112, so 20 starts low; the praise waits for the first step up (S2)
+	s.start_test(_mike(), "right", false, _plan({"low_start_ok": true, "level": 20}))
+	var praised := func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting below")
 	var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
 	assert_true(ok, "the player's turn")
 	if not ok:
 		return
 	await tap_action(&"present_tone")
-	var shown: bool = await _wait_until(func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting below"), 10.0)
+	var went_up := false
+	for i in 6:
+		ok = await _wait_until(_player_turn.bind(s), 10.0)
+		assert_true(ok, "the answer is shown")
+		assert_false(bool(praised.call()), "no praise before the dial comes up")
+		# score what he said; a miss steps up 5 (the ascent), a hit steps down 10 and tries again
+		var heard := bool(s.session.current.get("correct", false))
+		await tap_action(&"speech_correct" if heard else &"speech_incorrect")
+		await _wait_until(_player_turn.bind(s), 10.0)
+		for a: StringName in ([&"softer", &"softer"] if heard else [&"louder"]):
+			await tap_action(a)
+		await tap_action(&"present_tone")
+		if not heard:
+			went_up = true
+			break
+	assert_true(went_up, "a miss to step up from")
+	var shown: bool = await _wait_until(praised, 10.0)
 	assert_true(shown, "Hoot's praise: " + String(Hoot.current_tip().get("text", "")))
 	assert_eq(String(Hoot.current_tip().get("target", "")), "speech_ladder")
-	assert_eq(s.session.combo, 1, "a clean check: combo +1")
+	assert_true(s.session.combo >= 3, "clean checks all the way: the start, the scores and the steps")
 	assert_true(s.session.errors.is_empty(), "not an srt_start error")
 
 
