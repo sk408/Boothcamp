@@ -83,7 +83,7 @@ The "straining" face shows only when the dial is exactly at the true threshold, 
 **E12. Audiogram proportions.** [Misleading]
 The chart stretches to fill its card (`ui/audiogram/audiogram.gd:258`, `plot_rect`), so one octave is about 1.7 times as wide as 20 dB. ASHA (1990) symbols guideline: one octave should span the same distance as 20 dB. Letterbox the plot to that ratio on the audiometer screen and the end screens.
 
-**E13. Masked air never differs from unmasked air.** [Missing: see C10]
+**E13. Masked air never differs from unmasked air.** [Missing: see C10] **Done** with C10 (PR #18: Day 12's dead ear, where masked air changes the chart)
 Every patient uses the default real interaural attenuation of 60 dB (phones) and 75 dB (inserts) (`core/patient_profile.gd:28-30`), while the rules teach 40 and 55. So masked air always confirms unmasked air. The advanced case (C10) needs a lower real IA or a dead ear so a shadow curve appears and masked air drops.
 
 **E14. Masking source comments.** [Kept: comments only; question 4 for the values] **Done** (comments only)
@@ -162,7 +162,7 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **C9. New advanced case: a masking dilemma.** [Steve decided] A case near the end of the days with a large conductive loss in both ears, where the starting noise already risks overmasking. It needs E9 first.
 
-**C10. New advanced case: masked air.** [Steve decided] A case where masked air really changes the chart: one very poor or dead ear with a lower real interaural attenuation, so unmasked air shows a shadow of the good ear and masking reveals the true threshold. It can be the same patient as C9 or a second one.
+**C10. New advanced case: masked air.** [Steve decided] **Done** (PR #18: Day 12, Morgan Gale and the shadow curve) A case where masked air really changes the chart: one very poor or dead ear with a lower real interaural attenuation, so unmasked air shows a shadow of the good ear and masking reveals the true threshold. It can be the same patient as C9 or a second one.
 
 **C11. A 750 Hz case.** [Steve decided] **Done** (PR #9: Ginger's left jump is 25 dB, Hoot explains 750 Hz) Ginger (Day 9) already has the jump: 500 Hz to 1 kHz is 25 dB on the right and 20 on the left (`core/patients/ginger.tres`), so 750 Hz is required there today. Because stamps within 5 dB are accepted, her left ear triggers it only when the stamps are accurate; widening her left jump to 25 makes it reliable. Hoot should explain 750 the first time it is asked for.
 
