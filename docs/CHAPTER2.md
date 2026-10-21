@@ -438,6 +438,12 @@ bedsheet); the purple "shhh" cloud; a noise dial.
 Total 93 s planned (each scene lasts at least its time and long enough to read its last caption, so about 96 s
 at normal text speed).
 
+**(D2-7) Two roads to the cochlea**, `story/explainers/movies/bone_gap.gd` (`short`: never listed for replay): two
+`card` scenes, 20 s, played after the air results ("But WHERE is it stuck?"), before the bone placement. "Two roads to
+the cochlea" (Righty and Lefty wave): "AIR: canal, middle ear, cochlea" / "BONE: a buzz through the skull" / "Bone
+mostly skips the middle ear". "Read the gap": "The gap = air minus bone" / "Big gap, bone normal: CONDUCTIVE" / "No gap,
+both down: SENSORINEURAL" / "Gap AND bone down: MIXED". Esc skips it, and then Hoot says the one-line version.
+
 **(polish) The recap**, `story/explainers/movies/masking_recap.gd` ("The short version", `short`: never listed for
 replay): one `card` scene, 12 s, played when the masking phase opens (about 8 minutes after the movie, right before
 the masked bone test). Lines: "Shhh goes in the OTHER ear" / "Start: its air + 10 (+ occlusion)" / "Heard? Shhh up 5.

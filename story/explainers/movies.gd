@@ -12,6 +12,8 @@ extends RefCounted
 const MOVIES: Dictionary = {
 	"masking": "res://story/explainers/movies/masking.gd",
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
+	## (clinical review D2-7) Day 2's two-card short on air, bone and the gap, after the air results
+	"bone_gap": "res://story/explainers/movies/bone_gap.gd",
 	## (cases, clinical review C12) Hoot's case movies, on every case day (also_chapters)
 	"case_files": "res://story/explainers/movies/case_files.gd",
 	"tymp": "res://story/explainers/movies/tymp.gd",
