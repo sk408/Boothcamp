@@ -1114,7 +1114,7 @@ Rendered at 1280x720 and 1920x1080, reduced motion on and off.
   party golf (list 2 can birdie; lists 1, 3 and 5 top out at par); the FOCUS benefit; `run_by_textbook` reaches a
   sheet for every Day 5 plan; a whole Day 5 visit on one session; a list is used once; moments once per visit; the
   hidden loss; the per-ear summary; the lines fit and name keys; the mode is freed with its session.
-- `core/tests/test_speech_voice_babble.gd`: the loop builds in under 150 ms headless; unit RMS and capped peaks; the
+- `core/tests/test_speech_voice_babble.gd`: the loop builds in under 400 ms headless; unit RMS and capped peaks; the
   party keeps going; the same seed replays; the recording path and helpers; the babble level on the masker mapping;
   babble and mix peaks capped; "both" writes both channels and one ear one; the babble stops on stop, exit and pause.
 - `ui/tests/test_speech_screen_party.gd` (the screen): a party list by keys; layout and anchors on screen, clear of

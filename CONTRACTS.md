@@ -2614,7 +2614,7 @@ static func babble_rms(babble_db: int) -> float
   with peaks capped near `CREST` 4.0 times the RMS (about 12 dB). No sine synthesis per sample. As built the loop is
   built synchronously and cached: `level_marco.gd` calls `SpeechBabble.loop()` in `_ready` (before the movie), so
   the first PRESENT never hitches; no `WorkerThreadPool` was needed. `babble_ready()` says whether it is built. A
-  test builds it in under 150 ms headless.
+  test builds it in under 400 ms headless.
   When `res://assets/speech/babble/babble.wav` exists, it is used instead (through `wav_to_mono`, normalised the same
   way).
 - **Level**: `babble_rms(db) = AudioSafety.masker_to_rms(db + BABBLE_TRIM_DB)`. Words use `speech_to_rms(hl)`, and
@@ -3412,7 +3412,7 @@ Every random test uses fixed seeds (`SpeechSim.new(profile, seed)` for `seed in 
   one session; a list is used once; moments once per visit; the hidden loss; the per-ear summary; the lines fit and
   name keys; the mode is freed with its session.
 
-**`core/tests/test_speech_voice_babble.gd` (P)**, as built: the loop builds in under 150 ms headless; unit RMS and
+**`core/tests/test_speech_voice_babble.gd` (P)**, as built: the loop builds in under 400 ms headless; unit RMS and
 capped peaks (`CREST`); the party keeps going over the loop; the same seed replays; the recording path and helpers;
 the babble RMS on the masker mapping (`masker_to_rms(db - 5)`, the word RMS at SNR 0); babble under
 `MASKER_CEILING_DBFS` and the mix never above -12 dBFS (talker 90, SNR 0); "both" writes both channels and "right" /
