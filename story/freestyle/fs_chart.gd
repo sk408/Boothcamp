@@ -41,6 +41,7 @@ func _ready() -> void:
 	if ResourceLoader.exists(AUDIOGRAM_SCENE):
 		ag = (load(AUDIOGRAM_SCENE) as PackedScene).instantiate() as Control
 		ag.set("ear", "both")
+		ag.set("show_notes", true)   # (E18) transducer, mastoids, reliability under the chart
 		ag.custom_minimum_size = CHART_SIZE
 		ag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		v.add_child(ag)

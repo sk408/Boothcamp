@@ -1368,6 +1368,9 @@ static func merge_retest(first: Dictionary, second: Dictionary, ears: PackedStri
 				if old.has(k):
 					fresh[k] = old[k]
 			out_ears[ear] = fresh
+	# (E18) both visits' answers are on the chart, so the chart notes' reliability counts both
+	out["false_alarms"] = int(first.get("false_alarms", 0)) + int(second.get("false_alarms", 0))
+	out["duration_s"] = float(first.get("duration_s", 0.0)) + float(second.get("duration_s", 0.0))
 	return out
 
 

@@ -60,6 +60,8 @@ func _ready() -> void:
 	if ResourceLoader.exists(AUDIOGRAM_SCENE):
 		ag = (load(AUDIOGRAM_SCENE) as PackedScene).instantiate() as Audiogram
 		ag.ear = "both"
+		ag.show_notes = true   # (E18) transducer, mastoids, reliability under the chart
+		ag.notes_right = true  # clear of the averages chips (bottom-left)
 		ag.custom_minimum_size = Vector2(820, 400)
 		ag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_card.add_child(ag)

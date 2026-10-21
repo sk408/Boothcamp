@@ -634,3 +634,68 @@ static func response_threshold(t_ac: int, t_bc: int, n_ac: int, n_bc: int, bone:
 	var occl := oe if (bone and masked and n_gap <= OCCLUSION_MAX_GAP_DB) else 0
 	var via_cross := n_cochlea + ia_test - occl
 	return {"threshold": mini(via_test, via_cross), "test": via_test, "cross": via_cross, "by": &"test" if via_test <= via_cross else &"cross"}
+
+
+# ---------------------------------------------------------------- (E18) chart notes
+
+## (E18) The notes strip under a finished audiogram (ASHA 2005 record keeping; BSA 2018, 10.4 and
+## 10.5): the air transducer, the mastoids the bone oscillator sat on, and how reliable the answers
+## looked, from the 1 kHz retest and the patient's false alarms per minute of testing.
+const RELIABILITY_POOR_RETEST_DB := 10   ## a retest off by more than this: poor (more than RETEST_TOLERANCE_DB: fair)
+const RELIABILITY_FAIR_FA_PER_MIN := 1.0
+const RELIABILITY_POOR_FA_PER_MIN := 2.0
+
+
+## "good", "fair" or "poor" for a session's results (AudiometrySession.results()).
+static func reliability(results: Dictionary) -> String:
+	var worst := 0
+	var ears: Dictionary = results.get("ears", {})
+	for e: String in ears:
+		var rt: Dictionary = (ears[e] as Dictionary).get("retest_1k", {})
+		if not rt.is_empty():
+			worst = maxi(worst, absi(int(rt.get("diff", 0))))
+	var minutes := maxf(1.0, float(results.get("duration_s", 0.0)) / 60.0)
+	var fa_rate := float(results.get("false_alarms", 0)) / minutes
+	if worst > RELIABILITY_POOR_RETEST_DB or fa_rate >= RELIABILITY_POOR_FA_PER_MIN:
+		return "poor"
+	if worst > RETEST_TOLERANCE_DB or fa_rate >= RELIABILITY_FAIR_FA_PER_MIN:
+		return "fair"
+	return "good"
+
+
+## (E18) The air transducer part of the chart note, from each air stamp (stamp_air_transducer), so
+## a visit that changed transducers part-way (Day 13's insert loan) names both.
+static func air_transducer_note(results: Dictionary) -> String:
+	var fallback := StringName(String(results.get("air_transducer", "phones")))
+	var used := {}
+	var ears: Dictionary = results.get("ears", {})
+	for e: String in ears:
+		for key: String in ["freqs", "ac_masked"]:
+			var sheet: Dictionary = (ears[e] as Dictionary).get(key, {})
+			for f: Variant in sheet:
+				if sheet[f] is Dictionary:
+					used[stamp_air_transducer(sheet[f] as Dictionary, fallback)] = true
+	if used.is_empty():
+		used[fallback] = true
+	if used.size() > 1:
+		return "Headphones and insert earphones"
+	return "Insert earphones" if used.has(&"inserts") else "Headphones"
+
+
+## The one-line chart note, e.g. "Headphones  ·  Bone on the left mastoid  ·  Reliability: good".
+static func chart_notes(results: Dictionary) -> String:
+	var parts: Array[String] = []
+	var ears: Dictionary = results.get("ears", {})
+	parts.append(air_transducer_note(results))
+	var mastoids: Array[String] = []
+	for e: String in ["right", "left"]:
+		var ear: Dictionary = ears.get(e, {})
+		if not (ear.get("bc", {}) as Dictionary).is_empty() or not (ear.get("bc_masked", {}) as Dictionary).is_empty():
+			mastoids.append(e)
+	if mastoids.size() == 2:
+		parts.append("Bone on both mastoids")
+	elif mastoids.size() == 1:
+		parts.append("Bone on the %s mastoid" % mastoids[0])
+	parts.append("Reliability: %s" % reliability(results))
+	return "  \u00b7  ".join(parts)
+

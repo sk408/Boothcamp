@@ -67,6 +67,13 @@ const NO_PLATEAU_COLOR := Color("#8e5cc4")
 @export var show_title: bool = false
 ## Show the speech banana and degree labels (on by default; turn off for tiny charts).
 @export var show_guides: bool = true
+## (E18) The end screens' chart notes: show_results() fills `notes` from ClinicRules.chart_notes()
+## and a small strip under the plot shows it (the plot gives up NOTES_H of height for it).
+@export var show_notes: bool = false
+## Right-align the notes (Day 1's reveal keeps its averages chips bottom-left).
+@export var notes_right: bool = false
+var notes: String = ""
+const NOTES_H := 18.0
 
 ## ear -> freq -> {"db": int, "no_response": bool, "age": float (seconds since stamped, -1 = static), "seed": int}
 var points: Dictionary = {"right": {}, "left": {}}
@@ -204,6 +211,7 @@ static func reveal_before(a: Array, b: Array) -> bool:
 ## by one from low to high pitch with the lines drawing in, then emit draw_finished.
 func show_results(results: Dictionary, animate: bool = false) -> void:
 	clear_points()
+	notes = ClinicRules.chart_notes(results) if show_notes else ""
 	var ears: Dictionary = results.get("ears", {})
 	var queue: Array = []
 	var unsure := {}   # "ear:freq:test" -> true: masked stamps stored with no plateau (E9)
@@ -269,7 +277,8 @@ func title_height() -> float:
 func plot_rect() -> Rect2:
 	var top := 26.0 + title_height()
 	var left := 40.0
-	return Rect2(left, top, maxf(10.0, size.x - left - 12.0), maxf(10.0, size.y - top - 12.0))
+	var bottom := 12.0 + (NOTES_H if show_notes else 0.0)   # reserved before the notes arrive: no jump
+	return Rect2(left, top, maxf(10.0, size.x - left - 12.0), maxf(10.0, size.y - top - bottom))
 
 
 func freq_to_x(freq: int) -> float:
@@ -464,6 +473,12 @@ func _draw() -> void:
 	elif _no_plateau_count() > 0:
 		_draw_no_plateau_legend(r)
 	AoDraw.ring(self, r.grow(2.0), Color(Palette.INK, 0.55), 6, 2)
+	if notes != "":
+		var ny := r.end.y + 2.0 + NOTES_H * 0.5
+		if notes_right:
+			AoDraw.text_r(self, Vector2(r.end.x - 2.0, ny), notes, 12, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+		else:
+			AoDraw.text_l(self, Vector2(r.position.x + 2.0, ny), notes, 12, Palette.INK_SOFT, AoDraw.FONT_SEMI)
 
 
 func _draw_grid(r: Rect2) -> void:
