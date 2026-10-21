@@ -144,7 +144,7 @@ Scenes with a `demo_start()` for `--scene`:
 - `res://story/arcade/arcade_hall.tscn` **(arcade)**: the arcade hall (pick a cabinet).
 - `res://story/arcade/chart_chute.tscn` **(arcade)**: a Chart Chute run (play it yourself; `--seed=N` repeats a belt).
 - `res://story/arcade/ears_please.tscn` **(arcade)**: an Ears, Please! shift (`--seed=N` repeats a line of patients).
-- `res://tools/monkey.tscn`: the stress test (`--day=2` for Day 2, `--day=3` for Day 3, `--day=6` to `--day=11` for the cases; any other day is refused).
+- `res://tools/monkey.tscn`: the stress test (`--day=2` for Day 2, `--day=3` for Day 3, `--day=6` to `--day=12` for the cases; any other day is refused).
 
 ## Generators (one-off, foundation-owned)
 
