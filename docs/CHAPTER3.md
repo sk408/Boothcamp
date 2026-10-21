@@ -116,7 +116,7 @@ movie's question and names its answer.
 | 7 | `mismatch` | Two panels with small rulers. "Words much BETTER": beep at 45, word at 10; Hoot re-instructs kindly ("Every beep, even the faint ones!") and the rechecked beep slides up to 15, into the band, with a heart chip "never accuse". "Words much WORSE": beep at 40, word at 65; chips "instructions clear?", "words in their language?". Watching up to here counts as seen (`seen_at`). | "Words much better than beeps? Kindly re-instruct and recheck the beeps. Never accuse." / "Words much worse? Check the instructions, and that the words are in their language." | 12 | Poor agreement both ways: much better words, re-instruct kindly and recheck the beeps (never accuse); much worse, check the instructions and the language. |
 | 8 | `recap` | Four numbered tiles: two word blocks ("two-part words"), an ear ("say them first"), a little ladder with -10 and +5 ("find about half"), a beep beside a word block ("check the beeps"). Hoot bows, the curtains close: "Your turn, trainee!". | "Recap: two-part words, said first by ear. Find the halfway level, then check it against the beeps." | 8 | Recap: spondees said first by ear, down 10 / up 5 to about half right, then the SRT checked against the beeps. |
 
-Scene totals: 15 + 8 + 9 + 11 + 9 + 8 + 12 + 8 = **80 s**. The longest caption is 18 words. The words shown
+Scene totals: 15 + 8 + 9 + 11 + 9 + 8 + 12 + 8 = **80 s**. The longest caption is 17 words. The words shown
 (lighthouse, rainbow, goldfish) are `spondee_a.json`'s own, in the game's own order. Reduced motion: fades and cuts
 only. Every sound is a quiet `Sfx` cue; the words are drawn, never played.
 
