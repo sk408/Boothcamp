@@ -38,6 +38,11 @@ const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const SPORTS_SCRIPT := "res://story/papers/paper_party_golf.gd"
 const PATIENT_ID := "marco"
 const MOVIE_ID := "party_noise"
+## (Clinical review A2, all days) Before the visit's first masked test (Hoot's masked bone where a
+## gap shows, else his words in quiet with noise), while the masking movie is unseen: the one-card
+## recap, then where the full movie lives (HOOT "masking_hint"), as the case days do.
+const MASKING_MOVIE := "masking"
+const MASKING_RECAP := "masking_recap"
 ## Voices (story/voice.gd is not edited: registered at runtime, CHAPTER5 §12).
 const VOICE := {"f0": 118.0, "wobble": 0.07, "roll": 0.85}
 const ROSA_VOICE := {"f0": 215.0, "wobble": 0.08, "roll": 0.7}
@@ -115,6 +120,8 @@ const HOOT: Dictionary[String, String] = {
 	"bone_other": "Bone's in. Now his words, in quiet first.",
 	"words_noise": "Now words in quiet, my turn. The rule says noise in the other ear.",
 	"words_quiet": "Now words in quiet, my turn. No noise needed this time.",
+	# (clinical review A2, all days) after the masking recap card, as the case days say it
+	"masking_hint": "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen.",
 	"no_wrs": "Word lists are still at the printer. His beeps say words in quiet should be fine.",
 	"summary": "Mild high-pitch loss, PTA about {pta}. Words in quiet: {r} and {l} percent. {verdict}!",
 	"list_done": "Six sentences done. Time for the bill!",
@@ -200,6 +207,8 @@ var board: Control
 var tones: Dictionary = {}
 var results: Dictionary = {}
 var _movie_watched := false
+## (A2, all days) The masking recap played this visit (once, before the first masked test).
+var _recapped := false
 var _bill_tries := 0
 var _band_tries := 0
 var _plates_slips := 0
@@ -327,6 +336,22 @@ func _play_movie(id: String) -> Dictionary:
 	var r: Dictionary = await player.call("play", id, "day_start")
 	player.queue_free()
 	return r
+
+
+## (Clinical review A2, all days) The masking recap card before the visit's first masked test,
+## while the masking movie is unseen (a player who starts here, or skipped it on Day 2), then where
+## the full movie lives (level_case._recap). From here the level is in Movies.MASKING_LEVEL_GROUP,
+## so its pause menu lists the masking movie too (E19); a watched movie leaves the day as it was.
+func _recap() -> void:
+	if _recapped or Game.is_movie_seen(MASKING_MOVIE) or not Movies.has(MASKING_RECAP):
+		return
+	_recapped = true
+	add_to_group(Movies.MASKING_LEVEL_GROUP)
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", MASKING_RECAP, "recap")
+	player.queue_free()
+	await _hoot("masking_hint")
 
 
 # ---------------------------------------------------------------- 1. intro: the review
@@ -542,6 +567,7 @@ func _montage() -> void:
 			on_mastoid = ear
 		clinic.call("put_on_masking_phone", other)
 		await _wait(0.5)
+		await _recap()
 		cam = _open_audiometer()
 		await _tone_test(ear, {"test": "bc_masked", "masking_controls": true, "hoot_turn_after": 0, "montage": true,
 			"intro": "A gap? Masked bone settles it: the shhh goes in the %s ear." % other})
@@ -582,7 +608,10 @@ func _hidden_speech() -> void:
 	if not wrs_ok:
 		await _hoot("no_wrs")
 		return
-	await _hoot("words_noise" if words_need_noise(tones, _air_transducer()) else "words_quiet")
+	var noise := words_need_noise(tones, _air_transducer())
+	if noise:
+		await _recap()
+	await _hoot("words_noise" if noise else "words_quiet")
 	var lists := {"right": SpeechRules.WRS_LISTS[0], "left": SpeechRules.WRS_LISTS[1]}
 	for ear: String in ClinicRules.EARS:
 		_phase(&"speech", {"ear": ear, "test": "wrs"})
