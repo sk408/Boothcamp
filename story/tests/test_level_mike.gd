@@ -338,6 +338,52 @@ func _level_with_tones() -> Node:
 	return lv
 
 
+## Mike's tones with each left stamp set by `fn` (the right stamp at that frequency -> the new left).
+func _tones_with_left(fn: Callable) -> Dictionary:
+	var tones := SpeechSession.tone_results_from(_mike())
+	var ears: Dictionary = tones["ears"]
+	var right: Dictionary = (ears["right"] as Dictionary)["freqs"]
+	var left: Dictionary = (ears["left"] as Dictionary)["freqs"]
+	for f: Variant in left:
+		var st: Dictionary = left[f]
+		st["stored_db"] = fn.call(int((right[f] as Dictionary)["stored_db"]), int(st["stored_db"]))
+	return tones
+
+
+## S6: the SRT goes better ear first (the lower tone PTA), and Hoot coaches that ear; a tie keeps
+## the right first. Mike's own tones (71.7 against 73.3) keep his order as it was.
+func test_srt_better_ear_first() -> void:
+	var quick: Variant = Game.settings.get("quick_visit", true)
+	Game.settings["quick_visit"] = true
+	var lv := _level_with_tones()
+	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "Mike: right first, as before")
+	assert_eq(String(lv.call("first_ear_lead")), "Better ear first: the right.")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Better ear first: the right. "))
+	assert_eq(LevelMike.steps_for("right"), LevelMike.STEPS)
+	# a better left ear goes first, coached (no Hoot turn); the right becomes the solo ear
+	lv.set("tones", _tones_with_left(func(_r: int, l: int) -> int: return l - 10))
+	assert_eq(lv.call("srt_ears"), ["left", "right"] as Array[String])
+	var l: Dictionary = lv.call("speech_plan", "left")
+	var r: Dictionary = lv.call("speech_plan", "right")
+	assert_true(String(l["intro"]).begins_with("Better ear first: the left. "), String(l["intro"]))
+	assert_true(String(l["intro"]).contains("80"), "PTA 63.3 -> 65 + 15 = 80: " + String(l["intro"]))
+	assert_false(l.has("hoot_turn_after"), "the coached first ear is all the player's")
+	assert_eq(int(r.get("hoot_turn_after", -1)), LevelMike.LEFT_SOLO_WORDS, "quick visit: Hoot finishes the second ear")
+	assert_true(String(r["intro"]).begins_with("Right ear: yours"), String(r["intro"]))
+	for plan: Dictionary in [l, r]:
+		assert_true(String(plan["intro"]).split(" ", false).size() <= Hoot.MAX_WORDS, String(plan["intro"]))
+	var steps := LevelMike.steps_for("left")
+	assert_true(steps.find(&"srt_l") < steps.find(&"srt_r"), "the HUD lists SRT L first")
+	assert_eq(steps.size(), LevelMike.STEPS.size())
+	# a tie keeps the right first
+	lv.set("tones", _tones_with_left(func(rt: int, _l: int) -> int: return rt))
+	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "a tie: right first")
+	assert_eq(String(lv.call("first_ear_lead")), "Right ear first.")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Right ear first. "))
+	Game.settings["quick_visit"] = quick
+	lv.free()
+
+
 func test_objection_cards_by_sheet() -> void:
 	var cases: Array = [
 		["fair, no bracket", _sheet(65, "fair", SpeechRules.NO_SRT), false],

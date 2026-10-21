@@ -35,9 +35,10 @@ const ECHO_WORDS := 8
 ## non-organic loss. Mike's simulated tones are steady, so the level derives the retest from the
 ## measured result (the shared tone code is left as it is).
 const RETEST_BETTER_DB := 15
-## The solo (left) ear on a quick visit: the player scores words down to Mike's first miss below
-## his SRT (down 10 per hit from PTA + 15: eight words) and the step back up 5, then Hoot finishes
-## the bracket (plan hoot_turn_after_up). This many words is the cap, for a descent that never misses.
+## The solo (second, normally left) ear on a quick visit: the player scores words down to Mike's
+## first miss below his SRT (down 10 per hit from PTA + 15: eight words) and the step back up 5,
+## then Hoot finishes the bracket (plan hoot_turn_after_up). This many words is the cap, for a
+## descent that never misses.
 const LEFT_SOLO_WORDS := 12
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
@@ -95,11 +96,26 @@ func _ready() -> void:
 	add_child(clinic)
 	hud = Hud.new()
 	add_child(hud)
-	hud.call("set_steps", STEPS, STEP_LABELS, "MIKE LENDERS' VISIT", {&"srt_r": Palette.RIGHT_RED, &"srt_l": Palette.LEFT_BLUE})
+	_set_hud_steps("right")
 	dialogue = DialogueBox.new()
 	add_child(dialogue)
 	Events.level_started.emit(PATIENT_ID)
 	_run.call_deferred()
+
+
+## The visit's steps on the HUD, with the SRT ears in test order (`first` ear first).
+func _set_hud_steps(first: String) -> void:
+	hud.call("set_steps", steps_for(first), STEP_LABELS, "MIKE LENDERS' VISIT", {&"srt_r": Palette.RIGHT_RED, &"srt_l": Palette.LEFT_BLUE})
+
+
+## STEPS with the SRT ears in test order: "SRT L" before "SRT R" when the left goes first.
+static func steps_for(first: String) -> Array[StringName]:
+	var out: Array[StringName] = STEPS.duplicate()
+	if first == "left":
+		var i := out.find(&"srt_r")
+		out[i] = &"srt_l"
+		out[i + 1] = &"srt_r"
+	return out
 
 
 func _phase(p: StringName, info: Dictionary = {}) -> void:
@@ -461,6 +477,21 @@ func _familiarize() -> Control:
 
 # ---------------------------------------------------------------- 7-8. SRT: the SPEECH screen
 
+## The SRT ear order (clinical review S6): the better ear first, by the lower tone PTA, right on a
+## tie. The first ear is the coached one; Mike's right is normally the better (71.7 against 73.3).
+func srt_ears() -> Array[String]:
+	return SpeechRules.ears_better_first(ear_pta("right"), ear_pta("left"))
+
+
+## Hoot's lead-in on the first SRT ear: the better one by name, or the right when the ears tie.
+func first_ear_lead() -> String:
+	var r := ear_pta("right")
+	var l := ear_pta("left")
+	if is_nan(r) or is_nan(l) or is_equal_approx(r, l):
+		return "Right ear first."
+	return "Better ear first: the %s." % srt_ears()[0]
+
+
 ## The SPEECH screen plan for one ear (§9.7).
 func speech_plan(ear: String) -> Dictionary:
 	var plan := {"test": "srt", "tones": tones, "list": LIST_ID, "words": words.duplicate(), "transducer": String(_air_transducer())}
@@ -469,14 +500,14 @@ func speech_plan(ear: String) -> Dictionary:
 	# once the coffee whisper has been on screen, starting below his beeps is smart, not a slip
 	plan["low_start_ok"] = _whisper_seen
 	var start := SpeechRules.srt_start(ear_pta(ear))
-	if ear == "right":
-		plan["intro"] = "Start at his PTA plus 15: %d dB. He should repeat that easily." % start
+	if ear == srt_ears()[0]:
+		plan["intro"] = "%s Start at his PTA plus 15: %d dB, easy to repeat." % [first_ear_lead(), start]
 	elif quick_visit():
-		plan["intro"] = "Left ear: yours to the first miss and back up 5! PTA plus 15 is %d dB." % start
+		plan["intro"] = "%s ear: yours to the first miss and back up 5! PTA plus 15 is %d dB." % [_cap(ear), start]
 		plan["hoot_turn_after"] = LEFT_SOLO_WORDS
 		plan["hoot_turn_after_up"] = true
 	else:
-		plan["intro"] = "Left ear, your turn! PTA plus 15 is %d dB." % start
+		plan["intro"] = "%s ear, your turn! PTA plus 15 is %d dB." % [_cap(ear), start]
 	return plan
 
 
@@ -497,13 +528,17 @@ func _speech() -> void:
 	else:
 		push_warning("LevelMike: no SPEECH screen (%s); Hoot runs the words himself" % SPEECH_SCENE)
 	recheck = {}
-	for ear: String in ["right", "left"]:
+	# better ear first (S6); Hoot coaches the first ear
+	var order := srt_ears()
+	if order[0] != "right":
+		_set_hud_steps(order[0])
+	for ear: String in order:
 		hud.call("set_step", &"srt_r" if ear == "right" else &"srt_l")
 		_phase(&"speech", {"ear": ear, "test": "srt"})
 		var plan := speech_plan(ear)
 		var r: Dictionary
 		if screen != null:
-			screen.call("start_test", patient, ear, ear == "right", plan)
+			screen.call("start_test", patient, ear, ear == order[0], plan)
 			r = await screen.test_finished
 		else:
 			r = await _fallback_speech(ear, plan)
@@ -580,6 +615,7 @@ func _recheck_right() -> void:
 func rerun_right() -> void:
 	var plan := speech_plan("right")
 	plan.erase("intro")
+	plan.erase("hoot_turn_after_up")
 	plan["hoot_turn_after"] = 0
 	plan["fresh_session"] = true
 	plan["hoot_turn_text"] = "Right ear again, by the book, at 8x. Watch the ladder!"
