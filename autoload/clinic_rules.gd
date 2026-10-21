@@ -663,11 +663,30 @@ static func reliability(results: Dictionary) -> String:
 	return "good"
 
 
+## (E18) The air transducer part of the chart note, from each air stamp (stamp_air_transducer), so
+## a visit that changed transducers part-way (Day 13's insert loan) names both.
+static func air_transducer_note(results: Dictionary) -> String:
+	var fallback := StringName(String(results.get("air_transducer", "phones")))
+	var used := {}
+	var ears: Dictionary = results.get("ears", {})
+	for e: String in ears:
+		for key: String in ["freqs", "ac_masked"]:
+			var sheet: Dictionary = (ears[e] as Dictionary).get(key, {})
+			for f: Variant in sheet:
+				if sheet[f] is Dictionary:
+					used[stamp_air_transducer(sheet[f] as Dictionary, fallback)] = true
+	if used.is_empty():
+		used[fallback] = true
+	if used.size() > 1:
+		return "Headphones and insert earphones"
+	return "Insert earphones" if used.has(&"inserts") else "Headphones"
+
+
 ## The one-line chart note, e.g. "Headphones  ·  Bone on the left mastoid  ·  Reliability: good".
 static func chart_notes(results: Dictionary) -> String:
 	var parts: Array[String] = []
-	parts.append("Insert earphones" if String(results.get("air_transducer", "phones")) == "inserts" else "Headphones")
 	var ears: Dictionary = results.get("ears", {})
+	parts.append(air_transducer_note(results))
 	var mastoids: Array[String] = []
 	for e: String in ["right", "left"]:
 		var ear: Dictionary = ears.get(e, {})

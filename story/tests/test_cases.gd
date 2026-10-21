@@ -822,6 +822,10 @@ func test_merge_retest() -> void:
 	assert_eq(shown["ears"]["right"]["hearing_type"], &"normal", "the type is today's")
 	assert_eq(int((shown["ears"]["left"] as Dictionary)["pta"]), 5, "the other ear is the visit's")
 	assert_eq(int(first["ears"]["right"]["pta"]), 35, "the visit's results are untouched")
+	var timed := LevelCase.merge_retest({"ears": {}, "false_alarms": 2, "duration_s": 120.0},
+		{"ears": {}, "false_alarms": 1, "duration_s": 60.0}, PackedStringArray(["right"]))
+	assert_eq(int(timed["false_alarms"]), 3, "(E18) both visits' false alarms")
+	assert_eq(float(timed["duration_s"]), 180.0, "(E18) both visits' minutes")
 	(shown["ears"]["right"] as Dictionary)["pta"] = 99
 	assert_eq(int(second["ears"]["right"]["pta"]), 10, "a deep copy")
 	var board := LevelCase.retest_board_case(_case("wax"), _case("wax")["retest"],

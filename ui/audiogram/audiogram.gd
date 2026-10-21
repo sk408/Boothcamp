@@ -277,7 +277,7 @@ func title_height() -> float:
 func plot_rect() -> Rect2:
 	var top := 26.0 + title_height()
 	var left := 40.0
-	var bottom := 12.0 + (NOTES_H if notes != "" else 0.0)
+	var bottom := 12.0 + (NOTES_H if show_notes else 0.0)   # reserved before the notes arrive: no jump
 	return Rect2(left, top, maxf(10.0, size.x - left - 12.0), maxf(10.0, size.y - top - bottom))
 
 

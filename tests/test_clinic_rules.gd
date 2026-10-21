@@ -101,3 +101,9 @@ func test_chart_notes() -> void:
 	assert_eq(ClinicRules.reliability(r), "poor", "2.5 false alarms a minute")
 	var air_only := {"air_transducer": "phones", "ears": {"right": {}, "left": {}}}
 	assert_false(ClinicRules.chart_notes(air_only).contains("Bone"), "no bone, no mastoid note")
+	# (E18) each air stamp names its own transducer: Day 13's insert loan mid-visit names both
+	var loan := {"air_transducer": "inserts", "ears": {"right": {"freqs": {1000: {"transducer": "phones"}},
+		"ac_masked": {1000: {"transducer": "inserts"}}}, "left": {"freqs": {1000: {"transducer": "phones"}}}}}
+	assert_true(ClinicRules.chart_notes(loan).begins_with("Headphones and insert earphones"), ClinicRules.chart_notes(loan))
+	var phones_only := {"air_transducer": "inserts", "ears": {"right": {"freqs": {1000: {"transducer": "phones"}}}}}
+	assert_true(ClinicRules.chart_notes(phones_only).begins_with("Headphones"), "the stamps win over the last test's transducer")
