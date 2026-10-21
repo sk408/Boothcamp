@@ -12,12 +12,16 @@ const EARS: PackedStringArray = ["right", "left"]
 
 ## Every air-conduction frequency the AudiOtron can present (Hz).
 const AC_FREQS: Array[int] = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
-## The octave frequencies that are always required.
+## The octave frequencies.
 const OCTAVE_FREQS: Array[int] = [250, 500, 1000, 2000, 4000, 8000]
+## (Clinical review E1) The air frequencies every ear gets: the octaves plus 1.5, 3 and 6 kHz.
+## ASHA (2005) lists 3 and 6 kHz in the standard order; 1.5 kHz is the dispensing habit (fitting
+## software uses it). Only 750 Hz waits for the 20 dB rule (required_interoctaves()).
+const ROUTINE_FREQS: Array[int] = [250, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
 ## Inter-octave frequency -> the two octave neighbours that trigger it.
 const INTEROCTAVES: Dictionary[int, Array] = {750: [500, 1000], 1500: [1000, 2000], 3000: [2000, 4000], 6000: [4000, 8000]}
-## Recommended order per ear. 1000 appears twice: the second is the 1 kHz retest.
-const TEST_ORDER: Array[int] = [1000, 2000, 4000, 8000, 1000, 500, 250]
+## Recommended order per ear. 1000 appears twice: the second is the 1 kHz retest (first air ear only).
+const TEST_ORDER: Array[int] = [1000, 1500, 2000, 3000, 4000, 6000, 8000, 1000, 500, 250]
 
 const START_FREQ := 1000
 const START_DB := 40            ## "start at 1 kHz, about 40 dB HL"
@@ -39,6 +43,9 @@ const TONE_TOO_SHORT_S := 0.5
 const TONE_IDEAL_MIN_S := 1.0
 const TONE_IDEAL_MAX_S := 2.0
 const TONE_TOO_LONG_S := 3.0
+## (Clinical review E6) A gap shorter than the beep before it, and under this, breaks the combo
+## (ASHA 2005: the interval between tones is "not shorter than the test tone").
+const SHORT_GAP_S := 1.0
 ## A press up to this long after the tone ends still counts as a response to it.
 ## (Gus answers 0.4-1.2 s after tone onset, and tones last 1-2 s, so 1.5 s after the end is plenty.)
 const RESPONSE_WINDOW_S := 1.5
@@ -64,9 +71,12 @@ const MAX_COMFORT := 3
 const GRADE_BANDS: Array = [["S", 95.0], ["A", 85.0], ["B", 70.0], ["C", 55.0]]
 const GRADE_FAIL := "Do-over"
 
-## Degree of loss (adult, dB HL): upper bound inclusive -> name.
+## Degree of loss (adult, dB HL, on the 500/1k/2k average): upper bound inclusive -> name. The
+## scale is Goodman (1965): normal up to 25, without ASHA's "slight" band (clinical review E15).
+## The audiogram's band labels use the same names and print DEGREE_SCALE_NOTE.
 const DEGREE_BANDS: Array = [[25, "normal"], [40, "mild"], [55, "moderate"], [70, "moderately severe"], [90, "severe"]]
 const DEGREE_TOP := "profound"
+const DEGREE_SCALE_NOTE := "degrees: Goodman (1965)"
 
 ## Audiogram shapes recognised by classify_shape(). Each gets a reveal mascot (design notes §2.9).
 const SHAPES: Array[StringName] = [&"normal", &"flat", &"sloping", &"rising", &"cookie_bite", &"notch", &"unknown"]
@@ -87,6 +97,11 @@ static func max_db(freq: int) -> int:
 
 static func is_octave(freq: int) -> bool:
 	return OCTAVE_FREQS.has(freq)
+
+
+## (E1) Is this air frequency tested on every ear (an octave, 1.5k, 3k or 6k)?
+static func is_routine(freq: int) -> bool:
+	return ROUTINE_FREQS.has(freq)
 
 
 ## Snap any level to the 5 dB grid and the legal range for that frequency.
@@ -176,9 +191,9 @@ static func pta(thresholds: Dictionary) -> float:
 	return total / n if n > 0 else NAN
 
 
-## Which inter-octave frequencies are required, given the stored octave thresholds
-## (Dictionary freq -> dB). An inter-octave is required when both neighbours are stored and
-## differ by INTEROCTAVE_DIFF_DB or more.
+## Which inter-octave frequencies the 20 dB rule flags, given the stored octave thresholds
+## (Dictionary freq -> dB): both neighbours stored and differing by INTEROCTAVE_DIFF_DB or more.
+## (E1) 1.5, 3 and 6 kHz are routine anyway, so for the test plan only a flagged 750 adds a stop.
 static func required_interoctaves(thresholds: Dictionary) -> Array[int]:
 	var out: Array[int] = []
 	for f: int in INTEROCTAVES:
@@ -226,10 +241,11 @@ static func classify_shape(thresholds: Dictionary) -> StringName:
 
 
 # ================================================================ v3: bone conduction + masking
-# Chapter 2 (docs/CHAPTER2.md). Sources: ASHA (2005) manual pure-tone guidelines; Hood (1960)
-# plateau masking; Studebaker (1964) / Yacullo occlusion-effect corrections; the two clinical
-# programs' published masking rules (paraphrased in research/test-content.md §1.5 and §2.3-2.4).
-# Teaching defaults: Steve reviews every number here.
+# Chapter 2 (docs/CHAPTER2.md section 7 lists every number). Sources (clinical review E14): ASHA
+# (2005) manual pure-tone guidelines; BSA (2018) recommended procedure, 8.1 (interaural attenuation
+# 40 dB with supra-aural phones, 55 dB with inserts) and 8.6 (when to mask); Hood (1960) and
+# Yacullo (1996) plateau masking (start at the non-test ear's air + 10 dB, 5 dB steps, a 15 dB
+# plateau); Goldstein and Newman (1985) occlusion effect. Teaching defaults: Steve reviews them.
 
 ## Tests: the conduction route plus the masked flag. Each one is its own results "sheet".
 const TESTS: Array[StringName] = [&"ac", &"ac_masked", &"bc", &"bc_masked"]
@@ -244,8 +260,9 @@ const BC_FREQS: Array[int] = [250, 500, 750, 1000, 1500, 2000, 3000, 4000]
 const BC_REQUIRED: Array[int] = [1000, 2000, 4000, 500]
 ## Bone oscillator maximum output (dB HL). It runs out much sooner than headphones.
 const BC_MAX_DB: Dictionary[int, int] = {250: 45, 500: 60, 750: 65, 1000: 70, 1500: 70, 2000: 70, 3000: 70, 4000: 65}
-## Loud low bone tones are FELT (vibrotactile), not heard. Reference for later patients.
-const VIBROTACTILE_DB: Dictionary[int, int] = {250: 30, 500: 55}
+## Loud low bone tones are FELT (vibrotactile), not heard (clinical review E16: about 25 dB at
+## 250 Hz, 55 at 500 and 70 at 1000 Hz). The tickle reaction and lesson only.
+const VIBROTACTILE_DB: Dictionary[int, int] = {250: 25, 500: 55, 1000: 70}
 
 ## Minimum interaural attenuation the masking RULES assume (conservative, flat). The patient
 ## simulator uses each patient's own, larger, real IA (PatientProfile.ia_*_db).
@@ -269,6 +286,10 @@ const MASK_MIN_DB := 0
 const MASK_MAX_DB := 100
 ## Air-bone gap: more than this = a conductive component (10 dB or less = no real gap).
 const ABG_CONDUCTIVE_DB := 10
+## (Clinical review E5) Bone masking: an air-bone gap of this or MORE asks for masked bone (ASHA
+## 2005; BSA 2018 8.6.2 rule 2: "better ... by 10 dB or more"). Naming the type of loss still uses
+## ABG_CONDUCTIVE_DB (over 10), so a 10 dB gap is masked but still reads as no real gap.
+const BC_MASK_GAP_DB := 10
 ## Referral red flag: a gap of at least this at EACH of these frequencies.
 const ABG_RED_FLAG_DB := 15
 const ABG_RED_FLAG_FREQS: Array[int] = [500, 1000, 2000]
@@ -418,9 +439,9 @@ static func ac_masking_needed(test_ac: int, nontest_bc: int, transducer: StringN
 	return test_ac - ia_rule(transducer, freq) >= nontest_bc
 
 
-## BC masking rule: the test ear's air-bone gap (AC - unmasked BC) is more than 10 dB.
+## BC masking rule: the test ear's air-bone gap (AC - unmasked BC) is 10 dB or more (BC_MASK_GAP_DB).
 static func bc_masking_needed(test_ac: int, bc_unmasked: int) -> bool:
-	return is_conductive_gap(test_ac - bc_unmasked)
+	return test_ac - bc_unmasked >= BC_MASK_GAP_DB
 
 
 ## Initial masking level (dB EM) in the non-test ear: its AC threshold + 10, plus the occlusion
@@ -545,7 +566,7 @@ static func unmasked_bone(results: Dictionary, freq: int) -> Variant:
 
 ## Frequencies that need a masked measurement for one ear, from the stored results (§5.1), in the
 ## recommended order. test = &"bc_masked": wherever the ear's air-bone gap (best AC - unmasked BC)
-## is > 10 dB; (v4) the unmasked BC may come from either mastoid (unmasked_bone()), so testing
+## is 10 dB or more (E5); (v4) the unmasked BC may come from either mastoid (unmasked_bone()), so testing
 ## unmasked bone on the better ear only is enough to see the poorer ear's gap.
 ## test = &"ac_masked": wherever AC - IA(phones) >= the non-test ear's bone estimate.
 static func masked_freqs_needed(results: Dictionary, ear: String, test: StringName, phones: StringName = &"phones") -> Array[int]:
@@ -573,7 +594,7 @@ static func masked_freqs_needed(results: Dictionary, ear: String, test: StringNa
 
 
 ## The patient's response threshold (dial dB) for one tone, from the cross-hearing model
-## (research/test-content.md §3.1). Inputs are TRUE thresholds (the simulator's business only):
+## (docs/CHAPTER2.md section 7). Inputs are TRUE thresholds (the simulator's business only):
 ##   t_ac / t_bc   test ear air / bone (cochlea) thresholds
 ##   n_ac / n_bc   non-test ear air / bone thresholds
 ##   bone          tone through the bone oscillator (else through the air transducer)

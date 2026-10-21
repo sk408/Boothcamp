@@ -22,7 +22,7 @@ of her normal left ear, then **bone, better ear first**: the oscillator goes on 
 and you test her bone there, unmasked (`>` marks). Unmasked bone is heard by the better cochlea
 wherever the buzzer sits, so this is both ears' bone baseline. Hoot then moves it to her right
 mastoid for ONE unmasked tone, and her left cochlea answers for the right ear: the Cross-Hearing
-Ghost. Her right air is more than 10 dB poorer than that unmasked bone, so the right bone must be
+Ghost. Her right air is 10 dB or more poorer than that unmasked bone, so the right bone must be
 masked: noise in the left ear, the plateau dance for bone (`[` marks) and then for air, and the
 referral stamp to the ear doctor (a conductive loss with normal bone). About 15 minutes. Every day is open from the start: pick one
 on the title's **Days** card, in any order. The suggested day wears an **UP NEXT** ribbon, and after
@@ -37,7 +37,7 @@ clues on the OBJECTION! board, never accuse him, and stamp a recheck with object
 his doctor told about the sudden loss.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
-> on purpose (about -75 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
+> on purpose (about -71 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you
 > never need to hear them: every beep lights up on screen and every answer from Gus does too.
 > The "too loud" gags are visual only; the game never plays a loud sound.
 > Worried about your own hearing? Please see a licensed hearing professional.
@@ -133,9 +133,9 @@ ear: that was the Ghost.
 - **Earphones:** glasses off, red on the right ear, blue on the left (his right is your left).
 - **Pure-tone audiometry (Hughson-Westlake, simplified):** start at 1000 Hz around 40 dB HL; climb
   10 dB until the first response; then down 10 after every "yes" and up 5 after every miss; the
-  threshold is the lowest level heard on at least two ascending runs. Order: 1k, 2k, 4k, 8k,
-  retest 1k (within 5 dB is clinic-grade; the better one counts), then 500 and 250 Hz, plus the
-  half-octave in between whenever neighbours differ by 20 dB or more. Beeps 1 to 2 s, varied
+  threshold is the lowest level heard on at least two ascending runs. Order: 1k, 1.5k, 2k, 3k,
+  4k, 6k, 8k, retest 1k on the first ear (within 5 dB is clinic-grade; the better one counts), then
+  500 and 250 Hz, plus 750 whenever 500 Hz and 1 kHz differ by 20 dB or more. Beeps 1 to 2 s, varied
   gaps (a steady rhythm makes patients guess), never start loud.
 - **Reading the audiogram:** lower on the chart means a louder sound was needed. Gus has a gradual,
   sloping high-frequency loss in both ears: low pitches near normal, high pitches moderately
@@ -161,8 +161,9 @@ paper sells insert earphones).
   the better cochlea, wherever the oscillator sits: that is why bone goes on the better ear first.
   Air crosses too once the tone is at least 40 dB above the other ear's bone (on-ear phones; real
   heads lose 40 to 80 dB, so 40 is the safe rule).
-- **When to mask bone:** the test ear's air more than 10 dB poorer than the unmasked bone. Hoot
-  says it with her numbers ("Right air 50, unmasked bone 5: a gap over 10 dB").
+- **When to mask bone:** the test ear's air 10 dB or more poorer than the unmasked bone (ASHA 2005,
+  BSA 2018). Hoot says it with her numbers ("Right air 50, unmasked bone 5: a 45 dB gap"). A
+  gap of exactly 10 is masked but still names no conductive loss: that needs more than 10.
 - **Masking (simplified):** the noise goes in the OTHER (non-test) ear. Start it at that ear's air
   threshold + 10, plus the occlusion effect for bone at low pitches (a covered ear hears bone
   louder); heard = noise up 5, missed = tone up 5; the tone heard at the same level through three

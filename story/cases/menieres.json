@@ -83,7 +83,7 @@
 			"prompt": "Her ear feels full. Is it fluid behind the eardrum?",
 			"options": [
 				["No: type A, a normal peak. No fluid.", true, ""],
-				["Yes: it's flat, type B.", false, "A flat B would mean fluid. Hers has a normal peak."],
+				["Yes: it's flat, type B.", false, "Flat with a normal canal volume would point to fluid. Hers has a normal peak."],
 				["Yes: type C, negative pressure.", false, "Her peaks sit near zero. A type C sits far to the left."]
 			]
 		},
@@ -96,13 +96,13 @@
 	"instructions": [
 		["Hoot", "Tell her: press for every beep, even faint ones. Not for the roar!"],
 		["Marina", "Beeps yes, engine room no. Aye aye!"],
-		["Hoot", "Tip: with a roaring ear, pulsed beeps stand out better. Most audiometers can pulse them."]
+		["Hoot", "Tip: a steady beep hides in a steady roar. Keep it PULSED, or click the chip for WARBLE."]
 	],
 	"audiometry": [
 		{"ear": "right", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. I'll zip through the right!"},
-		{"ear": "left", "test": "ac", "hoot_turn_after": 8, "intro": "Left ear's all yours. Keep an eye on the low pitches!"},
-		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
-			"before": [["Hoot", "Now the bone buzzer, on her left. Watch out for the Ghost!"]]}
+		{"ear": "left", "test": "ac", "hoot_turn_after": 10, "intro": "Left ear's all yours. Keep an eye on the low pitches!"},
+		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Right ear at Hoot speed: bone for her better cochlea.",
+			"before": [["Hoot", "Bone buzzer on her better ear first: the right. Unmasked bone answers for her better cochlea."]]}
 	],
 	"after_audiometry": [
 		["Hoot", "Masked bone sits with the air: no gap. Not the middle ear."]
@@ -188,7 +188,7 @@
 		},
 		"wrong_first": {
 			"fit": {"headline": "TRAINEE NEARLY FITS A SPINNING CAPTAIN; OWL GRABS THE WHEEL", "subhead": "Dizziness and a one-sided, changing loss: a doctor looks first."},
-			"today": {"headline": "MARINA RUSHED TO DOCTOR; DOCTOR SAYS THIS WEEK WAS FINE", "subhead": "Her hearing dips with spells and returns: soon, not today."}
+			"today": {"headline": "MARINA SEEN SAME DAY; DOCTOR: NO HARM CHECKING, BUT THIS WEEK WAS FINE", "subhead": "Her hearing dips with spells and returns: soon, not today."}
 		}
 	}
 }

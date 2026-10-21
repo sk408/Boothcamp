@@ -34,6 +34,9 @@ const WHY_MIN_OPTIONS := 3
 ## The bot clicks a choice by its first characters (tools/autoplay_bot.gd).
 const PREFIX := 18
 const META_KEY := &"freestyle_next_case"
+## Game.current_chapter_id in the waiting room and every visit: no day's id, so the pause menu (E19)
+## never offers a leftover day's own movie in place of the masking movie.
+const NOT_A_DAY := "freestyle"
 
 static var _cache: Dictionary = {}
 
@@ -175,8 +178,10 @@ static func validate(c: Dictionary) -> PackedStringArray:
 	var keys: Array = c["key_questions"]
 	if not keys.has(FsRules.RED_FLAG_QUESTION):
 		out.append("key_questions must include " + FsRules.RED_FLAG_QUESTION)
-	if keys.size() > FsRules.CHAT_BUDGET:
-		out.append("key_questions: more than the %d a visit allows" % FsRules.CHAT_BUDGET)
+	if not keys.has(FsRules.TROUBLE_QUESTION):
+		out.append("key_questions must include " + FsRules.TROUBLE_QUESTION)
+	if keys.size() >= FsRules.CHAT_BUDGET:
+		out.append("key_questions: %d at most, so the player has a free pick" % (FsRules.CHAT_BUDGET - 1))
 	for k: Variant in keys:
 		if not _deck_ids().has(String(k)):
 			out.append("key_questions: unknown " + String(k))

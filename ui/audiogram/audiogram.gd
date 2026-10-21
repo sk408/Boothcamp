@@ -5,7 +5,7 @@ extends Control
 ## Public API (keep stable):
 ##   ear                      "right", "left" or "both" (which points are drawn)
 ##   show_title               draws an ear title strip above the plot
-##   set_point(ear, freq, db, no_response := false, animate := true, test := &"ac")
+##   set_point(ear, freq, db, no_response := false, animate := true, test := &"ac", no_plateau := false)
 ##   clear_points()
 ##   show_results(results, animate := false)   # results = CONTRACTS.md §5.1; emits draw_finished
 ##   set_cursor(freq, db, visible)
@@ -22,6 +22,9 @@ extends Control
 ## square): a masked air symbol replaces the plain one at its frequency and the air line runs
 ## through it; a masked bone symbol replaces the unmasked one; bone symbols sit beside the
 ## frequency line and are never connected (ASHA).
+## (Clinical review E9) A masked stamp stored with no plateau (the safe window filled first, or a
+## masking dilemma) carries a small purple "?" badge: the true threshold may be poorer. A legend
+## pill explains it when no other legend is showing.
 ## (v3, builder A) Three optional teaching overlays, all off by default (Day 1 never sets them):
 ##   attention    test -> ear -> freq -> true: those symbols BLINK with an amber halo ("masking
 ##                needed here", the masking assistant) and a legend pill appears
@@ -51,11 +54,14 @@ const OCTAVES := 6.0
 ## Speech banana [freq, top dB, bottom dB]: loud vowels low and wide, the soft high consonants
 ## (s, sh, f, th) up at 10-40 dB at 4-6 kHz, which is why a sloping loss scrambles them.
 const BANANA: Array = [[250, 24, 52], [500, 20, 56], [1000, 18, 56], [2000, 16, 52], [3000, 14, 46], [4000, 12, 38], [6000, 10, 32]]
-const DEGREES: Array = [[-10, 25, "normal"], [25, 40, "mild"], [40, 55, "moderate"], [55, 70, "mod-severe"], [70, 90, "severe"], [90, 120, "profound"]]
+## (E15) The degree bands, named as ClinicRules.DEGREE_BANDS names them (Goodman 1965).
+const DEGREES: Array = [[-10, 25, "normal"], [25, 40, "mild"], [40, 55, "moderate"], [55, 70, "moderately severe"], [70, 90, "severe"], [90, 120, "profound"]]
 const STAMP_IN_S := 0.09
 const HIT_STOP_S := 0.07
 const STAMP_SETTLE_S := 0.2
 const PEN_S := 0.32
+## (E9) The "plateau not reached" badge: the AudiOtron's masking-dilemma purple.
+const NO_PLATEAU_COLOR := Color("#8e5cc4")
 
 @export var ear: String = "right"
 @export var show_title: bool = false
@@ -126,8 +132,9 @@ func _ready() -> void:
 
 # ---------------------------------------------------------------- public API
 
-func set_point(p_ear: String, freq: int, db: int, no_response: bool = false, animate: bool = true, test: StringName = &"ac") -> void:
-	var pt := {"db": db, "no_response": no_response, "age": 0.0 if animate else -1.0, "seed": freq * 7 + (1 if p_ear == "right" else 2)}
+func set_point(p_ear: String, freq: int, db: int, no_response: bool = false, animate: bool = true, test: StringName = &"ac", no_plateau: bool = false) -> void:
+	var pt := {"db": db, "no_response": no_response, "age": 0.0 if animate else -1.0, "seed": freq * 7 + (1 if p_ear == "right" else 2),
+		"no_plateau": no_plateau}
 	if test != &"ac" and test != &"":
 		_layer(test, p_ear)[freq] = pt
 		if test == &"ac_masked":
@@ -199,6 +206,7 @@ func show_results(results: Dictionary, animate: bool = false) -> void:
 	clear_points()
 	var ears: Dictionary = results.get("ears", {})
 	var queue: Array = []
+	var unsure := {}   # "ear:freq:test" -> true: masked stamps stored with no plateau (E9)
 	for e: String in ears:
 		for key: String in ["freqs", "ac_masked", "bc", "bc_masked"]:
 			var freqs: Dictionary = (ears[e] as Dictionary).get(key, {})
@@ -206,10 +214,13 @@ func show_results(results: Dictionary, animate: bool = false) -> void:
 			fl.sort()
 			for f: int in fl:
 				var info: Dictionary = freqs[f]
-				queue.append([e, f, int(info["stored_db"]), bool(info.get("no_response", false)), &"ac" if key == "freqs" else StringName(key)])
+				var t: StringName = &"ac" if key == "freqs" else StringName(key)
+				queue.append([e, f, int(info["stored_db"]), bool(info.get("no_response", false)), t])
+				if bool(info.get("plateau_not_reached", false)):
+					unsure["%s:%d:%s" % [e, f, t]] = true
 	if not animate:
 		for q: Array in queue:
-			set_point(q[0], q[1], q[2], q[3], false, q[4])
+			set_point(q[0], q[1], q[2], q[3], false, q[4], unsure.has("%s:%d:%s" % [q[0], q[1], q[4]]))
 		_reveal = 1.0
 		queue_redraw()
 		draw_finished.emit.call_deferred()
@@ -219,7 +230,7 @@ func show_results(results: Dictionary, animate: bool = false) -> void:
 	var t := create_tween()
 	for q: Array in queue:
 		t.tween_callback(func() -> void:
-			set_point(q[0], q[1], q[2], q[3], true, q[4])
+			set_point(q[0], q[1], q[2], q[3], true, q[4], unsure.has("%s:%d:%s" % [q[0], q[1], q[4]]))
 			Sfx.play(&"stamp", randf_range(0.95, 1.08), -4.0)
 			Sfx.play_note(Sfx.audiogram_note_hz(int(q[1])), -8.0))
 		t.tween_interval(0.16)
@@ -424,6 +435,8 @@ func _draw() -> void:
 		for d: Array in DEGREES:
 			var y := (db_to_y(float(d[0])) + db_to_y(float(d[1]))) * 0.5
 			AoDraw.text_r(self, Vector2(r.end.x - 4.0, y), String(d[2]), 11, Color(Palette.INK_SOFT, 0.55), AoDraw.FONT_MED)
+		# (E15) which scale those names are
+		AoDraw.text_r(self, Vector2(r.end.x - 4.0, db_to_y(116.0)), ClinicRules.DEGREE_SCALE_NOTE, 9, Color(Palette.INK_SOFT, 0.45), AoDraw.FONT_MED)
 	if _hover_freq > 0:
 		var hx := freq_to_x(_hover_freq)
 		draw_rect(Rect2(hx - 9.0, r.position.y, 18.0, r.size.y), Color(Palette.SELECT_ORANGE, 0.1))
@@ -444,6 +457,8 @@ func _draw() -> void:
 		_draw_attention_legend(r)
 	elif _bone_range_count() > 0:
 		_draw_bone_range_legend(r)
+	elif _no_plateau_count() > 0:
+		_draw_no_plateau_legend(r)
 	AoDraw.ring(self, r.grow(2.0), Color(Palette.INK, 0.55), 6, 2)
 
 
@@ -557,7 +572,7 @@ func _draw_ear(e: String) -> void:
 		var age := float(p["age"])
 		if age >= STAMP_IN_S:
 			var fade := clampf(1.0 - (age - STAMP_IN_S) / 0.6, 0.0, 1.0)
-			AoDraw.splat(self, Vector2(freq_to_x(f), db_to_y(float(p["db"]))), 17.0, Color(col, 0.22 * fade), int(p["seed"]))
+			AoDraw.splat(self, Vector2(freq_to_x(f), db_to_y(float(p["db"]))), 17.0, Color(col, 0.22 * fade * fade_e), int(p["seed"]))
 	# pen lines
 	for k: String in _segments:
 		if not k.begins_with(e + ":"):
@@ -577,7 +592,7 @@ func _draw_ear(e: String) -> void:
 		if a.distance_to(b) < 20.0:
 			continue
 		var end := ia.lerp(ib, prog)
-		draw_line(ia, end, Color(col, 0.9), 3.0, true)
+		draw_line(ia, end, Color(col, 0.9 * fade_e), 3.0, true)   # (arcade) dim fades the line too, as documented
 		if prog < 1.0:
 			draw_circle(end, 4.0, Palette.INK)
 	# symbols
@@ -632,6 +647,10 @@ func _draw_layers(e: String) -> void:
 			var a := 1.0 if blink < 0.0 else 0.3 + 0.7 * blink
 			UiDraw.audiogram_symbol(self, c + Vector2(1.5, 2.0), e, test, s, 4.0, bool(p["no_response"]), Color(Palette.INK, 0.25 * a * fade_l))
 			UiDraw.audiogram_symbol(self, c, e, test, s, 4.0, bool(p["no_response"]), Color(col, a * fade_l))
+			if bool(p.get("no_plateau", false)) and (age < 0.0 or age >= STAMP_IN_S):
+				# on the outer side of a bone symbol (away from the frequency line), else up-right
+				var side := -1.0 if UiDraw.symbol_offset(e, test, 17.0).x < 0.0 else 1.0
+				_draw_no_plateau_badge(c + Vector2(12.0 * side, -12.0), fade_l)
 
 
 # ---------------------------------------------------------------- v3 overlays (builder A)
@@ -662,7 +681,7 @@ func _draw_halo(c: Vector2, k: float) -> void:
 
 
 ## "blinking = mask me": the masking assistant's legend, bottom-left inside the plot. (polish) When
-## only bone symbols blink it gives the reason too: the air-bone gap is over 10 dB.
+## only bone symbols blink it gives the reason too: the air-bone gap is 10 dB or more.
 func _draw_attention_legend(r: Rect2) -> void:
 	var txt := "blinking = needs masking"
 	var bone_only := not attention.is_empty()
@@ -670,7 +689,7 @@ func _draw_attention_legend(r: Rect2) -> void:
 		if not ClinicRules.test_is_bone(StringName(t)):
 			bone_only = false
 	if bone_only:
-		txt = "blinking = air-bone gap over 10: mask it"
+		txt = "blinking = air-bone gap of 10+: mask it"
 	var w := AoDraw.text_size(txt, 11, AoDraw.FONT_BOLD).x + 30.0
 	var lr := Rect2(Vector2(r.position.x + 6.0, r.end.y - 26.0), Vector2(w, 20.0))
 	AoDraw.rbox(self, lr, Color(Palette.PAPER, 0.92), 10, 2, Palette.SELECT_ORANGE)
@@ -780,6 +799,35 @@ func _draw_bone_range_legend(r: Rect2) -> void:
 	draw_circle(lr.position + Vector2(12, 10), 6.0, Palette.PAPER)
 	draw_arc(lr.position + Vector2(12, 10), 6.0, 0.0, TAU, 16, Palette.SELECT_ORANGE, 2.0, true)
 	AoDraw.text_c(self, lr.position + Vector2(12, 10.5), "?", 10, Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
+	AoDraw.text_l(self, lr.position + Vector2(22, 10), txt, 11, Palette.INK, AoDraw.FONT_BOLD)
+
+
+## (E9) The "plateau not reached" badge beside a masked symbol: a purple disc with a "?".
+func _draw_no_plateau_badge(c: Vector2, fade: float) -> void:
+	draw_circle(c, 7.5, Color(Palette.PAPER, fade))
+	draw_circle(c, 6.5, Color(NO_PLATEAU_COLOR, fade))
+	AoDraw.text_c(self, c + Vector2(0, 0.5), "?", 10, Color(Palette.PAPER, fade), AoDraw.FONT_BOLD)
+
+
+func _no_plateau_count() -> int:
+	var n := 0
+	for t: StringName in [&"bc_masked", &"ac_masked"]:
+		for e: String in ["right", "left"]:
+			if ear != "both" and e != ear:
+				continue
+			for f: int in _layer(t, e):
+				if bool((_layer(t, e)[f] as Dictionary).get("no_plateau", false)):
+					n += 1
+	return n
+
+
+## "? = no plateau: the true threshold may be poorer", bottom-left inside the plot.
+func _draw_no_plateau_legend(r: Rect2) -> void:
+	var txt := "? = no plateau: true threshold may be poorer"
+	var w := AoDraw.text_size(txt, 11, AoDraw.FONT_BOLD).x + 30.0
+	var lr := Rect2(Vector2(r.position.x + 6.0, r.end.y - 26.0), Vector2(w, 20.0))
+	AoDraw.rbox(self, lr, Color(Palette.PAPER, 0.92), 10, 2, NO_PLATEAU_COLOR)
+	_draw_no_plateau_badge(lr.position + Vector2(12, 10), 1.0)
 	AoDraw.text_l(self, lr.position + Vector2(22, 10), txt, 11, Palette.INK, AoDraw.FONT_BOLD)
 
 

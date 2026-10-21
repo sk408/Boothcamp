@@ -8,8 +8,9 @@ extends Control
 ## (v3) Mode chips follow the transducer (PHONE / INSERT / BONE) and the test (AC / BC). With the
 ## masking controls live the display becomes two channels, like a clinical audiometer: the tone
 ## (test ear) on the left, the masker on the right, its level in [brackets] with "NBN" and the
-## masked ear, plus the masking-help TRAFFIC LIGHT (top amber = too much, middle green = good,
-## bottom amber = too little / masking needed; all purple = masking dilemma). On a masked test the
+## masked ear, plus the masking-help TRAFFIC LIGHT (top amber = too much, middle green = in range, which reads
+## "good" once the plateau is found (clinical review E10), bottom amber = too little / masking needed; all purple =
+## masking dilemma). On a masked test the
 ## trail becomes the PLATEAU graph: tone level against noise level, the safe masking window shaded
 ## between the starting level and overmasking, and a flat line of heard dots = the plateau.
 const MASK_COLORS: Dictionary[StringName, Color] = {
@@ -17,9 +18,11 @@ const MASK_COLORS: Dictionary[StringName, Color] = {
 	&"ok": Color("#9ee34b"), &"over": Color("#ff6f59"), &"impossible": Color("#8e5cc4"),
 }
 const MASK_WORDS: Dictionary[StringName, String] = {
-	&"off": "off", &"needed": "MASK!", &"under": "too little", &"ok": "good", &"over": "too much", &"impossible": "dilemma",
+	&"off": "off", &"needed": "MASK!", &"under": "too little", &"ok": "in range", &"over": "too much", &"impossible": "dilemma",
 }
-## Traffic-light lamp per status: 0 = top (too much), 1 = middle (good), 2 = bottom (too little).
+## (E10) The green state's word once the plateau is found: "in range" alone doesn't mean the Ghost is quiet.
+const MASK_WORD_FOUND := "good"
+## Traffic-light lamp per status: 0 = top (too much), 1 = middle (in range), 2 = bottom (too little).
 const MASK_LAMP: Dictionary[StringName, int] = {&"needed": 2, &"under": 2, &"ok": 1, &"over": 0}
 
 signal freq_step(direction: int)
@@ -246,8 +249,10 @@ func _draw_masker(r: Rect2, m: Dictionary) -> void:
 			var xx := hx + 48.0 + i * 5.0
 			var hh := 4.0 + 5.0 * absf(sin(_t * 17.0 + i * 1.3))
 			draw_line(Vector2(xx, r.position.y + 68.0 - hh * 0.5), Vector2(xx, r.position.y + 68.0 + hh * 0.5), Color(Palette.PLUM.lightened(0.4), 0.9), 2.0)
-	# status word
+	# status word ((E10) "in range" until the plateau is found, then "good")
 	var word := String(MASK_WORDS.get(status, ""))
+	if status == &"ok" and bool((view.get("plateau", {}) as Dictionary).get("found", false)):
+		word = MASK_WORD_FOUND
 	if word != "":
 		var flash := status in [&"needed", &"under", &"over"]
 		AoDraw.text_l(self, Vector2(hx, r.end.y - 11.0), word, 12, Color(light, 1.0 if not flash else 0.55 + 0.45 * blink), AoDraw.FONT_BOLD)
@@ -401,13 +406,17 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 	var steps := int(pl.get("steps", 0))
 	var needed := int(pl.get("needed", 3))
 	var found := bool(pl.get("found", false))
-	var badge := "STORE!" if found else ("%d/%d noise ups" % [mini(steps, needed), needed] if not narrow else "%d/%d ups" % [mini(steps, needed), needed])
+	# (E9) a full safe window: store the held level, no plateau
+	var full := not found and int(view.get("candidate", -1)) != -1
+	var badge := "STORE!" if found else "STORE: no room" if full else ("%d/%d noise ups" % [mini(steps, needed), needed] if not narrow else "%d/%d ups" % [mini(steps, needed), needed])
 	var bw := AoDraw.text_size(badge, 12, AoDraw.FONT_BOLD).x + 14.0
 	var br := Rect2(Vector2(a.end.x - 4 - bw, head_y - 10), Vector2(bw, 20))
-	AoDraw.rbox(self, br, Palette.PRESS_LIME if found else Palette.SELECT_ORANGE, 10)
+	AoDraw.rbox(self, br, Palette.PRESS_LIME if found else (Color("#8e5cc4") if full else Palette.SELECT_ORANGE), 10)
 	AoDraw.text_c(self, br.get_center(), badge, 12, Palette.LCD_BG, AoDraw.FONT_BOLD)
 	var plot := Rect2(a.position + Vector2(30, 40), Vector2(a.size.x - 40, a.size.y - 62))
-	var m_lo := int(pl.get("initial", 0)) - 5
+	# (E9) the noise starts at the session's start: the initial masking, or the safe maximum in a dilemma
+	var start := int((view.get("mask", {}) as Dictionary).get("start", int(pl.get("initial", 0))))
+	var m_lo := start - 5
 	var m_hi := m_lo + 30
 	var lim0 := int((view.get("mask", {}) as Dictionary).get("limit", 0))
 	if lim0 > m_lo and lim0 <= m_lo + 40:
@@ -430,22 +439,22 @@ func _draw_plateau(a: Rect2, pl: Dictionary) -> void:
 		var y: float = to_y.call(float(lvl))
 		draw_line(Vector2(plot.position.x, y), Vector2(plot.end.x, y), Color(Palette.LCD_DIM, 0.45), 1.0)
 		AoDraw.text_r(self, Vector2(plot.position.x - 6, y), str(lvl), 11, Color(Palette.LCD_TEXT, 0.55), AoDraw.FONT_MED)
-	var init := int(pl.get("initial", 0))
-	var ix: float = to_x.call(float(init))
+	var ix: float = to_x.call(float(start))
 	# the safe masking window: from the starting level up to overmasking (mint), beyond it (coral)
 	var limit := int((view.get("mask", {}) as Dictionary).get("limit", 0))
 	var band_y := plot.end.y + 1.0
-	if limit > init:
+	if limit > 0:
 		var lx: float = clampf(to_x.call(float(limit)), plot.position.x, plot.end.x)
 		var sx: float = clampf(ix, plot.position.x, plot.end.x)
-		draw_rect(Rect2(Vector2(sx, plot.position.y), Vector2(maxf(0.0, lx - sx), plot.size.y)), Color(Palette.MINT, 0.07))
-		draw_rect(Rect2(Vector2(sx, band_y), Vector2(maxf(0.0, lx - sx), 4.0)), Color(Palette.MINT, 0.8))
+		if limit > start:
+			draw_rect(Rect2(Vector2(sx, plot.position.y), Vector2(maxf(0.0, lx - sx), plot.size.y)), Color(Palette.MINT, 0.07))
+			draw_rect(Rect2(Vector2(sx, band_y), Vector2(maxf(0.0, lx - sx), 4.0)), Color(Palette.MINT, 0.8))
 		if lx < plot.end.x:
 			draw_rect(Rect2(Vector2(lx, plot.position.y), Vector2(plot.end.x - lx, plot.size.y)), Color(Palette.CORAL, 0.1))
 			draw_rect(Rect2(Vector2(lx, band_y), Vector2(plot.end.x - lx, 4.0)), Color(Palette.CORAL, 0.85))
 			AoDraw.text_c(self, Vector2(minf(lx + 22.0, plot.end.x - 18.0), plot.position.y + 8.0), "too much", 9, Palette.CORAL, AoDraw.FONT_BOLD)
 	AoDraw.dashed(self, Vector2(ix, plot.position.y), Vector2(ix, plot.end.y), Color(Palette.PLUM.lightened(0.3), 0.8), 1.5, 4.0, 4.0)
-	AoDraw.text_c(self, Vector2(ix, plot.end.y + 12.0), "start %d" % init, 10, Palette.PLUM.lightened(0.4), AoDraw.FONT_BOLD)
+	AoDraw.text_c(self, Vector2(ix, plot.end.y + 12.0), "start %d" % start, 10, Palette.PLUM.lightened(0.4), AoDraw.FONT_BOLD)
 	AoDraw.text_r(self, Vector2(plot.end.x, plot.end.y + 12.0), "noise >", 10, Color(Palette.LCD_TEXT, 0.5), AoDraw.FONT_SEMI)
 	# the plateau run: same tone level, rising noise
 	var run_db := int(pl.get("db", -1))

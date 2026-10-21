@@ -51,6 +51,8 @@ const TIP_COOLDOWN_LATE_S := 45.0
 const STORE_DEBOUNCE_S := 0.35
 ## Quick visit: the solo (left) ear is the player's for this many stamps, then Hoot finishes it.
 const QUICK_SOLO_HOLES := 3
+## (Clinical review E1) Hoot's line at the player's first 1.5 kHz stamp (18 words).
+const ROUTINE_TIP := "1.5k, 3k and 6k sit between the octaves. Fitting software uses them, so we test them every time."
 ## Reactions that zoom the booth camera in over the right ear card.
 ## Sub-lines for a stamp with a store-time slip.
 const STORE_ERROR_SUBS: Dictionary[StringName, String] = {
@@ -122,7 +124,7 @@ var _coach_tip := -1
 var _coach_key := ""
 var _familiar_note_done := false
 var _tone: ToneGenerator
-var _stim := 0
+var _stim: int = ToneGenerator.Stimulus.PULSED   ## (E7) pulsed beeps by default; the stim key cycles
 var _hold: Dictionary = {}
 var _tone_glow := 0.0
 var _feathers := HINT_FEATHERS
@@ -138,7 +140,7 @@ var _quip_order: Array[int] = []
 var _quips: Array = []                ## this patient's between-beep quips (PATIENT_QUIPS)
 var _punch_t := -100.0
 var _punch_tween: Tween
-var _told_3k6k := false
+var _told_routine := false
 var _dance_key := ""
 var _auto: AoAutoTester
 var _auto_running := false
@@ -434,7 +436,7 @@ func get_state() -> Dictionary:
 			"points": 0, "multiplier": 1, "trail": [], "strokes": 0, "par": 0, "candidate_db": -1, "stimulus": ToneGenerator.STIMULUS_NAMES[_stim],
 			"hoot_turn": false, "quick_visit": quick_visit,
 			"test": &"ac", "goal_test": &"ac", "transducer": &"phones", "air_transducer": &"phones", "masking_controls": false, "masking_deck": false,
-			"mask_on": false, "mask_db": 0, "mask_ear": "left", "mask_status": &"off", "initial_mask_db": 0, "overmask_limit_db": 0,
+			"mask_on": false, "mask_db": 0, "mask_ear": "left", "mask_status": &"off", "initial_mask_db": 0, "start_mask_db": 0, "overmask_limit_db": 0,
 			"plateau": {}, "stored_tests": {}, "demo": false}
 	var cand: Variant = session.store_candidate(session.ear, session.freq)
 	var trail := session.trail(session.ear, session.freq)
@@ -480,6 +482,7 @@ func get_state() -> Dictionary:
 		"mask_ear": session.masker_ear(),
 		"mask_status": session.mask_status() if _masking_ui else &"off",
 		"initial_mask_db": session.initial_mask_db() if _masking_ui else 0,
+		"start_mask_db": session.start_mask_db(session.ear, session.freq, session.recommended_start(session.ear, session.freq)) if _masking_ui else 0,
 		"overmask_limit_db": session.overmask_limit_db() if _masking_ui else 0,
 		"plateau": session.plateau_info() if masked_now else {},
 		"stored_tests": stored_tests,
@@ -577,6 +580,7 @@ func _hold_remove(src: String) -> void:
 func _tone_down() -> void:
 	if not _accepting or session == null or session.tone_on:
 		return
+	session.set_steady_tone(_stim == ToneGenerator.Stimulus.PURE)   # (E8) tinnitus confuses steady tones
 	session.tone_down()
 	_demo_idle = 0.0
 	_demo_nudged = false
@@ -777,6 +781,8 @@ func _store(no_response: bool) -> void:
 func _cycle_stimulus() -> void:
 	_stim = (_stim + 1) % ToneGenerator.STIMULUS_NAMES.size()
 	_tone.set_stimulus(_stim)
+	if session != null:
+		session.set_steady_tone(_stim == ToneGenerator.Stimulus.PURE)
 	Sfx.play(&"click", 1.3, -4.0)
 	_refresh()
 
@@ -1019,15 +1025,37 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			Hoot.say_once("tip_marathon", String(data.get("message", "")), Hoot.HIGH, "store_button")
 		&"short_gap":
 			Hoot.say_once("tip_short_gap", String(data.get("message", "")), Hoot.HIGH, "tone_button")
+		&"retest_mismatch":
+			if auto:
+				return
+			if not _coach_active:
+				Sfx.play(&"sad_trombone", 1.0, -12.0)
+			# (E3) the words come with retest_why, right after this
+		&"retest_why":
+			if auto:
+				return
+			# (E3) the first failed retest of a visit: why it matters; later ones get the short tip
+			var lines: Array = data.get("lines", [])
+			if lines.is_empty() or not Hoot.say_once("tip_retest_why", String(lines[0]), Hoot.HIGH, "freq_down_button"):
+				_tip(&"retest_mismatch", session.tip_text(&"retest_mismatch"), "freq_down_button")
+				return
+			for i in range(1, lines.size()):
+				Hoot.say(String(lines[i]), Hoot.HIGH)
 		&"plateau_step":
-			if auto or not bool(data.get("found", false)) and int(data.get("steps", 0)) <= 0:
+			if auto or not bool(data.get("found", false)) and not bool(data.get("window_full", false)) and int(data.get("steps", 0)) <= 0:
 				return
 			var at2 := _lcd.last_dot_global() + Vector2(0, -26)
 			if bool(data.get("found", false)):
 				pass  # the FLAT LINE! callout says it (plateau_found)
+			elif bool(data.get("window_full", false)):
+				_fx.chip("no room: STORE", at2, Color("#8e5cc4"), Palette.PAPER, 14, 1.2)   # (E9)
 			else:
 				_fx.chip("%d/%d" % [int(data["steps"]), int(data["needed"])], at2, Palette.SUNNY, Palette.INK, 14, 0.8)
 			Sfx.play_note(392.0 * pow(2.0, int(data.get("steps", 0)) / 6.0), -12.0)
+		&"plateau_not_reached":
+			if auto or _coach_active:
+				return  # (E9) the coach already says "No room ... STORE, no plateau"; after the stamp Hoot explains the ?
+			_tip(kind, String(data.get("message", "")), "store_button")
 		&"plateau_found":
 			if auto:
 				return
@@ -1050,7 +1078,7 @@ func _on_technique(kind: StringName, data: Dictionary) -> void:
 			var error := kind in ERROR_KINDS
 			if error and not _coach_active:
 				Sfx.play(&"sad_trombone", 1.0, -12.0)
-			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"undermasked", &"vibrotactile", &"short_gap"]:
+			if msg != "" and _coach_active and not error and kind in [&"cross_hearing", &"cross_hearing_air", &"undermasked", &"vibrotactile", &"short_gap", &"masking_dilemma"]:
 				# (polish) a lesson during the coached steps waits for the coached stamp
 				_deferred_tips.append([kind, msg, _target_for(kind, data)])
 			elif msg != "" and not (_coach_active and error):
@@ -1086,7 +1114,9 @@ func _target_for(kind: StringName, data: Dictionary) -> String:
 			return "mask_louder_button"
 		&"overmasked":
 			return "mask_softer_button"
-		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"vibrotactile":
+		&"plateau_not_reached":
+			return "store_button"
+		&"mask_wrong_step", &"mask_start", &"store_no_plateau", &"cross_hearing", &"cross_hearing_air", &"vibrotactile":
 			return "tone_button"
 	return ""
 
@@ -1111,8 +1141,9 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 	var by_hoot := bool(info.get("by_hoot", false))
 	_last_store_t = session.time
 	var test := StringName(String(info.get("test", "ac")))
+	var no_plateau := bool(info.get("plateau_not_reached", false))
 	if not is_retest:
-		card.audiogram.set_point(ear, freq, db, no_resp, true, test)
+		card.audiogram.set_point(ear, freq, db, no_resp, true, test, no_plateau)
 	var at := card.audiogram.get_global_transform_with_canvas() * (Vector2(card.audiogram.freq_to_x(freq), card.audiogram.db_to_y(db)) + UiDraw.symbol_offset(ear, test, 17.0))
 	Sfx.play(&"stamp", randf_range(0.95, 1.05), -2.0 if not by_hoot else -12.0)
 	# hit-stop: the stamp lands, freezes for a beat, then the card jolts and ink flies
@@ -1151,9 +1182,13 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 		for d: Array in _deferred_tips:
 			_tip(StringName(d[0]), String(d[1]), String(d[2]))
 		_deferred_tips.clear()
-	elif not by_hoot and freq == 4000 and not _told_3k6k and test == &"ac":
-		_told_3k6k = true
-		Hoot.say("Many clinics also test 3000 and 6000 Hz: fitting formulas use them.", Hoot.LOW, "", "tip_3k6k", 5.0)
+	elif not by_hoot and freq == 1500 and not _told_routine and test == &"ac":
+		# (E1) why the in-between pitches are on every plan
+		_told_routine = true
+		Hoot.say(ROUTINE_TIP, Hoot.LOW, "", "tip_routine_freqs", 5.0)
+	if no_plateau and not by_hoot:
+		# (E9) what the purple ? on the chart means (once per visit)
+		Hoot.say("That purple ? means no plateau: the true threshold may be poorer. Note it on the report.", Hoot.HIGH, "", "tip_no_plateau_mark", 6.0)
 	_refresh()
 	if session.is_ear_complete(_ear) and ear == _ear and not _finishing:
 		_complete_ear(ear)
@@ -1191,6 +1226,8 @@ func _celebrate_stamp(_ear_s: String, _freq: int, at: Vector2, info: Dictionary)
 		sub = _say("{name} wobbled: +%d on {him}, not you") % maxi(1, strokes - par)
 	elif not clean and raw in [&"birdie", &"eagle", &"albatross"]:
 		sub = "birdie pace, but a slip on the way"
+	if bool(info.get("plateau_not_reached", false)):
+		sub = "no plateau: marked ?"   # (E9) the honest best answer, not a slip
 	if not errs.is_empty():
 		word = "Oops!"
 		col = Palette.PAPER
@@ -1756,6 +1793,9 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 			var ntimes := "once" if n == 1 else ("twice" if n == 2 else "%d times" % n)
 			var key := _k(&"mask_louder" if act == &"mask_louder" else &"mask_softer")
 			var btn := "mask_louder_button" if act == &"mask_louder" else "mask_softer_button"
+			if recs.is_empty() and tm < session.initial_mask_db():
+				# (E9) a masking dilemma: the textbook start would already overmask
+				return ["Masking dilemma! Noise to %d only, the most that's safe. Tap %s %s." % [tm, key, ntimes], btn, "mask_dil%d" % session.mask_db]
 			if recs.is_empty():
 				var occl := _occlusion_part(tm)
 				if occl > 0 and not _mask_tapped:
@@ -1768,6 +1808,10 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 				if steps >= 1 and steps < ClinicRules.PLATEAU_STEPS:
 					return ["Still heard! %d of %d noise raises. Noise UP 5 again: tap %s." % [steps, ClinicRules.PLATEAU_STEPS, key], btn, "mask_up%d_%d" % [recs.size(), session.mask_db]]
 				return ["Heard through the noise! Plateau dance: noise UP 5, same tone. Tap %s." % key, btn, "mask_up%d_%d" % [recs.size(), session.mask_db]]
+			if act == &"mask_softer" and tm < session.mask_db \
+					and session.mask_db >= session.overmask_limit_db(session.ear, session.freq, int(a["target_db"])):
+				# (E9) the noise sits at or past overmasking for this tone
+				return ["Too much noise for this tone! Down to %d, the safe maximum: tap %s %s." % [tm, key, ntimes], btn, "mask_safe%d_%d" % [recs.size(), session.mask_db]]
 			return ["Noise to %d dB: tap %s %s." % [tm, key, ntimes], btn, "mask_to%d_%d" % [recs.size(), session.mask_db]]
 	if not masked:
 		return []
@@ -1790,6 +1834,9 @@ func _coach_text_v3(a: Dictionary, recs: Array, times: String, last_heard: bool)
 				return ["Back down to %d dB, the plateau level." % int(a["target_db"]), "softer_button", "mto_store%d" % session.db]
 			return [_masked_start_text(int(a["target_db"]), &"softer", times), "softer_button", "mstart%d" % session.db]
 		&"store":
+			if not bool(session.plateau_info()["found"]):
+				# (E9) the safe window is full: store the held level, marked "plateau not reached"
+				return ["No room for more noise: it would cross back. Press %s to STORE, no plateau." % _k(&"store"), "store_button", "mstore_full%d" % recs.size()]
 			return ["Flat line! %d dB held through 15 dB more noise. Press %s to STORE." % [session.db, _k(&"store")], "store_button", "mstore%d" % recs.size()]
 	return []
 
@@ -1911,7 +1958,8 @@ func _refresh() -> void:
 		"accepting": st["accepting_input"],
 		"transducer": String(st["transducer"]), "test": String(st["test"]), "plateau": st["plateau"],
 		"mask": {"enabled": bool(st["masking_controls"]) and _mask_deck, "on": bool(st["mask_on"]), "db": int(st["mask_db"]), "ear": String(st["mask_ear"]),
-			"status": String(st["mask_status"]), "limit": int(st["overmask_limit_db"]), "initial": int(st["initial_mask_db"])}})
+			"status": String(st["mask_status"]), "limit": int(st["overmask_limit_db"]), "initial": int(st["initial_mask_db"]),
+			"start": int(st["start_mask_db"])}})
 	for k: String in _cards:
 		var card: AoEarCard = _cards[k]
 		card.audiogram.cursor_test = StringName(st["test"])
@@ -2100,12 +2148,13 @@ func _refresh_quest(st: Dictionary) -> void:
 	var cur_is_retest := cur_f == 1000 and st_e.has(1000)
 	var items: Array = []
 	for f: int in [1000, 1500, 2000, 3000, 4000, 6000, 8000]:
-		if ClinicRules.is_octave(f) or need.has(f):
+		if ClinicRules.is_routine(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f and not cur_is_retest))
 	var rt: Dictionary = session.retest[e]
-	items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
+	if session.retest_required(e) or not rt.is_empty():   # (E2) the first air ear's job (or a voluntary one)
+		items.append({"freq": 1000, "label": "1k R", "done": not rt.is_empty(), "db": int(rt.get("stored_db", 0)), "current": cur_is_retest, "retest": true, "nr": false})
 	for f: int in [750, 500, 250]:
-		if ClinicRules.is_octave(f) or need.has(f):
+		if ClinicRules.is_routine(f) or need.has(f):
 			items.append(_quest_item(f, st_e, false, cur_f == f))
 	var pr := session.ear_progress(e)
 	_quest.set_plan(e, items, pr[0], pr[1])

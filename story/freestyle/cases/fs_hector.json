@@ -36,9 +36,9 @@
 		"hardest": {"say": [
 			"At home, in the quiet. My wife sits on my left and murmurs. Gone.",
 			"In the workshop everyone shouts over the clocks, and I catch every word! Odd, isn't it?"
-		], "note": "Hears better in his noisy workshop than quiet"}
+		], "note": "Trouble: quiet home; fine in noisy workshop"}
 	},
-	"key_questions": ["red_flags", "which_ear", "onset", "family"],
+	"key_questions": ["red_flags", "which_ear", "onset", "family", "hardest"],
 	"otoscopy": {
 		"canal": "average-sized",
 		"right": {"view": "clear", "caption": "Hector's RIGHT ear: a clean canal and a shiny, pearly eardrum."},
@@ -69,7 +69,7 @@
 	"debrief": [
 		["Hoot", "A mixed loss has two parts: bone shows the inner ear's share, the gap shows the middle ear's."],
 		["Hoot", "Unmasked bone heard his good right cochlea. Only masked bone showed the left ear's own part."],
-		["Hoot", "Gap plus stiff tymp points to the middle ear. Doctor first; aids can come later, or alongside."]
+		["Hoot", "Gap plus stiff tymp points to the middle ear. Doctor first; aids can come later."]
 	],
 	"goodbye": [
 		{"do": "letter"},
@@ -79,7 +79,8 @@
 		["Hoot", "Maybe, maybe not. The doctor decides that, not an owl."],
 		{"react": "nod"},
 		["Hector", "And my puzzle? Why do I hear better among the clocks?"],
-		["Hoot", "Over the ticking, people speak up. At home, your wife murmurs on your slow side."],
+		["Hoot", "Over the ticking, people speak up, loud enough for even your slow ear."],
+		["Hoot", "At home, your wife murmurs on your slow side."],
 		["Hoot", "So sit her on your right, and ask people to face you."],
 		["Hector", "Right side, face to face. I'll be back on the dot, Hoot."],
 		{"react": "wave"}

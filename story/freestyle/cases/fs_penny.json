@@ -27,7 +27,11 @@
 		"family": {"say": "Nope. Grandma's ninety-six and hears gossip through walls.", "note": "No hearing loss in the family"},
 		"health": {"say": "Healthy as a horse. No medicines. A LOT of coffee.", "note": "Healthy, no medicines"},
 		"aids": {"say": "Never! I'm only here to prove him wrong.", "note": "Never worn hearing aids"},
-		"hardest": {"say": "He talks to me from the kitchen while I'm editing my podcast. I hear him... later.", "note": "Misses talk from another room"}
+		"hardest": {"say": [
+			"Parties and busy coffee shops. Everyone talks at once, so I just smile and nod.",
+			"At home he talks from the kitchen over the dishwasher. I hear him... later.",
+			"Recording my podcast? Perfect. Headphones on, one voice at a time."
+		], "note": "Trouble: parties, coffee shops, kitchen talk"}
 	},
 	"key_questions": ["red_flags", "onset", "noise", "hardest"],
 	"otoscopy": {
@@ -46,12 +50,12 @@
 		"fit": "Hearing aids for normal hearing? Every tone was 25 or better. They'd only make things louder.",
 		"refer": "Refer for what? Normal hearing, healthy eardrums, no red flags. No doctor needed.",
 		"today": "No emergency here: nothing sudden, no pain, and normal hearing in both ears.",
-		"clear": "Normal hearing in both ears! No aids needed. Her trouble is distance, not her ears."
+		"clear": "Normal hearing in both ears! No aids needed. Distance is her trouble at home, not her ears."
 	},
 	"why": {
 		"prompt": "Why does Penny need no hearing aids?",
 		"options": [
-			["Every tone was 25 dB or better in both ears.", true, "Right! 25 dB or better is the normal range for adults."],
+			["Every tone was 25 dB or better in both ears.", true, "Right! 25 dB or better is a common adult normal. WHO's normal: a better-ear four-tone average under 20."],
 			["She is too young for hearing aids.", false, "Age doesn't decide. Children wear hearing aids too. The chart decides."],
 			["Her tympanograms were both type A.", false, "Type A means the eardrum moves well. It can't tell how well she hears."],
 			["Her husband admitted that he mumbles.", false, "Wishful thinking! It's her chart that clears her: 25 or better everywhere."]
@@ -60,6 +64,7 @@
 	"debrief": [
 		["Hoot", "Normal hearing is good news, not a wasted visit. Now there's a baseline for later."],
 		["Hoot", "Talking from another room fails for everyone. Face each other, get attention first."],
+		["Hoot", "Normal tones, yet parties are hard? Add a speech-in-noise test: it shows how she copes with chatter."],
 		["Hoot", "And those loud earbuds: keep them at half volume, with breaks. Damaged hearing doesn't grow back."]
 	],
 	"goodbye": [
@@ -76,8 +81,8 @@
 			"Do-over": "HEARING CHECK HEARD BUT NOT LISTENED TO"
 		},
 		"subheads": {
-			"S": "Normal hearing in both ears, no red flags. No hearing aids: just talk face to face.",
-			"A": "25 dB or better everywhere means normal. The fix is in the kitchen, not the ears.",
+			"S": "Normal hearing in both ears, no red flags. No hearing aids: talk face to face, test speech in noise.",
+			"A": "25 dB or better everywhere means normal. Talk face to face; test speech in noise.",
 			"B": "Normal hearing still needs a full check. Look, ask, then test.",
 			"C": "Normal means 25 dB or better at every pitch. Check every tone.",
 			"Do-over": "Penny will be back. So will her husband, mumbling."

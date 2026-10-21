@@ -3,14 +3,14 @@ extends Control
 ## an envelope and flies off, the letter that folds into a paper boat and sails to a little lighthouse
 ## marked EAR DOCTOR, and the big desk phone Hoot calls the ear doctor on (docs/CASES.md §3).
 ## Batch 2: the letter that folds into a paper plane, loops the loop and lands on an EAR DOCTOR runway,
-## the jar of wax (EXHIBIT A), and the calendar card that stamps "TWO DAYS LATER" before a retest.
+## the jar of wax (EXHIBIT A), and the calendar card that stamps "A WEEK LATER" before a retest.
 ## Story-internal:
 ##   var p := CaseProps.new(); hud.add_game(p)
 ##   await p.play("letter")     # the letter writes, folds and flies away
 ##   await p.play("boat")       # the letter writes, folds into a boat and sails to the lighthouse
 ##   await p.play("plane")      # the letter writes, folds into a plane, loops and lands by EAR DOCTOR
 ##   await p.play("wax_jar")    # the plug in a jar bounces in, sparkles and slides away
-##   await p.play("later", "TWO DAYS LATER")   # pages flip, the caption stamps on; returns as it goes
+##   await p.play("later", "A WEEK LATER")   # pages flip, the caption stamps on; returns as it goes
 ##   await p.play("phone")      # the phone rings in; it stays until p.hang_up()
 ##   p.hang_up()
 
@@ -21,8 +21,10 @@ const LIGHTHOUSE_AT := Vector2(1110, 330)
 const SEA_Y := 380.0
 const CAL_AT := Vector2(640, 280)
 const CAL_FIRST_DAY := 12
-## Pages the calendar crosses off (the wax retest's card says TWO DAYS LATER).
-const LATER_PAGES := 2
+## Pages the calendar crosses off (the wax retest's card says A WEEK LATER), one every LATER_STEP s
+## from 0.25 s, so the last page turns just as the whoosh lands at 0.95 s.
+const LATER_PAGES := 7
+const LATER_STEP := 0.1
 const JAR_AT := Vector2(640, 300)
 const JAR_OUT_T := 2.2  ## when the jar slides away (it has landed by 0.6, then holds 1.6 s)
 const JAR_SPARKLES: Array[Vector2] = [Vector2(-122, -70), Vector2(118, -104), Vector2(126, 36), Vector2(-116, 80), Vector2(8, -150)]
@@ -98,15 +100,17 @@ func play(kind: String, text: String = "") -> void:
 			_kind = ""
 		"later":
 			Sfx.play(&"pop", 0.8, -8.0)
+			# each sound waits for the prop's own clock, so the timers' frame overruns can't add up:
+			# a pen stroke as each page's X starts, the whoosh and the stamp at 0.95 s and 1.07 s
+			# (the times _draw_later draws them)
 			for i in LATER_PAGES:
-				await get_tree().create_timer(0.25, false).timeout
-				Sfx.play(&"pen", 1.0 + 0.15 * i, -8.0)
-			# the whoosh and the stamp land at 0.95 s and 1.07 s, the times _draw_later draws them
-			await get_tree().create_timer(0.95 - 0.25 * LATER_PAGES, false).timeout
+				await _until(0.25 + LATER_STEP * i)
+				Sfx.play(&"pen", 1.0 + 0.06 * i, -8.0)
+			await _until(0.95)
 			Sfx.play(&"whoosh", 1.5, -10.0)
-			await get_tree().create_timer(0.12, false).timeout
+			await _until(1.07)
 			Sfx.play(&"stamp", 1.0, -2.0)
-			await get_tree().create_timer(0.53, false).timeout
+			await _until(1.6)
 			# it slides away and _process clears it; the runner moves on (and takes its shot of the
 			# stamped card) while it goes
 			_out_t = 0.0
@@ -117,6 +121,11 @@ func play(kind: String, text: String = "") -> void:
 				Sfx.play(&"chirp", 1.4, -6.0)
 				await get_tree().create_timer(0.35, false).timeout
 			Sfx.play(&"click", 0.8, -4.0)
+
+
+## Waits until the prop's clock (_t, which play() resets) reaches `at` seconds.
+func _until(at: float) -> void:
+	await get_tree().create_timer(maxf(0.0, at - _t), false).timeout
 
 
 ## The phone slides away.
@@ -466,10 +475,12 @@ func _draw_later() -> void:
 	# the top page gets its X, then flips up to the rings and shows the next day under it
 	var done := 0
 	for i in LATER_PAGES:
-		if _t >= 0.5 + 0.25 * i:
+		if _t >= 0.25 + LATER_STEP * (i + 1):
 			done += 1
-	var turn := clampf((_t - 0.35 - 0.25 * done) / 0.15, 0.0, 1.0) if done < LATER_PAGES else 0.0
-	var scrawl := clampf((_t - 0.25 - 0.25 * done) / 0.1, 0.0, 1.0) if done < LATER_PAGES else 0.0
+	# each page: the X takes the first 40% of its step, the flip the rest
+	var start := 0.25 + LATER_STEP * done
+	var turn := clampf((_t - start - 0.4 * LATER_STEP) / (0.6 * LATER_STEP), 0.0, 1.0) if done < LATER_PAGES else 0.0
+	var scrawl := clampf((_t - start) / (0.4 * LATER_STEP), 0.0, 1.0) if done < LATER_PAGES else 0.0
 	if turn > 0.0:
 		_draw_cal_page(at, CAL_FIRST_DAY + done + 1, 0.0, 1.0, 0.0)
 	_draw_cal_page(at, CAL_FIRST_DAY + done, scrawl, 1.0 - turn, turn)

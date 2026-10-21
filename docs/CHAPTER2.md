@@ -68,7 +68,7 @@ What the player sees, derived from those numbers (all checked in `tests/test_mas
 | | 250 | 500 | 1k | 2k | 4k | note |
 |---|---|---|---|---|---|---|
 | Unmasked right bone reads | 5 | 5 | 0 | 5 | 5 | the LEFT cochlea answers: the Cross-Hearing Ghost |
-| Air-bone gap (unmasked) | | 50 | 50 | 45 | 30 | > 10 everywhere: mask the bone |
+| Air-bone gap (unmasked) | | 50 | 50 | 45 | 30 | 10 or more everywhere: mask the bone |
 | Initial masking, right bone (dB EM, left ear) | | 30 | 25 | 15 | 20 | left air + 10 + occlusion (500 +15, 1k +10) |
 | Masked right bone (the plateau) | | 10 | 10 | 25 | 10 | 2k: the "shadow chase", 15 rises to 25 as noise climbs |
 | Overmasking starts at (bone) | | 50 | 50 | 65 | 50 | tone + 40 |
@@ -76,6 +76,10 @@ What the player sees, derived from those numbers (all checked in `tests/test_mas
 | Initial masking, right air | 20 | 15 | 15 | 15 | | left air + 10 (no occlusion for air) |
 | Overmasking starts at (air) | 50 | 50 | 50 | 65 | | test-ear masked bone + 40 (250 borrows the 500 bone) |
 | Masked right air | 55 | 55 | 50 | 50 | | same as unmasked: her real head did not cross over |
+
+**(Clinical review E1)** Air now covers 1.5k, 3k and 6k on both ears too (right 50 / 40 / 35, left 5 / 10 / 15).
+1.5k needs masked air as well (right 50 - 40 = 10, at or above her left 5; initial masking 15), so the masked air
+plan is 1k, 1.5k, 2k, 500, 250, and masked 1.5k comes out 50 like the unmasked one.
 
 Result the reveal shows: right ear **conductive** (gaps 45 / 40 / 25 / 25 at 500-4k, bone average 14),
 referral red flag (gap 15+ at 500, 1k and 2k), Carhart notch; left ear normal. ~~Bone is tested on the right
@@ -103,7 +107,7 @@ locked, his stamps marked "hoot", not scored for golf). Every blocking beat emit
 | 6b | `audiometry` {left, ac} | The left-ear montage. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 0:15 |
 | **7** | **`bc_placement` {ear: left}** | **Earphones off. "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway." "So: her LEFT." The placement game on her LEFT profile (§6). The 3D oscillator goes on her left mastoid.** | **bc_placement** (`mastoid_target_left`) | **0:45** |
 | **8** | **`audiometry` {left, bc}** | **Unmasked bone on the LEFT, coached: press B, stamp 1k; Hoot does 2k, 4k, 500 (`>` marks). (polish) Plan `masking_deck: false`: the AIR / BONE route buttons but no MASKING group yet. Optional 250 Hz bonus hole (the tickle, also without the masking group). Then: "Left bone 0, left air 5: side by side." and THE RULE: "unmasked bone tells you about the BETTER cochlea, wherever the buzzer sits."** | (AudiOtron), choice | **1:40** |
-| **9** | **`ghost_demo` {ear: right}** | **"Her right air needs 50. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." "Watch what happens if we try anyway: swap the buzzer to her RIGHT mastoid." A quick second placement ("Swap sides!") on her RIGHT mastoid. ONE unmasked tone at 1 kHz, 5 dB above her measured left bone (every control but TONE locked; TONE wiggles "Hold Space!" if you wait, Hoot presses it after twice that). Her LEFT cochlea answers: the Ghost flies, "Bone 10, air 50? BOO!" (the level she really answered at). Nothing is stored. "Was that her right cochlea, or the LEFT one? Can't tell!" Then the rule with her numbers: "Right air 50, unmasked bone 5: a gap over 10 dB. Any gap over 10? Mask the bone!"** | **bc_placement** (quick), (AudiOtron `demo_tone`) | **0:50** |
+| **9** | **`ghost_demo` {ear: right}** | **"Her right air needs 50. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." "Watch what happens if we try anyway: swap the buzzer to her RIGHT mastoid." A quick second placement ("Swap sides!") on her RIGHT mastoid. ONE unmasked tone at 1 kHz, 5 dB above her measured left bone (every control but TONE locked; TONE wiggles "Hold Space!" if you wait, Hoot presses it after twice that). Her LEFT cochlea answers: the Ghost flies, "Bone 10, air 50? BOO!" (the level she really answered at). Nothing is stored. "Was that her right cochlea, or the LEFT one? Can't tell!" Then the rule with her numbers: "Right air 50, unmasked bone 5: a 45 dB gap. Gap of 10 or more? Mask the bone!"** | **bc_placement** (quick), (AudiOtron `demo_tone`) | **0:50** |
 | 10 | `masking` | "Which ear gets the shhh noise?" (left!). Medal `masking`. A single blue earphone goes on her left ear; the oscillator stays on her right mastoid. **(polish) Then the recap card "Masking, the short version" (about 12 s, Esc skips): shhh in the OTHER ear; start at its air + 10 (+ occlusion); heard? shhh up 5, missed? beep up 5; flat for 15 dB = the truth.** | choice, **explainer** (recap) | **0:45** |
 | 10b | `audiometry` {right, bc_masked} | Masked bone, coached: noise in the LEFT ear, find the **flat line** at 1k and 2k; Hoot does 4k and 500. Starts at the unmasked (left) bone. | (AudiOtron) | 2:00 |
 | 10c | `audiometry` {right, ac_masked} | Earphones back on. **(polish) "Air leaks too! 50 minus 40: up to 10 dB crosses. Her left BONE hears 5."** Hoot runs masked air (none with inserts: "At least 55 dB lost crossing her head: 55 minus 55 is below her left bone."). | (AudiOtron) | 0:20 |
@@ -120,7 +124,7 @@ Hoot says the no-Ghost line (§4) and the day goes on.
 
 **Why this order (Steve).** Clinically you put the oscillator on the better ear first: unmasked bone there is
 both ears' bone baseline (bone crosses the skull for free, IA about 0). The poorer ear's air is then compared
-with that baseline: any gap over 10 dB means its bone must be masked. An unmasked tone on the poorer side only
+with that baseline: any gap of 10 dB or more means its bone must be masked. An unmasked tone on the poorer side only
 re-measures the better cochlea, which the demo shows with one tone instead of a whole unscored test.
 
 ## 4. Teaching moments (Hoot, 18 words or fewer)
@@ -138,6 +142,7 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Placement | **(polish)** "Snug on the mastoid, off the ear. Bone goes 250 to 4000 Hz: we need 500 and up." |
 | ~~The Ghost~~ | ~~"Bone has almost zero interaural attenuation. Her LEFT cochlea may have answered!"~~ (v4: replaced by the demo lines below) |
 | Tip `cross_hearing` | "Bone has zero IA: that beep may have crossed to the OTHER cochlea. Meet the Ghost!" |
+| Tip `cross_hearing_air` **(E4)** | "That loud beep leaked across the skull to the OTHER cochlea. Meet the Ghost! Time to mask." (an air tone; no Day 2 air tone is loud enough) |
 | Why mask | "To hear the right cochlea alone, keep the left one busy with noise. Masking!" **(v4)** ends "Masking, like the movie!" when the movie played to the end |
 | Wrong ear | "Noise in the test ear just hides the beep. Busy the OTHER ear." |
 | Starting level | "Start noise: her left air threshold plus 10, plus extra for occlusion on low tones." |
@@ -151,6 +156,8 @@ Lines in the order they appear (level dialogue and AudiOtron tips). Counted by `
 | Type of loss | "Conductive loss! Gap over 10 dB with normal bone. Gaps of 15 or more are a referral flag." |
 | Carhart | **(polish)** "See the bone dip at 2k? A Carhart notch: a stiff middle ear fakes a small bone dip. Her cochlea is fine!" |
 | Dilemma (mention only) | "If BOTH ears had big gaps, even masking could overmask. The masking dilemma. Another day!" |
+| Tip `masking_dilemma` | **(E9)** "Masking dilemma! Enough noise crosses back; safe noise is too weak. Inserts help. Else mark it ?" |
+| Tip `plateau_not_reached` | **(E9)** "No room left! More noise would cross back to this ear. Store it: plateau not reached." Then, after the stamp: "That purple ? means no plateau: the true threshold may be poorer. Note it on the report." |
 | Takeaway | "Conductive loss with normal bone: refer to ENT. Often very treatable! Stamp it!" |
 
 Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask_too_low`, `mask_start`,
@@ -177,7 +184,7 @@ Masked-technique error tips (`AudiometrySession.TIPS`): `mask_wrong_step`, `mask
 | Ghost callout | AudiOtron | "Bone %d, air %d? BOO!" (**polish:** %d = the level she really answered at) / "the LEFT cochlea may have heard it" |
 | After the demo | Hoot | "BOO! Same answer as her left bone. Was that her right cochlea, or the LEFT one? Can't tell!" **(polish)** If she answered a step or two higher: "Heard at %d, near her left bone. Her right cochlea, or the LEFT one? Can't tell!" |
 | | Bonnie | "A ghost in my skull?! I KNEW that oven was haunted." (kept) |
-| **The criterion** (polish) | Hoot | "Right air %d, unmasked bone %d: a gap over 10 dB. Any gap over 10? Mask the bone!" (`ClinicRules.bc_masking_needed`; fallback: "The rule: air more than 10 dB poorer than unmasked bone? Mask the bone!") |
+| **The criterion** (polish) | Hoot | "Right air %d, unmasked bone %d: a %d dB gap. Gap of 10 or more? Mask the bone!" (`ClinicRules.bc_masking_needed`; fallback: "The rule: air 10 dB or more poorer than unmasked bone? Mask the bone!") |
 | | Hoot | "That's the Ghost's trick. Only masking the left ear can tell us the right cochlea's truth." |
 | No Ghost (missed 3 times) | Hoot | "She missed it? Even the Ghost naps. But it CAN answer, so we mask anyway." |
 | Why mask | Hoot | "To hear the right cochlea alone, keep the left one busy with noise. Masking, like the movie!" |
@@ -247,20 +254,20 @@ Medal: gold with 0 slips, silver 1, bronze 2+. Visit flag `bc_placement_slips`.
 |---|---|---|
 | Bone frequencies | 250-4000 Hz; required 1000, 2000, 4000, 500 (250 optional) | `BC_FREQS`, `BC_REQUIRED` |
 | Bone maximum output | 250: 45, 500: 60, 750: 65, 1k-3k: 70, 4k: 65 dB HL | `BC_MAX_DB` |
-| Felt, not heard | 250 Hz at 30+, 500 Hz at 55+ | `VIBROTACTILE_DB` |
+| Felt, not heard | 250 Hz at 25+, 500 Hz at 55+, 1000 Hz at 70+ (E16) | `VIBROTACTILE_DB` |
 | Oscillator position | mastoid, not touching the pinna | mini-game |
 | Symbols (ASHA) | right: O air, < unmasked bone, [ masked bone, triangle masked air; left: X, >, ], square. Bone is never joined by lines; masked air replaces the unmasked O/X line point | `UiDraw.audiogram_symbol` |
 | Interaural attenuation (rules) | phones 40, inserts 55, bone 0 | `IA_RULE_DB` |
 | Air-bone gap | conductive when AC - BC > 10 | `ABG_CONDUCTIVE_DB`, `is_conductive_gap` |
 | Referral red flag | AC - BC >= 15 at 500, 1000 AND 2000 Hz | `ABG_RED_FLAG_DB`, `abg_red_flag` |
-| Bone masking needed | test-ear AC - unmasked BC > 10 | `bc_masking_needed` |
+| Bone masking needed | test-ear AC - unmasked BC >= 10 (clinical review E5; ASHA 2005, BSA 2018 rule 2) | `bc_masking_needed` |
 | Air masking needed | test AC - 40 (phones) >= non-test BC (best estimate) | `ac_masking_needed`, `nontest_bone_estimate` |
 | Initial masking | non-test AC + 10, + occlusion effect for bone at 250 +15, 500 +15, 750 +10, 1k +10, 2k and up 0 (phones; inserts 0); no occlusion if the non-test ear has its own gap > 10 | `initial_masking`, `OCCLUSION_DB` |
 | Plateau dance | heard: noise +5; missed: tone +5 | `next_mask_step` |
 | Plateau | the same tone level heard through 3 noise raises of 5 dB (15 dB), starting at or above the initial level | `PLATEAU_STEPS`, `plateau_run` |
 | Overmasking | masker - 40 >= test-ear bone (bone: masker >= tone + 40; air: masker >= the test ear's best bone + 40, the nearest measured bone frequency standing in where none was measured, e.g. 500 for 250) | `overmask_limit`, `is_overmasked`, session `overmask_limit_db` |
-| Full window | heard with the noise at or above the initial level and one more step would overmask: store the held level (a narrow window, no plateau error) | session `window_full` |
-| Masking dilemma | initial masking already at the overmasking limit (mention only) | `masking_dilemma` |
+| Full window | heard with the noise at or above the initial level and one more step would overmask: store the held level (a narrow window, no plateau error). **(Clinical review E9)** The stamp is recorded as "plateau not reached" (`plateau_not_reached` in the stamp info; a purple "?" badge on the audiogram: the true threshold may be poorer) | session `window_full` |
+| Masking dilemma | initial masking already at the overmasking limit. **(E9)** The coach starts the noise one step short of overmasking (`safe_mask_max_db`, `start_mask_db`), `mask_too_low` is measured against that, the lamp shows "dilemma", Hoot explains once (`masking_dilemma` tip, inserts leak less), and the first heard tone at the safe maximum fills the window: store it, "plateau not reached" (BSA 2018, 8.8 step 5 and 8.9). No current day reaches it; the advanced case C9 will | `masking_dilemma`, session `in_dilemma` |
 | Type of loss | normal (air <= 25); conductive (gap > 10 at 2+ of 500-4k, bone average <= 25); mixed (same gaps, poorer bone); sensorineural (no real gap) | `hearing_type` |
 | Carhart notch | **(polish)** bone at 2k at least 10 poorer than the better of 500 and 4k (1k stands in when 500 is missing), at least 5 poorer than 4k (a notch, not a slope) and no better than 1k (the bottom of the dip) | `has_carhart_notch` |
 | Masker range | 0-100 dB EM, 5 dB steps, starts at 10 when switched on | `MASK_MIN_DB`, `MASK_MAX_DB`, `MASK_STEP_DB` |
@@ -276,14 +283,17 @@ during bone tests. Gus (no bone data, no masking) gets exactly his air threshold
 - Results get one sheet per test (`ac`, `bc`, `bc_masked`, `ac_masked`). Accuracy, technique and efficiency
   average over every scored stamp on every sheet; Hoot's stamps are not scored.
 - **Par** for a masked measurement = the presentations of the deterministic textbook dance from its start
-  (initial noise, tone at the unmasked threshold) + `MASK_PAR_SLACK` 2. Unmasked bone uses the normal par.
+  (initial noise, tone at the unmasked threshold; **(E9)** the safe maximum in a dilemma, and the dance ends once
+  the window is full) + `MASK_PAR_SLACK` 2. Unmasked bone uses the normal par.
   Fair golf as Day 1.
 - **Masked technique errors** (break the combo, lower technique): `mask_too_low` (first masked tone with the
-  noise below the initial level), `mask_start` (first masked tone more than 10 dB from the unmasked threshold),
+  noise below the initial level; **(E9)** in a dilemma, below the safe maximum), `mask_start` (first masked tone more than 10 dB from the unmasked threshold),
   `mask_wrong_step` (anything but noise +5 after heard / tone +5 after missed), `store_no_plateau` (stored
   before 3 noise raises held, unless the safe window is full), `overmasked` (noise at or past the limit; once per measurement, not a check).
-  Observations: `cross_hearing`, `undermasked`, `plateau_step` {steps, needed, db, mask_db, found},
-  `plateau_found`, `vibrotactile`.
+  Observations: `cross_hearing`, `undermasked`, `plateau_step` {steps, needed, db, mask_db, found, window_full},
+  `plateau_found`, `vibrotactile`; **(E9)** `masking_dilemma` {initial_db, limit_db} and `plateau_not_reached`
+  {db, mask_db, limit_db}, each once per visit. A "plateau not reached" stamp at or better than the truth scores
+  full accuracy (the true threshold may be poorer, so it is not a miss).
 - **Medals (Day 2 paper row):** Chat (`history`), Bone (`bc_placement`), Mask (`masking`), Case (`evidence`),
   Refer (`referral`). Gold 10 / silver 6 / bronze 3 coins as before.
 - Golf card: rows R O, L X, plus R [ (masked bone) and R O+ (masked air) when present. **(v4)** plus L > (left
@@ -366,8 +376,8 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 
 ## 15. Polish pass (after the fun, audiology and bug reviews)
 
-- **Pacing.** Right air: Hoot coaches one beep, then runs the rest with no 1 kHz retest
-  (`skip_hoot_retest`). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
+- **Pacing.** Right air: Hoot coaches one beep, then runs the rest, the 1 kHz retest included (clinical
+  review E2: the first ear keeps it). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
   visit off the player tests everything. The bone and masking sheets are always the player's.
 - **Masked air after masked bone.** Clinics often mask air first; the level says so in one line. With the
   insert earphones (55 dB rule IA) Bonnie's right air cannot reach her left cochlea, so the level skips

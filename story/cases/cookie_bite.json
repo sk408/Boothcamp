@@ -83,7 +83,7 @@
 			"prompt": "Is her middle ear the problem?",
 			"options": [
 				["No sign of it: type A, both sides.", true, ""],
-				["Yes: flat, type B. Fluid.", false, "A flat B would mean fluid. Hers have normal peaks."],
+				["Yes: flat, type B.", false, "Flat with a normal canal volume would point to fluid. Hers have normal peaks."],
 				["Yes: type C, negative pressure.", false, "Her peaks sit near zero. A type C sits far to the left."]
 			]
 		},
@@ -99,7 +99,11 @@
 		["Ginger", "Beeps only. Got it."]
 	],
 	"audiometry": [
-		{"ear": "right", "test": "ac", "hoot_turn_after": 7, "intro": "Right ear's yours. Watch the middle pitches!"},
+		{"ear": "right", "test": "ac", "hoot_turn_after": 10, "intro": "Right ear's yours. Watch the middle pitches!",
+			"if_tested": {"750": [
+				["Hoot", "Extra stop at 750! A 500-to-1k jump of 20 dB or more gets tested in between."],
+				["Hoot", "Hearing aids care exactly where her loss begins. Now we know."]
+			]}},
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed. Same shape?"},
 		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: middle ear or inner ear?",
 			"before": [["Hoot", "Now the bone buzzer: middle ear, or deeper?"]]}
@@ -155,9 +159,9 @@
 		"wrong_line": "True, but it doesn't show she's safe to fit. Look for the red-flag check!",
 		"wrong_lines": {
 			"family": "That's family history, not a red flag. What shows it's safe?",
-			"ear_clear": "True: that clears wax, drainage and deformity. Which clue clears pain, dizziness and sudden change?",
-			"tymp_a": "True: no fluid, no blockage. Which clue clears pain, dizziness and sudden change?",
-			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears pain, dizziness and sudden change?",
+			"ear_clear": "True: no wax, drainage or deformity today. Past drips, pain, dizziness, sudden change: which clue clears those?",
+			"tymp_a": "True: no fluid, no blockage. Which clue clears past drips, pain, dizziness and sudden change?",
+			"snhl": "True: no air-bone gap, one red flag cleared. Which clue clears past drips, pain, dizziness and sudden change?",
 			"voices_drop": "That's what's wrong, not why it's safe. Look for the red-flag check!",
 			"cookie": "That's what's wrong, not why it's safe. Look for the red-flag check!"
 		},

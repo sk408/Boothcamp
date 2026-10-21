@@ -84,7 +84,8 @@ const CHAPTER_MEDAL_BEATS: Dictionary = {
 ## (v3) Extra golf-card rows for the bone and masked sheets: [sheet key, ear] (_row_tag draws the
 ## row's audiogram symbol). (v4) Day 2 tests the better (left) ear's bone first, unmasked: the "L  >"
 ## row, shown only when that ear has no masked-bone sheet (a poorer left ear, like Marina's, shows "L  ]").
-const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "left"], ["bc_masked", "right"], ["ac_masked", "right"], ["bc_masked", "left"], ["ac_masked", "left"]]
+## (cases) A better RIGHT ear's unmasked bone (Marina, Skye, Rocco, Ginger) is the "R  <" row, same rule.
+const GOLF_EXTRA_ROWS: Array[Array] = [["bc", "left"], ["bc", "right"], ["bc_masked", "right"], ["ac_masked", "right"], ["bc_masked", "left"], ["ac_masked", "left"]]
 const GOLF_COLORS: Dictionary = {
 	&"albatross": Color("#8e5cc4"), &"eagle": Color("#2d6cdf"), &"birdie": Color("#2f9e73"), &"par": Color("#6b5e7e"),
 	&"bogey": Color("#e08a1c"), &"double_bogey": Color("#e5383b"), &"triple_bogey": Color("#b02a2d"),

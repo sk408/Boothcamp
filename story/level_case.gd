@@ -22,12 +22,14 @@ const CaseTymp := preload("res://story/games/case_tymp.gd")
 const CaseClock := preload("res://story/games/case_clock.gd")
 const CaseProps := preload("res://story/games/case_props.gd")
 const Voice := preload("res://story/voice.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
 const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_case.tscn"
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"tymp", &"beeps", &"reveal", &"pattern", &"call"]
 const STEP_LABELS: Dictionary = {
@@ -42,10 +44,45 @@ const TYMP_QUIZ: Array[StringName] = [&"A", &"B", &"C"]
 const TYPE_ANSWERS: Dictionary = {&"sensorineural": 0, &"conductive": 1, &"mixed": 2}
 ## Unmasked bone reads the better cochlea, so it can stand in for an ear with no bone test of its own
 ## when it sits within this many dB of that ear's air at every bone frequency (no gap is possible).
+## (Clinical review C6) 10, the naming rule's no-gap line (ClinicRules.ABG_CONDUCTIVE_DB), not E5's
+## masking gap: a 10 dB gap gets masked bone first (masked_bone_ears), so an ear only borrows when
+## its masked bone was never needed.
 const BORROW_BONE_DB := 10
 ## Hoot's one-time briefing, the first time a player opens any case.
 const BRIEFING := "Case Files! Gather clues, then stamp it: FIT, REFER, or DOCTOR TODAY."
+## (Clinical review C12) Hoot's case movies (story/explainers/movies/<id>.gd), each just before its
+## step: the stamps and red flags before the first patient knocks, the tympanometer before its step,
+## the chart shapes before the reveal. Gated like BRIEFING: on a player's first case each plays after
+## its lead-in line; on a later case, an unwatched one is offered (offer); once watched, it lives in
+## the pause menu (Hoot's Movies) and the title's list.
+const CASE_MOVIES: Dictionary = {
+	"case_files": {
+		"lead_in": "New today: CASE FILES! A quick cartoon on the three stamps, then our patient.",
+		"offer": "Hoot's case files movie: the three stamps and the red flags. Watch it first?",
+	},
+	"tymp": {
+		"lead_in": "New gadget: the Tymp-O-Matic! A quick cartoon on what it shows, then we test.",
+		"offer": "Hoot's tympanometer movie: what those curves mean. Watch it before the tymp?",
+	},
+	"shapes": {
+		"lead_in": "Chart time! A quick cartoon on audiogram shapes, then you name this one.",
+		"offer": "Hoot's audiogram movie: slopes, notches and cookie bites. Watch it before the chart?",
+	},
+}
+## (Clinical review A2) Every day is open, so a player can meet masking on a case day first. Before
+## the visit's first masked test, while Day 2's full movie is unseen: the one-card recap (about 12 s,
+## Esc skips it), then where the full movie lives, as Freestyle does.
+const MASKING_MOVIE := "masking"
+const MASKING_RECAP := "masking_recap"
+const MASKING_HINT := "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen."
 ## The runner's own lines (case_scripts.py prints them too: keep the two in step).
+## The first look in every case: the other ear, before the case's own (both ears get a look before
+## any probe or insert goes in), with a fresh speculum (clinical review A1). %s: the speaker, then the
+## ear in capitals.
+const OTHER_EAR_CAPTION := "Fresh speculum. %s's %s ear first: a clear canal, a healthy eardrum."
+## (Clinical review A1) Before the case's own instructions on every first visit: the routine around
+## the test (the morning listening check, the response button, the dials out of the patient's view).
+const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
 ## After masked bone, when no ear needed masked air (built from the stamps).
 const NO_MASKED_AIR := "At these levels, air tones can't cross the head. Only bone needed masking today!"
 ## When a conditional finding reads differently on the chart than in the story (wandering stamps).
@@ -71,6 +108,11 @@ var clues: Array[Dictionary] = []
 var _walk_done := true
 ## Wax fills the canal (the otoscope's "wax" view): air goes through headphones, never a foam insert.
 var _canal_blocked := false
+## (A2) The masking recap played this visit (once, before the first masked test).
+var _recapped := false
+## The scored visit's summary when a retest follows it: Game.finish_visit runs before the retest, so
+## quitting during the unscored victory lap keeps the day (chapters_done, coins, best grade).
+var _summary: Dictionary = {}
 
 
 ## The case this level should play.
@@ -85,6 +127,7 @@ static func pick_case_id() -> String:
 
 
 func _ready() -> void:
+	add_to_group(&"masking_level")  # (E19) the pause menu offers the masking movie (Movies.MASKING_LEVEL_GROUP)
 	case_id = pick_case_id()
 	case_data = CaseData.load_case(case_id)
 	var problems := CaseData.validate(case_data) if not case_data.is_empty() else PackedStringArray(["no case file"])
@@ -274,6 +317,7 @@ func _run() -> void:
 	await _decision(board)
 	await _payoff(board)
 	if case_data.has("retest"):
+		_summary = Game.finish_visit()   # the scored visit ends here; the retest is a victory lap
 		await _retest()
 	await _results()
 
@@ -281,9 +325,10 @@ func _run() -> void:
 # ---------------------------------------------------------------- 1. intro
 
 func _intro() -> void:
+	clinic.call("focus_camera", &"door", 0.0)
+	await _movie("case_files")
 	_phase(&"intro")
 	hud.call("set_step", &"chat")
-	clinic.call("focus_camera", &"door", 0.0)
 	await _wait(0.5)
 	get_tree().create_timer(1.4, false).timeout.connect(func() -> void: clinic.call("focus_camera", &"desk", 2.2))
 	await clinic.call("walk_in")
@@ -297,6 +342,31 @@ func _intro() -> void:
 		var d: Dictionary = cl
 		hud.call("add_clue", String(d["text"]), String(d.get("kind", "clue")))
 		_add_clue(String(d.get("tag", "")), String(d["text"]), String(d.get("kind", "clue")), "note")
+
+
+## (Clinical review C12) One of Hoot's case movies (CASE_MOVIES), unless it was watched before. The
+## player's first case: Hoot's lead-in, then it plays; a later case: Hoot offers it. Esc skips it
+## (it comes back on the next case until watched to its seen_at scene).
+func _movie(id: String) -> void:
+	if not Movies.has(id) or Game.is_movie_seen(id):
+		return
+	var lines: Dictionary = CASE_MOVIES[id]
+	var first := first_case()
+	_phase(&"explainer", {"movie": id, "source": "case", "first_case": first})
+	if first:
+		await _say("Hoot", String(lines["lead_in"]))
+	else:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(id) / 10.0) * 10.0), "Not now: on with the case."]
+		var c: int = await dialogue.choose(String(lines["offer"]), opts, 0)
+		if c != 0:
+			return
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", id, "day_start" if id == "case_files" else "case")
+	player.queue_free()
+	Game.set_visit_flag("movie_" + id, bool(r.get("watched", false)))
+	if bool(r.get("skipped", false)):
+		await _say("Hoot", "Skipped! Rewatch it any time: pause menu, \"Hoot's Movies\".")
 
 
 # ---------------------------------------------------------------- 2. case history
@@ -357,8 +427,9 @@ func _history() -> void:
 
 # ---------------------------------------------------------------- 3. otoscopy (a quick look)
 
-## A look in the ear: the case's otoscopy section, or the retest's (first_pass false: no step pill,
-## and no card unless the section has a clue). A "wax" view blocks the canal for the air tests.
+## A look in the ear: the case's otoscopy section (the other ear first, then the case's), or the
+## retest's (first_pass false: the treated ear only, no step pill, and no card unless the section has
+## a clue). A "wax" view blocks the canal for the air tests.
 func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
 	_phase(&"otoscopy", {} if first_pass else {"retest": true})
 	if first_pass:
@@ -368,7 +439,12 @@ func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
 	_canal_blocked = view == "wax"
 	var g := CaseOtoscopy.new()
 	hud.call("add_game", g)
-	await g.show_view(String(oto.get("ear", "right")), view, String(oto.get("caption", "")))
+	var ear := String(oto.get("ear", "right"))
+	if first_pass:
+		var other := "left" if ear == "right" else "right"
+		await g.show_view(other, "clear", OTHER_EAR_CAPTION % [speaker, other.to_upper()])
+		await _wait(0.5)
+	await g.show_view(ear, view, String(oto.get("caption", "")))
 	_shot("otoscopy" if first_pass else "retest_otoscopy")
 	await _play(oto.get("lines", []))
 	if String(oto.get("clue", "")) != "":
@@ -384,6 +460,7 @@ func _otoscopy(oto: Dictionary, first_pass: bool = true) -> void:
 # ---------------------------------------------------------------- 4. the tympanometer
 
 func _tymp() -> void:
+	await _movie("tymp")
 	_phase(&"tymp")
 	hud.call("set_step", &"tymp")
 	var ty: Dictionary = case_data["tymp"]
@@ -531,6 +608,8 @@ func _instructions(lines: Variant, first_pass: bool = true) -> void:
 	if first_pass:
 		hud.call("set_step", &"beeps")
 	clinic.call("focus_camera", &"desk", 0.8)
+	if first_pass:
+		await _say("Hoot", ROUTINE_LINE)
 	await _play(lines)
 	if first_pass:
 		Game.set_visit_flag("instructed", true)
@@ -566,9 +645,7 @@ func _close_screen(cam: Camera3D) -> void:
 ## Headphones, or foam inserts once the upgrade is owned. Never an insert into a canal full of wax.
 ## The masking rules read the same transducer.
 func _air_transducer() -> StringName:
-	if _canal_blocked:
-		return &"phones"
-	return &"inserts" if Game.has_upgrade("insert_earphones") else &"phones"
+	return CaseData.air_transducer(_canal_blocked)
 
 
 func _test(ear: String, plan: Dictionary, info: Dictionary = {}) -> Dictionary:
@@ -592,6 +669,17 @@ func _aside(cam: Camera3D, lines: Variant, shot: StringName = &"face") -> void:
 	_open_screen()
 
 
+## An air step's "if_tested" lines ({"750": script}): each plays once the ear's stamps asked for
+## that half-octave (its neighbours differ by 20 dB or more) and it is on the chart, so the line
+## explains it only when it happened (a half-octave the player stamps unasked says nothing).
+func _if_tested(cam: Camera3D, ear: String, by_freq: Dictionary) -> void:
+	var stored := ClinicRules.sheet_thresholds(results, ear, &"ac")
+	var needed := ClinicRules.required_interoctaves(stored)
+	for f: String in by_freq:
+		if stored.has(int(f)) and needed.has(int(f)):
+			await _aside(cam, by_freq[f])
+
+
 ## A test step's plan for the AudiOtron: the test, Hoot's turn, an intro that fits, and any PLAN_KEYS
 ## (Hoot's montage) passed straight through.
 func _plan_from(pd: Dictionary) -> Dictionary:
@@ -606,8 +694,9 @@ func _plan_from(pd: Dictionary) -> Dictionary:
 	return plan
 
 
-## The case's test plan, then whatever masking the stamps ask for: masked bone on each bone-tested
-## ear, then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
+## The case's test plan, then whatever masking the stamps ask for: masked bone on each ear the rules
+## ask (CaseData.masked_bone_ears: one-sided cases test unmasked bone on the better ear, so the case
+## ear's masked bone needs no bone test of its own), then masked air on each air-tested ear. first_pass false: the retest (air only, no masking,
 ## no case lines, no step pill).
 func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	var cam := _open_screen()
@@ -637,12 +726,17 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 			if pd.has("before"):
 				await _aside(cam, pd["before"])
 		await _test(ear, plan, info)
+		if first_pass and plan["test"] == "ac":
+			await _if_tested(cam, ear, pd.get("if_tested", {}))
 	var masked_bone := false
 	var masked_air := false
+	var bone_ears: Array[String] = bc_ears.duplicate()
 	if first_pass:
-		for ear: String in bc_ears:
+		for ear: String in CaseData.masked_bone_ears(steps):
 			if ClinicRules.masked_freqs_needed(results, ear, &"bc_masked").is_empty():
 				continue
+			if not bone_ears.has(ear):
+				bone_ears.append(ear)
 			var other := "left" if ear == "right" else "right"
 			_close_screen(cam)
 			if oscillator_on != ear:
@@ -650,6 +744,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				oscillator_on = ear
 			clinic.call("focus_camera", &"face", 0.5)
 			clinic.call("put_on_masking_phone", other)
+			await _recap()
 			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
 				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
 			_open_screen()
@@ -666,6 +761,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				clinic.call("take_off_bone_oscillator")
 				oscillator_on = ""
 				clinic.call("put_on_earphones", true)
+				await _recap()
 				await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
 			_open_screen()
 			await _test(ear, {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0,
@@ -686,7 +782,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 	# the case's line describes the true chart ("bone sits with the air: no gap"); if the player's
 	# stamps left a different type on a bone ear, it would contradict the screen, so say a neutral line
 	var agrees := true
-	for ear: String in bc_ears:
+	for ear: String in bone_ears:
 		var measured: StringName = ((results.get("ears", {}) as Dictionary).get(ear, {}) as Dictionary).get("hearing_type", &"unknown")
 		if measured != CaseData.truth_type(patient, ear):
 			agrees = false
@@ -694,6 +790,19 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 		await _play(case_data.get("after_audiometry", []))
 	else:
 		await _say("Hoot", "Bone's in. Let's lay it over the air and see what it says.")
+
+
+## (Clinical review A2) The masking recap card before the visit's first masked test, while Day 2's
+## full movie is unseen, then where the full movie lives (the pause menu lists it on every case day).
+func _recap() -> void:
+	if _recapped or Game.is_movie_seen(MASKING_MOVIE) or not Movies.has(MASKING_RECAP):
+		return
+	_recapped = true
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", MASKING_RECAP, "recap")
+	player.queue_free()
+	await _say("Hoot", MASKING_HINT)
 
 
 ## Quick visit (the default): Hoot runs the tests the plan gives him. Off: the player runs everything.
@@ -705,7 +814,7 @@ func _quick() -> bool:
 ## An ear with air but no bone test of its own: the other ear's UNMASKED bone reads the better cochlea,
 ## so this ear's bone can be no better than it. When that bone sits within BORROW_BONE_DB of this
 ## ear's air at every bone frequency, no gap is possible and the ear is typed from it (Rocco's and
-## Ginger's left ears). Otherwise the ear stays "unknown" (it would need its own bone test).
+## Ginger's left ears; borrowed_type). Otherwise the ear stays "unknown" (it would need its own bone test).
 func _borrow_bone() -> void:
 	var ears: Dictionary = results.get("ears", {})
 	for ear: String in ["right", "left"]:
@@ -717,20 +826,28 @@ func _borrow_bone() -> void:
 		var air := ClinicRules.best_thresholds(results, ear, false)
 		if bone.is_empty() or air.is_empty():
 			continue
-		var close := true
-		for f: int in bone:
-			if air.has(f) and int(air[f]) - int(bone[f]) > BORROW_BONE_DB:
-				close = false
-		var kind := ClinicRules.hearing_type(air, bone)
-		if close and (kind == &"sensorineural" or kind == &"normal"):
+		var kind := borrowed_type(air, bone)
+		if kind != &"unknown":
 			e["hearing_type"] = kind
 			e["bone_from"] = other
 	Game.set_audiometry_results(results)
 
 
+## The type of loss an ear with no bone of its own reads from the other ear's unmasked bone:
+## &"sensorineural" or &"normal" when that bone sits within BORROW_BONE_DB of this ear's air at every
+## bone frequency, else &"unknown".
+static func borrowed_type(air: Dictionary, bone: Dictionary) -> StringName:
+	for f: int in bone:
+		if air.has(f) and int(air[f]) - int(bone[f]) > BORROW_BONE_DB:
+			return &"unknown"
+	var kind := ClinicRules.hearing_type(air, bone)
+	return kind if kind == &"sensorineural" or kind == &"normal" else &"unknown"
+
+
 # ---------------------------------------------------------------- 7. reveal: the chart
 
 func _reveal() -> Control:
+	await _movie("shapes")
 	_phase(&"reveal")
 	hud.call("set_step", &"reveal")
 	var b := CaseBoard.new()
@@ -986,7 +1103,7 @@ func _retest() -> void:
 	var first_comfort := Game.get_comfort()
 	_phase(&"retest")
 	hud.call("set_step", &"retest")
-	hud.call("clear_notes")   # two days on: the first visit's sticky notes are history
+	hud.call("clear_notes")   # a week on: the first visit's sticky notes are history
 	clinic.call("focus_camera", &"door", 0.0)
 	await _props().call("play", "later", String(rt.get("card", "LATER")))
 	_shot("retest_later")
@@ -1030,14 +1147,20 @@ func _retest() -> void:
 	clinic.call("focus_camera", &"door", 1.6)
 	_shot("retest_goodbye", 1.6)
 	await clinic.call("walk_out")
-	results = first_results
-	patient = first_patient
-	Game.set_audiometry_results(first_results)   # the score is the first visit's
-	if Game.get_comfort() < first_comfort:   # hearts lost on the victory lap don't count either
-		Game.gain_comfort("retest_unscored", first_comfort - Game.get_comfort())
+	_restore_first_visit(first_results, first_patient, first_comfort)
 	Game.set_visit_flag("retested", true)
 	Game.set_visit_flag("retest_type", String(measured))
 	hud.call("complete_step", &"retest")
+
+
+## Back to the scored visit after the retest: its results, its patient, and any heart lost on the
+## victory lap given back (the summary was already taken, but the HUD and the visit agree with it).
+func _restore_first_visit(first_results: Dictionary, first_patient: PatientProfile, first_comfort: int) -> void:
+	results = first_results
+	patient = first_patient
+	Game.set_audiometry_results(first_results)
+	if Game.get_comfort() < first_comfort:
+		Game.gain_comfort("retest_unscored", first_comfort - Game.get_comfort())
 
 
 ## The chart the retest board shows: a deep copy of the first visit's results with each retested ear
@@ -1105,7 +1228,7 @@ static func paper_for(c: Dictionary, decision_first: String) -> Dictionary:
 
 func _results() -> void:
 	_phase(&"results")
-	var summary := Game.finish_visit()
+	var summary := _summary if not _summary.is_empty() else Game.finish_visit()
 	var paper_data := paper_for(case_data, String(Game.get_visit_flag("decision_first", "")))
 	summary["case_id"] = case_id
 	summary["headlines"] = paper_data["headlines"]

@@ -34,8 +34,11 @@ BUS_DB = 2 * 20 * math.log10(0.8)  # Game defaults: tone_volume 0.8, master_volu
 BONE_CROSS = 10 ** (-10 / 20)      # ToneGenerator.BONE_CROSS_DB
 
 
+TONE_BOOST_DB = 4.0  # AudioSafety.TONE_BOOST_DB (clinical review E7): tones only, never the masker
+
+
 def hl_rms_dbfs(hl):
-    return min(max(-75.0 + 0.6 * hl, -90.0), -12.0)
+    return min(max(-75.0 + TONE_BOOST_DB + 0.6 * hl, -90.0), -12.0)
 
 
 def hl_peak_dbfs(hl):

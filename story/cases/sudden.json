@@ -99,8 +99,8 @@
 	"audiometry": [
 		{"ear": "left", "test": "ac", "hoot_turn_after": 0, "intro": "Better ear first, like the pros. Left at Hoot speed!"},
 		{"ear": "right", "test": "ac", "hoot_turn_after": 3, "intro": "Right ear's yours. Start at 1k, as always."},
-		{"ear": "right", "test": "bc", "hoot_turn_after": 0, "intro": "Bone check at Hoot speed: where is the trouble?",
-			"before": [["Hoot", "Wax would block air but not bone. The bone buzzer will tell us!"]]}
+		{"ear": "left", "test": "bc", "hoot_turn_after": 0, "intro": "Left ear at Hoot speed: bone for his better cochlea.",
+			"before": [["Hoot", "Wax would block air, not bone: bone settles it. Buzzer on his better ear first: the left."]]}
 	],
 	"after_audiometry": [
 		["Hoot", "Masked bone is in. Let's see where it landed."]
@@ -162,6 +162,7 @@
 		["Hoot", "Three o'clock? Perfect. His audiogram is on its way to you now."],
 		["Hoot", "Dash, the ear doctor sees you at three. Go straight there, pizzas or not."],
 		["Hoot", "No ear doctor free today? Then the emergency department. Same day, either way."],
+		["Hoot", "Sudden means over three days or less. Within a month, no wax or fluid to blame? Doctor today."],
 		{"react": "cheer"},
 		["Dash", "Same day? Faster than my pizzas! Thanks, owl!"]
 	],
