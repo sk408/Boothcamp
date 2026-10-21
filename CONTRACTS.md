@@ -3200,7 +3200,7 @@ fails the run with exit 4.
   - left `best_final`, `below_predicted`, `asymmetric` and `rollover` (A1-A3);
   - a counted left list with `louder_than > 0`, whose `mask_db` equals `wrs_mask_level(level_db, test_best_bone,
     transducer, nontest_largest_abg)` (A4; `test_best_bone` is the lowest of `ear_best_bone(tones, "left")`) and lies
-    in 65-75 (70 on a textbook run, as Hoot's bone stamps wobble, CHAPTER4 §2.2);
+    in 60-80 (70 on a textbook run, as Hoot's bone stamps wobble up to 10 dB, CHAPTER4 §2.2);
   - `wrs_summary.referral == &"refer"`; and the visit flag `decision` is `refer` when the visit records one;
   - the movies: the result adds `movies` (the movies that started, as Day 2 and the cases print it), and a fresh save
     (no `--keep-save`) must start `letter_choir`.

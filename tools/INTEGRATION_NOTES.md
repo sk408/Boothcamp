@@ -78,8 +78,8 @@ For every sheet in `speech.sin.<slot>`:
 - right: `pb_max >= 88` and `band` in `excellent` / `good`; left: the comfortable list's `pct <= 64`
 - left: `best_final`, `below_predicted` and `asymmetric` are all true
 - a left list with `louder_than > 0` and `rollover == true` on the sheet, whose `mask_db` equals
-  `SpeechRules.wrs_mask_level(level_db, test_best_bone, transducer)` (70 on a textbook run; accept 65-75, as
-  Hoot's bone stamps wobble, CHAPTER4 §2.2). `test_best_bone` is the lowest of
+  `SpeechRules.wrs_mask_level(level_db, test_best_bone, transducer)` (70 on a textbook run; accept 60-80, as
+  Hoot's bone stamps wobble up to 10 dB, CHAPTER4 §2.2). `test_best_bone` is the lowest of
   `SpeechRules.ear_best_bone(tones, "left")` on the visit's tone results (`SpeechSession.test_best_bone`)
 - `speech.wrs_summary.referral == &"refer"`; and `Game.visit.decision == &"refer"` when the visit records one
 

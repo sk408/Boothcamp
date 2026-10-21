@@ -167,8 +167,9 @@ a PTA of 41.7 gives 58).
 - **Every row raises every flag** with one rule each: her best (always the comfortable list) is below the prediction
   (56 or less against 58 or more), the ears are too far apart for chance (92 or more against 56 or less), and the
   rollover index is 0.50 or more (the cut-off is 0.45). `test_nora_rows` and `test_predicted_min_interp` pin this.
-- **The noise ceiling wobbles too.** Her left best bone reads 30-40, so the louder list's noise is 65-75 (70 on a
-  textbook run). At most 75 - 50 = 25 dB reaches her left cochlea, under her bone, so no score changes.
+- **The noise ceiling wobbles too.** Her left best bone usually reads 30-40 and can read 25-45 (a stamp may sit
+  10 dB off), so the louder list's noise is 60-80 (70 on a textbook run). At most 80 - 40 = 40 dB reaches her left
+  cochlea, under her left SRT, so no score changes.
 - The lines never hard-code 60 or 82: they take `{min}` from the sheet.
 - A right list scored below its prediction (only possible by scoring several real hits as misses) leaves the right
   ear's best open, so the ear verdict is held and the "apart" Roll Call card turns FINE. The other flags still refer.

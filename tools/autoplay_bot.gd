@@ -1540,8 +1540,9 @@ func _check_nora(res: Dictionary, sp: Dictionary, problems: PackedStringArray) -
 		var want_db := SpeechRules.wrs_mask_level(int(louder.get("level_db", 0)), best if best != INF else NAN,
 			StringName(String(l.get("transducer", "phones"))), SpeechRules.nontest_largest_abg(res, "left"))
 		var got := int(louder.get("mask_db", -1))
-		if got != want_db or got < 65 or got > 75:
-			problems.append("Day 4: the louder list's noise is %d dB, expected %d (65-75)" % [got, want_db])
+		# the ceiling follows the measured bone, and a bone stamp may sit up to 10 dB off the truth
+		if got != want_db or got < 60 or got > 80:
+			problems.append("Day 4: the louder list's noise is %d dB, expected %d (60-80)" % [got, want_db])
 	if StringName(String((sp.get("wrs_summary", {}) as Dictionary).get("referral", ""))) != &"refer":
 		problems.append("Day 4: the word scores do not call for a referral")
 	var decision := String(Game.get_visit_flag("decision", ""))
