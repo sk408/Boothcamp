@@ -9,6 +9,8 @@ extends Control
 ## Quit quits. Keyboard: Up/Down + Enter/Space (Days: arrows move in the grid, Esc = Back).
 ## Mouse: click, wheel scrolls the grid. The notice shows once per session; the footer
 ## "This is a game, not a hearing test." is always on screen.
+## (career-fair demo, docs/DEMO.md) In demo mode (Game.is_demo()) the menu is one Play button for
+## the short demo level, the notice greets every visitor, and each title starts a fresh visitor.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
@@ -18,6 +20,9 @@ const Movies := preload("res://story/explainers/movies.gd")
 const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
 ## (arcade, docs/ARCADE.md) The arcade hall: a cabinet per game (Chart Chute, Ears, Please!).
 const ARCADE_SCENE := "res://story/arcade/arcade_hall.tscn"
+## (demo) The career-fair demo's level, and the line under its Play button.
+const DEMO_SCENE := "res://story/level_demo.tscn"
+const DEMO_TAGLINE := "Find out what Gus can't hear, then help him hear it. About 7 minutes."
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -74,6 +79,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("title_screen")
 	_font = UiKit.font(700)
+	if Game.is_demo():
+		Game.reset_demo_visitor()   # (demo) every title is a new visitor
 	if ResourceLoader.exists(CLINIC_SCENE):
 		_clinic = (load(CLINIC_SCENE) as PackedScene).instantiate()
 		add_child(_clinic)
@@ -81,7 +88,7 @@ func _ready() -> void:
 			_clinic.call("set_title_mode", true)
 	_build()
 	Sfx.music_start()
-	if _notice_seen_this_session:
+	if _notice_seen_this_session and not Game.is_demo():
 		_notice_layer.visible = false
 		_show_title.call_deferred()
 	else:
@@ -145,11 +152,24 @@ func _show_title() -> void:
 	_menu_card.visible = true
 	Juice.bounce_in(_menu_card, 0.5)
 	_set_hl(0, false)
-	Events.awaiting_input.emit(&"title_start", {}, _on_start)
+	Events.awaiting_input.emit(&"title_start", {}, _on_demo_start if Game.is_demo() else _on_start)
 
 
 func _on_start() -> void:
 	_start_chapter(Game.next_chapter_id(), &"title_start")
+
+
+## (demo) Play: the career-fair demo level.
+func _on_demo_start() -> void:
+	if _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"fanfare")
+	if not _buttons.is_empty():
+		Juice.pop(_buttons[0], 1.15, 0.25)
+	Events.input_resolved.emit(&"title_start")
+	Events.goto_scene.emit(DEMO_SCENE)
 
 
 ## (v3) Start a chapter (falls back to Day 1's scene if it is unknown or missing).
@@ -533,6 +553,8 @@ func _build() -> void:
 		specs.append(["New player", _on_new_player])
 	specs.append(["Options", _on_options])
 	specs.append(["Quit", _on_quit])
+	if Game.is_demo():
+		specs = [["Play", _on_demo_start]]   # (demo) nothing else: no days, no quitting the booth
 	# (freestyle) Options and Quit share the last row, so a returning player's six buttons still
 	# clear the safety footer (Up/Down still walk them in order)
 	var pair := HBoxContainer.new()
@@ -564,7 +586,13 @@ func _build() -> void:
 		_buttons.append(b)
 	v.add_child(pair)
 	_menu_buttons = _buttons.duplicate()
-	if not Movies.replay_ids().is_empty():
+	if Game.is_demo():
+		var tag := UiKit.label(DEMO_TAGLINE, 18, Palette.INK_SOFT, 600)
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		tag.custom_minimum_size = Vector2(340, 0)
+		v.add_child(tag)
+	if not Movies.replay_ids().is_empty() and not Game.is_demo():
 		_movies_btn = UiKit.button("Hoot's Movies", &"", Vector2(214, 46))
 		_movies_btn.name = "MoviesButton"
 		_movies_btn.add_theme_font_size_override("font_size", 20)
@@ -584,7 +612,7 @@ func _build() -> void:
 		var hr := UiKit.hint_row([["Up", "Down"], "+", ["Enter"], "or click"], 15)
 		hr.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_child(hr)
-	var stats := _stats_text()
+	var stats := "" if Game.is_demo() else _stats_text()
 	if stats != "":
 		var sl := UiKit.label(stats, 15, Palette.INK_SOFT, 500)
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

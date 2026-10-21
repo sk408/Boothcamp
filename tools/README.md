@@ -26,6 +26,7 @@ Run every command from the project root (`/home/claude/boothcamp`). Godot 4.7.2 
 | **(Day 5)** Day 5 picked from the Days grid by mouse (a fresh save, so the Party Problem plays first) | `tools/autoplay_check.sh --save=/abs/s.json --via-days --mouse --pick=marco` | ~20 s |
 | **(cases)** Days 6 to 13, the case files (history, otoscopy, tymp, audiometry, the call; Day 10 also the retest; Day 12 the shadow curve; Day 13 the masking dilemma and Hoot's lent inserts), keys or mouse only | `tools/autoplay_check.sh --day=6` (or 7 to 13) / add `--mouse`; Quick visit off: add `--full`; inserts owned (Day 10: the wax keeps headphones; Day 13: no loan): add `--upgrades=insert_earphones` | ~30 s each (Day 10 ~45 s) |
 | **(Day 14)** The fitting (Gus's style pick, the probe tube, the real-ear target match, Hoot's left ear, the loud-sound check, the dishes payoff, the counselling), keys or mouse only; the result's `fitting` report has each band's error, moves and par, and the probe, loud and counsel slips | `tools/autoplay_check.sh --day=14` / add `--mouse` | ~60 s (mouse ~2.5 min) |
+| **(demo)** The career-fair demo (docs/DEMO.md): the Play-only title, Gus's short visit, the target match, "Next visitor" back to the title; the result's `demo` report has the medals and each band's error | `tools/autoplay_check.sh --demo` / add `--mouse --seed=3`; rendered: `tools/shots.sh /abs/out/dir --demo` | ~25 s (mouse ~50 s) |
 | **(cases)** A case picked from the Days grid by mouse | `tools/autoplay_check.sh --save=/abs/s.json --via-days --mouse --pick=marina` (or rocco, dash, ginger, barnaby, skye, morgan, bev) | ~30 s |
 | **(cases)** `docs/CASE_SCRIPTS.md` matches the case JSON (regenerate it: drop `--check`; `tools/run_tests.sh` runs the check too) | `python3 tools/case_scripts.py --check` | ~1 s |
 | **(freestyle)** One walk-in from the waiting room, keys or mouse only (any `fs_` id from `FsData.CASE_IDS`); Quick visit off: add `--full` | `tools/autoplay_check.sh --scene=res://story/freestyle/waiting_room.tscn --freestyle=fs_penny` / add `--mouse` | ~60 s |
@@ -145,6 +146,7 @@ Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `ri
 | `--via-days` | **(v3)** with `--autoplay`: start from the title's Days card (`--pick=`, `--expect-days=`, `--expect-suggested=`; with `--mouse` the bot scrolls the grid with the wheel; see CONTRACTS.md §7.1) |
 | `--freestyle=<id>` | **(freestyle)** the walk-in to play (the waiting room's pick and the runner's case; CONTRACTS.md §12) |
 | `--via-freestyle` | **(freestyle)** with `--autoplay`: start from the title's Freestyle button |
+| `--demo` | **(demo)** the career-fair demo (docs/DEMO.md): its own save `user://demo_save.json`, the Play-only title, quick visit always on. On the web: `?demo` in the page's address |
 
 Scenes with a `demo_start()` for `--scene`:
 - `res://ui/audiometer/audiometer_screen.tscn`: a coached right-ear test of Gus;
