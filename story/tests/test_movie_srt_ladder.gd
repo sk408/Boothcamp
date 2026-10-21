@@ -504,7 +504,7 @@ func test_srt_ladder_ladder_is_the_games_steps() -> void:
 
 ## Agreement within 6 dB (the game's own band, AGREE_GOOD_DB, as beat 7b and the paper grade it); better
 ## words than beeps (poor) re-instructed and rechecked until they agree, kindly; worse words (poor) mean
-## checking the instructions and the language.
+## checking the instructions, the language and the word scores.
 func test_srt_ladder_agreement_is_speech_rules() -> void:
 	var a := _data("agree")
 	var within := int(a["within"])
@@ -524,4 +524,4 @@ func test_srt_ladder_agreement_is_speech_rules() -> void:
 	assert_eq(SpeechRules.agreement(int(w["srt"]), float(w["pta"])), &"poor", "much worse: poor agreement")
 	var caps: Array = _caps("mismatch")
 	assert_true(String(caps[0]).contains("re-instruct") and String(caps[0]).contains("recheck") and String(caps[0]).contains("Never accuse"), "kindly, never accuse: %s" % caps[0])
-	assert_true(String(caps[1]).contains("instructions") and String(caps[1]).contains("language"), "instructions and language: %s" % caps[1])
+	assert_true(String(caps[1]).contains("instructions") and String(caps[1]).contains("language") and String(caps[1]).contains("word scores"), "instructions, language and word scores: %s" % caps[1])
