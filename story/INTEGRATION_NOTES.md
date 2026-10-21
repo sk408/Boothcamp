@@ -368,3 +368,8 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **tools/export_win.sh**: the delivery zip also carries `BoothCamp-Demo.cmd` (from `tools/booth/`). Steve's
   build folder needs it next to `BoothCamp.exe` to start the demo with a double-click.
 - **No new data files** (.gd, .tscn and a .cmd outside the export), so the Web preset needs nothing.
+- **(demo polish)** **daily_decibel.gd** (additive): a summary with `demo: true` hides the coins and the shop (B buys
+  nothing) and moves the WANTED ad to the bottom row. **title_screen.gd** (additive): in demo mode (not under
+  autoplay) the title adds `story/demo_attract.gd` and starts it after `attract_after()` seconds with nobody there
+  (`ATTRACT_S` 30, `--attract-after=N`), hiding the menu and the notice; a key, click or mouse movement ends it and the
+  notice shows. CONTRACTS.md §14.

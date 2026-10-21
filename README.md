@@ -122,9 +122,10 @@ For a booth: double-click `BoothCamp-Demo.cmd` next to the exe (or start `BoothC
 on the web page, add `?demo` to the address). The title is one **Play** button, and the visit is
 Grandpa Gus in about seven minutes: one question, the sesame seed, the earphones, a few beeps,
 the chart, then his hearing aids matched until Doris's "dishes" comes through. The paper's
-**Next visitor** button wipes the visitor for the next one; a visitor who walks off is reset
-after two minutes. The demo keeps its own save, so it never touches anyone's game.
-`docs/DEMO.md` has the details.
+**Next visitor** button wipes the visitor for the next one (its paper has no Decibucks or shop);
+a visitor who walks off is reset after two minutes. With nobody at the title for 30 seconds, Hoot
+and Gus play an attract loop until someone presses a key or clicks. The demo keeps its own save, so
+it never touches anyone's game. `docs/DEMO.md` has the details.
 
 ## How to play
 
@@ -373,5 +374,5 @@ The designs are in `docs/`: `CHAPTER2.md` to `CHAPTER5.md` and `SPEECH.md` (Days
 - Gus's follow-up visit: fine-tuning after his first weeks with the aids.
 - Real recorded voices for the speech tests (the words are on-screen text with a quiet murmur
   for now).
-- A Hoot movie for Day 13's masking dilemma, and an attract loop for the career-fair demo.
+- A Hoot movie for Day 13's masking dilemma.
 - More upgrades for the clinic, more walk-ins for Freestyle and more arcade cabinets.

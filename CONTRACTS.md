@@ -1065,6 +1065,7 @@ New kinds go through `world/INTEGRATION_NOTES.md`.
 | `--keep-save` **(v3, integrator)** | with `--autoplay`: keep the save instead of resetting it (chain Day 1 then Day 2 with the same `--save=`) |
 | `--upgrades=a,b` **(polish)** | own these shop items for this run (e.g. `insert_earphones`), after the save reset |
 | `--demo` **(demo)** | the career-fair demo (§14, docs/DEMO.md); on the web, `?demo` in the page's address |
+| `--attract-after=N` **(demo)** | with `--demo`: the title's attract loop starts after N seconds with nobody there (default 30) |
 | `--via-days` **(v3, integrator)** | with `--autoplay`: start from the title's Days card with real input (clicks with `--mouse`, else ui_* keys) instead of Play. Options: `--pick=<chapter id>` (default `next`; any day on any save, nothing is locked), `--expect-days=gus,bonnie` (the listed days must be on the grid, in that order; other days may sit between or after them), **(polish)** `--expect-suggested=<id>` (the card with the UP NEXT badge). With `--mouse` the bot rolls the wheel over the grid until the card is in view. The result gets a `days` report; a failed expectation is a problem (exit 4) |
 
 ### §7.2 What the bot relies on (must keep working)
@@ -3852,7 +3853,20 @@ otoscopy, earphones, match. The results are the audiometry results plus `fitting
 to the title. An inner `Watchdog` (PROCESS_MODE_ALWAYS, real time) sends the demo to the title after
 `IDLE_RESET_S` (120 s) without input; never under autoplay.
 
+**The paper** (`story/daily_decibel.gd`, additive): a summary with `demo: true` hides the Decibucks and the shop
+(B buys nothing) and moves the WANTED ad into their place on the bottom row, next to the buttons.
+
+**The attract loop** (`story/demo_attract.gd`, `DemoAttract`, a Control the title adds in demo mode, never under
+autoplay): after `TitleScreen.attract_after()` seconds (`ATTRACT_S` = 30, or `--attract-after=N`) with nobody at the
+title (menu or notice state, not paused), `start()` fades in over the clinic, hiding the menu and the notice: Hoot
+(waving) and Gus, Hoot's `LINES` one every `LINE_S` (4.5 s) round and round, `PROMPT` ("Press a key or click to
+play") pulsing, and the tagline; the safety footer stays uncovered. Any key, click or mouse movement of
+`MOTION_MIN_PX` (6 screen px) or more ends it (the event is consumed) and emits `dismissed`; the title then shows the
+safety notice. Silent; reduced motion calms the bob, wave and pulse.
+
 **Bot.** `_check_demo` (when the summary has `demo: true`): the four medals, each band within 5 dB, no next day,
 "Next visitor"; the ears are checked as usual. **Tests.** `story/tests/test_demo.gd`: the flag and the web address
 (only `WEB_FLAGS`), the visitor reset keeping settings, the Play-only title, the scene and plans, the paper, Hoot's
-lines at 18 words or fewer, and `montage_after` (a montage after two stamps, no x8, every hole stamped).
+lines at 18 words or fewer, and `montage_after` (a montage after two stamps, no x8, every hole stamped);
+**(demo polish)** the paper without Decibucks or shop, the attract loop (starts with nobody there, a mouse nudge
+leaves it, a key ends it with the notice) and no attract loop outside demo mode or under autoplay.
