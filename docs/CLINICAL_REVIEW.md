@@ -160,7 +160,7 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **C8. The tinnitus lesson.** [Steve decided] **Done** (PR #16) Hoot already says pulsed beeps stand out from a ringing or roaring ear (`story/cases/noise_notch.json:83`, `story/cases/menieres.json:99`), but nothing in play changes. With E7 (pulsed is the default) and E8 (tinnitus affects steady tones), Hoot can explain on Rocco's day why the beep pulses, and that some clinics use a warble tone instead (BSA prefers warble); Marina's day keeps a short version.
 
-**C9. New advanced case: a masking dilemma.** [Steve decided] A case near the end of the days with a large conductive loss in both ears, where the starting noise already risks overmasking. It needs E9 first.
+**C9. New advanced case: a masking dilemma.** [Steve decided] **Done** (PR #19: Day 13, Bev Bingham) A case near the end of the days with a large conductive loss in both ears, where the starting noise already risks overmasking. It needs E9 first.
 
 **C10. New advanced case: masked air.** [Steve decided] **Done** (PR #18: Day 12, Morgan Gale and the shadow curve) A case where masked air really changes the chart: one very poor or dead ear with a lower real interaural attenuation, so unmasked air shows a shadow of the good ear and masking reveals the true threshold. It can be the same patient as C9 or a second one.
 
