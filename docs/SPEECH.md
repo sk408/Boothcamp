@@ -120,29 +120,85 @@ reported sudden loss still goes to a doctor before any hearing aid.
 
 One-syllable words at a level **loud enough for every sound, never uncomfortable** (the game's rule: PTA + 35, at
 least 55). The score is the percentage repeated correctly: when speech is loud enough, how clearly does it come
-through?
+through? The design is `docs/CHAPTER4.md`; the API is `CONTRACTS.md` §9.10-§9.24. The clinical review's amendments
+(A1-A4, `docs/CLINICAL_REVIEW.md`) are the rules below: the predicted minimum, the rollover index, the critical
+difference and the noise's air-bone gap.
 
 | Rule | Value | Constant / function |
 |---|---|---|
-| Level | PTA + 35 rounded to 5 dB, at least 55 dB HL | `WRS_ABOVE_PTA_DB` 35, `WRS_MIN_DB` 55, `wrs_level` |
-| Acceptable level | PTA + 30 to PTA + 40 (at least 50) | `wrs_level_ok` |
-| List | 25 words, each worth 4 % | `WRS_WORDS` 25 |
-| Scoring | whole word only; a rhyme ("heap" for "sheep") is wrong | `SpeechSession.score` |
-| Bands | 90+ excellent, 78-89 good, 66-77 fair, 54-65 poor, below 54 very poor | `WRS_BANDS`, `wrs_band` |
-| Ear difference | the two ears' best scores differ by more than chance: the 95 % critical difference for the list length (arcsine-transformed, Thornton & Raffin 1978). On 25 words a 44 % score is the same as 20-68 %; 96 vs 52 differ, 96 vs 88 do not | `WRS_CRIT_Z` 1.96, `wrs_differ`, `wrs_same_range` (Day 3's fixed `WRS_ASYMMETRY_PCT` 20 is no longer used) |
-| Worse than the audiogram predicts | the ear's best score is below the minimum its PTA predicts, interpolated between the rows PTA 0: 88, 20: 80, 30: 72, 40: 60, 50: 48, 60: 36, 70: 24, 80: 12 (a game approximation of the published 95 % lower limits; Steve checks it). Lines say "her tones predict at least {min}%" | `WRS_PREDICTED_MIN_25`, `wrs_predicted_min_interp` (the old step table `WRS_PREDICTED_MIN` is no longer used) |
-| Rollover | PBmax is the best score, PBmin the lowest score at a level ABOVE PBmax's; rollover when the index (PBmax - PBmin) / PBmax is 0.45 or more (a lower score at a softer level never counts) | `ROLLOVER_INDEX_CUTOFF` 0.45, `wrs_rollover`, `rollover_index_of` (Day 3's `is_rollover` and `rollover_index` are no longer used) |
-| The louder list | 20 dB above the comfortable list (15-25 accepted), never past 100 | `WRS_LOUDER_DB` 20, `wrs_louder_level`, `wrs_louder_ok` |
-| Speech masking | needed when the level - 40 (phones) reaches the other ear's best bone, taken per frequency over 500-4000 Hz (masked bone, else unmasked bone, else air). Noise at level - 20 plus that ear's largest air-bone gap, clamped to [level - IA, the test ear's best bone + IA - 5] so it never crosses back | `nontest_best_bone`, `ear_best_bone`, `wrs_mask_level`, `wrs_mask_capped` |
+| Level | PTA + 35 rounded to 5 dB, at least 55 dB HL (PTA 15: 55; PTA 40: 75) | `WRS_ABOVE_PTA_DB` 35, `WRS_MIN_DB` 55, `wrs_level` |
+| Acceptable level | PTA + 30 to PTA + 40, at least 50, always holding the textbook level (PTA 15: 50-60; PTA 40: 70-80) | `WRS_WINDOW_DB` 5, `WRS_MIN_OK_DB` 50, `wrs_level_ok`, `wrs_window` |
+| One level, one noise | the level and the noise lock at a list's first word; a word score belongs to a single level | `WrsTest.can_set_level`, `can_mask` |
+| List | 25 words, each worth 4 %, played in file order; a list id is used once a visit, and each ear's lists come in play order (`words_1`, `words_2`, then `words_3`, `words_4`) | `WRS_WORDS` 25, `WRS_LISTS` |
+| No STORE | the list ends itself after its 25th score | |
+| Scoring | whole word only: a rhyme ("lock" for "sock"), a plural ("Socks?"), another word and silence are misses; the word inside a chatty line ("Sock! Like a good downbeat.") and a self-correction's final answer ("Lock... no, SOCK!") are hits | `WrsTest.score`, `WRS_SELF_CORRECT_COUNTS` |
+| Bands | 90+ excellent, 78-89 good, 66-77 fair, 54-65 poor, below 54 very poor | `WRS_BANDS`, `wrs_band`, `WRS_BAND_TITLES` |
+| Counting | a list counts when it started inside the window, with noise exactly when the rule needs it (a louder list: also 15-25 dB above its comfortable list), and no later list redoes it. Only counted lists give the ear's score and its flags | the list's `counts`, `redone_by` |
+| (A1) Worse than the audiogram predicts | the ear's best score is below the minimum its PTA predicts, interpolated between the rows PTA 0: 88, 20: 80, 30: 72, 40: 60, 50: 48, 60: 36, 70: 24, 80: 12 and clamped outside them (a game approximation of the published 95 % lower limits for 25 words, anchored on 48 % at a PTA of 50; Steve checks it). Lines and the paper say "her tones predict at least {min}%" and never credit a number to a paper | `WRS_PREDICTED_MIN_25`, `wrs_predicted_min_interp` (15 -> 82, 40 -> 60, 41.7 -> 58) |
+| (A2) Rollover | one extra list 20 dB louder on the poorer ear. PBmax is the ear's best counted score; PBmin the lowest counted score at a level ABOVE PBmax's (none: no rollover; a lower score at a softer level never counts); rollover when the index (PBmax - PBmin) / PBmax is 0.45 or more. A 20-point drop is NOT the rule: 52 then 40 is an index of 0.23, no rollover; 52 then 12 is 0.77 | `ROLLOVER_INDEX_CUTOFF` 0.45, `wrs_rollover(lists)`, `rollover_index_of` |
+| The louder list | 20 dB above the counted comfortable list (15-25 accepted), never past 100; its noise stays on, locked | `WRS_LOUDER_DB` 20, `WRS_LOUDER_TOLERANCE_DB` 5, `wrs_louder_level`, `wrs_louder_ok` |
+| (A3) Ear difference | the two ears' best scores are too far apart for chance on lists that long: with theta = 2 asin(sqrt(p)), they differ when the thetas are more than 1.96 x sqrt(1/n_a + 1/n_b) apart (the 95 % critical difference of Thornton & Raffin, 1978). On 25 words a 44 % score is the same as 20-68 % and differs from 16 and 72; 96 vs 52 differ, 96 vs 88 and 52 vs 40 do not | `WRS_CRIT_Z` 1.96, `wrs_differ`, `wrs_same_range` |
+| The verdicts wait for the best | "below predicted" and the ear difference use the ear's best and are said only once it is final: its louder list is done, or the comfortable score already reaches the prediction. The ear difference needs both ears final | the sheet's `best_final` (D13) |
+| Speech masking (need) | needed when the level - IA (40 phones, 55 inserts) reaches the other ear's best bone, taken per frequency over 500-4000 Hz: masked bone, else unmasked bone, else air (an unmasked bone value never stands in for an ear it was not measuring) | `SPEECH_IA_DB`, `ear_best_bone`, `nontest_best_bone`, `speech_masking_needed` |
+| (A4) Speech masking (level) | level - 20 plus the other ear's largest air-bone gap at 500-4000 Hz, clamped to [level - IA, the test ear's best bone + IA - 5], so it covers the crossed words and never crosses back to the test ear. The ceiling wins when the two meet. Hoot names a capped noise ("Noise 70, not 75: ...") | `wrs_mask_level(level, test_best_bone, transducer, nontest_abg)`, `wrs_mask_capped`, `nontest_largest_abg` |
+| The referral | refer (a doctor's check soon, before any fitting) when the ears differ beyond chance, rollover is found, or exactly one ear is below its prediction. Word scores alone never mean a doctor today | `wrs_referral` (D27), `speech.wrs_summary.referral` |
+| Chat level | the dial's "chatting level" mark, where the tea demo plays | `CHAT_DB` 50 |
 
-**The patient model.** At level L, an ear repeats a fraction `p(L) = wrs_max x A(L) - rollover(L)` of the words:
-`A(L) = logistic((L - (SRT_true + 12)) / 5)` (audibility of the whole word), `wrs_max` from `speech.wrs_max[ear]`
-or predicted from the audiogram, rollover from `speech.rollover[ear] = {after, drop_per_10db}`. The number right in a
-list is `round(p x N)` give or take one, so a clean test lands on the patient's real score. Which words are missed
-follows the **speech banana**: each word's key sound (the one its rhymes differ in) has a frequency and a level
-below the overall speech level (`SOUND_CUES`), and words whose key sound falls below the patient's threshold
-are missed first (a high-frequency loss loses s, f, th, t and k first: "sit" becomes "fit"). A
-`speech.neural[ear]` ear smears words at random instead, whatever the audiogram says.
+The SRT rules (section 3) keep their own masking need (`nontest_best_threshold`), so Day 3 is unchanged. Day 3's
+older WRS helpers stay in `SpeechRules` for Day 3's tests only, and no day grades with them: `WRS_ASYMMETRY_PCT` and
+`wrs_asymmetric` (a fixed 20 points), `WRS_PREDICTED_MIN` and `wrs_predicted_min` (the old step table),
+`ROLLOVER_DROP_PCT`, `is_rollover` and `rollover_index` (a raw drop), and `wrs_below_predicted`.
+
+**The patient model** (`core/speech/models/wrs_model.gd`, behind `SpeechSim`'s WRS facade). At level L an ear's
+chance of repeating a word is
+
+```
+p_test  = wrs_max x A(L, srt_eff) - rollover_drop(L)        srt_eff = max(SRT, noise - real IA)
+p_cross = the same for the other cochlea at L - real IA      0 once the noise reaches that crossed level
+p       = 1 - (1 - p_test) x (1 - p_cross)
+```
+
+- `A(L, srt) = logistic((L - (srt + 12)) / 5)` is the whole word's audibility (`wrs_audibility`,
+  `WRS_AUDIBLE_ABOVE_SRT_DB` 12, `WRS_AUDIBLE_SLOPE_DB` 5). `wrs_max` is `speech.wrs_max[ear]`, else predicted from the
+  true audiogram (`predicted_wrs_max`). `rollover_drop` comes from `speech.rollover[ear] = {after, drop_per_10db}`:
+  `max(0, L - after) / 10 x drop_per_10db %` (Nora: after 75, 20 per 10 dB, so 0.40 at 95).
+- The noise term in `srt_eff` only matters for overmasking (noise loud enough to cross back to the test ear).
+- **The deal.** A list is dealt whole at its first word (D4): `k = round(p x 25) + j`, one `j` from [-1, 0, 0, +1] per
+  list (`WRS_DEAL_JITTER`, `wrs_deal_count`), for the test ear alone and for either ear. So a clean list lands on the
+  patient's real score give or take one word, and a seed replays it exactly.
+- **Which words are missed** follows the **speech banana**: each word's key sound (the one its rhymes differ in) has a
+  frequency and a level below the overall speech level (`SOUND_CUES`). A cochlear ear misses first the words whose
+  key sound sits lowest under its TRUE thresholds (`wrs_miss_weight`: `WRS_MISS_SCALE_DB` 4, floor `WRS_MISS_FLOOR`
+  0.05), so a high-pitch loss loses s, f and th words first. A `speech.neural[ear]` ear misses at random, whatever the
+  audiogram says: she can miss a word whose every sound reached her.
+- **What she says on a miss.** A cochlear miss is a rhyme (a foil, 80 %) or silence (20 %); a neural miss is a foil
+  (60 %), silence (25 %) or another word of the list (15 %) (`WRS_MISS_COCHLEAR`, `WRS_MISS_NEURAL`). A word that is
+  too soft gets more silences.
+- **Answer styles** (D20, the player's words only; they change what she says, never the deal or the score): a
+  chatty hit, about 1 hit in 3 (`WRS_CHATTY_SHARE` 0.33): the word, then a short line of `WRS_CHATTY_MAX_WORDS` 6 or
+  fewer; a plural trap once per list on the first dealt miss that has a plural ("Socks?": a miss); a self-correction
+  once on a plan that asks for it ("Lock... no, SOCK!": a hit).
+- **Plan helpers.** `ensure_audible_miss_by` puts one dealt miss on a fully audible word in the first places (on the
+  measured thresholds the lens uses; `audible_target`), and `aside_by` lands an item's in-joke foil as a miss
+  (`aside_target`, never the audible word). Neither changes the count.
+
+**Hearing through the patient's ears (the lens).** "<NAME>-VISION" draws each spelling chunk of the next word at
+`lens_alpha(margin) = lerp(1.0, 0.15, clamp(-margin / 15, 0, 1))` (`LENS_FADE_DB` 15, `LENS_MIN_ALPHA` 0.15), where the
+margin is `sound_margin(sound, dial, measured thresholds)`: below 0 the sound is lost (dotted outline), 0 to 3 dB
+"only just" (dotted underline), 3 dB or more clear (`WRS_AUDIBLE_MARGIN_DB` 3, `word_min_margin`,
+`word_fully_audible`). It reads the MEASURED thresholds (interpolated, `interp_threshold`), never the truth, so it
+shows only what the player could know, and it never hides the only copy of the word.
+
+**The Ghost on the SPEECH screen.** On a coached list that needs noise with the noise off, the Ghost lurks at
+`ghost_alpha = clamp(0.2 + (level - IA - other ear's best bone) / 25, 0.2, 1)` (`GHOST_ALPHA_FLOOR` 0.2,
+`GHOST_ALPHA_SPAN_DB` 25): faint from the first level that needs noise, bold 20 dB above it (Nora's left: 50, then
+70), and 0 where words cannot cross. On a solo list it never
+lurks; it pops out ("BOO!") only when the player presents unmasked, with a two-press confirm.
+
+**Golf and the sheets.** Each list the player runs is a golf hole (section 6): a clean solo list set up unprompted is
+a birdie (`LIST_TEE_BONUS` 2), a clean coached list is par, a confirmed wrong set-up adds `LIST_CONFIRM_SLIP` 3. One
+sheet per ear (`speech.wrs.<ear>`) holds every list on that ear (the comfortable list, a redo, the louder list), and
+`speech.wrs_summary` holds the bests, the flags and the referral (`CONTRACTS.md` §9.15).
 
 ## 5. The Party Noise Test: speech in babble (Day 5)
 
@@ -223,12 +279,32 @@ without any of it.
 | `srt_store_no_bracket` | stored with no level below scoring under half |
 | `srt_store_wrong_level` | stored a level that is not the lowest one with 2+ right and half or more |
 | `misscored` | the player scored a word or key word differently from what the patient said |
-| `wrs_level` | the first word of a list is outside the comfortable window |
+| `wrs_level` | the first word of a comfortable word list is outside the window (`wrs_level_ok`) |
+| `rollover_level` | the first word of a louder word list is not 15-25 dB above its comfortable list (or past 100) |
+| `wrs_unmasked` | a word list's first word goes out with no noise in the other ear when the rule needs it |
 | `sin_level` | the party test is not at its level |
 | `speech_textbook` | a by-the-book step or score (combo +1) |
 | `srt_low_start` | clean: a first word at least 10 dB below the PTA with plan `low_start_ok` (combo +1, 10 points, Hoot's line in `message`) |
+| `wrs_good_start` | clean: a word list's first word inside its window (a louder list: 15-25 dB above the comfortable one; combo +1, 10 points) |
+| `wrs_mask_ok` | clean: the noise was on before the first word of a list that needs it (combo +1, 20 points) |
 | `srt_stored` / `wrs_done` / `sin_done` | observations at the end of a measurement |
 | `half_word` | the patient gave half a word ("Lots of half-words can be a sign of a non-organic loss.") |
 | `cross_heard_speech` | unmasked: the other ear repeated the word |
+| `wrs_verdict` | a word list made the ear's best final: `below_predicted` or `best_ok`, plus the ear difference when it is new (`lines`) |
+| `wrs_below_predicted` | the ear's final best is below its predicted minimum (A1) |
+| `wrs_asymmetry` | both ears' bests are final and too far apart for chance (A3) |
+| `rollover_found` | the louder list made the ear's rollover index reach 0.45 (A2) |
+| `wrs_mask_capped` | the word-list noise was clamped to the test ear's ceiling (`mask`, `naive`) |
+| `ghost_lurk` / `boo` | the lurking Ghost showed on a coached list / the BOO chip on an unmasked solo PRESENT (once per list) |
+| `ghost_word` | a word list's word was answered by the other cochlea (once per list; `cross_heard_speech` once per ear) |
+| `audible_miss` | plan `audible_stamp`: a word whose every sound reached the patient was missed (once per list) |
+| `wrs_level_locked` / `wrs_noise_locked` | the player tried to change the level or the noise after a list's first word |
+| `wrs_no_store` / `wrs_list_reused` / `score_first` | STORE on a word list; a list id used twice in a visit (refused); PRESENT before the last word was scored |
+| `call_it` | a Call it guess (`word`, `guess`, `outcome`, `moment`): unscored |
+| `aside` | a non-blocking side line (an item's in-joke, the noise, the lens, the loud list), once per visit |
+| `birdie` / `par` / `bogey` ... | a finished player word list's golf name (`ClinicRules.fair_golf`; no eagles on lists) (`golf_strokes`, `golf_par`, `slips`, `tee_bonus`, `points`) |
 
-Each error, and `srt_low_start`, carries a Hoot `message` of 18 words or fewer (`SpeechSession.TIPS`).
+Each error, and `srt_low_start`, carries a Hoot `message` of 18 words or fewer (`SpeechSession.TIPS`). The word-list
+kinds take theirs from `WrsTest.TIPS`, `MISSCORED_WRS` (a misscore, by what the patient said) and `VERDICTS`
+(`wrs_done` and the verdicts); their data adds `list_id` and `list_n`. The word-list errors and verdicts are
+Day 4's only (`CONTRACTS.md` §9.13.6).
