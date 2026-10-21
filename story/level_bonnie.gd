@@ -351,15 +351,19 @@ func _air() -> void:
 	hud.call("set_step", &"air")
 	# a career-fair player may start here (Unlock all days): no "like yesterday"
 	var veteran := Game.is_chapter_done("gus")
-	# (E2) the first ear keeps its 1 kHz retest (Hoot does it in his turn); the left, second, owes none
-	await _test("right", true, {"test": "ac", "hoot_turn_after": 1, "done_title": "RIGHT AIR DONE!",
-		"intro": "Air first, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
-			else "New trainee? Air first: I'll coach your first beep, then whizz through the rest!",
-		"intro_full": "Air first: her whole right ear is yours. I'll coach the first beep."})
-	# quick visit: the left ear is a few-second montage (Hoot "did it while you chatted")
-	await _test("left", false, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true, "done_title": "LEFT AIR DONE!",
-		"intro": "I did her left while you chatted. Normal! Watch the stamps fly in.",
-		"intro_full": "Left ear: all yours this time! Same dance as the right."})
+	# (D2-2) better ear first, as for bone: her left (she calls it perfect), then her right.
+	# Quick visit: the left is Hoot's few-second montage, which waives its 1 kHz retest (taught on
+	# Day 1), so the right, second, owes none (E2); the player stamps the right's 1k, coached, and
+	# Hoot runs the rest. Quick visit off: the player runs both, coached on the left, whose retest
+	# is then owed as usual.
+	var quick := _quick()
+	await _test("left", not quick, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true, "done_title": "LEFT AIR DONE!",
+		"intro": "Better ear first: her left. I did it while you chatted. Normal! Watch the stamps fly in.",
+		"intro_full": "Better ear first: her left, the one she calls perfect. I'll coach the first beep."})
+	await _test("right", quick, {"test": "ac", "hoot_turn_after": 1, "done_title": "RIGHT AIR DONE!",
+		"intro": "Now her right, like yesterday. Stamp 1k, then I'll whizz through the rest!" if veteran
+			else "Now her right! I'll coach your first beep, then whizz through the rest.",
+		"intro_full": "Now her right: all yours. Same dance as the left."})
 	hud.call("complete_step", &"air")
 	_close_screen(cam)
 	clinic.call("focus_camera", &"face", 0.6)

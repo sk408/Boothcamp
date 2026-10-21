@@ -126,7 +126,7 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **D2-1. Masking rule lines.** **Done** with E5 (8231167): "Gap of 10 or more? Mask the bone!"
 
-**D2-2. Air on the poorer ear first.** [Misleading] Day 2 tests air on Bonnie's poorer right ear first (`story/level_bonnie.gd:354-361`), although she says her left is perfect and the same day teaches better ear first for bone. Swap the two air tests: Hoot's montage does the left ear, then the player gets the coached right ear. (ASHA 2005; BSA 2018, 6.4.)
+**D2-2. Air on the poorer ear first.** [Misleading] **Done** (Hoot's montage does her left, then the player gets the coached right) Day 2 tests air on Bonnie's poorer right ear first (`story/level_bonnie.gd:354-361`), although she says her left is perfect and the same day teaches better ear first for bone. Swap the two air tests: Hoot's montage does the left ear, then the player gets the coached right ear. (ASHA 2005; BSA 2018, 6.4.)
 
 **D2-3. Noise headline.** [Misleading] **Done** ("NOISE MOSTLY IN THE OTHER EAR, CONFIRMS OWL") The Daily Decibel C headline "NOISE MOSTLY IN THE RIGHT EAR, CONFIRMS OWL" (`story/daily_decibel.gd:41`) puts the noise in the test ear. "NOISE MOSTLY IN THE LEFT EAR" or "IN THE OTHER EAR" makes the joke teach the rule.
 

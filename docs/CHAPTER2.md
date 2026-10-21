@@ -104,8 +104,8 @@ locked, his stamps marked "hoot", not scored for golf). Every blocking beat emit
 | 3 | `otoscopy` | A quick look: canals clear, eardrums normal. | dialogue | 0:15 |
 | 4 | `instructions` | "Press for every beep, even faint ones. Ignore the shhh noise." | choice | 0:30 |
 | 5 | `earphones` | Day 1's drag game, with "HER RIGHT" labels. Medal `earphones`. | earphones_place | 0:30 |
-| 6 | `audiometry` {right, ac} | Player stamps 1 kHz (coached), Hoot runs the rest. | (AudiOtron) | 1:10 |
-| 6b | `audiometry` {left, ac} | The left-ear montage. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 0:15 |
+| 6 | `audiometry` {left, ac} | Better ear first (clinical review D2-2): the left-ear montage. | (AudiOtron) | 0:15 |
+| 6b | `audiometry` {right, ac} | Player stamps 1 kHz (coached), Hoot runs the rest. "Right ear needs about 50 dB, left is normal. But WHERE is it stuck?" | (AudiOtron) | 1:10 |
 | **7** | **`bc_placement` {ear: left}** | **Earphones off. "Meet the bone buzzer! Better ear first: unmasked bone hears with the better cochlea anyway." "So: her LEFT." The placement game on her LEFT profile (§6). The 3D oscillator goes on her left mastoid.** | **bc_placement** (`mastoid_target_left`) | **0:45** |
 | **8** | **`audiometry` {left, bc}** | **Unmasked bone on the LEFT, coached: press B, stamp 1k; Hoot does 2k, 4k, 500 (`>` marks). (polish) Plan `masking_deck: false`: the AIR / BONE route buttons but no MASKING group yet. Optional 250 Hz bonus hole (the tickle, also without the masking group). Then: "Left bone 0, left air 5: side by side." and THE RULE: "unmasked bone tells you about the BETTER cochlea, wherever the buzzer sits."** | (AudiOtron), choice | **1:40** |
 | **9** | **`ghost_demo` {ear: right}** | **"Her right air needs 50. Is her RIGHT cochlea fine too? Unmasked bone can't tell us." "Watch what happens if we try anyway: swap the buzzer to her RIGHT mastoid." A quick second placement ("Swap sides!") on her RIGHT mastoid. ONE unmasked tone at 1 kHz, 5 dB above her measured left bone (every control but TONE locked; TONE wiggles "Hold Space!" if you wait, Hoot presses it after twice that). Her LEFT cochlea answers: the Ghost flies, "Bone 10, air 50? BOO!" (the level she really answered at). Nothing is stored. "Was that her right cochlea, or the LEFT one? Can't tell!" Then the rule with her numbers: "Right air 50, unmasked bone 5: a 45 dB gap. Gap of 10 or more? Mask the bone!"** | **bc_placement** (quick), (AudiOtron `demo_tone`) | **0:50** |
@@ -377,9 +377,10 @@ hidden on Day 1. Key chips follow `Game.key_label()`.
 
 ## 15. Polish pass (after the fun, audiology and bug reviews)
 
-- **Pacing.** Right air: Hoot coaches one beep, then runs the rest, the 1 kHz retest included (clinical
-  review E2: the first ear keeps it). Left air: a few-second stamp montage (`montage`, quick visit only). With Quick
-  visit off the player tests everything. The bone and masking sheets are always the player's.
+- **Pacing.** Better ear first (clinical review D2-2). Left air: a few-second stamp montage (`montage`, quick visit
+  only), which waives the left's 1 kHz retest, so the right, second, owes none (E2). Right air: Hoot coaches one
+  beep, then runs the rest. With Quick visit off the player tests everything, coached on the left, and the left
+  keeps its retest. The bone and masking sheets are always the player's.
 - **Masked air after masked bone.** Clinics often mask air first; the level says so in one line. With the
   insert earphones (55 dB rule IA) Bonnie's right air cannot reach her left cochlea, so the level skips
   masked air with two Hoot lines, and the AudiOtron finishes an empty goal sheet at once (no soft-lock).
