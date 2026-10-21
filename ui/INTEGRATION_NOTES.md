@@ -163,3 +163,6 @@ optional and additive:
   Morgan's deaf ear answered unmasked (the shadow) but gave no response masked, and the line was joining the
   arrows. Only a masked no-response mark changes anything, so Days 1-11 and Freestyle draw as before. The shadow
   itself is drawn by the case board, not the audiogram (the audiogram still hides an unmasked O under a masked mark).
+- **(C13, done, small) `SpeechScreen.run_hidden` names the patient.** Only `start_test` set the bubble's speaker, so a
+  hidden run before any `start_test` (Day 5's montage, the cases' words check) labelled the bubble "Mike says".
+  `run_hidden` now sets it from `patient.short_name()` too. Nothing else changes.

@@ -3644,6 +3644,11 @@ raises (so before any purple ? can show) it plays `on_dilemma`, then, with
 window with fewer than `PLATEAU_STEPS` safe raises; `CaseData.no_plateau_shows`); `reveal.plug` `stiff` (the board
 drops a padlocked stirrup into the gap, "STUCK!"); a `gap` reveal with `ear` `both` dims neither ear. After the masked
 tests, when Hoot stored a purple ?, he says `LevelCase.NO_ROOM`.
+**(Clinical review C13, A4)** `speech_check` (`{ears: ["right", "left"] (one or both, default both), after: script}`):
+after the tones and before the reveal, the HUD's Words step: Hoot's SRT and word score (`SpeechRules.WRS_LISTS` in order) on
+each ear, then one unaided Party Noise Test list in both ears, run off-screen (`SpeechScreen.run_hidden`, unscored);
+`LevelCase.speech_lines` / `speech_clues` turn the sheets into Hoot's two lines (`SPEECH_WORDS` or `SPEECH_WORD`,
+`SPEECH_NOISE`) and the cards `words` and `sin`. Used before a FIT call only (Rocco, Ginger).
 `CaseData.validate` type-checks every key before reading it (a broken file returns problems, never a script error),
 checks every script's speakers, Hoot emotes and props (`story/tests/test_cases.gd` checks reaction names against
 the clinic's `REACTIONS`), and the runner goes back to the title on any problem.
@@ -3758,6 +3763,8 @@ Masked bone starts from unmasked bone stamped on either mastoid; with none yet t
 first (no unmasked pre-run on the poorer side). Any test begun before the otoscope looked, bone included, is the
 "look first" slip. After the case's debrief, `debrief_extras()` adds Hoot's Carhart line (an ear with a
 middle-ear part whose truth has the notch, shown by the chart's masked bone) and, on every FIT, that a full fitting also checks words in quiet and in noise.
+(The case days' FITs now run the words check themselves, `speech_check` in section 11; freestyle's FS-13 can follow
+the same pattern: see story/INTEGRATION_NOTES.md.)
 
 **Tests.** `story/tests/test_freestyle.gd`: every walk-in is listed and validates, the call and the types of loss
 agree with the truth table (and survive any 5 dB wobble), "no aids needed" only for normal hearing, every walk-in

@@ -111,6 +111,10 @@
 	"after_audiometry": [
 		["Hoot", "Bone sits right on the air: no gap. Not the middle ear."]
 	],
+	"speech_check": {
+		"ears": ["right", "left"],
+		"after": [["Chip", "Words at a party? Buddy, I AM the party."]]
+	},
 	"reveal": {
 		"pattern": "cookie",
 		"ear": "both",
@@ -169,7 +173,7 @@
 	},
 	"payoff": [
 		["Hoot", "Hearing aids tuned for the middle pitches: right where her bite is."],
-		["Hoot", "A full fitting also checks words in each ear."],
+		["Hoot", "At the fitting we measure in her ear, then score words again with the aids on."],
 		{"do": "hearing_aids"},
 		{"react": "cheer"},
 		["Ginger", "Oh! I can hear the back row. Even the hecklers!"],

@@ -657,6 +657,11 @@ func test_validate_survives_broken_files() -> void:
 		func(c: Dictionary) -> void: c["lend_inserts"] = "yes",
 		func(c: Dictionary) -> void: c["on_dilemma"] = "x",
 		func(c: Dictionary) -> void: c["lend_inserts"] = true,
+		func(c: Dictionary) -> void: c["speech_check"] = ["right"],
+		func(c: Dictionary) -> void: c["speech_check"] = {"ears": []},
+		func(c: Dictionary) -> void: c["speech_check"] = {"ears": ["right", "right"]},
+		func(c: Dictionary) -> void: c["speech_check"] = {"ears": ["both"]},
+		func(c: Dictionary) -> void: c["speech_check"] = {"after": [["Nobody", "hi"]]},
 	]
 	for i in breaks.size():
 		var got := _wax_problems(breaks[i])
@@ -832,8 +837,45 @@ func test_hoot_lines_cover_the_retest_and_runner() -> void:
 	for w: String in ["retest.intro", "retest.otoscopy.lines", "retest.tymp.after", "retest.before.choose", "retest.payoff"]:
 		assert_true(wheres.has(w), "Hoot's %s lines are counted" % w)
 	for line: String in [LevelCase.NO_MASKED_AIR, LevelCase.MISMATCH, LevelCase.RETEST_NEUTRAL, LevelCase.BRIEFING,
-			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU, LevelCase.NO_ROOM, LevelCase.LEND_INSERTS]:
+			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU, LevelCase.NO_ROOM, LevelCase.LEND_INSERTS, LevelCase.SPEECH_INTRO]:
 		assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
+
+
+## (Clinical review C13, A4) The FIT cases check words before the call: Hoot's SRT and word score on
+## each ear, then a Party Noise Test list. Every other case is unchanged.
+func test_fit_cases_check_words_first() -> void:
+	for id: String in CaseData.chapter_case_ids():
+		var c := _case(id)
+		assert_eq(c.has("speech_check"), id in ["noise_notch", "cookie_bite"], "%s checks words" % id)
+		if c.has("speech_check"):
+			assert_eq(String(c["decision"]["answer"]), "fit", "%s: words come before a FIT call" % id)
+			assert_eq(CaseData.validate(c).size(), 0, id)
+
+
+## The speech check's lines and cards read the visit's speech sheets; every line fits Hoot's budget,
+## whatever the numbers, and none names the call.
+func test_speech_check_lines_and_cards() -> void:
+	for agree: String in ["good", "fair"]:
+		for pct: int in [100, 92, 76, 40, 0]:
+			for loss: float in [0.5, 5.5, 12.5, 25.5]:
+				var res := {"speech": {
+					"srt": {"right": {"agreement": agree}, "left": {"agreement": "good"}},
+					"wrs": {"right": {"pct": pct}, "left": {"pct": 88}},
+					"sin": {"both": {"snr_loss": loss}}}}
+				var lines := LevelCase.speech_lines(res, ["right", "left"])
+				assert_eq(lines.size(), 2, "words and noise")
+				for line: String in lines + LevelCase.speech_lines(res, ["left"]):
+					assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
+					for word: String in ["fit", "refer", "aid", "doctor"]:
+						assert_false(line.to_lower().contains(word), "%s: never hints at the call" % line)
+				assert_true(lines[0].contains("right %d%%" % pct), lines[0])
+				assert_true(lines[0].begins_with("SRTs match") == (agree == "good"), lines[0])
+				var cards := LevelCase.speech_clues(res, ["right", "left"])
+				assert_eq(cards.size(), 2)
+				assert_eq(String(cards[0]["text"]), "Words in quiet: R %d%%, L 88%%" % pct)
+				assert_true(String(cards[1]["text"]).begins_with("Party Noise Test: %s dB" % String.num(loss, 1)), String(cards[1]["text"]))
+	assert_eq(LevelCase.speech_lines({}, ["right", "left"]).size(), 0, "no sheets, no lines")
+	assert_eq(LevelCase.speech_clues({}, ["right", "left"]).size(), 0, "no sheets, no cards")
 
 
 func test_new_patients_get_portraits() -> void:
