@@ -42,6 +42,8 @@ const PHASES: Array[StringName] = [
 	&"probe_tube", &"loud_check",
 	# the tune-up (Day 15, docs/TUNEUP.md): the aid's datalog, the tune-up desk (the ask uses &"history")
 	&"datalog", &"tune_desk",
+	# the tune-up, part 2: the listening check (the next-visit plan uses &"counselling")
+	&"listening_check",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.

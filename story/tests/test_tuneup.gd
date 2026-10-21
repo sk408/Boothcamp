@@ -4,6 +4,7 @@ extends TestCase
 
 const TuneDesk := preload("res://story/games/tune_desk.gd")
 const BingoNight := preload("res://story/games/bingo_night.gd")
+const WaxGuard := preload("res://story/games/wax_guard.gd")
 const LevelTuneup := preload("res://story/level_tuneup.gd")
 const PaperTuneup := preload("res://story/papers/paper_tuneup.gd")
 const TargetMatch := preload("res://story/games/target_match.gd")
@@ -62,7 +63,7 @@ func test_day_15_is_gus_tune_up() -> void:
 	assert_true(tune.validate().is_empty(), "the profile validates")
 	for ear: String in ["right", "left"]:
 		assert_eq(tune.get_thresholds(ear), gus.get_thresholds(ear), "%s: Gus's own thresholds" % ear)
-	for p: StringName in [&"datalog", &"tune_desk"]:
+	for p: StringName in [&"datalog", &"tune_desk", &"listening_check"]:
 		assert_has(Game.PHASES, p, "tune-up phase")
 
 
@@ -268,3 +269,69 @@ func test_tuneup_movie_draws_every_scene() -> void:
 			st.queue_redraw()
 			await wait_frames(1)
 	st.queue_free()
+
+
+## (part 2) The listening check: one right part (the wax guard), short findings, the bot's path.
+func test_wax_guard_check() -> void:
+	var right := 0
+	for p: Array in WaxGuard.PARTS:
+		if bool(p[3]):
+			right += 1
+			assert_eq(String(p[0]), WaxGuard.RIGHT_PART)
+		assert_true(_words(String(p[2])) <= Hoot.MAX_WORDS, String(p[2]))
+	assert_eq(right, 1)
+	assert_true(WaxGuard.is_right("guard"))
+	assert_false(WaxGuard.is_right("battery"))
+	var g: Control = add_node(WaxGuard.new())
+	await wait_frames(1)
+	var picked: Array = []
+	var pick_it := func() -> void: picked.append(await g.call("pick"))
+	pick_it.call()
+	await wait_frames(1)
+	g.call("_click", "battery")
+	await wait_frames(1)
+	assert_eq(picked, ["battery"])
+	g.call("mark_checked", "battery")
+	pick_it.call()
+	await wait_frames(1)
+	g.call("_click", "battery")
+	await wait_frames(1)
+	assert_eq(picked.size(), 1, "a checked part is greyed")
+	g.call("solve")
+	await wait_frames(1)
+	assert_eq(picked, ["battery", "guard"])
+	assert_eq(g.call("result"), {"tries": 2, "wrong": ["battery"]})
+	var done := [false]
+	var swap_it := func() -> void:
+		await g.call("swap")
+		done[0] = true
+	swap_it.call()
+	await wait_frames(1)
+	assert_true((g.call("part_button", "swap") as Button).visible)
+	g.call("solve")
+	await wait_seconds(1.6)
+	assert_true(done[0], "the new guard clicked in")
+	assert_true(bool(g.get("_swapped")))
+
+
+## (part 2) The next-visit plan: one right option, told apart by the mouse bot, short lines.
+func test_next_visit_plan() -> void:
+	var seen := {}
+	var right := 0
+	var lengths: Array[int] = []
+	for p: Array in LevelTuneup.PLANS:
+		var prefix := String(p[0]).substr(0, BOT_PREFIX)
+		assert_false(seen.has(prefix), prefix)
+		seen[prefix] = true
+		lengths.append(String(p[0]).length())
+		if String(p[1]) == LevelTuneup.RIGHT_PLAN:
+			right += 1
+		for k in [2, 3]:
+			assert_true(_words(String(p[k])) <= Hoot.MAX_WORDS, String(p[k]))
+	assert_eq(right, 1)
+	assert_true(lengths.max() - lengths.min() <= 12, "about as long, so length gives nothing away")
+	assert_eq(LevelTuneup._plan_index(LevelTuneup.RIGHT_PLAN), 1)
+	var tune: Dictionary = LevelTuneup.results_for({"tickets": [], "tools_used": 4, "par": 4}, 1, 0, {"check_tries": 2, "plan_tries": 1})["tuneup"]
+	var lines := PaperTuneup.lines(tune)
+	assert_true(lines.has("Listening check: a plugged wax guard, found on the second pick."), str(lines))
+	assert_true(lines.has("Next visit: a check in a few months, a test every year (first pick)."), str(lines))

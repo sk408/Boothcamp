@@ -357,6 +357,7 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `probe_tube` **(Day 14)** | level_fitting (probe tube, §13) | {}; solver slides the tube straight into the zone (within 5 mm of the eardrum) and locks it |
 | `loud_check` **(Day 14)** | level_fitting (loud-sound check, §13) | {}; solver turns the loud limit straight to the right notch and drops the pan once |
 | `tune_desk` **(Day 15)** | level_tuneup (tune-up desk, §15) | {ticket: ticket id}; solver uses the ticket's right tool |
+| `wax_guard` **(Day 15)** | level_tuneup (listening check, §15) | {step: "find" or "swap"}; solver picks the wax guard, then clicks in the new one |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 
@@ -3916,3 +3917,14 @@ silver with one or two). **The paper**: `story/papers/paper_tuneup.gd` (THE TUNE
 **Bot.** The mouse route for `tune_desk` clicks the right tool; on the `gus_tune` chapter `_check_tuneup` replaces the
 per-ear check: both medals, four tickets fixed on the first tool, ask_tries 1, ups 0; the report gains `tuneup`.
 **Tests.** `story/tests/test_tuneup.gd`.
+
+**(part 2)** Hoot's movie `tuneup` (`story/explainers/movies/tuneup.gd`, sets `story/case_movies/tuneup_sets.gd`,
+chapter `gus_tune`, seen at `crowd`) plays first in the `explainer` phase (`LevelTuneup.MOVIE_NEW` the first time,
+`MOVIE_AGAIN` as a replay offer once seen). After the ask, the `listening_check` phase (new): `story/games/wax_guard.gd`
+(`WaxGuard`): `pick()` (beat `wax_guard` {step: find}) returns a `PARTS` id, the level plays `WaxGuard.finding(id)` and
+`mark_checked(id)` greys a wrong one; `swap()` (beat `wax_guard` {step: swap}) clicks in a new guard and the tube sounds
+clear. After the desk, the next-visit plan (`counselling` phase, `LevelTuneup.PLANS`, right: a check in a few months
+and a test every year). Medals `check` and `plan` join `ask` and `tune`; `results_for(desk, asks, ups, extra)` keeps
+`check_tries` and `plan_tries` in `tuneup` (the three scores are unchanged), and the paper prints both. The bot's
+`wax_guard` route clicks `part_button("guard")`, then `part_button("swap")`; `_check_tuneup` also wants the two new
+medals and both on the first pick.

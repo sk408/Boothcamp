@@ -14,6 +14,7 @@ extends Node
 const Hud := preload("res://story/hud.gd")
 const TuneDesk := preload("res://story/games/tune_desk.gd")
 const BingoNight := preload("res://story/games/bingo_night.gd")
+const WaxGuard := preload("res://story/games/wax_guard.gd")
 const CaseProps := preload("res://story/games/case_props.gd")
 const Movies := preload("res://story/explainers/movies.gd")
 
@@ -31,8 +32,9 @@ const MOVIE_NEW := "New trick today: the TUNE-UP. A quick cartoon first, then Gu
 const MOVIE_AGAIN := "Hoot's tune-up movie again? Popcorn's on me!"
 const MOVIE_SKIPPED := "Skipped! Rewatch it any time: pause menu, \"Watch {title}\"."
 
-const STEPS: Array[StringName] = [&"hello", &"ask", &"log", &"tune", &"bingo"]
-const STEP_LABELS: Dictionary = {&"hello": "Hello", &"ask": "Ask", &"log": "Diary", &"tune": "Tune", &"bingo": "Bingo"}
+const STEPS: Array[StringName] = [&"hello", &"ask", &"check", &"log", &"tune", &"next", &"bingo"]
+const STEP_LABELS: Dictionary = {&"hello": "Hello", &"ask": "Ask", &"check": "Check", &"log": "Diary", &"tune": "Tune",
+	&"next": "Next", &"bingo": "Bingo"}
 const STEPS_TITLE := "Gus's tune-up"
 const LATER_CARD := "TWO WEEKS LATER"
 const ASK_PROMPT := "How should we start?"
@@ -53,9 +55,21 @@ const STORIES: Array = [
 	["Gus", "Bingo's no better. Bev calls a number and the whole hall talks over her.", "Ticket 3: bingo numbers lost in the crowd"],
 ]
 const DATALOG_NOTE := "Ticket 4: worn 3.5 hours a day"
+const PLAN_PROMPT := "When should Gus come back?"
+## The next-visit options in display order: [text, id, Gus's line, Hoot's line]. Right: a check in a
+## few months and a hearing test every year (sooner if anything changes).
+const PLANS: Array = [
+	["Only when the aids break or stop working.", "broken", "Like my car? It's made that noise since 1994.",
+		"Small changes creep up. Regular checks catch them before they're problems."],
+	["A check in a few months, and a test every year.", "checks", "",
+		"Yes! A check in a few months, a hearing test every year. Sooner if anything changes."],
+	["Every single week, just to be on the safe side.", "weekly", "Every week? I'd have to move in, Hoot.",
+		"Too often. A few months for a check, a test every year, sooner if needed."],
+]
+const RIGHT_PLAN := "checks"
 const PART_SCORES: Array[float] = [1.0, 0.5, 0.2]
 const MEDALS: Array[String] = ["gold", "silver", "bronze"]
-const MEDAL_BEATS: Array = [["ask", "Ask"], ["tune", "Tune"]]
+const MEDAL_BEATS: Array = [["ask", "Ask"], ["check", "Check"], ["tune", "Tune"], ["plan", "Next"]]
 const WEATHER := "Weather: noisy in the hall, clear in the kitchen"
 const HEADLINES: Dictionary = {
 	"S": "FOUR TICKETS, FOUR FIXES; GUS WINS BINGO, LOSES DISHES ARGUMENT",
@@ -77,6 +91,8 @@ var clinic: Node3D
 var hud: CanvasLayer
 var dialogue: DialogueBox
 var ask_tries := 0
+var check_tries := 0
+var plan_tries := 0
 ## WHOLE AID UP uses across the desk (the first one costs a comfort point).
 var ups := 0
 var _desk: Control
@@ -126,8 +142,10 @@ func _run() -> void:
 	await _movie()
 	await _intro()
 	await _ask()
+	await _check()
 	await _datalog()
 	await _tune()
+	await _plan()
 	await _bingo()
 	await _results()
 
@@ -231,6 +249,48 @@ static func _ask_index(id: String) -> int:
 	return -1
 
 
+# ---------------------------------------------------------------- 2b. the listening check
+
+## The right aid went quiet: listen through the tube, find the plugged wax guard, click in a new one.
+func _check() -> void:
+	_phase(&"listening_check")
+	hud.call("set_step", &"check")
+	hud.call("set_notes_visible", false)
+	clinic.call("gus_look", &"doris")
+	await _say("Doris", "And tell him about Tuesday, Gus.")
+	clinic.call("gus_look", &"hoot")
+	await _say("Gus", "The right one went quiet on Tuesday. Mostly quiet. Like a mouse in a sock.")
+	await _say("Hoot", "Before any tweaking, check the aid itself. A listening tube lets us hear it.")
+	clinic.call("focus_camera", &"fitting", 0.8)
+	var g := WaxGuard.new()
+	hud.call("add_game", g)
+	await _wait(0.5)
+	_shot("tuneup_check", 0.2)
+	await _say("Hoot", "Muffled. Where's the sound getting stuck? Pick a part to check.")
+	check_tries = 0
+	while true:
+		var part: String = await g.pick()
+		check_tries += 1
+		await _say("Hoot", WaxGuard.finding(part))
+		if WaxGuard.is_right(part):
+			break
+		g.mark_checked(part)
+	await _say("Hoot", "Wax guards catch earwax so it can't reach the speaker. Swap it out.")
+	await g.swap()
+	_react(&"cheer")
+	await _say("Gus", "It's back! Doris, say something.")
+	await _say("Doris", "Something.")
+	await _say("Hoot", "A plugged wax guard is the top reason an aid goes quiet. Check it first!")
+	Game.record_medal("check", MEDALS[mini(check_tries, MEDALS.size()) - 1])
+	Game.set_visit_flag("check_tries", check_tries)
+	var t := g.create_tween()
+	t.tween_property(g, "modulate:a", 0.0, 0.3)
+	await t.finished
+	g.queue_free()
+	hud.call("set_notes_visible", true)
+	hud.call("complete_step", &"check")
+
+
 # ---------------------------------------------------------------- 3. the datalog
 
 func _datalog() -> void:
@@ -281,7 +341,7 @@ func _tune() -> void:
 	_desk_result = _desk.call("result")
 	Game.record_medal("tune", tune_medal(_desk_result))
 	Game.set_visit_flag("tools_used", int(_desk_result.get("tools_used", 0)))
-	Game.set_audiometry_results(results_for(_desk_result, ask_tries, ups))
+	_store_results()
 	await _say("Gus", "Four for four! Doris, cross them off.")
 	await _say("Doris", "Crossed. In pen.")
 	var t := _desk.create_tween()
@@ -291,8 +351,14 @@ func _tune() -> void:
 	hud.call("complete_step", &"tune")
 
 
+## (Re)stores the visit's results: after the desk, then again after the next-visit plan.
+func _store_results() -> void:
+	Game.set_audiometry_results(results_for(_desk_result, ask_tries, ups, {"check_tries": check_tries, "plan_tries": plan_tries}))
+
+
 ## The visit's results (TUNEUP.md §4): the usual three parts plus "tuneup" for the paper and the bot.
-static func results_for(desk: Dictionary, asks: int, harm: int) -> Dictionary:
+## extra: the listening check's and the plan's picks ({check_tries, plan_tries}), kept in "tuneup".
+static func results_for(desk: Dictionary, asks: int, harm: int, extra: Dictionary = {}) -> Dictionary:
 	var tries: Array = []
 	for t: Dictionary in desk.get("tickets", []):
 		tries.append(int(t.get("tries", 1)))
@@ -301,6 +367,8 @@ static func results_for(desk: Dictionary, asks: int, harm: int) -> Dictionary:
 	var tune := desk.duplicate(true)
 	tune["ask_tries"] = maxi(1, asks)
 	tune["ups"] = harm
+	for k: String in extra:
+		tune[k] = extra[k]
 	return {
 		"accuracy": TuneDesk.accuracy_of(tries),
 		"technique": 0.5 * ask_part + 0.5 * safe,
@@ -315,6 +383,49 @@ static func tune_medal(desk: Dictionary) -> String:
 	for t: Dictionary in desk.get("tickets", []):
 		wrong += (t.get("wrong", []) as Array).size()
 	return "gold" if wrong == 0 else ("silver" if wrong <= 2 else "bronze")
+
+
+# ---------------------------------------------------------------- 4b. the next visit
+
+## When Gus comes back: a check in a few months and a hearing test every year (a wrong pick is
+## explained and greyed).
+func _plan() -> void:
+	_phase(&"counselling")
+	hud.call("set_step", &"next")
+	clinic.call("gus_look", &"hoot")
+	await _say("Hoot", "One more thing before Saturday: when should Gus come back?")
+	var opts: Array[String] = []
+	var ids: Array[String] = []
+	for p: Array in PLANS:
+		opts.append(String(p[0]))
+		ids.append(String(p[1]))
+	plan_tries = 0
+	while true:
+		var c: int = await dialogue.choose(PLAN_PROMPT, opts, ids.find(RIGHT_PLAN))
+		plan_tries += 1
+		var p: Array = PLANS[_plan_index(ids[c])]
+		if ids[c] == RIGHT_PLAN:
+			clinic.call("hoot_emote", &"nod")
+			await _say("Hoot", String(p[3]))
+			break
+		_react(&"confused")
+		await _say("Gus", String(p[2]))
+		await _say("Hoot", String(p[3]))
+		opts.remove_at(c)
+		ids.remove_at(c)
+	hud.call("add_clue", "Next: a check in a few months, a test every year")
+	await _say("Gus", "A few months. Doris, write it on the fridge. Next to the dishes rota.")
+	Game.record_medal("plan", MEDALS[mini(plan_tries, MEDALS.size()) - 1])
+	Game.set_visit_flag("plan_tries", plan_tries)
+	_store_results()
+	hud.call("complete_step", &"next")
+
+
+static func _plan_index(id: String) -> int:
+	for k in PLANS.size():
+		if String(PLANS[k][1]) == id:
+			return k
+	return -1
 
 
 # ---------------------------------------------------------------- 5. bingo night

@@ -68,6 +68,12 @@ static func lines(tune: Dictionary) -> Array[String]:
 		out.append("Whole aid up: %s. Louder makes sharp sounds sharper." % ("once" if ups == 1 else "%d times" % ups))
 	else:
 		out.append("Whole aid up: never. Gus's ears thank you.")
+	if tune.has("check_tries"):
+		var ct := clampi(int(tune["check_tries"]), 1, PICKS.size())
+		out.append("Listening check: a plugged wax guard, found on the %s." % PICKS[ct - 1])
+	if int(tune.get("plan_tries", 0)) > 0:
+		var pt := clampi(int(tune["plan_tries"]), 1, PICKS.size())
+		out.append("Next visit: a check in a few months, a test every year (%s)." % PICKS[pt - 1])
 	out.append(TIP)
 	out.append(HOOT_SAYS)
 	return out
