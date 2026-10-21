@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_n0ra4"]
+
+[resource]
+script = ExtResource("1_n0ra4")
+id = "nora"
+display_name = "Nora Nightingale"
+age = 58
+complaint = "My left ear has gone like a radio between stations. I hear the voices. I just can't make out the WORDS."
+thresholds_right = Dictionary[int, int]({
+250: 10,
+500: 10,
+750: 10,
+1000: 15,
+1500: 15,
+2000: 20,
+3000: 25,
+4000: 30,
+6000: 35,
+8000: 40
+})
+thresholds_left = Dictionary[int, int]({
+250: 30,
+500: 35,
+750: 35,
+1000: 40,
+1500: 45,
+2000: 45,
+3000: 50,
+4000: 55,
+6000: 55,
+8000: 60
+})
+ia_phones_db = 50
+ia_inserts_db = 75
+false_alarms_per_minute = 0.3
+reaction_time_min_s = 0.7
+reaction_time_max_s = 1.2
+psychometric_slope_db = 2.5
+attention = 0.95
+fatigue_per_tone = 0.0005
+min_tone_s = 0.5
+rhythm_sensitivity = 0.6
+speech = {
+"neural": {
+"left": true
+},
+"rollover": {
+"left": {
+"after": 75,
+"drop_per_10db": 20
+}
+},
+"srt": {
+"left": 40,
+"right": 15
+},
+"wrs_max": {
+"left": 52,
+"right": 96
+}
+}
+tags = PackedStringArray("speech", "chapter_4")
+pronoun = "she"
+nickname = "Nora"

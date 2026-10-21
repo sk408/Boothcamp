@@ -18,7 +18,7 @@ const Portraits := preload("res://story/portraits.gd")
 const Voice := preload("res://story/voice.gd")
 
 const CHARS_PER_SECOND := 42.0
-const DISPLAY_NAMES: Dictionary = {"Gus": "Grandpa Gus", "Hoot": "Professor Hoot", "Doris": "Doris", "You": "You", "Mike": "Mike Lenders"}
+const DISPLAY_NAMES: Dictionary = {"Gus": "Grandpa Gus", "Hoot": "Professor Hoot", "Doris": "Doris", "You": "You", "Mike": "Mike Lenders", "Nora": "Nora Nightingale"}
 const PANEL_W := 900.0
 const PANEL_H := 156.0
 
