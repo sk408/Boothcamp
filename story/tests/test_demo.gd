@@ -1,10 +1,12 @@
 extends TestCase
 ## The career-fair demo (docs/DEMO.md): the --demo / ?demo flag, the fresh visitor per title, the
-## Play-only title, the demo level's plans, paper and lines, and the audiometer's "montage_after".
+## Play-only title, the demo level's plans, paper and lines, the audiometer's "montage_after", the
+## paper without Decibucks or shop, and the booth's attract loop.
 
 const LevelDemo := preload("res://story/level_demo.gd")
 const LevelGus := preload("res://story/level_gus.gd")
 const TitleScreen := preload("res://story/title_screen.gd")
+const DemoAttract := preload("res://story/demo_attract.gd")
 const AUDIOMETER := "res://ui/audiometer/audiometer_screen.tscn"
 
 const SAVE := "user://test_demo_save.json"
@@ -181,6 +183,8 @@ func test_demo_lines_are_short() -> void:
 		lines.append(m.get_string(1))
 	assert_true(lines.size() >= 15, "found Hoot's lines (%d)" % lines.size())
 	lines.append(String(LevelDemo.LEFT_PLAN["intro"]))
+	lines.append_array(DemoAttract.LINES)
+	lines.append(DemoAttract.PROMPT)
 	lines.append(String(LevelDemo.RIGHT_PLAN["hoot_turn_text"]))
 	for l: String in lines:
 		assert_true(_words(l) <= MAX_HOOT_WORDS, "%d words: %s" % [_words(l), l])
@@ -235,3 +239,120 @@ func test_montage_after_the_players_stamps() -> void:
 	assert_eq(finished.size(), 1, "the test finished")
 	assert_near(Engine.time_scale, scale, 0.001, "game speed untouched")
 	assert_true(s.is_ear_complete("right"), "every hole stamped")
+
+
+func _press(code: Key) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	await wait_frames(2)
+	var up := InputEventKey.new()
+	up.keycode = code
+	Input.parse_input_event(up)
+	await wait_frames(2)
+
+
+## Gus's chart as stored, for a paper (as in test_story.gd).
+static func _results() -> Dictionary:
+	var p := Game.load_patient("gus") as PatientProfile
+	var ears := {}
+	for ear: String in ["right", "left"]:
+		var freqs := {}
+		var th := {}
+		for f: int in [250, 500, 1000, 2000, 4000, 8000]:
+			var db := p.get_threshold(ear, f)
+			th[f] = db
+			freqs[f] = {"ear": ear, "freq": f, "stored_db": db, "true_db": db, "no_response": false, "strokes": 7, "par": 7, "golf": &"par"}
+		ears[ear] = {"freqs": freqs, "complete": true, "shape": ClinicRules.classify_shape(th), "pta": ClinicRules.pta(th)}
+	return {"patient_id": "gus", "ears": ears, "presentations": 84, "false_alarms": 0, "max_combo": 10,
+		"accuracy": 1.0, "technique": 1.0, "efficiency": 1.0, "score": 100.0, "grade": "S"}
+
+
+## A paper for Gus (the demo's when demo), once it has landed.
+func _paper(demo: bool) -> Node:
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var s := {"patient_id": "gus", "score": 88.0, "grade": "A", "accuracy": 0.9, "technique": 0.9, "efficiency": 0.8,
+		"care": 1.0, "comfort": 3, "medals": {}, "coins_earned": 60, "coins_total": 560, "audiometry": _results(),
+		"patient_name": "Grandpa Gus", "patient_short": "Gus", "chapter_id": "gus", "day": 1, "next_chapter_id": ""}
+	if demo:
+		LevelDemo.apply_summary(s)
+	var run := func() -> void:
+		await paper.call("show_summary", s)
+	run.call()
+	await wait_seconds(1.2)
+	return paper
+
+
+## The texts of a paper's labels and buttons on show.
+static func _shown(paper: Node) -> Array[String]:
+	var shown: Array[String] = []
+	for c: Node in paper.find_children("*", "", true, false):
+		if (c is Label or c is Button) and (c as Control).is_visible_in_tree():
+			shown.append(c.get("text"))
+	return shown
+
+
+## (demo) The demo's paper has no Decibucks and no shop, and B buys nothing; the WANTED ad stays.
+func test_demo_paper_has_no_coins_or_shop() -> void:
+	Game.progress["coins"] = 500
+	var plain: Node = await _paper(false)
+	assert_true(_shown(plain).any(func(t: String) -> bool: return t.contains("Decibucks")), "a normal paper keeps its coins")
+	plain.queue_free()
+	await wait_frames(2)
+	var shown := _shown(await _paper(true))
+	assert_false(shown.any(func(t: String) -> bool: return t.contains("Decibucks")), "no Decibucks: %s" % str(shown))
+	assert_false(shown.any(func(t: String) -> bool: return t.begins_with("CLASSIFIEDS") or t.begins_with("Buy")), "no shop")
+	assert_true(shown.any(func(t: String) -> bool: return t.begins_with("WANTED")), "the WANTED ad")
+	assert_true(shown.any(func(t: String) -> bool: return t.begins_with("Next visitor")), "Next visitor")
+	await _press(KEY_B)
+	assert_eq(int(Game.progress["coins"]), 500, "B buys nothing")
+	assert_true((Game.progress.get("upgrades", []) as Array).is_empty())
+
+
+## (demo) Nobody at the demo's title: the attract loop starts (here after half a second), a nudge of
+## the mouse leaves it running, and a key ends it with the safety notice for the visitor.
+func test_attract_loop_at_the_booth() -> void:
+	assert_near(TitleScreen.ATTRACT_S, 30.0, 0.001)
+	Game.cli = {"demo": true, "attract-after": "0.5"}
+	assert_near(TitleScreen.attract_after(), 0.5, 0.001, "--attract-after")
+	TitleScreen._notice_seen_this_session = true
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	add_node(title)
+	await wait_frames(3)
+	title.call("_on_notice_ok")
+	await wait_seconds(0.3)
+	assert_eq(title.get("_state"), &"menu")
+	var a: Control = title.get("_attract")
+	assert_true(a != null, "the demo's title has the attract loop")
+	assert_false(bool(a.call("is_running")))
+	await wait_seconds(1.0)
+	assert_true(bool(a.call("is_running")), "it starts with nobody there")
+	assert_true(a.visible)
+	var nudge := InputEventMouseMotion.new()
+	nudge.relative = Vector2(2, 1)
+	nudge.screen_relative = Vector2(2, 1)
+	Input.parse_input_event(nudge)
+	await wait_frames(3)
+	assert_true(bool(a.call("is_running")), "a nudge of the mouse is not a visitor")
+	await _press(KEY_SPACE)
+	assert_false(bool(a.call("is_running")), "a key ends it")
+	assert_eq(title.get("_state"), &"notice", "the safety notice greets the visitor")
+	Game.cli["attract-after"] = "100"   # (so it does not come back while we look)
+	await wait_seconds(0.5)
+	assert_false(a.visible)
+	assert_eq(title.get("_state"), &"notice", "the key that woke it did not also close the notice")
+
+
+## The attract loop is only for the demo, and never under autoplay.
+func test_no_attract_loop_outside_the_booth() -> void:
+	TitleScreen._notice_seen_this_session = true
+	for cli: Dictionary in [{}, {"demo": true, "autoplay": true}]:
+		Game.cli = cli
+		var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+		add_node(title)
+		await wait_frames(3)
+		assert_true(title.get("_attract") == null, "no attract loop with %s" % str(cli))
+		title.queue_free()
+		await wait_frames(2)

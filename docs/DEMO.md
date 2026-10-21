@@ -23,6 +23,11 @@ In demo mode (`Game.is_demo()`):
 - The safety notice ("This is a game, not a hearing test.") greets every visitor, not once per session.
 - Quick visit is always on: Hoot finishes the beeps after the visitor's stamps.
 - The web build only reads `demo` from the address; nothing else in it can change the game.
+- **The attract loop.** After 30 seconds with nobody at the title (`--attract-after=N` for another delay), Hoot and
+  Gus fill the screen over the clinic: Hoot waves and talks through the visit one teaser at a time, round and
+  round, with "Press a key or click to play" pulsing and the tagline under it. Any key, click or real mouse
+  movement ends it and the safety notice greets the visitor. It is silent, keeps the safety footer on screen, and
+  never runs under autoplay.
 
 ## 2. The visit (`story/level_demo.gd`)
 
@@ -53,13 +58,13 @@ as they are; the patient is `gus`, so the paper scores it like Day 1.
 
 **The paper.** The Daily Decibel with the demo's own headlines ("LOCAL GRANDPA HEARS 'DISHES' FOR FIRST TIME IN
 YEARS" for an A), weather ("sunny, with a chance of careers"), four medals (Chat, Peek, Phones, Fit), the beep golf
-card, the WANTED ad that is on every paper ("Hearing care professionals do this every day. Ask at this booth!"), no
-next day, and the button **Next visitor** (back to the title, which wipes the visitor). "Play Gus again" replays the
-demo.
+card, no next day, and the button **Next visitor** (back to the title, which wipes the visitor). "Play Gus again"
+replays the demo. No Decibucks and no shop: the WANTED ad ("Hearing care professionals do this every day. Ask at
+this booth!") sits in their place, next to the buttons.
 
 **Left alone.** A visitor who walks off mid-visit: after 120 seconds with no key, click or mouse movement (real
 time, also while paused or during Hoot's montage) the demo goes back to the title. The paper goes back by itself
-after 90 seconds, and the title shows the safety notice again after 90 seconds. Never under autoplay.
+after 90 seconds, and the title starts the attract loop after 30 seconds. Never under autoplay.
 
 ## 3. What it leaves out, and why
 
@@ -73,8 +78,10 @@ demo says so out loud in the fitting step. The clinical lines it keeps are Day 1
 1. Seven minutes: one chat question, two stamps of his own before Hoot takes over. More stamps (3) or fewer?
 2. The title's line says "About 7 minutes". Keep it?
 3. The idle reset after 120 seconds. Shorter for a busy booth?
-4. The paper keeps the Decibucks and the comfy-chair ad. Hide them in the demo (a later small PR)?
-5. Should the booth also have an attract loop (Hoot waving, a short clip) when nobody is playing (a later PR)?
+4. ~~The paper keeps the Decibucks and the comfy-chair ad. Hide them in the demo?~~ Steve: yes (2026-10-21). Done:
+   the WANTED ad takes their place.
+5. ~~Should the booth also have an attract loop when nobody is playing?~~ Steve: yes (2026-10-21). Done (§1). Its six
+   teaser lines are in `story/demo_attract.gd`; the delay is 30 seconds.
 
 ## 5. Engine notes
 
@@ -90,4 +97,10 @@ demo says so out loud in the fitting step. The clinical lines it keeps are Day 1
   ear's target match).
 - The bot's `_check_demo`: the four medals, every band within 5 dB, no next day, "Next visitor"; the ears are
   checked like any visit's.
+- The paper: a summary with `demo: true` hides the Decibucks and the shop (B buys nothing) and moves the WANTED ad
+  to the bottom row.
+- The attract loop: `story/demo_attract.gd` (`start()`, `stop()`, `is_running()`, `LINES`, `PROMPT`, signal
+  `dismissed`), added by the title in demo mode; `TitleScreen.ATTRACT_S` (30) and `attract_after()`
+  (`--attract-after=N`). To look at it:
+  `tools/scene_shot.sh res://story/title_screen.tscn /abs/out/dir "3,8" -- --demo --attract-after=1`.
 - Tests: `story/tests/test_demo.gd`.

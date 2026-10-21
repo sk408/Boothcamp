@@ -11,6 +11,8 @@ extends Control
 ## "This is a game, not a hearing test." is always on screen.
 ## (career-fair demo, docs/DEMO.md) In demo mode (Game.is_demo()) the menu is one Play button for
 ## the short demo level, the notice greets every visitor, and each title starts a fresh visitor.
+## Nobody at the demo's title for ATTRACT_S seconds (in the menu or the notice) starts the booth's
+## attract loop (story/demo_attract.gd); a key, click or mouse movement ends it and shows the notice.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
@@ -23,6 +25,9 @@ const ARCADE_SCENE := "res://story/arcade/arcade_hall.tscn"
 ## (demo) The career-fair demo's level, and the line under its Play button.
 const DEMO_SCENE := "res://story/level_demo.tscn"
 const DEMO_TAGLINE := "Find out what Gus can't hear, then help him hear it. About 7 minutes."
+const DemoAttract := preload("res://story/demo_attract.gd")
+## (demo) Seconds with nobody at the title before the attract loop; --attract-after=N sets another.
+const ATTRACT_S := 30.0
 
 static var _notice_seen_this_session := false
 ## A title left alone this long (a booth / kiosk display) shows the safety notice again.
@@ -41,6 +46,9 @@ var _font: Font
 var _starting := false
 var _idle := 0.0
 var _reset_armed := false
+## (demo) The booth's attract loop (never under autoplay) and the seconds with nobody at the title.
+var _attract: Control
+var _attract_idle := 0.0
 ## (v4) "Hoot's Movies": a small mouse shortcut to the cartoon explainers (keyboard: Options).
 var _movies_btn: Button
 # v3: the day picker (polish: a scrolling grid for any number of days)
@@ -87,6 +95,11 @@ func _ready() -> void:
 		if _clinic.has_method("set_title_mode"):
 			_clinic.call("set_title_mode", true)
 	_build()
+	if Game.is_demo() and not Game.is_autoplay():
+		_attract = DemoAttract.new()
+		_attract.set("tagline", DEMO_TAGLINE)
+		add_child(_attract)
+		_attract.connect("dismissed", _on_attract_dismissed)
 	Sfx.music_start()
 	if _notice_seen_this_session and not Game.is_demo():
 		_notice_layer.visible = false
@@ -97,12 +110,18 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _state == &"menu" and not get_tree().paused:
+	if _state == &"menu" and not get_tree().paused and not _attract_running():
 		_idle += delta
 		if _idle > IDLE_NOTICE_S:
 			_idle = 0.0
 			_notice_layer.modulate.a = 1.0
 			_show_disclaimer()
+	if _attract != null and not _attract_running() and (_state == &"menu" or _state == &"notice") and not get_tree().paused:
+		_attract_idle += delta
+		if _attract_idle > attract_after():
+			_attract.call("start")
+			_menu_card.visible = false
+			_notice_layer.visible = false
 	_logo.queue_redraw()
 	queue_redraw()
 	if _movies_btn != null:
@@ -170,6 +189,23 @@ func _on_demo_start() -> void:
 		Juice.pop(_buttons[0], 1.15, 0.25)
 	Events.input_resolved.emit(&"title_start")
 	Events.goto_scene.emit(DEMO_SCENE)
+
+
+## (demo) Seconds with nobody at the title before the attract loop starts.
+static func attract_after() -> float:
+	return float(Game.cli.get("attract-after", ATTRACT_S))
+
+
+func _attract_running() -> bool:
+	return _attract != null and bool(_attract.call("is_running"))
+
+
+## (demo) A visitor walked up: the attract loop is gone, and the safety notice greets them.
+func _on_attract_dismissed() -> void:
+	_idle = 0.0
+	_attract_idle = 0.0
+	_notice_layer.modulate.a = 1.0
+	_show_disclaimer()
 
 
 ## (v3) Start a chapter (falls back to Day 1's scene if it is unknown or missing).
@@ -469,6 +505,7 @@ func _on_movies() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event.is_pressed():
 		_idle = 0.0
+		_attract_idle = 0.0
 	# (polish) Esc on the Days card means Back (before the pause menu turns it into Options)
 	if _state == &"days" and event.is_action_pressed(&"ui_cancel") and not event.is_echo():
 		var pm := get_tree().get_first_node_in_group("pause_menu")

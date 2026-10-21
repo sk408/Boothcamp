@@ -13,6 +13,8 @@ extends CanvasLayer
 ## (Days 4-5) A summary may bring its day's "weather" line, "subheads" (by grade) and "sports_script"
 ## (a script path whose build(c2, audiometry, summary) fills column 2), so this file serves every
 ## speech day unchanged (CONTRACTS.md §9.10.7, D8).
+## (demo) A summary with "demo": true (the career-fair demo, docs/DEMO.md) has no Decibucks and no
+## shop: the WANTED ad sits in their place, next to the buttons, and B buys nothing.
 
 signal _continued
 
@@ -255,6 +257,8 @@ func _shop_cost() -> int:
 
 
 func _try_buy() -> void:
+	if bool(_summary.get("demo", false)):
+		return
 	if Game.has_upgrade(_shop_id()):
 		return
 	if Game.buy_upgrade(_shop_id(), _shop_cost()):
@@ -509,6 +513,15 @@ func _build(s: Dictionary) -> void:
 	_buy.pressed.connect(_try_buy)
 	_buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sh.add_child(_buy)
+	if bool(s.get("demo", false)):
+		# (demo) no Decibucks and no shop at the booth: the WANTED ad takes their place
+		coins_box.visible = false
+		shop.visible = false
+		c2.remove_child(wanted)
+		wanted.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		wanted.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		wl.add_theme_font_size_override("font_size", 18)
+		bottom.add_child(wanted)
 	var btns := VBoxContainer.new()
 	btns.add_theme_constant_override("separation", 6)
 	btns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
