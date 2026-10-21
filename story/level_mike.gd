@@ -22,13 +22,23 @@ const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_mike.tscn"
 const PATIENT_ID := "mike"
 
-## The spondee list, how many cards Mike reads, and the one he has never heard of.
+## The spondee list, how many cards Hoot says for Mike to repeat, and the one he has never heard of.
 const LIST_ID := "spondee_a"
 const FAMILIAR_WORDS := 12
 const UNKNOWN_WORD := "windmill"
-## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
-## reach Mike's first miss below his SRT (down 10 per hit from PTA + 15), and maybe the step back up.
-const LEFT_SOLO_WORDS := 8
+## Seconds for Hoot and Mike to go through the known cards (a short step: the player may click on).
+const SAY_ALONG_S := 4.4
+## Mike says back this many of them in his dialogue line (the rest are on the cards).
+const ECHO_WORDS := 8
+## Hoot's 1 kHz retest after the right-ear montage comes back this much BETTER than the first 1 kHz
+## result: past ClinicRules.RETEST_TOLERANCE_DB (5), a test-retest mismatch, one more sign of a
+## non-organic loss. Mike's simulated tones are steady, so the level derives the retest from the
+## measured result (the shared tone code is left as it is).
+const RETEST_BETTER_DB := 15
+## The solo (left) ear on a quick visit: the player scores words down to Mike's first miss below
+## his SRT (down 10 per hit from PTA + 15: eight words) and the step back up 5, then Hoot finishes
+## the bracket (plan hoot_turn_after_up). This many words is the cap, for a descent that never misses.
+const LEFT_SOLO_WORDS := 12
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
 const STEP_LABELS: Dictionary = {
@@ -64,6 +74,8 @@ var screen: CanvasLayer
 ## The tone results from Hoot's run (§5.1), then the merged visit results (§9.5).
 var tones: Dictionary = {}
 var results: Dictionary = {}
+## Hoot's right-ear 1 kHz retest (retest_1k(); {} before the tones).
+var tone_retest: Dictionary = {}
 ## Familiarisation: the word ids used, and the ones dropped.
 var words: Array[String] = []
 var dropped: Array[String] = []
@@ -297,9 +309,11 @@ func _tones() -> void:
 	await _tone_test("right", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Beeps first. I'll run them; watch the stamps fly in.",
 		"hoot_turn_text": "My turn! Right ear at 8x. Watch the dance card!"})
+	await _retest_right_1k()
 	await _tone_test("left", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Left ear, Hoot speed!",
 		"hoot_turn_text": "Left ear at 8x. Same dance, other ear!"})
+	_record_retest()
 	screen.queue_free()
 	screen = null
 	cam.current = true
@@ -316,6 +330,43 @@ func _tones() -> void:
 		await _say("Mike", "Severe! Write that down. In big letters. Skip the 'moderately'.")
 	else:
 		await _say("Mike", "%s! Write that down. In big letters." % _cap(degree))
+
+
+## The right ear's 1 kHz retest from Hoot's tone results: the first 1 kHz result minus
+## RETEST_BETTER_DB, in the §5.1 retest_1k shape (plus by_hoot). {} when 1 kHz wasn't measured.
+static func retest_1k(tone_results: Dictionary) -> Dictionary:
+	var ac := ClinicRules.sheet_thresholds(tone_results, "right", &"ac")
+	if not ac.has(ClinicRules.START_FREQ):
+		return {}
+	var first := int(ac[ClinicRules.START_FREQ])
+	var again := maxi(ClinicRules.MIN_DB, first - RETEST_BETTER_DB)
+	return {"first_db": first, "stored_db": again, "diff": first - again, "strokes": 0, "par": 0, "by_hoot": true}
+
+
+## Hoot's remark on the retest: the numbers and the 5 dB rule, never a verdict on Mike.
+static func retest_remark(rt: Dictionary) -> String:
+	return "1000 Hz again: %d dB, %d better than before. Retests usually agree within %d dB." % [
+		int(rt.get("stored_db", 0)), int(rt.get("diff", 0)), ClinicRules.RETEST_TOLERANCE_DB]
+
+
+## After the right-ear montage: Hoot retests 1 kHz and it comes back better (test-retest mismatch).
+func _retest_right_1k() -> void:
+	tone_retest = retest_1k(tones)
+	if tone_retest.is_empty():
+		return
+	await _say("Hoot", retest_remark(tone_retest))
+	_react(&"wince")
+	await _say("Mike", "Must be the earphones warming up. Happens to my forklift too.")
+
+
+## The retest goes on the record (results.ears.right.retest_1k), next to Hoot's first 1 kHz stamp;
+## the PTA keeps the first one (the two disagree by more than ClinicRules.RETEST_TOLERANCE_DB).
+func _record_retest() -> void:
+	if tone_retest.is_empty() or not (tones.get("ears", {}) as Dictionary).has("right"):
+		return
+	((tones["ears"] as Dictionary)["right"] as Dictionary)["retest_1k"] = tone_retest.duplicate()
+	results = tones
+	Game.set_audiometry_results(results)
 
 
 ## Hoot's PTA definition, true to the average the speech tests use (SpeechRules.pta_method).
@@ -342,6 +393,17 @@ func ear_pta(ear: String) -> float:
 
 # ---------------------------------------------------------------- 6. familiarise the word list
 
+## Mike's line while he says the cards back after Hoot (the first ECHO_WORDS; all of them are on
+## the cards): "Lighthouse! Rainbow! Sunbeam! Bookshelf! Easy! Moonlight! ...".
+static func echo_line(items: Array) -> String:
+	var said: Array[String] = []
+	for it: Variant in items.slice(0, ECHO_WORDS):
+		said.append(_cap(String((it as Dictionary).get("text", ""))))
+	var first := "! ".join(PackedStringArray(said.slice(0, 4)))
+	var rest := "! ".join(PackedStringArray(said.slice(4)))
+	return "%s! Easy! %s..." % [first, rest] if rest != "" else "%s! Easy!" % first
+
+
 ## Returns the board: the objection and the referral happen on it later.
 func _familiarize() -> Control:
 	_phase(&"familiarize")
@@ -364,16 +426,17 @@ func _familiarize() -> Control:
 	var b := MikeBoard.new()
 	hud.call("add_game", b)
 	await b.run_cards(items, SpeechMaterial.title(LIST_ID))
+	# by ear, not by eye: Hoot says each word, Mike says it back, and the cards face Hoot (the
+	# board's "Mike can't see this" sign); every word is on the cards and the "now saying" line
+	await _say("Hoot", "I'll say each word, nice and loud. You say it back. No peeking: the cards face me!")
 	var unknown := words.find(UNKNOWN_WORD)
 	var last_known := (unknown - 1) if unknown > 0 else words.size() - 1
-	b.read_along(0, last_known, 2.6)
-	var texts: Array[String] = []
-	for it: Dictionary in items.slice(0, mini(8, last_known + 1)):
-		texts.append(String(it.get("text", "")))
-	var first := ", ".join(PackedStringArray(texts.slice(0, 4)))
-	var rest := ", ".join(PackedStringArray(texts.slice(4)))
-	await _say("Mike", "%s... easy! %s..." % [_cap(first), _cap(rest)])
+	b.say_along(0, last_known, SAY_ALONG_S)
+	_react(&"nod")
+	await _say("Mike", echo_line(items.slice(0, last_known + 1)))
+	b.finish_say_along()   # the player may click on before the sweep ends
 	if unknown >= 0:
+		b.say_word(UNKNOWN_WORD, "Wind... mill?")
 		b.stumble(UNKNOWN_WORD)
 		_react(&"confused")
 		await _say("Mike", "Wind... mill? Never seen one. Is it a fan for a field?")
@@ -383,6 +446,8 @@ func _familiarize() -> Control:
 		dropped = b.dropped.duplicate()
 		_react(&"nod")
 		await _say("Mike", "The rest? Know 'em all. Not that I'll HEAR any of 'em.")
+	# his instructions for the SRT: the answers come from this list
+	await _say("Hoot", "Every test word comes from this list, Mike. Say back what you hear, and guess if unsure.")
 	var problems := (0 if said_yes else 1) + b.drop_slips
 	Game.record_medal("familiarize", "gold" if problems == 0 else ("silver" if problems == 1 else "bronze"))
 	Game.set_visit_flag("familiarized_first", said_yes)
@@ -401,14 +466,15 @@ func speech_plan(ear: String) -> Dictionary:
 	var plan := {"test": "srt", "tones": tones, "list": LIST_ID, "words": words.duplicate(), "transducer": String(_air_transducer())}
 	if not dropped.is_empty():
 		plan["exclude"] = dropped.duplicate()
-	# once the coffee whisper has been on screen, starting low and coming up is smart, not a slip
+	# once the coffee whisper has been on screen, starting below his beeps is smart, not a slip
 	plan["low_start_ok"] = _whisper_seen
 	var start := SpeechRules.srt_start(ear_pta(ear))
 	if ear == "right":
 		plan["intro"] = "Start at his PTA plus 15: %d dB. He should repeat that easily." % start
 	elif quick_visit():
-		plan["intro"] = "Left ear, yours for %d words! PTA plus 15 is %d dB." % [LEFT_SOLO_WORDS, start]
+		plan["intro"] = "Left ear: yours to the first miss and back up 5! PTA plus 15 is %d dB." % start
 		plan["hoot_turn_after"] = LEFT_SOLO_WORDS
+		plan["hoot_turn_after_up"] = true
 	else:
 		plan["intro"] = "Left ear, your turn! PTA plus 15 is %d dB." % start
 	return plan
@@ -441,10 +507,12 @@ func _speech() -> void:
 			r = await screen.test_finished
 		else:
 			r = await _fallback_speech(ear, plan)
-		results = r
+		results = with_recheck(r)
 		Game.set_audiometry_results(results)
 		if ear == "right" and not _srt_shows_mismatch(srt_sheet("right")):
 			await _recheck_right()
+			results = with_recheck(results)
+			Game.set_audiometry_results(results)
 		hud.call("complete_step", &"srt_r" if ear == "right" else &"srt_l")
 	if screen != null:
 		screen.queue_free()
@@ -463,9 +531,21 @@ func _speech() -> void:
 	elif poor:
 		# words WORSE than beeps point elsewhere (never at his story)
 		await _say("Hoot", "%s His is %d dB worse. Poor agreement!" % [within, diff])
-		await _say("Hoot", "Words worse than beeps? Think instructions, language, word scores or a sloping loss.")
+		await _say("Hoot", "Words worse than beeps? Think instructions, language or word scores.")
 	else:
 		await _say("Hoot", "%s His is %d dB apart. Let's look closer." % [within, absi(diff)])
+
+
+## The visit results with Hoot's recheck on the record when he ran one (speech.recheck {srt: {right}},
+## §9.5): the paper notes it; the sheets and the grade stay the player's.
+func with_recheck(r: Dictionary) -> Dictionary:
+	if recheck.is_empty() or not (r.get("speech", null) is Dictionary):
+		return r
+	var out := r.duplicate()
+	var sp: Dictionary = (out["speech"] as Dictionary).duplicate()
+	sp["recheck"] = {"srt": {"right": recheck.duplicate(true)}}
+	out["speech"] = sp
+	return out
 
 
 ## The right SRT can carry the board only when it shows the mismatch for real: poor agreement,
@@ -680,7 +760,8 @@ func _payoff(b: Control) -> void:
 	await _say("Mike", "Objective tests? The kind where I don't have to answer anything?")
 	await _say("Hoot", "Exactly. Tiny sounds, tiny sensors. Your ears do all the talking.")
 	_react(&"wince")
-	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. My ears are fine.")
+	# his own words, no more than the test showed: an SRT of 30 is an upper bound on his hearing, never "fine ears"
+	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine.")
 	clinic.call("hoot_emote", &"nod")
 	await _say("Hoot", "Thank you for telling us, Mike. That took guts.")
 	# the main path must not teach "non-organic = faking"

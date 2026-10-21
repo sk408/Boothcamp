@@ -52,6 +52,18 @@ const MIKE := {
 	"glasses": &"shades", "glasses_color": Color("#2e2442"), "walker": false, "prop": &"clipboard",
 	"apron": false, "vest": true, "neck_brace": true,
 }
+## (Days 4-5) Day 4: Nora Nightingale, 58, choir director. A silver bob held by a tuning-fork hair
+## pin ("Middle C. For emergencies."), a navy scarf printed with cream music notes over a
+## forest-green cardigan, pearl opera glasses on a gold chain, and a baton in her breast pocket.
+const NORA := {
+	"name": "Nora", "face": &"doris",
+	"skin": Color("#f2c4a0"), "skin_shade": Color("#d79c78"), "nose": Color("#e9ab88"),
+	"cardigan": Color("#2f6b4f"), "pants": Color("#3b3f5c"), "shirt": Color("#fffbf2"),
+	"accent": Color("#1f2f5c"), "shoes": Color("#3a2a40"),
+	"hair": Color("#d7dbe3"), "hair_style": &"bob", "mustache": false, "brows": false,
+	"glasses": &"none", "glasses_color": Color("#f4efe6"), "walker": false, "prop": &"",
+	"apron": false, "notes_scarf": true, "opera_glasses": true, "baton": true,
+}
 ## (v3) Pick a bean spec by patient id (unknown ids get Gus).
 static func spec_for(patient_id: String) -> Dictionary:
 	match patient_id:
@@ -59,6 +71,8 @@ static func spec_for(patient_id: String) -> Dictionary:
 			return BONNIE
 		"mike":
 			return MIKE
+		"nora":
+			return NORA
 	return GUS
 
 var cfg: Dictionary = {}
@@ -148,6 +162,8 @@ func _build_body() -> void:
 		_build_vest(torso)
 	elif bool(cfg.get("apron", false)):
 		_build_apron(torso)
+	elif bool(cfg.get("notes_scarf", false)):
+		_build_notes_scarf(torso)
 	elif String(cfg["face"]) == "gus":
 		# bow tie
 		var bow := Node3D.new()
@@ -163,6 +179,10 @@ func _build_body() -> void:
 		for i in 9:
 			var a := lerpf(-1.1, 1.1, i / 8.0)
 			Kit.sphere(torso, 0.026, Vector3(sin(a) * 0.25, 0.74 - cos(a) * 0.09 + 0.05, cos(a) * 0.25 + 0.04), Color("#fffbf2"), Vector3.ONE, {"outline": 0.005}, 8)
+	if bool(cfg.get("opera_glasses", false)):
+		_build_opera_glasses(torso)
+	if bool(cfg.get("baton", false)):
+		_build_baton(torso)
 	# floating mitten hands
 	for side: int in [-1, 1]:
 		var hand := Kit.sphere(body, 0.1, Vector3(0.5 * side, 0.82, 0.12), cfg["skin"], Vector3(0.95, 1.0, 1.1))
@@ -259,6 +279,8 @@ func _build_head() -> void:
 			_build_bun(neck, hc)
 		&"quiff":
 			_build_quiff(neck, hc)
+		&"bob":
+			_build_bob(neck, hc)
 		&"beehive":
 			var hive := Node3D.new()
 			hive.position = hc
@@ -303,6 +325,101 @@ func _build_bun(neck: Node3D, hc: Vector3) -> void:
 	var wood := Color("#d9a066")
 	Kit.capsule(spoon, 0.018, 0.5, Vector3(0, 0, 0), wood, {"outline": 0.006}, 8)
 	Kit.sphere(spoon, 0.055, Vector3(0, 0.27, 0), wood, Vector3(0.9, 1.25, 0.45), {"outline": 0.008}, 10)
+
+
+## (Days 4-5) Nora's silver bob: a smooth cap with a side-swept fringe, two side panels that end
+## in a curl at the jaw (the "tufts" a too-loud blast flicks out), and a tuning fork as a hair pin.
+func _build_bob(neck: Node3D, hc: Vector3) -> void:
+	var cap := Node3D.new()
+	cap.name = "HairCap"
+	cap.position = hc
+	neck.add_child(cap)
+	Kit.sphere(cap, 0.35, Vector3(0, 0.1, -0.05), cfg["hair"], Vector3(1.08, 0.8, 1.04), {}, 20)
+	var fringe := Kit.sphere(cap, 0.16, Vector3(0.08, 0.23, 0.21), cfg["hair"], Vector3(1.55, 0.55, 0.7), {"outline": 0.01}, 14)
+	fringe.rotation.z = -0.25
+	for side: int in [-1, 1]:
+		# behind the ears, so the ears (and the earphones) stay clear
+		var panel := Node3D.new()
+		panel.position = hc + Vector3(0.27 * side, 0.02, -0.12)
+		neck.add_child(panel)
+		parts["tuft_r" if side < 0 else "tuft_l"] = panel
+		Kit.sphere(panel, 0.14, Vector3(0.02 * side, -0.05, 0.0), cfg["hair"], Vector3(0.6, 1.3, 1.2), {"outline": 0.012}, 14)
+		Kit.sphere(panel, 0.075, Vector3(0.01 * side, -0.21, 0.04), cfg["hair"], Vector3(0.9, 0.7, 1.35), {"outline": 0.01}, 10)
+	# the tuning-fork pin over her left temple: a handle, a yoke and two tines
+	var pin := Node3D.new()
+	pin.name = "TuningForkPin"
+	pin.position = hc + Vector3(0.2, 0.28, 0.2)
+	pin.rotation.z = -0.65
+	neck.add_child(pin)
+	parts["hair_pin"] = pin
+	var steel := Color("#c3ccd6")
+	Kit.capsule(pin, 0.011, 0.08, Vector3(0, -0.05, 0), steel, {"outline": 0.005}, 8)
+	Kit.box(pin, Vector3(0.05, 0.014, 0.014), Vector3(0, -0.008, 0), steel, {"outline": 0.004})
+	for s: int in [-1, 1]:
+		Kit.capsule(pin, 0.009, 0.1, Vector3(0.02 * s, 0.04, 0), steel, {"outline": 0.005}, 8)
+
+
+## (Days 4-5) Nora's navy scarf printed with cream music notes: a soft ring round the collar, a
+## knot off-centre and two tails, with little notes (a head and a stem) dotted over it.
+func _build_notes_scarf(torso: Node3D) -> void:
+	var navy: Color = cfg["accent"]
+	var cream := Color("#f6ecd2")
+	var n := Node3D.new()
+	n.name = "NotesScarf"
+	torso.add_child(n)
+	parts["scarf"] = n
+	var ring := Kit.torus(n, 0.2, 0.31, Vector3(0, 0.755, 0.05), navy, {"outline": 0.008}, 24, 8)
+	ring.rotation.x = 0.32
+	ring.scale = Vector3(1.0, 1.3, 1.0)
+	var knot_at := Vector3(-0.1, 0.69, 0.335)
+	Kit.sphere(n, 0.06, knot_at, navy.lightened(0.06), Vector3(1.1, 0.9, 0.7), {"outline": 0.007}, 12)
+	for s: int in [-1, 1]:
+		var tail := Kit.sphere(n, 0.07, knot_at + Vector3(0.035 * s - 0.01, -0.11, 0.02), navy.darkened(0.06), Vector3(0.62, 1.45, 0.32), {"outline": 0.006}, 10)
+		tail.rotation.z = 0.3 * s - 0.1
+	# the printed notes: on the ring's front and on both tails
+	var spots: Array[Vector3] = [Vector3(0.14, 0.73, 0.3), Vector3(0.05, 0.7, 0.34), Vector3(-0.2, 0.72, 0.29),
+		knot_at + Vector3(-0.05, -0.12, 0.05), knot_at + Vector3(0.04, -0.16, 0.05)]
+	for p: Vector3 in spots:
+		Kit.sphere(n, 0.014, p, cream, Vector3(1.2, 0.9, 0.5), {"outline": 0.0, "unshaded": true}, 8)
+		Kit.box(n, Vector3(0.005, 0.034, 0.004), p + Vector3(0.011, 0.018, 0.004), cream, {"unshaded": true})
+
+
+## (Days 4-5) Pearl opera glasses on a gold chain, hanging over her cardigan.
+func _build_opera_glasses(torso: Node3D) -> void:
+	var pearl: Color = cfg["glasses_color"]
+	var gold := Color("#e0b84f")
+	var g := Node3D.new()
+	g.name = "OperaGlasses"
+	g.position = Vector3(0.07, 0.3, 0.405)
+	g.rotation = Vector3(0.12, 0.0, 0.08)
+	torso.add_child(g)
+	parts["opera_glasses"] = g
+	for s: int in [-1, 1]:
+		var barrel := Kit.cylinder(g, 0.032, 0.038, 0.06, Vector3(0.04 * s, 0, 0), pearl, {"outline": 0.006, "rim": 0.4}, 14)
+		barrel.rotation.x = PI / 2.0
+		var ring := Kit.torus(g, 0.03, 0.04, Vector3(0.04 * s, 0, 0.032), gold, {"outline": 0.0}, 14, 5)
+		ring.rotation.x = PI / 2.0
+	Kit.box(g, Vector3(0.03, 0.022, 0.03), Vector3(0, 0.008, 0), gold, {"outline": 0.004})
+	# the chain: up from the glasses to either side of her collar
+	for s: int in [-1, 1]:
+		var top := Vector3(0.15 * s, 0.67, 0.3)
+		var bottom := g.position + Vector3(0.05 * s, 0.03, -0.01)
+		var mid := (top + bottom) * 0.5
+		var link := Kit.box(torso, Vector3(0.008, top.distance_to(bottom), 0.008), mid, gold, {"outline": 0.0})
+		link.rotation.z = atan2(bottom.x - top.x, top.y - bottom.y)
+
+
+## (Days 4-5) Her conductor's baton, poking out of a breast pocket on her right.
+func _build_baton(torso: Node3D) -> void:
+	var b := Node3D.new()
+	b.name = "Baton"
+	b.position = Vector3(-0.17, 0.5, 0.33)
+	b.rotation = Vector3(-0.25, 0.0, 0.12)
+	torso.add_child(b)
+	parts["baton"] = b
+	Kit.box(b, Vector3(0.12, 0.1, 0.02), Vector3(0, -0.02, 0.0), cfg["cardigan"].darkened(0.12), {"outline": 0.006})
+	Kit.capsule(b, 0.008, 0.24, Vector3(0.01, 0.1, 0.004), Color("#fffbf2"), {"outline": 0.004}, 8)
+	Kit.sphere(b, 0.02, Vector3(0.01, 0.02, 0.006), Color("#c8874b"), Vector3(1.0, 1.4, 1.0), {"outline": 0.004}, 10)
 
 
 ## (v3) A baker's apron with a pocket, a little flour on it and a loaf stitched on the bib.

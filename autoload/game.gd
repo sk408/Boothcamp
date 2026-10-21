@@ -29,6 +29,8 @@ const PHASES: Array[StringName] = [
 	&"retest",
 	# freestyle (docs/FREESTYLE.md): the waiting room, the tool tray, the chart question, the debrief
 	&"freestyle_room", &"freestyle_tray", &"freestyle_chart", &"freestyle_debrief",
+	# Speech, Days 4-5 (CONTRACTS.md §9.21): talking the results through with the patient
+	&"counselling",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -45,6 +47,10 @@ const CHAPTERS: Array[Dictionary] = [
 	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
 	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech recognition threshold",
 		"scene": "res://story/level_mike.tscn", "requires": "bonnie", "face": "Mike", "tint": Color("#fff0a6")},
+	{"id": "nora", "day": 4, "title": "Day 4: Nora Nightingale", "patient_id": "nora", "teaches": "Word recognition (WRS)",
+		"scene": "res://story/level_nora.tscn", "requires": "mike", "face": "Nora", "tint": Color("#d8f0e4")},
+	# Days 4-5: word recognition, then speech in noise. Keep this line between the two markers.
+	# (Day 5 marker) the marco entry replaces this line, merged after Day 4's (CONTRACTS.md §9.21)
 	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
 	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
 	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",

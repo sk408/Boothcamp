@@ -14,6 +14,8 @@ const MOVIES: Dictionary = {
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
 	## (clinical review D2-7) Day 2's two-card short on air, bone and the gap, after the air results
 	"bone_gap": "res://story/explainers/movies/bone_gap.gd",
+	"letter_choir": "res://story/explainers/movies/letter_choir.gd",
+	"party_noise": "res://story/explainers/movies/party_noise.gd",
 	## (cases, clinical review C12) Hoot's case movies, on every case day (also_chapters)
 	"case_files": "res://story/explainers/movies/case_files.gd",
 	"tymp": "res://story/explainers/movies/tymp.gd",
@@ -125,11 +127,12 @@ static func for_level(chapter_id: String, masks: bool) -> Array[String]:
 
 
 ## Every movie the replay lists show (the pause menu's and the title's "Hoot's Movies"): all but
-## the recaps, in registry order.
+## the recaps, in registry order. (Days 4-5) A movie whose chapter is not in Game.CHAPTERS yet (a
+## stub registered before its day exists) is left out too, so nobody sees it before its day.
 static func replay_ids() -> Array[String]:
 	var out: Array[String] = []
 	for id: String in ids():
-		if not is_short(id):
+		if not is_short(id) and not Game.chapter(String(movie(id).get("chapter", ""))).is_empty():
 			out.append(id)
 	return out
 

@@ -5,6 +5,8 @@ extends Node
 ## (Hoot's textbook run); no audiometry runs here.
 ##   tools/scene_shot.sh res://story/dev_day3.tscn /abs/dir "1" 40   (shots come from the script)
 ## Add -- --part=world (or board, paper, title) after the quit time to shoot one part (default: all).
+## The paper part also shoots a C paper: a misscored right ear that Hoot rechecked (dev_day3_paper_c).
+## Both papers have a next day, like a real Day 3 visit, so they show all three buttons.
 
 const Hud := preload("res://story/hud.gd")
 const MikeBoard := preload("res://story/games/mike_board.gd")
@@ -77,10 +79,12 @@ func _board() -> void:
 		if items.size() < LevelMike.FAMILIAR_WORDS:
 			items.append(it)
 	await b.run_cards(items, SpeechMaterial.title(LevelMike.LIST_ID))
-	b.read_along(0, 5, 1.0)
-	await _wait(0.5)
-	await _shot("dev_day3_cards_reading")
-	await _wait(0.8)
+	b.say_along(0, 10, 2.0)
+	await _wait(0.75)
+	await _shot("dev_day3_cards_saying")
+	await _wait(1.4)
+	b.finish_say_along()
+	b.say_word(LevelMike.UNKNOWN_WORD, "Wind... mill?")
 	b.stumble(LevelMike.UNKNOWN_WORD)
 	b.call_deferred("run_drop", LevelMike.UNKNOWN_WORD)
 	await _wait(0.4)
@@ -132,11 +136,30 @@ func _paper() -> void:
 	var summary := {"patient_id": "mike", "score": 93.0, "grade": "A", "accuracy": 0.95, "technique": 0.97, "efficiency": 0.86,
 		"care": 1.0, "comfort": 3, "medals": {"history": "gold", "instructions": "silver", "familiarize": "gold", "evidence": "gold", "referral": "bronze"},
 		"coins_earned": 76, "coins_total": 140, "audiometry": res, "chapter_id": "mike", "day": 3, "patient_name": "Mike Lenders",
-		"next_chapter_id": ""}
+		"next_chapter_id": "rocco"}   # a real Day 3 visit always has a next day (Game._paper_next)
 	paper.call_deferred("show_summary", summary)
 	await _wait(2.5)
 	await _shot("dev_day3_paper")
 	paper.queue_free()
+	# a C: the player's right ear stored at its bracket but misscored (misses scored as repeated), and
+	# Hoot's recheck on the record
+	var c_res := _merged()
+	var sp: Dictionary = c_res["speech"]
+	var right: Dictionary = (sp["srt"] as Dictionary)["right"]
+	sp["recheck"] = {"srt": {"right": right.duplicate(true)}}
+	right["by_hoot"] = false
+	right["errors"] = [&"misscored", &"misscored"]
+	sp["technique_errors"] = [{"kind": "misscored", "scored": true, "said_kind": "half"}, {"kind": "misscored", "scored": true, "said_kind": "wrong"}]
+	var c_summary := summary.duplicate(true)
+	c_summary["audiometry"] = c_res
+	c_summary["grade"] = "C"
+	c_summary["score"] = 64.0
+	var paper_c: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_child(paper_c)
+	paper_c.call_deferred("show_summary", c_summary)
+	await _wait(2.5)
+	await _shot("dev_day3_paper_c")
+	paper_c.queue_free()
 
 
 ## The title's Days grid (every day is open).

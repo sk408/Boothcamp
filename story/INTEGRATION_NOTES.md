@@ -55,13 +55,17 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Tones:** Hoot runs both ears on the AudiOtron (`hoot_turn_after` 0, coached false, `montage` and
   `skip_hoot_retest` as on Day 2: a few seconds per ear). The AudiOtron only starts Hoot's turn at once
   with quick visit on, so the level sets the screen's public `quick_visit = true` right after `add_child`
-  (see the request below). Hoot then names the degree from `ClinicRules.degree_name` and defines the PTA
+  (see the request below). After the right ear Hoot retests 1 kHz in the level (`retest_1k(tones)`: the
+  measured 1 kHz minus `RETEST_BETTER_DB` 15, a test-retest mismatch; Hoot says the numbers, Mike blames the
+  earphones) and it goes on the record as the right ear's `retest_1k` (`by_hoot`, PTA unchanged); not on the
+  OBJECTION! board, where SRT vs PTA stays the clue. Hoot then names the degree from `ClinicRules.degree_name` and defines the PTA
   (`pta_line()`, best two when `SpeechRules.pta_method` says so).
 - **SPEECH screen:** one instance for both ears (`start_test(patient, ear, coached, plan)`, then
   `await test_finished`); plan `{test: "srt", tones, list: "spondee_a", words: the 12 familiarised ids,
-  exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after: 8`
-  (`LEFT_SOLO_WORDS`: enough to reach his first miss below the SRT) on the left ear with quick
-  visit on. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
+  exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after_up`
+  with `hoot_turn_after: 12` (`LEFT_SOLO_WORDS`, the cap) on the left ear with quick visit on: the
+  player scores down to his first miss below the SRT and the word stepped up 5 after it, then Hoot
+  finishes the bracket. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
   the hidden `non_organic` tag). Mike's response button is put away first (`hold_response_button(false)`).
   Hoot defines the SRT before the words. "The tell" lives in the SPEECH screen only (§9.7; the level no
   longer listens to `speech_response`). If the SPEECH scene is missing, Hoot runs the words himself
@@ -72,8 +76,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `hoot_turn_after` 0, the screen's `quick_visit` on for it and restored after; without a screen a new
   `SpeechSession` + `hoot_runs_ear`). His sheet goes in `LevelMike.recheck`; `board_sheet()` returns it for
   the board and Hoot's verdict, while the results keep the player's sheet for the grade.
-- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)`,
-  `read_along(from, to, s)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
+- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)` (the cards face the
+  clinician: a "CLINICIAN'S SIDE: Mike can't see this" sign, anchor `familiarize_cue`), `say_along(from, to, s)`
+  (Hoot says each card, Mike says it back by ear: the "now saying" line and a tick per card),
+  `finish_say_along()`, `say_word(id, echo)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
   `{targets: ["word_card_windmill"], mouse: {click: "word_card_windmill"}}`, solver drops it; other cards
   are slips with a kind tip), `show_objection(claim, clues)`, `run_objection()` (beat `objection_present`,
   info `{targets: ["objection_claim"], mouse: {drag: ["clue_srt_pta", "objection_claim"]}}`, solver
@@ -83,14 +89,26 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   ("Hoot's recheck: SRT %d vs PTA %d" after a recheck) is always the best one, the coffee and canals
   captions stay neutral, and the verdict and `claim_note()` follow the direction.
   OBJECTION! slams in with `Events.screen_shake` and settles into a corner sticker; reduced motion
-  keeps it still. Anchors: `word_card_<id>`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+  keeps it still. Anchors: `word_card_<id>`, `familiarize_cue`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
   `clue_canals`, `referral_stamp`.
 - **Daily Decibel:** headlines, subheads and the medal row (Chat, Explain, Words, Case, Next) for
   `mike`; with `audiometry.speech.srt` present, column 2 is the word golf card (per ear stored SRT,
-  PTA, agreement chip with the gap, words vs par, golf; "no bracket" instead of the golf for an
-  unbracketed store) with half-words and Hoot's words in the facts line. A speech C grade's subhead
-  names the most frequent slip (`SPEECH_C_SUBHEADS`, `speech_c_subhead()`). Tone-only results keep the
-  beep golf card.
+  PTA, agreement chip with the gap, words vs par, golf) with half-words and Hoot's words in the facts line.
+  - Golf cell: "no bracket" for an unbracketed player store, and "N slip(s)" / "no golf" for a bracketed
+    player store with errors (`sheet.errors`, like the screen's "Oops!"). Hoot's rows and clean player
+    stores keep the golf name.
+  - C subhead: the most frequent slip (`SPEECH_C_SUBHEADS`, `speech_c_subhead()`). When misscoring tops
+    it, `misscore_way()` (from the errors' `scored`) picks the `SPEECH_C_MISSCORED` line, generous or
+    strict; a tie, or no direction on record, keeps the `SPEECH_C_SUBHEADS` line.
+  - Under the card, `recheck_note(sp)` prints "Hoot's recheck: SRT N dB on the right, by the book (X
+    agreement). Not graded." when `speech.recheck.srt.right` exists.
+  - The legend (`agreement_legend()`, two lines) gives the bands and the direction: words better than
+    beeps point to a non-organic loss; words worse, to instructions, language or word recognition.
+  - Tone-only results keep the beep golf card.
+- **Daily Decibel fit (any day):** `show_summary` settles the paper at `fit_scale(size, window)`: exactly
+  1 when its tilted box fits the window's height, else scaled down to fit with 8 px to spare above and
+  below. Papers that fit are unchanged; a tall one (masked golf rows plus three buttons, e.g. Days 2, 7
+  and 8 in autoplay) no longer runs off the window.
 - **Shared story bits:** Mike's portrait (`portraits.gd`), display name "Mike Lenders" (no joke
   nickname), a gruff voice (f0 105 Hz). Mike's day card uses his chapter entry's own `"face": "Mike"`
   and `"tint"` keys (no `title_screen.gd` change). The HUD tracker, the Hoot notes and the pause

@@ -32,8 +32,9 @@ Lifecycle and ownership:
 - While it is in the tree it joins the group `speech_screen` and turns the booth view on.
 
 **Plan keys:** `test` ("srt"), `tones` (required for the PTA), `list`, `words`, `exclude`, `level`,
-`transducer`, `low_start_ok` (passed to the session), `hoot_turn_after`, `intro`, `hoot_turn_text`,
-`show_agreement` (default true), `done_title` (the big callout at the end of the ear) and `fresh_session`.
+`transducer`, `low_start_ok` (passed to the session), `hoot_turn_after`, `hoot_turn_after_up`, `intro`,
+`hoot_turn_text`, `show_agreement` (default true), `done_title` (the big callout at the end of the ear) and
+`fresh_session`.
 
 **`fresh_session` (Hoot's recheck on Day 3):** this ear runs on a new session. The player's session is parked
 (`_kept_session`) and comes back, with its sheets, on the next `start_test` without the key; the status card
@@ -44,7 +45,8 @@ sheet's `bracketed` (else `candidate_db` == `stored_db`). The word card's line r
 for a clean bracketed store ("ear done: check Hoot's tips" after slips, "stored before a bracket", "the bracket
 said N dB", "stored by Hoot, by the book"). `SpeechScreen.golf_text(sheet)` gives the golf callout: "Oops!" after
 a slip or an unbracketed store, "Clean!" for a clean run over par (never "Par!" over "14 words, par 12"). The
-fanfare and confetti only play for a bracketed or Hoot store.
+fanfare and confetti only play for a bracketed or Hoot store. A clean store on an ear with earlier slips
+(`session.slips()`) gets no combo callout, so no "Clean score!" appears under its "Oops!".
 
 **Clean kinds with a message:** `srt_low_start` (a first word at least 10 dB below the PTA with `low_start_ok`) takes the clean branch
 (combo note, "+points") and shows its `message` as a once-per-visit Hoot tip pointing at `speech_ladder`.
@@ -64,6 +66,9 @@ interrupts the coach's tip, which comes back after.
   - After 1.8 s `Engine.time_scale` is multiplied by 8 (base × 8, so x48 under the bot's `--speed=6`).
   - No player beat is emitted before or during his turn.
 - **N > 0:** Hoot takes over once the player has presented N words on this ear and scored the last one.
+- **With `hoot_turn_after_up`:** Hoot also takes over as soon as the player has scored a word stepped up after
+  a miss (the bracket's first "missed: up 5"); N stays the cap. Day 3's solo left ear uses N = 12
+  (`LevelMike.LEFT_SOLO_WORDS`).
 - **During his turn:**
   - `session.scoring` is false, so his words never count, and the sheet has `by_hoot: true`.
   - He presses the screen's own buttons, following `recommended_action()`, on pausable timers.

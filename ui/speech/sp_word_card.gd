@@ -5,6 +5,7 @@ extends Control
 ## States: &"idle" (NEXT WORD), &"talking" (NOW SAYING, glowing), &"listening" (waiting for his
 ## answer), &"score" (SCORE IT: compare the card with what he said), &"done" (the SRT is stored),
 ## &"empty" (no word list yet). A new word arrives with a quick card flip.
+## (Days 4-5) A test mode's hooks, all off on Day 3: word_drawer, carrier, hide_word (below).
 
 var list_title: String = "":
 	set(v):
@@ -29,6 +30,19 @@ var done_text: String = "":
 var done_sub: String = "ear done: nice work!":
 	set(v):
 		done_sub = v
+		queue_redraw()
+## (Days 4-5) When valid, draws a second row under the word: word_drawer.call(card, row: Rect2) (the
+## word itself is always drawn crisp); with hide_word, the row is the card's whole body.
+var word_drawer: Callable = Callable()
+## (Days 4-5) A small line above the word (the carrier phrase).
+var carrier: String = "":
+	set(v):
+		carrier = v
+		queue_redraw()
+## (Days 4-5) No word (sentence mode only: the drawer owns the card).
+var hide_word := false:
+	set(v):
+		hide_word = v
 		queue_redraw()
 var _word := ""
 var _parts: Array = []
@@ -112,7 +126,13 @@ func _draw() -> void:
 		if done_sub != "":
 			AoDraw.text_c(self, c + Vector2(0, 26), done_sub, 14, Palette.INK_SOFT, AoDraw.FONT_SEMI)
 	else:
-		_draw_word(c, r.size.x - 60.0)
+		if not hide_word:
+			_draw_word(c, r.size.x - 60.0)
+		if carrier != "" and not hide_word:
+			AoDraw.text_c(self, c + Vector2(0, -40), carrier, 13, Palette.INK_SOFT, AoDraw.FONT_SEMI)
+		if word_drawer.is_valid():
+			var top := head_h + 8.0 if hide_word else c.y + 28.0
+			word_drawer.call(self, Rect2(Vector2(36.0, top), Vector2(r.size.x - 48.0, maxf(0.0, r.size.y - 40.0 - top))))
 	# status line
 	var sl := Vector2(r.size.x * 0.5 + 12.0, r.size.y - 22.0)
 	var dots := ".".repeat(1 + int(_t * 3.0) % 3)
