@@ -791,10 +791,11 @@ func test_build_results_units() -> void:
 	var merged := SpeechSession.merge_results(_tones(), res)
 	assert_eq(int((merged["speech"] as Dictionary)["scored_sheets"]), 3, "merge_results weighs the units")
 	# with the game's own paths each test that has a mode script adds its summary, even on fake sheets
+	# (Day 5) SinTest reads only whole party sheets, so this stand-in one adds none (test_speech_sin_session)
 	_probes("", "")
 	var real := s.build_results()
 	assert_eq(real.has("wrs_summary"), ResourceLoader.exists(SpeechTestMode.PATHS[&"wrs"]), "the word lists' summary")
-	assert_eq(real.has("sin_summary"), ResourceLoader.exists(SpeechTestMode.PATHS[&"sin"]), "the party test's summary")
+	assert_false(real.has("sin_summary"), "a stand-in party sheet adds no summary")
 	assert_eq(real["scored_sheets"], 3, "a summary changes no number")
 
 
