@@ -4,7 +4,8 @@ extends TestCase
 ## only before its first play), the party plans (contract §9.21) on Hoot's textbook visit, the bill's
 ## options and the medals, the band ruler, the plates (keys, drag, click-then-click, the solver, a
 ## distractor's tip), the switch and the reveal, the seats, the dinner, the party golf card on the
-## paper, Hoot's line lengths and words, and a smoke run of the first beats.
+## paper, Hoot's line lengths and words, a smoke run of the first beats, and (clinical review A1
+## and A2, all days) the routine lines and the masking recap before the first masked test.
 
 const LevelMarco := preload("res://story/level_marco.gd")
 const MarcoBoard := preload("res://story/games/marco_board.gd")
@@ -14,6 +15,8 @@ const PaperPartyGolf := preload("res://story/papers/paper_party_golf.gd")
 const DevMarco := preload("res://story/dev_marco.gd")
 const Movies := preload("res://story/explainers/movies.gd")
 const Hud := preload("res://story/hud.gd")
+const LevelMike := preload("res://story/level_mike.gd")
+const LevelCase := preload("res://story/level_case.gd")
 
 ## Words Hoot never says on Day 5: no diagnosis, no cause, no age label (CHAPTER5 §9).
 const BANNED: Array[String] = ["tumour", "tumor", "neuroma", "schwannoma", "cancer", "hidden", "processing", "presbycusis",
@@ -26,6 +29,11 @@ var phases: Array[StringName] = []
 var phase_info: Array[Dictionary] = []
 var resolved: Array[StringName] = []
 var lines: Array[String] = []
+## (A1, A2) Phases with their test ("audiometry:bc_masked"), movies ("movie:masking_recap") and
+## lines ("Hoot: ..."), in order.
+var timeline: Array[String] = []
+## (A1) A label showed the caption _play_until_test watched for.
+var caption_seen := false
 var _progress: Dictionary = {}
 var _settings: Dictionary = {}
 
@@ -36,6 +44,7 @@ func before_each() -> void:
 	phase_info.clear()
 	resolved.clear()
 	lines.clear()
+	timeline.clear()
 	_progress = Game.progress.duplicate(true)
 	_settings = Game.settings.duplicate(true)
 	Events.awaiting_input.connect(_on_awaiting)
@@ -61,11 +70,14 @@ func after_each() -> void:
 
 func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	beats.append({"beat": beat, "info": info, "solver": solver})
+	if beat == &"explainer":
+		timeline.append("movie:" + String(info.get("movie", "")))
 
 
 func _on_phase(p: StringName, info: Dictionary) -> void:
 	phases.append(p)
 	phase_info.append(info)
+	timeline.append("%s:%s" % [p, String(info.get("test", ""))])
 
 
 func _on_resolved(beat: StringName) -> void:
@@ -74,6 +86,7 @@ func _on_resolved(beat: StringName) -> void:
 
 func _on_line(speaker: String, text: String) -> void:
 	lines.append("%s: %s" % [speaker, text])
+	timeline.append("%s: %s" % [speaker, text])
 
 
 func _count(beat: StringName) -> int:
@@ -101,6 +114,33 @@ func _play_until(stop: StringName, max_ms: int = 60000) -> Node:
 	while Time.get_ticks_msec() - t0 < max_ms:
 		await wait_frames(2)
 		if phases.has(stop):
+			break
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	return lv
+
+
+## (A1, A2) The level from the top until a phase whose info names `test` (Hoot's words in quiet:
+## "wrs"), every beat solved as the bot solves it; caption_seen turns true once a label in the
+## level shows `caption` (the otoscope's).
+func _play_until_test(test: String, caption: String, max_ms: int = 120000) -> Node:
+	Engine.time_scale = 6.0
+	caption_seen = false
+	var lv: Node = (load(LevelMarco.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < max_ms:
+		await wait_frames(2)
+		if not caption_seen and phases.has(&"otoscopy"):
+			for n: Node in lv.find_children("*", "Label", true, false):
+				caption_seen = caption_seen or (n as Label).text == caption
+		if timeline.has("audiometry:" + test) or timeline.has("speech:" + test):
 			break
 		if handled >= beats.size():
 			continue
@@ -180,6 +220,61 @@ func test_movie_announced_only_when_unseen() -> void:
 	assert_true(j >= 0 and bool(phase_info[j].get("seen", false)), "phase explainer, seen true")
 	lv2.queue_free()
 	await wait_seconds(0.3)
+
+
+# ---------------------------------------------------------------- the routine (clinical review A1, A2)
+
+## (A1, all days) A fresh speculum on the otoscope's caption, and the cases' listening-check line
+## once, before the first tone test. (A2, all days) While the masking movie is unseen, the recap
+## card plays once, before Hoot's masked bone where a gap shows (his measured tones decide; with no
+## gap, no card: the words' noise is not the tone plateau the card teaches).
+func test_routine_and_masking_recap_when_unseen() -> void:
+	assert_eq(LevelMarco.line("routine"), LevelCase.ROUTINE_LINE, "the cases' own words")
+	assert_eq(LevelMarco.line("masking_hint"), LevelCase.MASKING_HINT, "the cases' own words")
+	assert_eq(LevelMarco.MASKING_RECAP, LevelCase.MASKING_RECAP)
+	assert_eq(LevelMarco.MASKING_MOVIE, LevelCase.MASKING_MOVIE)
+	Game.mark_movie_seen(LevelMarco.MOVIE_ID)
+	assert_false(Game.is_movie_seen(LevelMarco.MASKING_MOVIE), "a fresh save has not seen the masking movie")
+	var caption := LevelMike.SPECULUM_CAPTION % ["Marco", "RIGHT"]
+	assert_true(_words(caption) <= Hoot.MAX_WORDS, caption)
+	var lv := await _play_until_test("wrs", caption)
+	assert_has(timeline, "speech:wrs", "the visit reached Hoot's words in quiet")
+	assert_true(caption_seen, "the otoscope's caption: " + caption)
+	var routine := "Hoot: " + LevelCase.ROUTINE_LINE
+	assert_eq(timeline.count(routine), 1, "the listening check, once")
+	assert_true(timeline.find(routine) < timeline.find("audiometry:ac"), "before the first tone test")
+	var first := timeline.find("audiometry:bc_masked")
+	var recap := "movie:" + LevelMarco.MASKING_RECAP
+	var hint := "Hoot: " + LevelCase.MASKING_HINT
+	assert_eq(timeline.count(recap), 1 if first >= 0 else 0, "the recap card once, before masked bone only")
+	assert_eq(timeline.count(hint), timeline.count(recap), "then where the full movie lives")
+	if first >= 0:
+		var at := timeline.find(recap)
+		assert_true(at > timeline.find("audiometry:bc") and at < first, "after unmasked bone, before the masked bone")
+		assert_true(timeline.find(hint) > at and timeline.find(hint) < first, "right after the card")
+		assert_true(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "the pause menu offers every replay movie now (E19)")
+		# a second call plays nothing (only once the card has played: with no gap a call here would
+		# play it for real, and nobody answers its beats once _play_until_test returns)
+		await lv.call("_recap")
+		assert_eq(timeline.count(recap), 1, "never twice a visit")
+	else:
+		assert_false(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "no gap: the pause menu keeps the day's own movie")
+	lv.queue_free()
+	await wait_seconds(0.5)
+
+
+## (A2, all days) A watched masking movie: no recap card, no pointer, the pause menu as it was.
+func test_no_masking_recap_once_the_movie_is_seen() -> void:
+	Game.mark_movie_seen(LevelMarco.MOVIE_ID)
+	Game.mark_movie_seen(LevelMarco.MASKING_MOVIE)
+	var lv := await _play_until_test("wrs", LevelMike.SPECULUM_CAPTION % ["Marco", "RIGHT"])
+	assert_has(timeline, "speech:wrs", "the visit reached Hoot's words in quiet")
+	assert_false(timeline.has("movie:" + LevelMarco.MASKING_RECAP), "no recap card")
+	assert_false(timeline.has("Hoot: " + LevelCase.MASKING_HINT), "no pointer to the movie")
+	assert_false(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "the pause menu keeps the day's own movie")
+	assert_eq(timeline.count("Hoot: " + LevelCase.ROUTINE_LINE), 1, "the listening check still")
+	lv.queue_free()
+	await wait_seconds(0.5)
 
 
 # ---------------------------------------------------------------- plans (contract §9.21)

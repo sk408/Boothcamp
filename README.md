@@ -29,10 +29,14 @@ on the title's **Days** card, in any order. The suggested day wears an **UP NEXT
 Day 1 The Daily Decibel stamps UP NEXT! and **Next: Day 2** goes straight on. Progress is saved.
 
 **Day 3** brings Mike Lenders, a forklift driver who says he can't hear a thing since a forklift
-beeped at work (yet he hears Hoot's whispered offer of coffee). Hoot runs his beeps, then you find
-his speech recognition threshold (SRT) on the new SPEECH screen: go through the two-part words
-first, present them softer and softer, score what Mike actually says, and find the softest level
-where he repeats half of them. His words come back far better than his beeps, so you present the
+beeped at work (yet he hears Hoot's whispered offer of coffee). It opens with **Hoot's spondee
+movie** ("The Spondee Ladder"), an 80-second cartoon in eight scenes: why test words after beeps,
+two-part words with both halves equally strong, the SRT as the halfway level, the down 10, up 5
+ladder (one common way, not the only one), saying the words first by ear, and whether words and
+beeps agree. Replay it from the pause menu ("Watch Hoot's spondee movie") or **Hoot's Movies**.
+Hoot runs his beeps, then you find his speech recognition threshold (SRT) on the new SPEECH
+screen, better ear first: go through the two-part words first, present them softer and softer,
+score what Mike actually says, and find the softest level where he repeats half of them. His words come back far better than his beeps, so you present the
 clues on the OBJECTION! board, never accuse him, and stamp a recheck with objective tests, with
 his doctor told about the sudden loss.
 
@@ -303,19 +307,20 @@ always lights the NOISE box and the booth squiggles, so Day 2 is playable withou
 - **Spondees:** two-part words said with equal stress on both parts (rainbow, doorbell), chosen
   because they are about equally easy to hear. Go through them first at a comfortable level, and
   drop any word the patient doesn't know.
-- **The SRT (speech recognition threshold):** start about 15 dB above the pure-tone average
-  (PTA: the average of the beeps at 500, 1000 and 2000 Hz); repeated = down 10, missed = up 5,
-  and another word at the same level is fine; the SRT is the softest level where at least two
-  words and half of them come back, with fewer than half right 5 dB below it. Score only what the
-  patient said: half a word is a miss.
+- **The SRT (speech recognition threshold):** better ear first; start about 15 dB above the pure-tone
+  average (PTA: the average of the beeps at 500, 1000 and 2000 Hz; up to 40 above is fine too);
+  repeated = down 10, missed = up 5 (one common way, not the only one), and another word at the
+  same level is fine; the SRT is the softest level where at least two words and half of them come
+  back, with fewer than half right 5 dB below it. Score only what the patient said: half a word is
+  a miss.
 - **PTA/SRT agreement:** a reliable SRT lands within about 6 dB of the PTA (12 is fair). The
   direction matters: Mike's SRT is about 40 dB better than his beeps, a classic sign of a
   non-organic loss; an SRT worse than the PTA points to the instructions, language or word
   recognition instead.
-- **Never accuse:** most non-organic losses aren't fibs (stress, worry, even a real loss
-  underneath). Gather the clues (the agreement, the whispered coffee, clear canals), stay kind,
-  recheck, refer for objective tests, and tell his doctor about the sudden loss. The game never
-  calls Mike a liar.
+- **Never accuse:** non-organic loss has many causes (money, stress, worry, even a real loss
+  underneath), and we can't tell which from the booth. Gather the clues (the agreement, the
+  whispered coffee, clear canals), stay kind, recheck, refer for objective tests, and tell his
+  doctor about the sudden loss. The game never calls Mike a liar.
 - **Word recognition (Day 4):** play one-syllable words loud enough for every sound (the game's rule:
   the PTA plus 35, never below 55), score whole words only, 25 words at 4% each, and keep one level
   and one set-up per list. Loud words can cross the head, so speech noise goes in the other ear when

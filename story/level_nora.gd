@@ -35,6 +35,11 @@ const SPORTS_SCRIPT := "res://story/papers/paper_word_golf.gd"
 const PATIENT_ID := "nora"
 const MOVIE_ID := "letter_choir"
 const MASKING_MOVIE := "masking"
+## (Clinical review A2, all days; not the word amendments' A2) Before the visit's first masked test
+## (Hoot's masked bone), while the masking movie is unseen: the one-card recap, then where the full
+## movie lives, as the case days do.
+const MASKING_RECAP := "masking_recap"
+const MASKING_HINT := "The full masking movie is under Hoot's Movies, in the pause menu or on the title screen."
 ## Her voice (story/voice.gd is not edited: registered at runtime, CHAPTER4 §14).
 const VOICE := {"f0": 230.0, "wobble": 0.09}
 
@@ -124,6 +129,8 @@ var tones: Dictionary = {}
 var results: Dictionary = {}
 ## The movie reached its seen_at scene this visit (lines may refer to it).
 var _movie_watched := false
+## (A2, all days) The masking recap played this visit (once, before the first masked test).
+var _recapped := false
 ## Word lists handed out so far (play order, D25).
 var _lists_given := 0
 ## The Roll Call's wrong sorts (the paper's line and the Flags medal).
@@ -246,6 +253,23 @@ func _play_movie(id: String) -> Dictionary:
 	return r
 
 
+## (Clinical review A2, all days) The masking recap card before Hoot's masked bone, while the
+## masking movie is unseen (the day-start offer declined or skipped, or Day 2 played without its
+## movie), then where the full movie lives (level_case._recap). From here the level is in
+## Movies.MASKING_LEVEL_GROUP, so its pause menu lists the masking movie too (E19); a watched movie
+## leaves the day as it was.
+func _recap() -> void:
+	if _recapped or Game.is_movie_seen(MASKING_MOVIE) or not Movies.has(MASKING_RECAP):
+		return
+	_recapped = true
+	add_to_group(Movies.MASKING_LEVEL_GROUP)
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", MASKING_RECAP, "recap")
+	player.queue_free()
+	await _say("Hoot", MASKING_HINT)
+
+
 # ---------------------------------------------------------------- 1. intro: the tuning gag
 
 func _intro() -> void:
@@ -337,7 +361,7 @@ func _otoscopy() -> void:
 	await clinic.call("focus_camera", &"otoscope", 0.8)
 	var g := Otoscopy.new()
 	hud.call("add_game", g)
-	await g.show_clear("left", "Nora's LEFT ear: clear canal, healthy eardrum.")
+	await g.show_clear("left", LevelMike.SPECULUM_CAPTION % ["Nora", "LEFT"])
 	await _say("Hoot", "Look before you test! Clear canals, healthy eardrums. Nothing blocking the left.")
 	hud.call("add_clue", "Canals clear, eardrums healthy")
 	g.queue_free()
@@ -426,6 +450,7 @@ func _tones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
+	await _say("Hoot", LevelMike.ROUTINE_LINE)
 	await _say("Hoot", "Earphones on! I'll run the beeps at top speed. Better ear first: right.")
 	clinic.call("put_on_earphones", true)
 	await _wait(0.6)
@@ -449,6 +474,7 @@ func _tones() -> void:
 	clinic.call("put_on_bone_oscillator", "left")
 	clinic.call("put_on_masking_phone", "right")
 	await _wait(0.5)
+	await _recap()
 	if not Game.is_chapter_done("bonnie"):
 		await _say("Hoot", "Loud sounds can cross the skull to the other ear. That's the Cross-Hearing Ghost!")
 	cam = _open_audiometer()
