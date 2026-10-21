@@ -76,6 +76,12 @@ static func better_ear(pta_right: float, pta_left: float) -> String:
 	return "left" if pta_left < pta_right else "right"
 
 
+## The SRT ear order: the better ear (lower PTA) first, right on a tie (clinical review S6).
+static func ears_better_first(pta_right: float, pta_left: float) -> Array[String]:
+	var first := better_ear(pta_right, pta_left)
+	return [first, "left" if first == "right" else "right"]
+
+
 ## Nearest multiple of 5 (halves round up), on the speech dB grid.
 static func snap5(db: float) -> int:
 	return int(floor(db / 5.0 + 0.5)) * 5
@@ -90,7 +96,7 @@ static func clamp_db(db: int) -> int:
 
 const SRT_START_ABOVE_PTA_DB := 15
 const SRT_START_MIN_DB := 10   ## first word at PTA + 10 ...
-const SRT_START_MAX_DB := 25   ## ... to PTA + 25
+const SRT_START_MAX_DB := 40   ## ... to PTA + 40 (ASHA 1988 starts 30 to 40 above; clinical review S4)
 const SRT_DOWN_DB := 10        ## repeated it -> down 10
 const SRT_DOWN_TOLERATED_DB := 5   ## down 5 is tolerated (some clinics drop 5 after every correct word)
 const SRT_UP_DB := 5           ## missed it -> up 5
@@ -122,7 +128,7 @@ static func srt_start(pta: float) -> int:
 	return clamp_db(snap5(pta) + SRT_START_ABOVE_PTA_DB)
 
 
-## Is this a sensible first SRT word level for this PTA (PTA + 10 .. PTA + 25)?
+## Is this a sensible first SRT word level for this PTA (PTA + 10 .. PTA + 40)?
 static func srt_start_ok(db: int, pta: float) -> bool:
 	if is_nan(pta):
 		return true

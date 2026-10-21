@@ -86,8 +86,18 @@ func test_pta_and_start() -> void:
 	assert_near(SpeechRules.pta_for_speech({500: 10, 1000: 20, 2000: 60}), 15.0, 0.01)
 	assert_eq(SpeechRules.srt_start(71.7), 85)
 	assert_true(SpeechRules.srt_start_ok(85, 71.7))
-	assert_false(SpeechRules.srt_start_ok(110, 71.7))
+	assert_true(SpeechRules.srt_start_ok(110, 71.7), "PTA + 38: ASHA's 30 to 40 above (S4)")
+	assert_false(SpeechRules.srt_start_ok(115, 71.7), "past PTA + 40")
 	assert_false(SpeechRules.srt_start_ok(75, 71.7))
+
+
+## S6: the SRT ears go better first (the lower PTA), right on a tie or when a PTA is missing.
+func test_srt_ears_better_first() -> void:
+	assert_eq(SpeechRules.ears_better_first(71.7, 73.3), ["right", "left"] as Array[String])
+	assert_eq(SpeechRules.ears_better_first(45.0, 15.0), ["left", "right"] as Array[String])
+	assert_eq(SpeechRules.ears_better_first(30.0, 30.0), ["right", "left"] as Array[String], "a tie keeps right first")
+	assert_eq(SpeechRules.ears_better_first(NAN, 30.0), ["left", "right"] as Array[String])
+	assert_eq(SpeechRules.ears_better_first(NAN, NAN), ["right", "left"] as Array[String])
 
 
 func test_srt_steps() -> void:
@@ -437,7 +447,8 @@ func test_more_words_at_one_level() -> void:
 
 
 ## A first word below the start window is an srt_start error, unless the plan allows an ascending
-## start (low_start_ok): then it is a clean srt_low_start with Hoot's line. Too high stays an error.
+## start (low_start_ok): then it is a clean start, and Hoot's srt_low_start praise waits for the first
+## step up (test_low_start_praise_waits_for_the_ascent). Too high stays an error.
 func test_low_start_ok() -> void:
 	var s := _session(_mike())
 	var got := _record(s)
@@ -450,20 +461,21 @@ func test_low_start_ok() -> void:
 	ok.begin("right")
 	ok.set_level(60)
 	ok.present()
-	assert_eq(_kinds(got_ok), [&"srt_low_start"] as Array[StringName])
+	assert_eq(_kinds(got_ok), [&"srt_good_start"] as Array[StringName], "a low first word alone earns no praise (S2)")
 	var d: Dictionary = got_ok[0][1]
-	assert_eq(String(d.get("message", "")), "Starting below his beeps: smart when answers look exaggerated.")
+	assert_false(d.has("message"))
 	assert_eq(ok.combo, 1, "a clean check: combo +1")
 	assert_eq(ok.checks, 1)
 	assert_eq(ok.clean_checks, 1)
 	assert_true(int(d.get("points", 0)) > 0)
 	assert_true(ok.errors.is_empty())
-	var high := _session(_mike(), 11, {"low_start_ok": true})
+	# (S4) Mike's PTA + 40 is past the dial's top, so too high is shown on Gus (PTA 22.5: 65 is + 42.5)
+	var high := _session(Game.load_patient("gus") as PatientProfile, 11, {"low_start_ok": true})
 	var got_high := _record(high)
 	high.begin("right")
-	high.set_level(100)
+	high.set_level(65)
 	high.present()
-	assert_eq(_kinds(got_high), [&"srt_start"] as Array[StringName], "too high is still an error")
+	assert_eq(_kinds(got_high)[0], &"srt_start", "too high is still an error")
 	var good := _session(_mike(), 11, {"low_start_ok": true})
 	var got_good := _record(good)
 	good.begin("right")
@@ -479,6 +491,93 @@ func test_low_start_ok() -> void:
 	lazy.present()
 	assert_eq(_kinds(got_lazy), [&"srt_start"] as Array[StringName], "the untouched dial is a start error")
 	assert_false((got_good[0][1] as Dictionary).has("message"), "a plain clean kind has no line")
+
+
+## S2: after a low first word (low_start_ok) the praise comes with the first step up, whenever that
+## is: straight after a miss, or after the dial first went down. A wrong step up spends it.
+func test_low_start_praise_waits_for_the_ascent() -> void:
+	var praise := "Starting below his beeps and coming up: smart when answers look exaggerated."
+	var up := _session(_mike(), 11, {"low_start_ok": true})
+	var got_up := _record(up)
+	up.begin("right")
+	up.set_level(60)
+	up.present()
+	up.score(false)
+	up.set_level(65)
+	var n := got_up.size()
+	var checks := up.checks
+	up.present()
+	var at_step := got_up.slice(n)
+	var step_kinds := _kinds(at_step)
+	assert_true(step_kinds.has(&"srt_low_start"), "the step up 5 earns the praise: %s" % str(step_kinds))
+	assert_false(step_kinds.has(&"speech_textbook"), "in place of the plain step check")
+	assert_eq(String((at_step[step_kinds.find(&"srt_low_start")][1] as Dictionary).get("message", "")), praise)
+	assert_eq(up.checks, checks + 1, "one check, as any step")
+	up.score(false)
+	up.set_level(70)
+	up.present()
+	assert_eq(_kinds(got_up).count(&"srt_low_start"), 1, "once per ear")
+	# he repeats the low first word: down first, and the praise waits for the first step up
+	var down := _session(_mike(), 11, {"low_start_ok": true})
+	var got_down := _record(down)
+	down.begin("right")
+	down.set_level(60)
+	down.present()
+	down.score(true)
+	down.set_level(50)
+	down.present()
+	assert_false(_kinds(got_down).has(&"srt_low_start"), "no ascent yet")
+	down.score(false)
+	down.set_level(55)
+	down.present()
+	assert_true(_kinds(got_down).has(&"srt_low_start"), "the first step up")
+	# a wrong step up (up 10 after a miss) is the wrong-step slip, and no praise follows later
+	var wrong := _session(_mike(), 11, {"low_start_ok": true})
+	var got_wrong := _record(wrong)
+	wrong.begin("right")
+	wrong.set_level(60)
+	wrong.present()
+	wrong.score(false)
+	wrong.set_level(70)
+	wrong.present()
+	wrong.score(false)
+	wrong.set_level(75)
+	wrong.present()
+	assert_true(_kinds(got_wrong).has(&"srt_wrong_step"))
+	assert_false(_kinds(got_wrong).has(&"srt_low_start"), "spent on the wrong step")
+	# a first word in the window never earns it, however the dial moves
+	var std := _session(_mike(), 11, {"low_start_ok": true})
+	var got_std := _record(std)
+	std.begin("right")
+	std.set_level(85)
+	std.present()
+	std.score(false)
+	std.set_level(90)
+	std.present()
+	assert_false(_kinds(got_std).has(&"srt_low_start"), "not a low start")
+
+
+## S4: a first word 30 to 40 dB above the PTA (ASHA 1988) is a clean start, with par counted from it;
+## the recommended start stays PTA + 15.
+func test_asha_start_is_clean() -> void:
+	var gus := Game.load_patient("gus") as PatientProfile
+	var s := _session(gus)
+	var got := _record(s)
+	s.begin("right")
+	assert_eq(s.recommended_start(), 40, "still PTA (22.5 -> 25) + 15")
+	s.set_level(60)
+	s.present()
+	assert_eq(_kinds(got)[0], &"srt_good_start", "PTA + 37.5: no penalty (then a masking note: his left ear is good)")
+	assert_true(s.errors.is_empty())
+	var truth := s.sim.true_srt("right")
+	assert_true(SpeechRules.srt_par(60, truth) > SpeechRules.srt_par(40, truth), "par counts from the first word: the extra words cost nothing")
+	# Mike: the dial's top (100) is his PTA + 28, now inside the window
+	var m := _session(_mike())
+	var got_m := _record(m)
+	m.begin("right")
+	m.set_level(SpeechRules.MAX_DB)
+	m.present()
+	assert_eq(_kinds(got_m), [&"srt_good_start"] as Array[StringName])
 
 
 ## Every SRT sheet says whether it was stored at the bracketed SRT.
