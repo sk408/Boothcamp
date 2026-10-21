@@ -11,7 +11,7 @@ const UiKit := preload("res://story/ui_kit.gd")
 const HEADER := "SPORTS: THE WORD GOLF CARD"
 const COLUMNS: Array[String] = ["Ear · List · Level", "Noise", "Score + band", "Golf"]
 const CELL_W: Array[int] = [196, 64, 150, 96]
-const CELL_H := 30
+const CELL_H := 26
 const HOOT_SAYS_GOOD := "HOOT SAYS: Whole words, both ears, louder once, flags raised. Lovely, careful work, trainee."
 const HOOT_SAYS_REST := "HOOT SAYS: Whole words, both ears, louder once, flags raised. We'll tune the rest together."
 const ARTS := "ARTS: Nightingale Singers' altos now stand on the director's right."
@@ -22,11 +22,15 @@ func build(c2: VBoxContainer, aud: Dictionary, s: Dictionary) -> void:
 	var sp: Dictionary = aud.get("speech", {})
 	c2.add_child(UiKit.label(HEADER, 16, Palette.INK, 700))
 	c2.add_child(_table(rows(sp)))
+	# the lines sit close together, so a visit with a redone list still fits the page
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", -1)
+	c2.add_child(box)
 	for line: String in lines(sp, s):
 		var l := UiKit.label(line, 14, Palette.INK, 700 if line.begins_with("HOOT SAYS") else 600)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(500, 0)
-		c2.add_child(l)
+		box.add_child(l)
 
 
 ## Every word list of the visit (both ears) in play order: {ear, n, title, level_db, masked,
@@ -138,7 +142,7 @@ static func _table(rs: Array[Dictionary]) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = COLUMNS.size()
 	grid.add_theme_constant_override("h_separation", 4)
-	grid.add_theme_constant_override("v_separation", 3)
+	grid.add_theme_constant_override("v_separation", 2)
 	for i in COLUMNS.size():
 		var h := UiKit.label(COLUMNS[i], 13, Palette.INK_SOFT, 700)
 		h.custom_minimum_size = Vector2(CELL_W[i], 0)
