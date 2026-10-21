@@ -4,7 +4,7 @@
 "ear": "right",
 "expected": 85,
 "freq": -1,
-"message": "Start at his PTA plus 15: easy words first, then work down.",
+"message": "Start at his PTA plus 15, plus 40 at most: easy words first, then work down.",
 "pta": 71.66666666666667,
 "test": "srt"
 }], ["combo", 1, 1], ["technique", &"speech_textbook", {
@@ -194,7 +194,7 @@
 "ear": "right",
 "freq": -1,
 "kind": "srt_start",
-"message": "Start at his PTA plus 15: easy words first, then work down.",
+"message": "Start at his PTA plus 15, plus 40 at most: easy words first, then work down.",
 "test": "srt"
 }, {
 "db": 60,
@@ -1009,12 +1009,11 @@
 "message": "SRT 13 dB worse than the PTA: POOR agreement! Check instructions, language and word recognition.",
 "pta": 71.66666666666667,
 "test": "srt"
-}], ["combo", 4, 2], ["technique", &"srt_low_start", {
+}], ["combo", 4, 2], ["technique", &"srt_good_start", {
 "combo": 4,
 "db": 40,
 "ear": "left",
 "freq": -1,
-"message": "Starting below his beeps: smart when answers look exaggerated.",
 "multiplier": 2,
 "points": 20,
 "test": "srt"

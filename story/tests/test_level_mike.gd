@@ -2,20 +2,28 @@ extends TestCase
 ## (Speech) Day 3, Mike (story/level_mike.gd, story/games/mike_board.gd): the board's three beats
 ## and their solvers, the level's SPEECH plans and objection cards with real numbers (and Hoot's
 ## recheck when the player's SRT can't show the mismatch), Hoot's textbook fallback run, Hoot's
-## line lengths, the Daily Decibel's word golf card, and a smoke run of the first beats.
+## line lengths, the Daily Decibel's word golf card, a smoke run of the first beats, (clinical
+## review A1 and A2, all days) the routine lines and why the day has no masking recap, and (S7)
+## the spondee movie beat (announced only before its first play).
 
 const MikeBoard := preload("res://story/games/mike_board.gd")
 const LevelMike := preload("res://story/level_mike.gd")
+const LevelCase := preload("res://story/level_case.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 var beats: Array = []
 var phases: Array[StringName] = []
+var phase_info: Array[Dictionary] = []
 var resolved: Array[StringName] = []
+var _progress: Dictionary = {}
 
 
 func before_each() -> void:
 	beats.clear()
 	phases.clear()
+	phase_info.clear()
 	resolved.clear()
+	_progress = Game.progress.duplicate(true)
 	Events.awaiting_input.connect(_on_awaiting)
 	Events.phase_changed.connect(_on_phase)
 	Events.input_resolved.connect(_on_resolved)
@@ -26,6 +34,7 @@ func after_each() -> void:
 	Events.awaiting_input.disconnect(_on_awaiting)
 	Events.phase_changed.disconnect(_on_phase)
 	Events.input_resolved.disconnect(_on_resolved)
+	Game.progress = _progress
 	Hoot.clear()
 	Hoot.clear_bubble_hint()
 	Engine.time_scale = 1.0
@@ -37,8 +46,9 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	beats.append({"beat": beat, "info": info, "solver": solver})
 
 
-func _on_phase(p: StringName, _info: Dictionary) -> void:
+func _on_phase(p: StringName, info: Dictionary) -> void:
 	phases.append(p)
+	phase_info.append(info)
 
 
 func _on_resolved(beat: StringName) -> void:
@@ -336,6 +346,66 @@ func _level_with_tones() -> Node:
 	lv.set("words", ws)
 	lv.set("dropped", ["windmill"] as Array[String])
 	return lv
+
+
+## Mike's tones with each left stamp set by `fn` (the right stamp at that frequency -> the new left).
+func _tones_with_left(fn: Callable) -> Dictionary:
+	var tones := SpeechSession.tone_results_from(_mike())
+	var ears: Dictionary = tones["ears"]
+	var right: Dictionary = (ears["right"] as Dictionary)["freqs"]
+	var left: Dictionary = (ears["left"] as Dictionary)["freqs"]
+	for f: Variant in left:
+		var st: Dictionary = left[f]
+		st["stored_db"] = fn.call(int((right[f] as Dictionary)["stored_db"]), int(st["stored_db"]))
+	return tones
+
+
+## S6: the SRT goes better ear first (the lower tone PTA), and Hoot coaches that ear; a tie keeps
+## the right first, and a missing right PTA puts the left first, named. Mike's own tones (71.7
+## against 73.3) keep his order as it was.
+func test_srt_better_ear_first() -> void:
+	var quick: Variant = Game.settings.get("quick_visit", true)
+	Game.settings["quick_visit"] = true
+	var lv := _level_with_tones()
+	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "Mike: right first, as before")
+	assert_eq(String(lv.call("first_ear_lead")), "Better ear first: the right.")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Better ear first: the right. "))
+	assert_eq(LevelMike.steps_for("right"), LevelMike.STEPS)
+	# a better left ear goes first, coached (no Hoot turn); the right becomes the solo ear
+	lv.set("tones", _tones_with_left(func(_r: int, l: int) -> int: return l - 10))
+	assert_eq(lv.call("srt_ears"), ["left", "right"] as Array[String])
+	var l: Dictionary = lv.call("speech_plan", "left")
+	var r: Dictionary = lv.call("speech_plan", "right")
+	assert_true(String(l["intro"]).begins_with("Better ear first: the left. "), String(l["intro"]))
+	assert_true(String(l["intro"]).contains("80"), "PTA 63.3 -> 65 + 15 = 80: " + String(l["intro"]))
+	assert_false(l.has("hoot_turn_after"), "the coached first ear is all the player's")
+	assert_eq(int(r.get("hoot_turn_after", -1)), LevelMike.LEFT_SOLO_WORDS, "quick visit: Hoot finishes the second ear")
+	assert_true(String(r["intro"]).begins_with("Right ear: yours"), String(r["intro"]))
+	for plan: Dictionary in [l, r]:
+		assert_true(String(plan["intro"]).split(" ", false).size() <= Hoot.MAX_WORDS, String(plan["intro"]))
+	var steps := LevelMike.steps_for("left")
+	assert_true(steps.find(&"srt_l") < steps.find(&"srt_r"), "the HUD lists SRT L first")
+	assert_eq(steps.size(), LevelMike.STEPS.size())
+	# a tie keeps the right first
+	lv.set("tones", _tones_with_left(func(rt: int, _l: int) -> int: return rt))
+	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "a tie: right first")
+	assert_eq(String(lv.call("first_ear_lead")), "Right ear first.")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Right ear first. "))
+	# no right PTA (fewer than two of 500, 1k and 2k Hz) but a known left: the left goes first, and
+	# Hoot names the ear on screen
+	var partial := SpeechSession.tone_results_from(_mike())
+	var right_freqs: Dictionary = ((partial["ears"] as Dictionary)["right"] as Dictionary)["freqs"]
+	right_freqs.erase(1000)
+	right_freqs.erase(2000)
+	lv.set("tones", partial)
+	assert_true(is_nan(float(lv.call("ear_pta", "right"))), "no right PTA")
+	assert_eq(lv.call("srt_ears"), ["left", "right"] as Array[String], "a missing right PTA: left first")
+	assert_eq(String(lv.call("first_ear_lead")), "Left ear first.")
+	var lone: String = (lv.call("speech_plan", "left") as Dictionary)["intro"]
+	assert_true(lone.begins_with("Left ear first. "), lone)
+	assert_true(lone.split(" ", false).size() <= Hoot.MAX_WORDS, lone)
+	Game.settings["quick_visit"] = quick
+	lv.free()
 
 
 func test_objection_cards_by_sheet() -> void:
@@ -880,6 +950,125 @@ func test_misscore_error_keeps_its_direction() -> void:
 	assert_eq(String(e["kind"]), "misscored")
 	assert_eq(e.get("scored", null), not truth, "the player's score")
 	assert_true(e.has("said_kind"), "what was said")
+
+
+# ---------------------------------------------------------------- the routine (clinical review A1, A2)
+
+## (A1, all days) A fresh speculum on the otoscope's caption, and the cases' listening-check line
+## once, before the first tone test. (A2, all days) Day 3 never masks: with Mike's tones no speech
+## level on the dial needs noise in the other ear, and the day has no bone, so no masking recap.
+func test_routine_lines_and_no_masking_recap() -> void:
+	assert_eq(LevelMike.ROUTINE_LINE, LevelCase.ROUTINE_LINE, "the cases' own words")
+	assert_true(LevelMike.SPECULUM_CAPTION.begins_with(LevelCase.OTHER_EAR_CAPTION.substr(0, 15)), "a fresh speculum, as on the case days")
+	var caption := LevelMike.SPECULUM_CAPTION % ["Mike", "RIGHT"]
+	for line: String in [LevelMike.ROUTINE_LINE, caption]:
+		assert_true(line.split(" ", false).size() <= Hoot.MAX_WORDS, line)
+	var said: Array[String] = []
+	var on_line := func(speaker: String, text: String) -> void: said.append("%s: %s" % [speaker, text])
+	Events.dialogue_line.connect(on_line)
+	Engine.time_scale = 6.0
+	var lv: Node = (load(LevelMike.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var seen := false
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < 60000 and not phases.has(&"audiometry"):
+		await wait_frames(2)
+		if not seen and phases.has(&"otoscopy"):
+			seen = _find_label(lv, caption) != null
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	Events.dialogue_line.disconnect(on_line)
+	assert_has(phases, &"audiometry", "the visit reached the first tone test")
+	assert_true(seen, "the otoscope's caption: " + caption)
+	assert_eq(said.count("Hoot: " + LevelMike.ROUTINE_LINE), 1, "the listening check, once, before the first tone test")
+	assert_false(lv.has_method("_recap"), "no masking recap on Day 3")
+	lv.queue_free()
+	await wait_seconds(0.5)
+	var tones := SpeechSession.tone_results_from(_mike())
+	var masks := false
+	for ear: String in ClinicRules.EARS:
+		var other := SpeechRules.nontest_best_threshold(tones, ear)
+		assert_true(other > 0.0 and other < SpeechRules.MAX_DB, "his other ear's air (%s)" % str(other))
+		for tr: StringName in SpeechRules.SPEECH_IA_DB:
+			for level in range(SpeechRules.MIN_DB, SpeechRules.MAX_DB + 1, 5):
+				masks = masks or SpeechRules.speech_masking_needed(level, other, tr)
+	assert_false(masks, "no SRT level needs noise with Mike's tones")
+
+
+# ---------------------------------------------------------------- the movie (clinical review S7)
+
+## The level from the top until the phase `stop`, every beat solved as the bot solves it; the
+## dialogue lines land in `said` ("Hoot: ...").
+func _play_until(stop: StringName, said: Array[String], max_ms: int = 60000) -> Node:
+	var on_line := func(speaker: String, text: String) -> void: said.append("%s: %s" % [speaker, text])
+	Events.dialogue_line.connect(on_line)
+	Engine.time_scale = 6.0
+	var lv: Node = (load(LevelMike.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < max_ms and not phases.has(stop):
+		await wait_frames(2)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	Events.dialogue_line.disconnect(on_line)
+	return lv
+
+
+func _count(beat: StringName) -> int:
+	return beats.filter(func(b: Dictionary) -> bool: return b["beat"] == beat).size()
+
+
+## Hoot's spondee movie opens the day: one announcement line before its first play, then the movie
+## (the solver skips it, so Hoot says where it lives); once seen, only the replay offer (best: skip).
+func test_movie_announced_only_when_unseen() -> void:
+	(Game.progress.get("movies_seen", []) as Array).erase(LevelMike.MOVIE_ID)
+	assert_eq(Movies.for_chapter("mike"), [LevelMike.MOVIE_ID] as Array[String], "Day 3's own movie")
+	var said: Array[String] = []
+	var lv := await _play_until(&"intro", said)
+	assert_has(phases, &"intro", "the visit went on to the intro")
+	var announce := "Hoot: New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!"
+	assert_eq(said.count(announce), 1, "the one-line announcement before the first play")
+	assert_eq(_count(&"explainer"), 1, "the movie played (its explainer beat)")
+	var i := phases.find(&"explainer")
+	assert_true(i >= 0 and i < phases.find(&"intro"), "the movie comes before the intro")
+	assert_true(i >= 0 and not bool(phase_info[i].get("seen", true)), "phase explainer, seen false")
+	assert_eq(String(phase_info[i].get("movie", "")) if i >= 0 else "", LevelMike.MOVIE_ID)
+	assert_has(said, "Hoot: Skipped! Rewatch it any time: pause menu, \"Watch Hoot's spondee movie\".", "where it lives")
+	assert_false(bool(Game.get_visit_flag("movie_watched", true)), "an early skip is not watched")
+	assert_false(Game.is_movie_seen(LevelMike.MOVIE_ID), "so it plays again next visit")
+	lv.queue_free()
+	await wait_seconds(0.3)
+	# once seen (watched to its seen_at scene): only the replay choice, no announcement
+	Game.mark_movie_seen(LevelMike.MOVIE_ID)
+	beats.clear()
+	phases.clear()
+	phase_info.clear()
+	said.clear()
+	var lv2 := await _play_until(&"intro", said)
+	assert_false(said.has(announce), "no announcement once the movie is seen")
+	var first: Dictionary = beats[0] if not beats.is_empty() else {}
+	assert_eq(first.get("beat", &""), &"choice", "the first beat is the replay choice")
+	var info: Dictionary = first.get("info", {})
+	assert_eq(String(info.get("prompt", "")), "Hoot's spondee movie again? Popcorn's on me!", "a replay offer")
+	assert_eq(info.get("options", []), ["Roll the film! (about 80 s)", "Skip it: I know my spondees."] as Array[String])
+	assert_eq(int(info.get("best", -1)), 1, "skipping is the best answer")
+	assert_eq(_count(&"explainer"), 0, "the solver skips the replay")
+	var j := phases.find(&"explainer")
+	assert_true(j >= 0 and bool(phase_info[j].get("seen", false)), "phase explainer, seen true")
+	lv2.queue_free()
+	await wait_seconds(0.3)
 
 
 # ---------------------------------------------------------------- smoke: the first beats

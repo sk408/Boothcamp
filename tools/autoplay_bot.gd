@@ -1364,7 +1364,8 @@ func _fail(code: int, why: String) -> void:
 
 
 ## (Speech, §9.9) Every stored speech measurement within 10 dB of the truth; on a speech day both
-## ears have an SRT; on Day 3 (Mike) the PTA/SRT agreement comes out poor in both ears.
+## ears have an SRT; on Day 3 (Mike) the PTA/SRT agreement comes out poor in both ears, and a
+## fresh save starts Hoot's spondee movie.
 func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringArray) -> void:
 	var sp: Dictionary = res.get("speech", {})
 	var chapter := String(_summary.get("chapter_id", Game.current_chapter_id))
@@ -1393,6 +1394,10 @@ func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringAr
 				problems.append("Day 3: no %s SRT" % e)
 			elif StringName(String((srt[e] as Dictionary).get("agreement", ""))) != &"poor":
 				problems.append("Day 3: %s PTA/SRT agreement is not poor" % e)
+		# (clinical review S7) Hoot's spondee movie starts on a fresh save (level_mike._movie, contract §9.20)
+		report["movies"] = _movies
+		if not _movies.has("srt_ladder") and not Game.cli_flag("keep-save"):
+			problems.append("Day 3: Hoot's srt_ladder movie never started on a fresh save")
 	# (Days 4-5) §9.22: every counted word list on any day with a word sheet; Day 4's own checks
 	if not (sp.get("wrs", {}) as Dictionary).is_empty():
 		_check_wrs_lists(sp, report, problems)
@@ -1586,8 +1591,9 @@ func _check_nora(res: Dictionary, sp: Dictionary, problems: PackedStringArray) -
 		var want_db := SpeechRules.wrs_mask_level(int(louder.get("level_db", 0)), best if best != INF else NAN,
 			StringName(String(l.get("transducer", "phones"))), SpeechRules.nontest_largest_abg(res, "left"))
 		var got := int(louder.get("mask_db", -1))
-		if got != want_db or got < 65 or got > 75:
-			problems.append("Day 4: the louder list's noise is %d dB, expected %d (65-75)" % [got, want_db])
+		# the ceiling follows the measured bone, and a bone stamp may sit up to 10 dB off the truth
+		if got != want_db or got < 60 or got > 80:
+			problems.append("Day 4: the louder list's noise is %d dB, expected %d (60-80)" % [got, want_db])
 	if StringName(String((sp.get("wrs_summary", {}) as Dictionary).get("referral", ""))) != &"refer":
 		problems.append("Day 4: the word scores do not call for a referral")
 	var decision := String(Game.get_visit_flag("decision", ""))

@@ -3,14 +3,18 @@ extends TestCase
 ## paper_word_golf.gd, story/dev_nora.gd): the movie beat (announced only before its first play),
 ## the masking-movie offer, the word-list plans and quick-visit counts, coached SRTs before Day 3,
 ## the Roll Call (nine cards, six flags; keys, buttons, a wrong sort bouncing back), the stamp tray
-## and the letter, the word golf card on the paper, Hoot's line lengths and words, and a smoke run
-## of the first beats.
+## and the letter, the word golf card on the paper, Hoot's line lengths and words, a smoke run of
+## the first beats, and (clinical review A1 and A2, all days) the routine lines and the masking
+## recap before Hoot's masked bone.
 
 const LevelNora := preload("res://story/level_nora.gd")
 const NoraBoard := preload("res://story/games/nora_board.gd")
 const PaperWordGolf := preload("res://story/papers/paper_word_golf.gd")
 const DevNora := preload("res://story/dev_nora.gd")
 const Hud := preload("res://story/hud.gd")
+const LevelMike := preload("res://story/level_mike.gd")
+const LevelCase := preload("res://story/level_case.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 ## Words Hoot never says on Day 4 (he names no diagnosis).
 const BANNED: Array[String] = ["tumour", "tumor", "neuroma", "schwannoma", "cancer", "acoustic"]
@@ -20,6 +24,11 @@ var phases: Array[StringName] = []
 var phase_info: Array[Dictionary] = []
 var resolved: Array[StringName] = []
 var lines: Array[String] = []
+## (A1, A2) Phases with their test ("audiometry:bc_masked"), movies ("movie:masking_recap") and
+## lines ("Hoot: ..."), in order.
+var timeline: Array[String] = []
+## (A1) A label showed the caption _play_until_test watched for.
+var caption_seen := false
 var _progress: Dictionary = {}
 var _settings: Dictionary = {}
 
@@ -42,6 +51,7 @@ func before_each() -> void:
 	phase_info.clear()
 	resolved.clear()
 	lines.clear()
+	timeline.clear()
 	_progress = Game.progress.duplicate(true)
 	_settings = Game.settings.duplicate(true)
 	Events.awaiting_input.connect(_on_awaiting)
@@ -67,11 +77,14 @@ func after_each() -> void:
 
 func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	beats.append({"beat": beat, "info": info, "solver": solver})
+	if beat == &"explainer":
+		timeline.append("movie:" + String(info.get("movie", "")))
 
 
 func _on_phase(p: StringName, info: Dictionary) -> void:
 	phases.append(p)
 	phase_info.append(info)
+	timeline.append("%s:%s" % [p, String(info.get("test", ""))])
 
 
 func _on_resolved(beat: StringName) -> void:
@@ -80,6 +93,7 @@ func _on_resolved(beat: StringName) -> void:
 
 func _on_line(speaker: String, text: String) -> void:
 	lines.append("%s: %s" % [speaker, text])
+	timeline.append("%s: %s" % [speaker, text])
 
 
 func _count(beat: StringName) -> int:
@@ -113,6 +127,33 @@ func _play_until(stop: StringName, max_ms: int = 60000) -> Node:
 	while Time.get_ticks_msec() - t0 < max_ms:
 		await wait_frames(2)
 		if phases.has(stop):
+			break
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	return lv
+
+
+## (A1, A2) The level from the top until a phase whose info names `test` (Hoot's masked bone:
+## "bc_masked"), every beat solved as the bot solves it; caption_seen turns true once a label in
+## the level shows `caption` (the otoscope's).
+func _play_until_test(test: String, caption: String, max_ms: int = 120000) -> Node:
+	Engine.time_scale = 6.0
+	caption_seen = false
+	var lv: Node = (load(LevelNora.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < max_ms:
+		await wait_frames(2)
+		if not caption_seen and phases.has(&"otoscopy"):
+			for n: Node in lv.find_children("*", "Label", true, false):
+				caption_seen = caption_seen or (n as Label).text == caption
+		if timeline.has("audiometry:" + test) or timeline.has("speech:" + test):
 			break
 		if handled >= beats.size():
 			continue
@@ -193,6 +234,59 @@ func test_masking_offer_only_without_day2() -> void:
 			assert_false(String((b["info"] as Dictionary).get("prompt", "")).contains("Ghost"), "no offer after Day 2")
 	lv2.queue_free()
 	await wait_seconds(0.3)
+
+
+# ---------------------------------------------------------------- the routine (clinical review A1, A2)
+
+## (A1, all days) A fresh speculum on the otoscope's caption, and the cases' listening-check line
+## once, before the first tone test. (A2, all days) A player who declined the day-start masking
+## offer gets the recap card once, after Hoot's unmasked bone and before his masked bone, then where
+## the full movie lives; the pause menu lists the masking movie from then on.
+func test_routine_and_masking_recap_when_unseen() -> void:
+	assert_eq(LevelMike.ROUTINE_LINE, LevelCase.ROUTINE_LINE, "the cases' own words")
+	assert_eq(LevelNora.MASKING_HINT, LevelCase.MASKING_HINT, "the cases' own words")
+	assert_eq(LevelNora.MASKING_RECAP, LevelCase.MASKING_RECAP)
+	assert_true(LevelMike.SPECULUM_CAPTION.begins_with(LevelCase.OTHER_EAR_CAPTION.substr(0, 15)), "a fresh speculum, as on the case days")
+	var caption := LevelMike.SPECULUM_CAPTION % ["Nora", "LEFT"]
+	for line: String in [LevelMike.ROUTINE_LINE, LevelNora.MASKING_HINT, caption]:
+		assert_true(_words(line) <= Hoot.MAX_WORDS, line)
+	Game.mark_movie_seen(LevelNora.MOVIE_ID)
+	assert_false(Game.is_movie_seen(LevelNora.MASKING_MOVIE), "a fresh save has not seen the masking movie")
+	var lv := await _play_until_test("bc_masked", caption)
+	assert_true(caption_seen, "the otoscope's caption: " + caption)
+	var routine := "Hoot: " + LevelMike.ROUTINE_LINE
+	assert_eq(timeline.count(routine), 1, "the listening check, once")
+	assert_true(timeline.find(routine) < timeline.find("audiometry:ac"), "before the first tone test")
+	var recap := "movie:" + LevelNora.MASKING_RECAP
+	var at := timeline.find(recap)
+	assert_eq(timeline.count(recap), 1, "the recap card, once")
+	assert_false(timeline.has("movie:" + LevelNora.MASKING_MOVIE), "the offer was declined (its best answer)")
+	assert_true(at > timeline.find("audiometry:bc") and at < timeline.find("audiometry:bc_masked"),
+		"after unmasked bone, before masked bone")
+	var hint := "Hoot: " + LevelNora.MASKING_HINT
+	assert_eq(timeline.count(hint), 1, "then where the full movie lives")
+	assert_true(timeline.find(hint) > at and timeline.find(hint) < timeline.find("audiometry:bc_masked"), "right after the card")
+	assert_true(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "the pause menu offers every replay movie now (E19)")
+	assert_has(Movies.for_level(Game.current_chapter_id, true), LevelNora.MASKING_MOVIE)
+	await lv.call("_recap")
+	assert_eq(timeline.count(recap), 1, "never twice a visit")
+	assert_eq(timeline.count(hint), 1)
+	lv.queue_free()
+	await wait_seconds(0.5)
+
+
+## (A2, all days) A watched masking movie: no recap card, no pointer, the pause menu as it was.
+func test_no_masking_recap_once_the_movie_is_seen() -> void:
+	Game.mark_movie_seen(LevelNora.MOVIE_ID)
+	Game.mark_movie_seen(LevelNora.MASKING_MOVIE)
+	var lv := await _play_until_test("bc_masked", LevelMike.SPECULUM_CAPTION % ["Nora", "LEFT"])
+	assert_has(timeline, "audiometry:bc_masked", "the visit reached Hoot's masked bone")
+	assert_false(timeline.has("movie:" + LevelNora.MASKING_RECAP), "no recap card")
+	assert_false(timeline.has("Hoot: " + LevelNora.MASKING_HINT), "no pointer to the movie")
+	assert_false(lv.is_in_group(Movies.MASKING_LEVEL_GROUP), "the pause menu keeps the day's own movie")
+	assert_eq(timeline.count("Hoot: " + LevelMike.ROUTINE_LINE), 1, "the listening check still")
+	lv.queue_free()
+	await wait_seconds(0.5)
 
 
 # ---------------------------------------------------------------- plans (contract §9.21)

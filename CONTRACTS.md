@@ -396,7 +396,7 @@ recap "The short version". How to add one: `docs/ADDING_A_CHAPTER.md`, "Hoot's m
 
 | Part | File | What it is |
 |---|---|---|
-| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps and, **(Days 4-5)**, any movie whose `chapter` is not in `Game.CHAPTERS` yet, such as a stub registered before its day), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-13" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
+| Registry | `story/explainers/movies.gd` (`preload`, story-internal) | `MOVIES {id: path}`; static `ids()`, `has(id)`, `movie(id)` (deep copy), `for_chapter(chapter_id, include_short := false)` (the chapter's replayable movies; **(cases)** a movie's `also_chapters` count too), `chapters_of(movie) -> Array[String]` (**(cases)** its `chapter`, then its `also_chapters`), `replay_ids()` (every movie but the recaps and, **(Days 4-5)**, any movie whose `chapter` is not in `Game.CHAPTERS` yet, such as a stub registered before its day), **(E19)** `for_level(chapter_id, masks)` (the chapter's own, or every replay movie when the level can mask: **(cases)** even when it has movies of its own, so the case days list the masking movie beside their three) and `MASKING_LEVEL_GROUP` (`masking_level`: the case runner and Freestyle join it, so their pause menus offer the masking movie; **(clinical review A2, all days)** Days 4 and 5 join it when their masking recap card plays), `is_short(id)`, `day_label(id)` ("Day 2"; "Days 6-13" for a movie shared by several days), `title(id)`, `total_s(id)`, `own_sets(id)` (the movie's own set ids), `word_count(text)`, `validate(id, known_sets) -> PackedStringArray`. `CARD_MAX_LINES` 4 and `CARD_MAX_CHARS` 36: `validate()` reports a `card` scene with more or longer lines. **(polish)** `static var extra := {}` (id -> a movie file path or a MOVIE Dictionary): **tests and dev tools only**, more movies at run time (`dev_explainer --extra-movie=`, `--list`); the game never sets it |
 | Movie data | `story/explainers/movies/<id>.gd` (or your chapter's folder) | `const MOVIE := {id, title, subtitle, chapter (a Game.CHAPTERS id), narrator ("Hoot"), scenes: [...]}` plus the optional keys **(polish)** `seen_at` (a scene id: reaching it counts as seen, default the last scene; masking: `"plateau"`), `short` (true = a recap of 5-30 s: played by its level, never in a replay list), `stage` (the movie's own sets script, below) and **(cases)** `also_chapters` (more Game.CHAPTERS ids whose pause menu lists it: the case movies belong to `rocco` and also to Days 7 to 13, labelled "Days 6-13") |
 | Scene | (in the movie data) | `{id, set, duration (s), captions: [Hoot lines, 18 words or fewer], teaches (the one idea)}` plus the optional keys `title` (the scene chip top-left on the stage: a number disc and the title in capitals), `caption_at: [s]` (default spread), `board` (the animation brief, never shown), `params` (for the set), `cues: [{t, sfx, pitch, vol_db}]` |
 | Stage | `story/explainers/explainer_stage.gd` (Control, 880 x 440) | Fully animated: `SETS` (the built-in set ids: the ten masking sets of `docs/CHAPTER2.md` §16 and `card`), `use_movie(movie)` (the player calls it: loads `MOVIE.stage`), `show_scene(scene)`, and it animates by the `t` the player sets each frame: every drawing is a pure function of `t` (no tweens, nodes or RNG), so a paused movie freezes, a screenshot repeats and a skipped scene leaves nothing behind. `scene_no` (set by the player) and `scene_title` (the scene's `title`) label the corner chip. The generic set **`card`** needs no code: params `{heading (default: the scene's title), lines (at most 4, 36 characters each), line_at: [s] (default spread over the first 60 %), icon (one of `CARD_ICONS`: "", "snails", "ghost", "cloud", "note", "dial", "hoot"), hoot (a waving Hoot, default true), tint ("#rrggbb")}`. **Fallback:** a `set` nobody knows (neither the stage nor the movie's sets script) draws a card with the scene's title (never an error, never a blank screen) |
@@ -441,7 +441,7 @@ var start_scene := 0            # dev scenes only (dev_explainer --from=): the f
   After a day-start skip Hoot says where it lives: "Skipped! Rewatch it any time: pause menu, "Watch <title>"."
   (2) A level may play a `short` recap mid-day (`level_bonnie._recap()`, source `"recap"`, the same beat; Day 2: the
   masking card right before the masked bone test). (3) The pause menu offers the movies "here": the current
-  chapter's in a level (none on Day 1, nor on Days 3 and 6-9), every movie on the title's Options, never the recaps
+  chapter's in a level (none on Day 1; **(clinical review S7)** Day 3's is "Hoot's spondee movie"), every movie on the title's Options, never the recaps
   (`movie_ids_here()`). One movie: a "Watch <title>" button; two or more: **(polish)** a "Hoot's Movies..." button
   that opens a small vertical list (`open_movie_list(standalone := false)`, `is_movie_list_open()`,
   `close_movie_list()`, `movie_list_rows()`): one row per movie (the day chip, title and subtitle, the length, "Watch"),
@@ -1305,7 +1305,8 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
 - Setup: `SpeechSession.new(profile, seed)`, `configure(plan)` (keys below: `test`, `list`, `words`, `exclude`,
   `tones`, `transducer`, `level`, `low_start_ok`), `begin(ear, coached)` (the dial goes to the PTA rounded to 5 dB,
   or `level`). `low_start_ok` (bool, default false): a first SRT word at least 10 dB below the PTA
-  (`SRT_LOW_START_BELOW_PTA_DB`) is the clean `srt_low_start` instead of an `srt_start` error (an ascending start;
+  (`SRT_LOW_START_BELOW_PTA_DB`) is a clean start instead of an `srt_start` error, and the first step after it, when it
+  goes up, the clean `srt_low_start` (clinical review S2; an ascending start;
   the dial's default at the PTA does not count); the level sets it once suspicion of a
   non-organic loss is on screen, never from the hidden `non_organic` tag. A start above the window stays an error.
 - Controls: `step_level(dir)`, `set_level(db)`, `set_mask(on)`, `toggle_mask()`, `present() -> trial` (`{}` when
@@ -1339,14 +1340,14 @@ Pure logic for every speech test of one visit (both ears); the screen owns all t
 
 | kind | type | when |
 |---|---|---|
-| `srt_start` | error | the first word is outside PTA + 10..25; a first word at least 10 dB below the PTA is clean with `low_start_ok` (data: expected, pta) |
+| `srt_start` | error | the first word is outside PTA + 10..40 (clinical review S4); a first word at least 10 dB below the PTA is clean with `low_start_ok` (data: expected, pta) |
 | `srt_wrong_step` | error | not "got it: down 10 (5 tolerated); missed: up 5", nor another word at the same level (up to 4 there) (expected, got, prev_db, prev_correct, words_here) |
 | `misscored` | error | the score differs from what the patient said (said, said_kind, scored) |
 | `srt_store_no_bracket` | error | stored before a level scored 2+ right and half or more with the level 5 below under half |
 | `srt_store_wrong_level` | error | stored a level other than that one (candidate) |
 | `speech_marathon` | error | more than 3x par words in one measurement (once) |
 | `speech_textbook`, `srt_good_start`, `srt_store_ok` | clean | combo +1, points |
-| `srt_low_start` | clean | a first word at least 10 dB below the PTA with plan `low_start_ok`: combo +1, 10 points, Hoot's line in `message` ("Starting below his beeps: smart when answers look exaggerated.") |
+| `srt_low_start` | clean | the first step after a first word at least 10 dB below the PTA with plan `low_start_ok`, when it goes up, in place of that step's `speech_textbook` (the low first word itself is `srt_good_start`): combo +1, 10 points, Hoot's line in `message` ("Starting below his beeps and coming up: smart when answers look exaggerated.") |
 | `birdie` / `eagle` / `albatross` | observation | the SRT hole's golf |
 | `srt_stored`, `srt_agreement` | observation | after a store (agreement, diff, pta); `srt_agreement` carries Hoot's verdict line |
 | `half_word`, `cross_heard_speech`, `speech_mask_needed`, `score_first` | observation | lessons (once each) |
@@ -2619,7 +2620,7 @@ static func babble_rms(babble_db: int) -> float
   with peaks capped near `CREST` 4.0 times the RMS (about 12 dB). No sine synthesis per sample. As built the loop is
   built synchronously and cached: `level_marco.gd` calls `SpeechBabble.loop()` in `_ready` (before the movie), so
   the first PRESENT never hitches; no `WorkerThreadPool` was needed. `babble_ready()` says whether it is built. A
-  test builds it in under 150 ms headless.
+  test builds it in under 400 ms headless.
   When `res://assets/speech/babble/babble.wav` exists, it is used instead (through `wav_to_mono`, normalised the same
   way).
 - **Level**: `babble_rms(db) = AudioSafety.masker_to_rms(db + BABBLE_TRIM_DB)`. Words use `speech_to_rms(hl)`, and
@@ -3036,6 +3037,12 @@ func _play_movie(id: String) -> Dictionary:
   so Day 4's pause menu does not list it (the title's "Hoot's Movies" does). Day 5's works the same way ("Watch
   Hoot's party movie"). `Movies.replay_ids()` leaves out a movie whose chapter is not in `Game.CHAPTERS` yet; both
   days exist now, so both movies are listed.
+- **(Clinical review A2, all days)** While the masking movie is unseen, the visit's first masked test (Day 4: Hoot's masked
+  bone; Day 5: his masked bone, where a gap shows) plays the one-card
+  `masking_recap` first (the `explainer` beat, source `recap`), once a visit, then Hoot: "The full masking movie is
+  under Hoot's Movies, in the pause menu or on the title screen." The level joins `MASKING_LEVEL_GROUP` right there,
+  so from then on its pause menu offers every replay movie, as on the case days. Day 4's day-start masking offer
+  stays. A watched masking movie changes nothing; Day 3 masks nothing and has no recap.
 - No `seen_explainers`, `explainer_skipped`, `movie_skipped`, skip anchors, hold-to-skip or `--explainer`: the player
   and `movies_seen` cover them. No `tools/INTEGRATION_NOTES.md` stage note is needed either.
 
@@ -3199,7 +3206,7 @@ fails the run with exit 4.
   - left `best_final`, `below_predicted`, `asymmetric` and `rollover` (A1-A3);
   - a counted left list with `louder_than > 0`, whose `mask_db` equals `wrs_mask_level(level_db, test_best_bone,
     transducer, nontest_largest_abg)` (A4; `test_best_bone` is the lowest of `ear_best_bone(tones, "left")`) and lies
-    in 65-75 (70 on a textbook run, as Hoot's bone stamps wobble, CHAPTER4 §2.2);
+    in 60-80 (70 on a textbook run, as Hoot's bone stamps wobble up to 10 dB, CHAPTER4 §2.2);
   - `wrs_summary.referral == &"refer"`; and the visit flag `decision` is `refer` when the visit records one;
   - the movies: the result adds `movies` (the movies that started, as Day 2 and the cases print it), and a fresh save
     (no `--keep-save`) must start `letter_choir`.
@@ -3411,7 +3418,7 @@ Every random test uses fixed seeds (`SpeechSim.new(profile, seed)` for `seed in 
   one session; a list is used once; moments once per visit; the hidden loss; the per-ear summary; the lines fit and
   name keys; the mode is freed with its session.
 
-**`core/tests/test_speech_voice_babble.gd` (P)**, as built: the loop builds in under 150 ms headless; unit RMS and
+**`core/tests/test_speech_voice_babble.gd` (P)**, as built: the loop builds in under 400 ms headless; unit RMS and
 capped peaks (`CREST`); the party keeps going over the loop; the same seed replays; the recording path and helpers;
 the babble RMS on the masker mapping (`masker_to_rms(db - 5)`, the word RMS at SNR 0); babble under
 `MASKER_CEILING_DBFS` and the mix never above -12 dBFS (talker 90, SNR 0); "both" writes both channels and "right" /

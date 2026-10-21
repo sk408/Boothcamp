@@ -48,7 +48,7 @@ a slip or an unbracketed store, "Clean!" for a clean run over par (never "Par!" 
 fanfare and confetti only play for a bracketed or Hoot store. A clean store on an ear with earlier slips
 (`session.slips()`) gets no combo callout, so no "Clean score!" appears under its "Oops!".
 
-**Clean kinds with a message:** `srt_low_start` (a first word at least 10 dB below the PTA with `low_start_ok`) takes the clean branch
+**Clean kinds with a message:** `srt_low_start` (the first step up after a first word at least 10 dB below the PTA with `low_start_ok`) takes the clean branch
 (combo note, "+points") and shows its `message` as a once-per-visit Hoot tip pointing at `speech_ladder`.
 
 **The tell:** once per visit, the first word rightly scored as repeated `TELL_GAP_DB` (30) dB or more below the

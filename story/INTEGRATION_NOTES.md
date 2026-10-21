@@ -63,9 +63,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **SPEECH screen:** one instance for both ears (`start_test(patient, ear, coached, plan)`, then
   `await test_finished`); plan `{test: "srt", tones, list: "spondee_a", words: the 12 familiarised ids,
   exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after_up`
-  with `hoot_turn_after: 12` (`LEFT_SOLO_WORDS`, the cap) on the left ear with quick visit on: the
+  with `hoot_turn_after: 12` (`LEFT_SOLO_WORDS`, the cap) on the second ear with quick visit on: the
   player scores down to his first miss below the SRT and the word stepped up 5 after it, then Hoot
-  finishes the bracket. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
+  finishes the bracket. The ears go better first (`srt_ears()`: the lower tone PTA, right on a tie; clinical
+  review S6) and the first is the coached one: for Mike the right, then the left. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
   the hidden `non_organic` tag). Mike's response button is put away first (`hold_response_button(false)`).
   Hoot defines the SRT before the words. "The tell" lives in the SPEECH screen only (§9.7; the level no
   longer listens to `speech_response`). If the SPEECH scene is missing, Hoot runs the words himself
@@ -120,6 +121,13 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Tests:** `story/tests/test_level_mike.gd` (board beats, keyboard paths and solvers, the plans and
   objection cards with real numbers and by sheet, the recheck with and without the screen, every Hoot
   line 18 words or fewer, Hoot's textbook fallback, the Day 3 paper, a smoke run to the instructions).
+- **(Clinical review A1 and A2, all days: Days 3 to 5.)** The cases' routine, in their words: `LevelMike.ROUTINE_LINE`
+  (the morning listening check, the button, the dials out of view) once, seated, before the first tone test,
+  and `LevelMike.SPECULUM_CAPTION` ("Fresh speculum. ...") on the otoscope card; Days 4 and 5 use both (Day 5
+  as `HOOT["routine"]`). Ungraded, no new beat. Days 4 and 5 copy `level_case._recap` (the masking recap before
+  the visit's first masked test while the movie is unseen, then Hoot's pointer; CONTRACTS.md §9.20); Day 3 masks
+  nothing. These lines draw on `Game.rng` (Hoot's voice), so Days 3 to 5 replay with different seeded answers
+  than before. Tests: each day's level test plays to the first tone test (Day 3) or the first masked test.
 
 ## Dev tool
 
@@ -250,7 +258,9 @@ Requests for the integrator and the title owner:
   are now `[sheet key, ear]`; `_row_tag` draws the symbol.
 - **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
 - **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button
-  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save).
+  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save). **(clinical
+  review S7)** Day 3 now opens with Hoot's spondee movie (`level_mike._movie`, as Day 4's), and its pause menu
+  offers "Watch Hoot's spondee movie".
 
 ## Freestyle (the walk-in clinic; freestyle branch; CONTRACTS.md §12, docs/FREESTYLE.md)
 
