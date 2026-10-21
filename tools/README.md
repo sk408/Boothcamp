@@ -107,7 +107,7 @@ softer), `speech_<ear>_srt_stored`; Day 3 adds `day3_familiarize`, `day3_objecti
 `day3_glazed`.
 
 Day 2 results add `sheets` (`<ear>_<test>`: `[stored, true]` per frequency), `right_abg`, `right_type` and
-`plateaus_found`; **(v4)** `movies` (movies that started) and `ghost_demo_tones`. **(Speech)** Speech days add `speech` (`<test>_<ear>`: `[stored, true, agreement, words, par]`) and `speech_scores`.
+`plateaus_found`; **(v4)** `movies` (movies that started) and `ghost_demo_tones`. **(Speech)** Speech days add `speech` (`<test>_<ear>`: `[stored, true, agreement, words, par]`) and `speech_scores`. **(Days 4-5)** Days with word lists add `wrs_lists`; Day 4 adds `movies` (a fresh save must start `letter_choir`).
 
 `run.log` in the output directory holds the full log.
 

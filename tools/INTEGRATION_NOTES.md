@@ -16,6 +16,8 @@ of it runs on Days 1-3 or 6-12: each block needs a `wrs` / `sin` test, a word sh
   with word lists prints.
 - §5: `_check_nora(res, sp, problems)`. The decision is read from the visit flag `decision`, which is where Day 4
   records it (as the cases do).
+- Day 4's movie (M-MV4, not in §9.22): on `nora` the result adds `movies` (the movies that started, as Day 2 and
+  the cases print it), and a fresh save (no `--keep-save`) must start `letter_choir`.
 - §7: `_speech_shot_key()` and the `wrs` / `sin` shot names. The `_low` / `_descent` shot is now kept for
   `test == &"srt"` only.
 

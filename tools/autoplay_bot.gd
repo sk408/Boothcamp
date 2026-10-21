@@ -1243,6 +1243,10 @@ func _check_speech(res: Dictionary, report: Dictionary, problems: PackedStringAr
 		_check_wrs_lists(sp, report, problems)
 	if chapter == "nora":
 		_check_nora(res, sp, problems)
+		# (Days 4-5) Hoot's word movie starts on a fresh save (level_nora._movie, contract §9.20)
+		report["movies"] = _movies
+		if not _movies.has("letter_choir") and not Game.cli_flag("keep-save"):
+			problems.append("Day 4: Hoot's letter_choir movie never started on a fresh save")
 
 
 ## (Days 4-5) §9.22.3: every counted list the player scored lands near its deal, matches the truth
