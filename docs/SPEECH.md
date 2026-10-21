@@ -58,10 +58,10 @@ tone audiogram.
 | Rule | Value | Constant / function |
 |---|---|---|
 | Familiarise first | at a comfortable level, say each word for the patient to repeat (the list out of their sight: they learn the words by ear, not by reading); drop any word they don't know; then tell them every test word comes from this list | story beat |
-| Better ear first | the ear with the lower PTA | `better_ear` |
+| Better ear first | the ear with the lower PTA from the visit's tones goes first, right on a tie (Day 3's coached ear is the first one) | `better_ear`, `ears_better_first` |
 | Start level | the PTA rounded to the nearest 5 dB, plus 15 | `SRT_START_ABOVE_PTA_DB` 15, `srt_start` |
-| Acceptable first word | PTA + 10 to PTA + 25. A first word at least 10 dB below the PTA is an ascending start: clean (`srt_low_start`) when the plan sets `low_start_ok`. Anything else outside the window (including the dial's default at the PTA) is an `srt_start` error | `SRT_START_MIN_DB` 10, `SRT_START_MAX_DB` 25, `SRT_LOW_START_BELOW_PTA_DB` 10, `srt_start_ok`, `srt_start_low` |
-| The dance | repeated it: **down 10** (down 5 is tolerated); missed it: **up 5** | `SRT_DOWN_DB` 10, `SRT_UP_DB` 5, `srt_next_level` |
+| Acceptable first word | PTA + 10 to PTA + 40 (ASHA 1988 starts 30 to 40 above). A first word at least 10 dB below the PTA is an ascending start: a clean start when the plan sets `low_start_ok`, and the first step up after it is the clean `srt_low_start`. Anything else outside the window (including the dial's default at the PTA) is an `srt_start` error | `SRT_START_MIN_DB` 10, `SRT_START_MAX_DB` 40, `SRT_LOW_START_BELOW_PTA_DB` 10, `srt_start_ok`, `srt_start_low` |
+| The dance | repeated it: **down 10** (down 5 is tolerated); missed it: **up 5**. One common way, not the only method (ASHA 1988 describes its own descending method) | `SRT_DOWN_DB` 10, `SRT_UP_DB` 5, `srt_next_level` |
 | Same level again | another word at the same level is tolerated, after a hit or a miss, while fewer than 4 words were given at that level in this ear; the 5th word there is a wrong step | `SRT_MAX_WORDS_PER_LEVEL` 4, `srt_step_verdict(db, correct, next_db, words_here)` (`SpeechSession._check_step` counts the words) |
 | SRT | the lowest level with **at least 2 words right and at least half right**, once the level **5 dB below** it was tried and scored under half | `SRT_MIN_CORRECT` 2, `srt_candidate` |
 | Scoring | only the whole word counts: "Rain...?", "Train toe?" and silence are all wrong | `SpeechSession.score` |
@@ -73,7 +73,8 @@ tone audiogram.
 
 Teaching line: **"Got it: down 10. Missed: up 5. Another word here is fine too!"** (the `srt_wrong_step` tip) and
 **"SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more."** It
-is close to the dance of the tones on purpose ("got it twice at 30, missed at 25: SRT 30"). A second word at the
+is close to the dance of the tones on purpose ("got it twice at 30, missed at 25: SRT 30"). Day 3 adds
+**"Down 10, up 5 is one common way, not the only method."** right after it (clinical review S5). A second word at the
 same level is how a level is confirmed (ASHA presents a second word at a level too), so the game allows up
 to `SRT_MAX_WORDS_PER_LEVEL` words there before it calls the step wrong.
 
@@ -87,14 +88,17 @@ stand-in (Hoot runs air only on Day 3, and Mike has no gap, so his numbers are t
 results with bone sheets bring the gap in with no code change.
 
 **Where the search starts.** ASHA (1988) starts 30-40 dB above the estimated SRT, and allows an ascending
-start (from below, coming up) when an exaggerated loss (pseudohypacusis) is suspected. The game's
-PTA + 15, with PTA + 10..25 accepted, is a shorter teaching default that Steve reviews (CHAPTER3.md §7 Q2;
-`SRT_START_MAX_DB` stays until he answers). The plan key `low_start_ok` turns the ascending start on: Day 3 sets
-it once Hoot's coffee whisper has been on screen (never from the hidden `non_organic` tag), and a first word
-at least 10 dB below the PTA (`SRT_LOW_START_BELOW_PTA_DB`) then scores clean with Hoot's *"Starting below his
-beeps: smart when answers look exaggerated."* (true for any such start: Mike may still repeat a first word at 60,
-and then the next step is down, not up). The dial's default (the PTA itself) is not an ascending start, so
-presenting straight away is still an `srt_start` error.
+start (from below, coming up) when an exaggerated loss (pseudohypacusis) is suspected. The game recommends
+PTA + 15, a shorter teaching default, and accepts any first word from PTA + 10 to PTA + 40 without a penalty, so
+ASHA's start is clean too (clinical review S4; par counts from the first word, so the extra words cost nothing).
+The `srt_start` tip says so: *"Start at his PTA plus 15, plus 40 at most: easy words first, then work down."*
+The plan key `low_start_ok` turns the ascending start on: Day 3 sets it once Hoot's coffee whisper has been on
+screen (never from the hidden `non_organic` tag). A first word at least 10 dB below the PTA
+(`SRT_LOW_START_BELOW_PTA_DB`) is then a clean start, and the first step up after it scores clean with Hoot's
+*"Starting below his beeps and coming up: smart when answers look exaggerated."* in place of the plain step
+(`srt_low_start`, clinical review S2): never on the low first word alone, since Mike may still repeat a first word
+at 60 and step down first; a wrong step up spends it. The dial's default (the PTA itself) is not an ascending
+start, so presenting straight away is still an `srt_start` error.
 
 **On the SPEECH screen.** The sheet's `bracketed` key (stored at the bracketed SRT) decides the praise: "ear done:
 nice work!", the golf callout (a clean run over par reads "Clean!", never "Par!") and the fanfare only follow a
@@ -117,8 +121,9 @@ repeats spondees at about 30. Hoot's 1 kHz retest also comes back 15 dB better t
 agree within 5 dB): poor test-retest reliability is another sign. An SRT 13 dB or more better than the PTA is
 "poor agreement" in the direction of a non-organic loss: re-instruct, retest, and refer for objective tests that
 don't need his answers (acoustic reflexes, OAEs, ABR / ASSR; a Stenger only for a one-sided claim, and Mike claims
-both ears). An SRT of 30 is an upper bound on his hearing, not his real hearing. Never accuse: most non-organic
-losses aren't fibs (stress, worry, even a real loss underneath), and the clinic's job is an accurate record. A
+both ears). An SRT of 30 is an upper bound on his hearing, not his real hearing. Never accuse: non-organic loss
+has many causes (money, stress, worry, even a real loss underneath), we can't tell which from the booth, and the
+clinic's job is an accurate record. A
 reported sudden loss still goes to a doctor before any hearing aid.
 
 ## 4. WRS: word recognition score (Day 4)
@@ -310,7 +315,7 @@ without any of it.
 
 | kind | when |
 |---|---|
-| `srt_start` | the first SRT word is outside PTA + 10..25 (at least 10 dB below the PTA is clean with plan `low_start_ok`) |
+| `srt_start` | the first SRT word is outside PTA + 10..40 (at least 10 dB below the PTA is clean with plan `low_start_ok`) |
 | `srt_wrong_step` | not "got it = down 10 (or 5), missed = up 5", nor another word at the same level (up to 4 there) |
 | `srt_store_no_bracket` | stored with no level below scoring under half |
 | `srt_store_wrong_level` | stored a level that is not the lowest one with 2+ right and half or more |
@@ -320,7 +325,8 @@ without any of it.
 | `wrs_unmasked` | a word list's first word goes out with no noise in the other ear when the rule needs it |
 | `sin_level` | the player's first scored sentence of a party list plays off the talker target (`target`, `got`, `pta`); never when Hoot set the level |
 | `speech_textbook` | a by-the-book step or score (combo +1) |
-| `srt_low_start` | clean: a first word at least 10 dB below the PTA with plan `low_start_ok` (combo +1, 10 points, Hoot's line in `message`) |
+| `srt_good_start` | clean: the first SRT word inside PTA + 10..40, or at least 10 dB below the PTA with plan `low_start_ok` (combo +1, 10 points) |
+| `srt_low_start` | clean: the first step up after a first word at least 10 dB below the PTA with plan `low_start_ok`, in place of that step's `speech_textbook` (combo +1, 10 points, Hoot's line in `message`) |
 | `wrs_good_start` | clean: a word list's first word inside its window (a louder list: 15-25 dB above the comfortable one; combo +1, 10 points) |
 | `wrs_mask_ok` | clean: the noise was on before the first word of a list that needs it (combo +1, 20 points) |
 | `sin_good_level` | clean: that first scored sentence at the target (combo +1, 10 points) |

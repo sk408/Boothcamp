@@ -6,7 +6,7 @@ agreement check, and the signs of a non-organic loss. Shared speech rules and nu
 
 | | |
 |---|---|
-| Teaches | what PTA and SRT mean, spondees, familiarisation, SRT bracketing ("got it: down 10, missed: up 5", another word at the same level is fine, half right twice), scoring what the patient actually said, PTA/SRT agreement and its direction, signs of a non-organic loss (most aren't fibs), never accuse, recheck, objective tests and the doctor for a sudden loss |
+| Teaches | what PTA and SRT mean, spondees, familiarisation, the better ear first, SRT bracketing ("got it: down 10, missed: up 5", one common way, not the only one; another word at the same level is fine, half right twice), scoring what the patient actually said, PTA/SRT agreement and its direction, signs of a non-organic loss (many causes, and the booth can't tell which), never accuse, recheck, objective tests and the doctor for a sudden loss |
 | Length | 10-12 minutes with "quick visit" on (the default) |
 | Opens | always (chapter select; `requires` = `bonnie` is only the "suggested next" hint) |
 | New controls | the SPEECH screen: Space presents a word, Up / Down level, Right (or + / =) = repeated it, Left (or - ) = missed it, S stores the SRT; every control is a button too |
@@ -81,13 +81,13 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | 4 | `instructions` | "Beeps AND words today." Pick: press for every beep, repeat every word, guess if unsure. Wrong picks: "only when you're sure" (too strict), "shout every word" (the gag). Medal `instructions`. | choice | 0:40 |
 | 5 | `audiometry` {right, ac} / {left, ac} | Hoot pops the earphones on and runs both ears as a few-second montage each (`montage`, `skip_hoot_retest`, as on Day 2: the beeps aren't today's lesson). After the right ear he retests 1000 Hz, and it comes back 15 dB better than the first time (`LevelMike.RETEST_BETTER_DB`, from his measured 1 kHz result): "1000 Hz again: 55 dB, 15 better than before. Retests usually agree within 5 dB." Mike: "Must be the earphones warming up." (a test-retest mismatch, one more sign; the PTA keeps the first stamp, the retest goes on the record as `retest_1k`). "About 75 dB in both ears. Severe, on paper." The degree comes from `ClinicRules.degree_name` (at 70 it is "Moderately severe", and Mike says "Skip the 'moderately'."). Then Hoot defines the PTA. | (AudiOtron), dialogue | 0:40 |
 | 6 | `familiarize` | Hoot's spondee line ("two-part words, equal stress on both parts, like rain-bow"). "Go through the word list with Mike first?" Yes = gold. Twelve word cards flip over on the clinician's side (a small "CLINICIAN'S SIDE: Mike can't see this" sign): Hoot says each word and Mike says it back by ear, never reading it. The player sees every word on the cards and on the "now saying" line (Hoot: "rainbow"  Mike: "Rainbow!"), with a tick per card; nothing depends on hearing. Mike repeats "Wind... mill?" and has never seen one, so the player drops that card ("Drop any word they don't know"). Then his SRT instructions: every test word comes from this list; say back what you hear, guess if unsure. Medal `familiarize`. | choice, dialogue, familiarize_cards | 0:50 |
-| 7 | `speech` {right, srt} | Hoot defines the SRT, then the dance. The SPEECH screen, coached. PTA + 15 = 85. Mike repeats words all the way down to the 30s. The tell (once, on the screen): the first word scored as repeated 30 dB or more below the ear's PTA, "He's repeating words 40 dB below his beeps. Hmm!", with Hoot's hand on the agreement meter, then the coach's tip comes back. Half-word tip. Store at 30 (the coached ear never stores before a bracket). | (speech beats) | 2:30 |
+| 7 | `speech` {right, srt} | Hoot defines the SRT, then the dance, and adds "Down 10, up 5 is one common way, not the only method." (clinical review S5). The SPEECH screen, coached, on the better ear (S6: the lower PTA from Hoot's tones goes first, right on a tie; Mike's right, 71.7 against 73.3): "Better ear first: the right. Start at his PTA plus 15: 85 dB, easy to repeat." A better left ear would go first and be the coached one (`LevelMike.srt_ears`, the HUD lists SRT L first); the recheck and the board stay on the right ear. Mike repeats words all the way down to the 30s. The tell (once, on the screen): the first word scored as repeated 30 dB or more below the ear's PTA, "He's repeating words 40 dB below his beeps. Hmm!", with Hoot's hand on the agreement meter, then the coach's tip comes back. Half-word tip. Store at 30 (the coached ear never stores before a bracket). | (speech beats) | 2:30 |
 | 7b | | The **agreement meter** swings: PTA 72, SRT 30, difference 42: **POOR**. The needle clunks into the red. Hoot: "SRT should sit within 6 dB of the PTA. His is 42 dB better. Poor agreement!" (the 6 is `SpeechRules.AGREE_GOOD_DB`; an SRT worse than the PTA gets the instructions / language / word scores line instead; a sloping loss is no reason for a worse SRT: a steep slope can make words a little better than the three-tone average, so the PTA uses the best two). | | 0:15 |
 | 7c | `speech` {right, srt} (recheck) | Only when the player's right SRT can't show the mismatch (not poor, not better than the PTA, or not stored at its bracket: `_srt_shows_mismatch`). Hoot says why ("That SRT didn't get a full bracket. I'll recheck the right ear by the book.", or "The bracket said N dB, not that one...") and reruns the right ear at 8x on a fresh session (plan `fresh_session`). The board uses his recheck; the player's own sheet stays for the grade. | (Hoot's turn) | 0:20 |
-| 8 | `speech` {left, srt} | Solo: "Left ear: yours to the first miss and back up 5! PTA plus 15 is 90 dB." The player scores the descent from 90 (about eight words, down to his first miss below the SRT) and the word stepped up 5 after it, so they play every rule of the bracket alone; then Hoot takes over and finishes the bracket (quick visit; plan `hoot_turn_after_up`, with 12 words as the cap). Same story: poor agreement. | (speech beats) | 1:00 |
+| 8 | `speech` {left, srt} | Solo, the second ear: "Left ear: yours to the first miss and back up 5! PTA plus 15 is 90 dB." The player scores the descent from 90 (about eight words, down to his first miss below the SRT) and the word stepped up 5 after it, so they play every rule of the bracket alone; then Hoot takes over and finishes the bracket (quick visit; plan `hoot_turn_after_up`, with 12 words as the cap). Same story: poor agreement. | (speech beats) | 1:00 |
 | 9 | `evidence` | **OBJECTION!** Mike's claim card "I can't hear ANYTHING" and three clues: "SRT 30 vs PTA 72" (or "Hoot's recheck: SRT 30 vs PTA 72"), "answered a whispered coffee offer", "canals clear". The captions stay neutral ("Two sugars, thanks." Hoot whispered it at the desk. / Otoscopy, both ears: clear canals, normal-looking eardrums.); the explanations come in the "why" after a wrong pick. The measurement is always the strongest clue; the whisper never outranks it. Medal `evidence`. | objection_present | 0:45 |
 | 10 | `referral` | "What's next for Mike?" Fit strong hearing aids / **Re-instruct, retest, objective tests, tell his doctor** / Call him a fibber. Then the **RECHECK + OBJECTIVE TESTS + DOCTOR TODAY** stamp. Medal `referral`. | choice, referral_stamp | 0:45 |
-| 11 | `results` | Mike owns up ("Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine."; the game never says his ears are fine: an SRT of 30 is an upper bound on his hearing, and the objective tests still follow). Hoot thanks him, then the main-path lesson: "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse." and "We'll still finish the objective tests and send your results to your doctor." He leaves; Hoot whispers "free donuts in the break room" and Mike yells "GLAZED?!" from the hall. The Daily Decibel, Day 3. | results_continue | 1:00 |
+| 11 | `results` | Mike owns up ("Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine."; the game never says his ears are fine: an SRT of 30 is an upper bound on his hearing, and the objective tests still follow). Hoot thanks him, then the main-path lesson: "Non-organic loss has many causes: money, stress, worry, even a real loss underneath." and "We can't tell which from the booth, so we never accuse." (clinical review S11), then "We'll still finish the objective tests and send your results to your doctor." He leaves; Hoot whispers "free donuts in the break room" and Mike yells "GLAZED?!" from the hall. The Daily Decibel, Day 3. | results_continue | 1:00 |
 
 ## 4. Teaching moments (Hoot, 18 words or fewer)
 
@@ -104,10 +104,12 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | By ear | "I'll say each word, nice and loud. You say it back. No peeking: the cards face me!" |
 | Drop a word | "Never seen a windmill? Drop it. Only use words they know." |
 | SRT instructions | "Every test word comes from this list, Mike. Say back what you hear, and guess if unsure." |
-| SRT start | "Start at his PTA plus 15: 85 dB. He should repeat that easily." |
+| SRT start | "Better ear first: the right. Start at his PTA plus 15: 85 dB, easy to repeat." ("Right ear first." when the PTAs tie) |
 | SRT | "SRT, speech recognition threshold: the softest level where he repeats at least two words, half or more." |
 | The dance | "Got it: down 10. Missed: up 5. Another word at the same level is fine too!" (the wrong-step tip: "...Another word here is fine too!") |
-| Low start | "Starting below his beeps: smart when answers look exaggerated." (a first word at least 10 dB below the PTA, once the whisper has been on screen: `low_start_ok`) |
+| One way | "Down 10, up 5 is one common way, not the only method." |
+| Start window | "Start at his PTA plus 15, plus 40 at most: easy words first, then work down." (the `srt_start` tip: a first word below PTA + 10 or above PTA + 40) |
+| Low start | "Starting below his beeps and coming up: smart when answers look exaggerated." (the first step up after a first word at least 10 dB below the PTA, once the whisper has been on screen: `low_start_ok`) |
 | Scoring | "Score what he SAID. Half a word, a different word, or silence: all misses." |
 | SRT rule | "SRT: the softest level with two right and half or more. Check the trail!" |
 | Bracket (coach) | "Bracketed! 30 dB: the softest level with half or more right. Press S to STORE." |
@@ -120,13 +122,13 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | Never accuse (wrong pick) | "Never accuse! Non-organic loss has many causes. Stay kind and record the facts." |
 | Next step | "Re-instruct, retest, objective tests that don't need his answers, and his doctor hears about the sudden loss today." |
 | After the confession | "Thank you for telling us, Mike. That took guts." |
-| Non-organic (main path) | "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse." |
+| Non-organic (main path) | "Non-organic loss has many causes: money, stress, worry, even a real loss underneath." / "We can't tell which from the booth, so we never accuse." |
 | The doctor | "We'll still finish the objective tests and send your results to your doctor." |
 
 **Non-organic, on the main path.** A player who answers everything well never sees the "Call him a fibber" reply,
 so the term and its meaning come on the main path: the half-word tip names a non-organic loss, and right after
-Mike's confession Hoot says most non-organic losses aren't fibs (stress, worry, even a real loss underneath) and
-that we never accuse. The fibber branch keeps its short reminder. The game never teaches "non-organic = faking".
+Mike's confession Hoot says non-organic loss has many causes (money, stress, worry, even a real loss underneath),
+that we can't tell which from the booth, and so we never accuse. The fibber branch keeps its short reminder. The game never teaches "non-organic = faking".
 
 **The sudden loss.** The history's red flag ("A doctor needs to know fast, if it's real.") is closed on every path:
 the next-step line, the stamp (+ DOCTOR TODAY) and the closing line send his results to his doctor, and the fit
@@ -172,15 +174,18 @@ words or fewer (`story/tests/test_level_mike.gd::test_hoot_lines_fit`).
 1. SRT stepping: "down 10 / up 5" with "at least 2 right and half or more", or your clinic's routine (for example
    down 5 after each correct word, or 2-dB steps with the Tillman-Olsen arithmetic)? Another word at the same
    level is tolerated, after a hit or a miss, up to 4 words at a level per ear (`SRT_MAX_WORDS_PER_LEVEL`); the
-   5th is a wrong step. Is 4 right?
-2. Start level PTA + 15 (rounded) and the acceptable window PTA + 10..25. ASHA (1988) starts 30-40 dB above the
-   estimated SRT, and allows an ascending start when pseudohypacusis (an exaggerated loss) is suspected. The game
-   now scores an ascending start (a first word at least 10 dB below the PTA) clean once the whisper is on screen
-   (`low_start_ok`); a start above PTA + 25 is
-   still an error (`SRT_START_MAX_DB` waits for your answer). Hoot's praise for it, "Starting below his beeps:
-   smart when answers look exaggerated.", only says where the first word sits: a first word at 60 (13 below
-   Mike's PTA) that he still repeats steps down, not up, so the line no longer says "coming up". Is starting
-   10+ dB below the PTA the right trigger, or should it be lower (nearer the expected SRT)?
+   5th is a wrong step. Is 4 right? **(clinical review S5, question 11, default taken)** Down 10 / up 5 stays, and
+   Hoot calls it one common way, not the only method (ASHA 1988 describes a descending method of its own).
+2. Start level PTA + 15 (rounded), with a first word from PTA + 10 to PTA + 40 accepted. ASHA (1988) starts
+   30-40 dB above the estimated SRT, and allows an ascending start when pseudohypacusis (an exaggerated loss) is
+   suspected. **(clinical review S4, question 11, default taken)** A first word 30 to 40 above the PTA is a clean
+   start (`SRT_START_MAX_DB` 40; par counts from the first word, so the extra words cost nothing); the
+   recommended start stays PTA + 15, and the `srt_start` tip says "plus 40 at most". For Mike the dial's top
+   (100) is his PTA + 28. An ascending start (a first word at least 10 dB below the PTA) is clean once the whisper
+   is on screen (`low_start_ok`), and **(S2)** Hoot's praise, "Starting below his beeps and coming up: smart when
+   answers look exaggerated.", comes with the first step up after it, never on the low first word alone: a first
+   word at 60 (about 12 below his right PTA) that he still repeats steps down first, and the praise waits. Is
+   starting 10+ dB below the PTA the right trigger, or should it be lower (nearer the expected SRT)?
 3. Agreement bands 6 / 12 dB (good / fair / poor) with the 3-frequency PTA (best two when the three spread 20+).
 4. Is the next step right: re-instruct, retest (an ascending retest?), objective tests that don't need his answers
    (the objective cross-checks: acoustic reflexes, OAEs, ABR / ASSR; a Stenger only for a one-sided claim, so not
