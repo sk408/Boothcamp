@@ -76,6 +76,12 @@ static func better_ear(pta_right: float, pta_left: float) -> String:
 	return "left" if pta_left < pta_right else "right"
 
 
+## The SRT ear order: the better ear (lower PTA) first, right on a tie (clinical review S6).
+static func ears_better_first(pta_right: float, pta_left: float) -> Array[String]:
+	var first := better_ear(pta_right, pta_left)
+	return [first, "left" if first == "right" else "right"]
+
+
 ## Nearest multiple of 5 (halves round up), on the speech dB grid.
 static func snap5(db: float) -> int:
 	return int(floor(db / 5.0 + 0.5)) * 5
@@ -90,7 +96,7 @@ static func clamp_db(db: int) -> int:
 
 const SRT_START_ABOVE_PTA_DB := 15
 const SRT_START_MIN_DB := 10   ## first word at PTA + 10 ...
-const SRT_START_MAX_DB := 25   ## ... to PTA + 25
+const SRT_START_MAX_DB := 40   ## ... to PTA + 40 (ASHA 1988 starts 30 to 40 above; clinical review S4)
 const SRT_DOWN_DB := 10        ## repeated it -> down 10
 const SRT_DOWN_TOLERATED_DB := 5   ## down 5 is tolerated (some clinics drop 5 after every correct word)
 const SRT_UP_DB := 5           ## missed it -> up 5
@@ -122,7 +128,7 @@ static func srt_start(pta: float) -> int:
 	return clamp_db(snap5(pta) + SRT_START_ABOVE_PTA_DB)
 
 
-## Is this a sensible first SRT word level for this PTA (PTA + 10 .. PTA + 25)?
+## Is this a sensible first SRT word level for this PTA (PTA + 10 .. PTA + 40)?
 static func srt_start_ok(db: int, pta: float) -> bool:
 	if is_nan(pta):
 		return true
@@ -225,7 +231,8 @@ static func srt_textbook_words(start_db: int, srt_true: int) -> int:
 
 ## PTA/SRT agreement: |SRT - PTA| <= AGREE_GOOD_DB (6) good, <= AGREE_FAIR_DB (12) fair, else poor.
 ## The direction matters too (srt_pta_diff): an SRT much better than the PTA points to a non-organic
-## loss; a worse one to the instructions, language, word recognition or a sloping loss.
+## loss; a worse one to the instructions, language or word recognition. (A steep slope can make words
+## a little better than the three-tone average: pta_for_speech then uses the best two.)
 static func agreement(srt: int, pta: float) -> StringName:
 	if is_nan(pta) or srt == NO_SRT or srt < MIN_DB:
 		return &""
@@ -245,21 +252,42 @@ static func srt_pta_diff(srt: int, pta: float) -> int:
 
 const SPEECH_IA_DB: Dictionary[StringName, int] = {&"phones": 40, &"inserts": 55}
 const SPEECH_MASK_BELOW_DB := 20   ## speech noise at the presentation level minus 20 (rule of thumb)
+## The air-bone gap that lifts the speech noise is the non-test ear's largest over these.
+const SPEECH_ABG_FREQS: Array[int] = [500, 1000, 2000, 4000]
 
 
 ## Does speech at `level` in the test ear risk crossing to the other ear? `nontest_best` is the
 ## other ear's best bone threshold (or best air when no bone was measured) over 500-4000 Hz.
+## Without bone results the rule uses air only: a temporary stand-in (docs/SPEECH.md §3).
 static func speech_masking_needed(level: int, nontest_best: float, transducer: StringName = &"phones") -> bool:
 	if is_nan(nontest_best):
 		return false
 	return float(level - int(SPEECH_IA_DB.get(transducer, 40))) >= nontest_best
 
 
-static func speech_mask_level(level: int) -> int:
-	return clampi(level - SPEECH_MASK_BELOW_DB, ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+## Speech noise (dB EM) for the other ear: the presentation level minus 20, plus the non-test ear's
+## largest air-bone gap (`nontest_abg`, nontest_largest_abg(); 0 = no gap, or no bone measured),
+## since a gap there needs that much more noise to reach its cochlea. Clamped to the masker's range.
+## Without bone results the rule uses air only (no gap): a temporary stand-in.
+static func speech_mask_level(level: int, nontest_abg: int = 0) -> int:
+	return clampi(level - SPEECH_MASK_BELOW_DB + maxi(0, nontest_abg), ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+
+
+## The other ear's largest air-bone gap (best air minus best bone, masked where measured) over
+## SPEECH_ABG_FREQS, from tone results §5.1. 0 when no bone was measured there (or no gap).
+static func nontest_largest_abg(tone_results: Dictionary, test_ear: String) -> int:
+	var other := "left" if test_ear == "right" else "right"
+	var ac := ClinicRules.best_thresholds(tone_results, other, false)
+	var bc := ClinicRules.best_thresholds(tone_results, other, true)
+	var gap := 0
+	for f: int in SPEECH_ABG_FREQS:
+		if ac.has(f) and bc.has(f):
+			gap = maxi(gap, ClinicRules.air_bone_gap(int(ac[f]), int(bc[f])))
+	return gap
 
 
 ## The other ear's best bone (bone sheets) or else best air over 500-4000 Hz, from tone results §5.1.
+## (The air-only fallback is a temporary stand-in until the speech days measure bone.)
 static func nontest_best_threshold(tone_results: Dictionary, test_ear: String) -> float:
 	var other := "left" if test_ear == "right" else "right"
 	var best := INF
@@ -287,11 +315,16 @@ const WRS_BAND_BOTTOM: StringName = &"very_poor"
 const WRS_BAND_TITLES: Dictionary[StringName, String] = {
 	&"excellent": "Excellent", &"good": "Good", &"fair": "Fair", &"poor": "Poor", &"very_poor": "Very poor",
 }
+## (Day 3's tests only; no day uses it: Days 4-5 compare ears with wrs_differ.)
 const WRS_ASYMMETRY_PCT := 20
 ## [PTA up to, minimum WRS expected]: a score below it is worse than the audiogram predicts.
+## (Day 3's tests only; no day uses it: Days 4-5 read WRS_PREDICTED_MIN_25 through
+## wrs_predicted_min_interp.)
 const WRS_PREDICTED_MIN: Array = [[25, 88], [40, 76], [55, 64], [70, 48], [200, 0]]
 const ROLLOVER_STEP_DB := 20
+## (Not used by Days 4-5: they flag rollover by its index, ROLLOVER_INDEX_CUTOFF.)
 const ROLLOVER_DROP_PCT := 20
+## (Not used by Days 4-5.)
 const ROLLOVER_INDEX_FLAG := 0.25
 ## WRS patient model (docs/SPEECH.md §4): whole-word audibility A(L) = logistic((L - (SRT + 12)) / 5).
 const WRS_AUDIBLE_ABOVE_SRT_DB := 12.0
@@ -324,6 +357,7 @@ static func wrs_band(pct: float) -> StringName:
 
 
 ## The lowest score the PTA predicts (teaching table; check against your clinic's norms).
+## (Day 3's tests only; no day uses it: Days 4-5 use wrs_predicted_min_interp.)
 static func wrs_predicted_min(pta: float) -> int:
 	if is_nan(pta):
 		return 0
@@ -333,15 +367,18 @@ static func wrs_predicted_min(pta: float) -> int:
 	return 0
 
 
+## (Day 3's tests only; no day uses it.)
 static func wrs_below_predicted(pct: float, pta: float) -> bool:
 	return pct < float(wrs_predicted_min(pta))
 
 
+## (Day 3's tests only; no day uses it: Days 4-5 use wrs_differ.)
 static func wrs_asymmetric(pct_right: float, pct_left: float) -> bool:
 	return absf(pct_right - pct_left) >= WRS_ASYMMETRY_PCT
 
 
 ## Rollover index (PBmax - PBmin) / PBmax over two or more scores; 0 when PBmax is 0.
+## (Not used by Days 4-5: wrs_rollover takes PBmin only from a level above PBmax's.)
 static func rollover_index(scores: Array) -> float:
 	if scores.is_empty():
 		return 0.0
@@ -354,6 +391,7 @@ static func rollover_index(scores: Array) -> float:
 
 
 ## Rollover: the louder score fell ROLLOVER_DROP_PCT points or more below the comfortable one.
+## (Not used by Days 4-5: they flag rollover by its index, wrs_rollover.)
 static func is_rollover(pct_comfortable: float, pct_louder: float) -> bool:
 	return pct_comfortable - pct_louder >= ROLLOVER_DROP_PCT
 
@@ -414,6 +452,341 @@ static func predicted_wrs_max(thresholds: Dictionary) -> int:
 		if m < 0.0:
 			lost += clampf(-m / 15.0, 0.0, 1.0)
 	return clampi(int(round(100.0 - lost * 4.0)), 30, 100)
+
+
+## (Days 4-5) One ear's best bone per frequency over SPEECH_ABG_FREQS (D17): masked bone, else
+## unmasked bone, else air (masked air where measured). {freq: dB}; a frequency with nothing
+## measured is left out. The WRS noise rules read it: nontest_best_bone() for "is noise needed" and
+## its lowest value on the test ear for the noise ceiling.
+static func ear_best_bone(tone_results: Dictionary, ear: String) -> Dictionary:
+	var masked := ClinicRules.sheet_thresholds(tone_results, ear, &"bc_masked")
+	var bone := ClinicRules.sheet_thresholds(tone_results, ear, &"bc")
+	var air := ClinicRules.best_thresholds(tone_results, ear, false)
+	var out := {}
+	for f: int in SPEECH_ABG_FREQS:
+		if masked.has(f):
+			out[f] = int(masked[f])
+		elif bone.has(f):
+			out[f] = int(bone[f])
+		elif air.has(f):
+			out[f] = int(air[f])
+	return out
+
+
+## (Days 4-5) The non-test ear's lowest best bone (D17): "is noise needed" for word lists (the SRT
+## keeps nontest_best_threshold). NAN when nothing was measured there.
+static func nontest_best_bone(tone_results: Dictionary, test_ear: String) -> float:
+	var best := INF
+	var t := ear_best_bone(tone_results, "left" if test_ear == "right" else "right")
+	for f: int in t:
+		best = minf(best, float(t[f]))
+	return best if best != INF else NAN
+
+# (Day 4) Word lists (CONTRACTS.md §9.11-§9.15, with the clinical amendments A1-A4). Four lists of
+# 25 one-syllable words (core/speech/material/words_<n>.json), each with the same mix of key sounds,
+# played in file order and handed out in play order. The word model (WrsModel) deals a whole list at
+# its first word: round(p x 25) give or take one.
+
+## The word lists, in play order (D25): right, left, then the next left list (redo or louder).
+const WRS_LISTS: PackedStringArray = ["words_1", "words_2", "words_3", "words_4"]
+## The key sounds of every list (25 words): high, soft sounds three and two times, the rest once.
+const WRS_KEY_MIX: Dictionary[String, int] = {
+	"s": 3, "f": 2, "th": 2, "t": 2, "k": 2, "sh": 1, "ch": 1, "z": 1, "v": 1, "p": 1, "b": 1, "d": 1, "g": 1,
+	"m": 1, "n": 1, "l": 1, "r": 1, "w": 1, "h": 1,
+}
+## One draw per list: the dealt count is round(p x N) plus one of these (1/4, 1/2, 1/4).
+const WRS_DEAL_JITTER: Array[int] = [-1, 0, 0, 1]
+## Which words a cochlear ear misses: weight 1 / (1 + exp(margin / 4)) + 0.05 on its key sound.
+const WRS_MISS_SCALE_DB := 4.0
+const WRS_MISS_FLOOR := 0.05
+## What a miss sounds like: a rhyme (foil), silence, or (a neural ear) another word of the list.
+const WRS_MISS_COCHLEAR: Dictionary[StringName, float] = {&"foil": 0.80, &"silence": 0.20}
+const WRS_MISS_NEURAL: Dictionary[StringName, float] = {&"foil": 0.60, &"silence": 0.25, &"other": 0.15}
+## The louder list: 20 dB above the counted comfortable one (15-25 accepted), never past MAX_DB.
+const WRS_LOUDER_DB := 20
+const WRS_LOUDER_TOLERANCE_DB := 5
+## A sound "reaches" the ear at 3 dB or more above its threshold; 0-3 dB is "only just" (D18).
+const WRS_AUDIBLE_MARGIN_DB := 3.0
+## The answer styles on the player's words (D20): about 1 hit in 3 comes back chatty, with at most
+## this many words around the word; a self-correction counts its final answer.
+const WRS_CHATTY_SHARE := 0.33
+const WRS_CHATTY_MAX_WORDS := 6
+const WRS_SELF_CORRECT_COUNTS := true
+## The "chatting level" mark on the dial (the tea demo).
+const CHAT_DB := 50
+## The lens: a lost sound fades to LENS_MIN_ALPHA over LENS_FADE_DB below its threshold.
+const LENS_FADE_DB := 15.0
+const LENS_MIN_ALPHA := 0.15
+## The lurking Ghost: GHOST_ALPHA_FLOOR at the first level that needs noise, plus 1 / 25 per dB above it.
+const GHOST_ALPHA_FLOOR := 0.2
+const GHOST_ALPHA_SPAN_DB := 25.0
+## (A1) The lowest best-word-score (25-word list) that still fits the tones, by 3-frequency PTA: below it the score is
+## disproportionately poor. A game approximation of Dubno et al. (1995)'s 95% lower limits, anchored on their 50-word
+## value of 48% at a PTA of 50 dB; Steve replaces the rows with the published 25-word limits (CHAPTER4 open questions).
+const WRS_PREDICTED_MIN_25: Array = [[0, 88], [20, 80], [30, 72], [40, 60], [50, 48], [60, 36], [70, 24], [80, 12]]
+## (A2) Rollover: (PBmax - PBmin) / PBmax at this or more, with PBmin from a level above PBmax's
+## (Jerger & Jerger's classic cut-off; Steve may lower it for his recorded list).
+const ROLLOVER_INDEX_CUTOFF := 0.45
+## (A3) Two word scores differ when their arcsine-transformed gap passes this z (95%): the
+## critical differences of Thornton & Raffin (1978).
+const WRS_CRIT_Z := 1.96
+
+
+## (A1) The predicted minimum best score for this PTA, interpolated linearly between the rows of
+## WRS_PREDICTED_MIN_25 and clamped outside them (PTA 41.67 -> 58.0). Lines say "{his} tones predict
+## at least {min}%", never a source. 0 when the PTA is unknown (nothing to compare with).
+static func wrs_predicted_min_interp(pta: float) -> float:
+	if is_nan(pta):
+		return 0.0
+	var rows := WRS_PREDICTED_MIN_25
+	if pta <= float(rows[0][0]):
+		return float(rows[0][1])
+	for i in rows.size() - 1:
+		var a: Array = rows[i]
+		var b: Array = rows[i + 1]
+		if pta <= float(b[0]):
+			return lerpf(float(a[1]), float(b[1]), (pta - float(a[0])) / (float(b[0]) - float(a[0])))
+	return float(rows[rows.size() - 1][1])
+
+
+## Word-list noise (dB EM) for the other ear (D16, A4): the level minus 20, plus the other ear's
+## largest air-bone gap, clamped to [level - IA, test-ear best bone + IA - 5] (IA = SPEECH_IA_DB of
+## the transducer): enough to cover crossed words, never enough to cross back to the test ear. When
+## the two limits cross (the masking dilemma), the ceiling wins. `bc_te_best` NAN: no ceiling.
+static func wrs_mask_level(level: int, bc_te_best: float, transducer: StringName = &"phones", nontest_abg: int = 0) -> int:
+	var ia := int(SPEECH_IA_DB.get(transducer, 40))
+	var db := level - SPEECH_MASK_BELOW_DB + maxi(0, nontest_abg)
+	db = maxi(db, level - ia)
+	if not is_nan(bc_te_best):
+		db = mini(db, int(floor(bc_te_best)) + ia - 5)
+	return clampi(db, ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+
+
+## Was the word-list noise held below level - 20 (+ gap) by the ceiling (the wrs_mask_capped tip)?
+static func wrs_mask_capped(level: int, bc_te_best: float, transducer: StringName = &"phones", nontest_abg: int = 0) -> bool:
+	return wrs_mask_level(level, bc_te_best, transducer, nontest_abg) < level - SPEECH_MASK_BELOW_DB + maxi(0, nontest_abg)
+
+
+## The louder list's level: 20 dB above the comfortable list, never past MAX_DB.
+static func wrs_louder_level(comfy_db: int) -> int:
+	return mini(MAX_DB, comfy_db + WRS_LOUDER_DB)
+
+
+## Is `db` an acceptable louder list (15-25 dB above the comfortable list)? The textbook level always is.
+static func wrs_louder_ok(db: int, comfy_db: int) -> bool:
+	if db == wrs_louder_level(comfy_db):
+		return true
+	return absi(db - comfy_db - WRS_LOUDER_DB) <= WRS_LOUDER_TOLERANCE_DB
+
+
+## The share of words a rollover ear loses at `level` (0..1): above `after` dB HL it loses
+## `drop_per_10db` points per 10 dB. `entry` is speech.rollover[ear] ({} = no rollover).
+static func rollover_drop(entry: Dictionary, level: float) -> float:
+	if entry.is_empty():
+		return 0.0
+	var after := float(entry.get("after", MAX_DB))
+	return maxf(0.0, level - after) / 10.0 * float(entry.get("drop_per_10db", 0)) / 100.0
+
+
+## A list's percentage: each of `words` words is worth 100 / words (25 words: right x 4).
+static func wrs_pct(right: int, words: int = WRS_WORDS) -> int:
+	return roundi(float(right) * 100.0 / float(maxi(1, words)))
+
+
+## The dealt count of a list: round(p x n) plus the list's jitter, kept within [lo, n].
+static func wrs_deal_count(p: float, n: int, jitter: int, lo: int = 0) -> int:
+	return clampi(roundi(p * float(n)) + jitter, mini(lo, n), n)
+
+
+## How likely a cochlear ear is to miss a word whose key sound has this margin (dB above threshold):
+## a sound below threshold weighs about 1, a clear one the floor (WRS_MISS_FLOOR).
+static func wrs_miss_weight(margin: float) -> float:
+	return 1.0 / (1.0 + exp(margin / WRS_MISS_SCALE_DB)) + WRS_MISS_FLOOR
+
+
+## The lens alpha of a sound with this margin: full ink from 0 dB up, fading to LENS_MIN_ALPHA
+## LENS_FADE_DB below its threshold.
+static func lens_alpha(margin: float) -> float:
+	return lerpf(1.0, LENS_MIN_ALPHA, clampf(-margin / LENS_FADE_DB, 0.0, 1.0))
+
+
+## How visible the lurking Ghost is while the noise is off (0 when words cannot cross at `level`):
+## 0.2 at the first level that needs noise, rising 1 / 25 per dB: bold 20 dB above it (Nora: 50, 70).
+static func ghost_alpha(level: int, transducer: StringName, nontest_best: float) -> float:
+	if not speech_masking_needed(level, nontest_best, transducer):
+		return 0.0
+	var over := float(level - int(SPEECH_IA_DB.get(transducer, 40))) - nontest_best
+	return clampf(GHOST_ALPHA_FLOOR + over / GHOST_ALPHA_SPAN_DB, GHOST_ALPHA_FLOOR, 1.0)
+
+
+## A word's spelling pieces with their sound ids ("" = silent): the item's own `chunks`, else a
+## letter guess (digraphs such as th, sh, ch, ck, ng and ph; vowel runs; a silent final e).
+static func chunk_sounds(item: Dictionary) -> Array:
+	var given: Variant = item.get("chunks", null)
+	if given is Array and not (given as Array).is_empty():
+		return (given as Array).duplicate(true)
+	return _guess_chunks(String(item.get("text", "")))
+
+
+const _DIGRAPHS: Dictionary = {
+	"tch": "ch", "dge": "j", "th": "th", "sh": "sh", "ch": "ch", "ph": "f", "ng": "ng", "ck": "k", "qu": "k",
+	"wh": "w", "wr": "r", "kn": "n", "gh": "",
+}
+const _LETTERS: Dictionary = {
+	"b": "b", "d": "d", "f": "f", "g": "g", "h": "h", "j": "j", "k": "k", "l": "l", "m": "m", "n": "n", "p": "p",
+	"q": "k", "r": "r", "s": "s", "t": "t", "v": "v", "w": "w", "x": "s", "z": "z",
+}
+
+
+static func _guess_chunks(text: String) -> Array:
+	var low := text.to_lower()
+	var out: Array = []
+	var i := 0
+	while i < low.length():
+		var ch := low[i]
+		var took := false
+		for n: int in [3, 2]:
+			var piece := low.substr(i, n)
+			if piece.length() == n and _DIGRAPHS.has(piece):
+				out.append([text.substr(i, n), String(_DIGRAPHS[piece])])
+				i += n
+				took = true
+				break
+		if took:
+			continue
+		if "aeiou".contains(ch) or (ch == "y" and i > 0):
+			var j := i + 1
+			while j < low.length() and ("aeiou".contains(low[j]) or (low[j] in ["w", "y"] and (j + 1 >= low.length() or not "aeiou".contains(low[j + 1])))):
+				j += 1
+			# a final e after a consonant, with a vowel before it, is silent ("zone", "dice")
+			var silent := ch == "e" and j == low.length() and j - i == 1 and not out.is_empty() \
+				and String((out[out.size() - 1] as Array)[1]) != "vowel" and _has_vowel(out)
+			out.append([text.substr(i, j - i), "" if silent else "vowel"])
+			i = j
+			continue
+		if ch == "y":
+			out.append([text.substr(i, 1), "y"])
+			i += 1
+			continue
+		if _LETTERS.has(ch):
+			var j := i + 1
+			while j < low.length() and low[j] == ch:
+				j += 1   # a doubled letter is one sound ("shell", "chess")
+			out.append([text.substr(i, j - i), String(_LETTERS[ch])])
+			i = j
+			continue
+		if ch == "c":
+			var soft := i + 1 < low.length() and "eiy".contains(low[i + 1])
+			out.append([text.substr(i, 1), "s" if soft else "k"])
+			i += 1
+			continue
+		out.append([text.substr(i, 1), ""])
+		i += 1
+	return out
+
+
+static func _has_vowel(chunks: Array) -> bool:
+	for c: Array in chunks:
+		if String(c[1]) == "vowel":
+			return true
+	return false
+
+
+## The weakest sound of a word at `level` against `thresholds` (dB above threshold; silent pieces
+## are skipped). INF for a word with no sound at all.
+static func word_min_margin(item: Dictionary, level: float, thresholds: Dictionary) -> float:
+	var lo := INF
+	for c: Variant in chunk_sounds(item):
+		var sound := String((c as Array)[1]) if c is Array and (c as Array).size() == 2 else ""
+		if sound != "":
+			lo = minf(lo, sound_margin(sound, level, thresholds))
+	return lo
+
+
+## Does every sound of the word reach the ear (each WRS_AUDIBLE_MARGIN_DB or more above threshold)?
+## The lens, the "audible, but missed" stamp and the deal's audible target read MEASURED thresholds.
+static func word_fully_audible(item: Dictionary, level: float, thresholds: Dictionary) -> bool:
+	return word_min_margin(item, level, thresholds) >= WRS_AUDIBLE_MARGIN_DB
+
+
+## (A2) The rollover index (PBmax - PBmin) / PBmax; 0 when PBmax is 0.
+static func rollover_index_of(pb_max: float, pb_min: float) -> float:
+	return (pb_max - pb_min) / pb_max if pb_max > 0.0 else 0.0
+
+
+## (A2) Rollover over an ear's counted lists [{level_db, pct}]: PBmax is the best score (the softest
+## level on a tie), PBmin the lowest score at a level ABOVE PBmax's. Without one (a single list, or
+## nothing louder) there is no PBmin and no rollover. {pb_max, pb_min (-1: none), index, rollover}.
+static func wrs_rollover(lists: Array) -> Dictionary:
+	var out := {"pb_max": -1.0, "pb_min": -1.0, "index": 0.0, "rollover": false}
+	var best := -1.0
+	var best_db := 0
+	for l: Variant in lists:
+		var d: Dictionary = l
+		var pct := float(d.get("pct", -1))
+		var db := int(d.get("level_db", 0))
+		if pct > best or (pct == best and db < best_db):
+			best = pct
+			best_db = db
+	if best < 0.0:
+		return out
+	out["pb_max"] = best
+	var lo := INF
+	for l: Variant in lists:
+		var d: Dictionary = l
+		if int(d.get("level_db", 0)) > best_db:
+			lo = minf(lo, float(d.get("pct", 0)))
+	if lo == INF:
+		return out
+	out["pb_min"] = lo
+	out["index"] = rollover_index_of(best, lo)
+	out["rollover"] = float(out["index"]) >= ROLLOVER_INDEX_CUTOFF
+	return out
+
+
+## (A3) Do two word scores differ by more than chance (95%)? With theta = 2 asin(sqrt(p)), true when
+## |theta_a - theta_b| > WRS_CRIT_Z x sqrt(1 / n_a + 1 / n_b). On 25 words 44% is the same as 20%-68%.
+static func wrs_differ(pct_a: float, n_a: int, pct_b: float, n_b: int) -> bool:
+	if n_a <= 0 or n_b <= 0:
+		return false
+	var ta := 2.0 * asin(sqrt(clampf(pct_a / 100.0, 0.0, 1.0)))
+	var tb := 2.0 * asin(sqrt(clampf(pct_b / 100.0, 0.0, 1.0)))
+	return absf(ta - tb) > WRS_CRIT_Z * sqrt(1.0 / float(n_a) + 1.0 / float(n_b))
+
+
+## (A3) The lowest and highest whole-word scores (in 100 / n steps) that wrs_differ calls the same
+## as `pct` on a list of `n`: the band the ear compare draws (44% on 25 words: 20-68).
+static func wrs_same_range(pct: float, n: int) -> Vector2i:
+	if n <= 0:
+		return Vector2i(0, 100)
+	var lo := 100
+	var hi := 0
+	for k in n + 1:
+		var p := roundi(100.0 * float(k) / float(n))
+		if not wrs_differ(pct, n, float(p), n):
+			lo = mini(lo, p)
+			hi = maxi(hi, p)
+	return Vector2i(lo, hi) if lo <= hi else Vector2i(roundi(pct), roundi(pct))
+
+
+## When word scores refer (D27): ears that differ (asymmetric), rollover, or a best score below its
+## prediction in exactly one ear give &"refer" (a doctor's check soon, before any fitting). Both ears
+## below with nothing else gives &"" (the summary adds the flag below_predicted_both). Never &"today":
+## word scores alone never send a patient to a doctor today.
+static func wrs_referral(asymmetric: bool, below_right: bool, below_left: bool, rollover: bool) -> StringName:
+	return &"refer" if asymmetric or rollover or below_right != below_left else &""
+
+
+## The comfortable window wrs_level_ok accepts, as whole dB (the LCD and the coach show it):
+## PTA + 30..40 and at least 50 (PTA 15: 50-60; 40: 70-80), widened to hold the textbook level and
+## never past MAX_DB.
+static func wrs_window(pta: float) -> Vector2i:
+	var target := wrs_level(pta)
+	if is_nan(pta):
+		return Vector2i(WRS_MIN_OK_DB, 70)
+	var lo := ceili(maxf(float(WRS_MIN_OK_DB), pta + WRS_ABOVE_PTA_DB - WRS_WINDOW_DB))
+	var hi := floori(maxf(float(WRS_MIN_DB) + WRS_WINDOW_DB, pta + WRS_ABOVE_PTA_DB + WRS_WINDOW_DB))
+	return Vector2i(mini(lo, target), mini(MAX_DB, maxi(hi, target)))
 
 # ---------------------------------------------------------------- Party Noise Test (Day 5)
 
@@ -478,3 +851,232 @@ static func estimated_snr_loss(thresholds: Dictionary) -> float:
 static func sin_expected_words(snr: float, loss: float) -> float:
 	var snr50 := SIN_NORMAL_SNR50_DB + loss
 	return float(SIN_KEY_WORDS) / (1.0 + exp(-(snr - snr50) / SIN_SLOPE_DB))
+
+# ---------------------------------------------------------------- lists (Days 4-5)
+# Golf on a fixed list (word lists and party lists, CONTRACTS.md §9.15, D19). Each player list is a
+# hole: golf_strokes = golf_par + slips - tee_bonus. Both test modes read these.
+
+## Strokes off a solo list whose set-up the player made unprompted (the textbook level, and noise
+## exactly when needed): the only way a clean list becomes a birdie.
+const LIST_TEE_BONUS := 2
+## Slips added when the player confirms a wrong set-up ("test at this level anyway").
+const LIST_CONFIRM_SLIP := 3
+
+# ---------------------------------------------------------------- party lists (Day 5)
+# The Party Noise Test as Day 5 runs it (CONTRACTS.md §9.11.2, §9.12.2, §9.14, §9.15.2; docs/CHAPTER5.md).
+# The SIN_* rules above are shared and stay as they were. SIN_BAND_TITLES and SIN_HELP are kept for
+# them, but no Day 5 file reads them (a test): Day 5 prints SIN_BAND_NAMES and SIN_REMEDIES.
+
+## Party lists 1-6, in play order: unaided 1-2, programme A 3-4, programme B 5-6.
+const SIN_LISTS: Array[String] = ["party_1", "party_2", "party_3", "party_4", "party_5", "party_6"]
+## The practice sentence (one item, never scored or stored) and the SNR it plays at.
+const SIN_PRACTICE_LIST := "party_practice"
+const SIN_PRACTICE_SNR := 25
+## Lists averaged per condition: one list is a rough guess, two make it solid.
+const SIN_LISTS_PER_CONDITION := 2
+## Unaided under earphones; hearing aids on all-round microphones (OMNI); directional (FOCUS).
+const SIN_CONDITIONS: Array[StringName] = [&"unaided", &"omni", &"directional"]
+const SIN_CONDITION_TITLES: Dictionary[StringName, String] = {
+	&"unaided": "Unaided", &"omni": "OMNI", &"directional": "FOCUS",
+}
+## Every slot a party sheet can sit in (sin_slot), in the order results list them.
+const SIN_SLOTS: Array[String] = ["both", "right", "left", "aided_omni", "aided_directional"]
+## The course of each sentence, in SIN_SNRS order (Starter 25 dB ... Dessert 0 dB).
+const SIN_COURSES: Array[String] = ["Starter", "Soup", "Fish", "Main", "Cheese", "Dessert"]
+const SIN_AIDED_DB := 50     ## aided party tests in the sound field: about 65 dB SPL (check your calibration)
+## Band names and remedies in our own words (D22, amendment A7: 0-3 dB is normal or near-normal).
+## Lines print "{Band} SNR loss"; the receipt prints "{BAND} SNR LOSS". Unaided sheets only (D21).
+const SIN_BAND_NAMES: Dictionary[StringName, String] = {
+	&"normal": "Near-normal", &"mild": "Mild", &"moderate": "Moderate", &"severe": "Severe"}
+const SIN_REMEDIES: Dictionary[StringName, String] = {
+	&"normal": "good habits", &"mild": "if aids: standard settings",
+	&"moderate": "+ directional mics", &"severe": "+ a remote mic"}
+
+## The party model's misses (§9.12.2): a key word whose high, soft cue sits within SIN_PICK_WINDOW_DB
+## of threshold at the talker level is missed first; each such sound adds 1 to its weight, up to
+## SIN_PICK_CAP more.
+const SIN_PICK_WINDOW_DB := 15.0
+const SIN_PICK_CAP := 3
+## What a missed key word becomes: a mishear from the item, a filler ("something"), or nothing.
+const SIN_MISS_SHARES: Dictionary[StringName, float] = {&"mishear": 0.55, &"filler": 0.30, &"drop": 0.15}
+## One answer in five swaps a little word ("the" for "a"): little words never count.
+const SIN_LITTLE_SWAP_SHARE := 0.2
+## When the noise wins (count 0 and fewer than this many key words expected), half the answers are
+## one of the patient's lost lines.
+const SIN_LOST_EXPECTED := 0.25
+const SIN_LOST_SHARE := 0.5
+## The little words an answer may swap, and what each becomes. Never a key word.
+const SIN_LITTLE_WORDS: Dictionary[String, String] = {
+	"the": "a", "a": "the", "an": "the", "my": "the", "our": "the", "his": "the", "her": "the",
+	"on": "in", "in": "on",
+}
+## Letter-based key sounds (key_word_sounds): the high, soft consonants a noisy room steals first.
+const SIN_KEY_SOUNDS: PackedStringArray = ["s", "f", "th", "t", "k", "sh", "ch", "z", "v", "p"]
+## Past tenses that no suffix rule finds, mapped to the word they come from (is_trap).
+const SIN_IRREGULAR_FORMS: Dictionary[String, String] = {
+	"drew": "draw", "hid": "hide", "kept": "keep", "lent": "lend", "sang": "sing", "sat": "sit",
+	"shook": "shake", "slept": "sleep", "stole": "steal", "woke": "wake", "wore": "wear", "heard": "hear",
+	"lost": "lose", "left": "leave", "met": "meet", "fell": "fall", "rang": "ring", "swam": "swim",
+}
+
+
+## The sheet slot of a party test: unaided "both" or an ear as given, then "aided_omni" or
+## "aided_directional" (CONTRACTS.md §9.14.1).
+static func sin_slot(condition: StringName, ear: String = "both") -> String:
+	match condition:
+		&"omni":
+			return "aided_omni"
+		&"directional":
+			return "aided_directional"
+	return ear if ear == "right" or ear == "left" else "both"
+
+
+## The party (babble) level for a sentence: the talker level minus its SNR (same dial scale).
+static func sin_babble_level(talker_db: int, snr: int) -> int:
+	return talker_db - snr
+
+
+## The SNR of sentence n (1-6, SIN_SNRS); n = 0 is the practice sentence (SIN_PRACTICE_SNR).
+static func sin_snr_for(n: int) -> int:
+	if n <= 0:
+		return SIN_PRACTICE_SNR
+	return SIN_SNRS[mini(n, SIN_SNRS.size()) - 1]
+
+
+## Key words the patient gets in one sentence: the expected number, dithered by `u` (0..1, one
+## rng.randf()). Never more than one away from `expected`, and exactly `expected` on average.
+static func sin_count(expected: float, u: float) -> int:
+	return clampi(floori(expected + u), 0, SIN_KEY_WORDS)
+
+
+## The key sounds a word's letters suggest (SIN_KEY_SOUNDS only, each once, in order): "socks" ->
+## s, k; "phone" -> f; "watched" -> ch; "city" -> s, t. A sentence item's `key_sounds` overrides
+## this where the spelling misleads (the silent t of "castle", the "ch" of "school").
+static func key_word_sounds(word: String) -> PackedStringArray:
+	var w := word.to_lower()
+	var out := PackedStringArray()
+	var i := 0
+	while i < w.length():
+		var two := w.substr(i, 2)
+		var sound := ""
+		var step := 1
+		if w.substr(i, 3) == "tch":
+			sound = "ch"
+			step = 3
+		elif two == "th" or two == "sh" or two == "ch":
+			sound = two
+			step = 2
+		elif two == "ph":
+			sound = "f"
+			step = 2
+		elif two == "ck":
+			sound = "k"
+			step = 2
+		else:
+			match w[i]:
+				"s", "f", "t", "k", "z", "v", "p":
+					sound = w[i]
+				"q":
+					sound = "k"
+				"c":
+					var next := w.substr(i + 1, 1)
+					sound = "s" if next == "e" or next == "i" or next == "y" else "k"
+				"x":
+					if not out.has("k"):
+						out.append("k")
+					sound = "s"
+		if sound != "" and not out.has(sound):
+			out.append(sound)
+		i += step
+	return out
+
+
+## How likely a key word is to be the one missed (the party model draws misses by this weight):
+## 1 + the number of its key sounds whose cue margin at `level` is under SIN_PICK_WINDOW_DB, at most
+## SIN_PICK_CAP more. `sounds` empty = key_word_sounds(word). `thresholds` are the TRUE ones.
+static func key_word_miss_weight(word: String, sounds: PackedStringArray, thresholds: Dictionary, level: float) -> float:
+	var list := sounds if not sounds.is_empty() else key_word_sounds(word)
+	var near := 0
+	for s: String in list:
+		if sound_margin(s, level, thresholds) < SIN_PICK_WINDOW_DB:
+			near += 1
+	return 1.0 + float(mini(near, SIN_PICK_CAP))
+
+
+## Is `said` a trap for `key_word`: the same word with a plural or tense change ("streets" for
+## "street", "drop" for "dropped", "chews" for "chewed", "keeps" for "kept")? Still a miss, but it
+## gets its own line ("Plurals and tenses must match"). One word starts with the other, or both
+## share a stem once a regular ending (s, es, ies, ves, ed, ied, ing) or an irregular past is undone
+## ("leaves" for "leaf", "sat" for "sit").
+static func is_trap(said: String, key_word: String) -> bool:
+	var a := said.strip_edges().to_lower()
+	var b := key_word.strip_edges().to_lower()
+	if a.is_empty() or b.is_empty() or a == b:
+		return false
+	if a.begins_with(b) or b.begins_with(a):
+		return true
+	var stems_a := _word_stems(a)
+	for s: String in _word_stems(b):
+		if stems_a.has(s):
+			return true
+	return false
+
+
+## A word and the bases it may come from by a regular ending or SIN_IRREGULAR_FORMS (stems of 3
+## letters or more only, so "red" never becomes "r").
+static func _word_stems(w: String) -> PackedStringArray:
+	var out := PackedStringArray([w])
+	if SIN_IRREGULAR_FORMS.has(w):
+		out.append(SIN_IRREGULAR_FORMS[w])
+	var cuts: Array = [["ies", "y"], ["ied", "y"], ["ves", "f"], ["ves", "fe"], ["es", ""], ["s", ""], ["ed", ""],
+		["ed", "e"], ["ing", ""], ["ing", "e"]]
+	for c: Array in cuts:
+		var end := String(c[0])
+		if w.ends_with(end) and w.length() - end.length() >= 3:
+			var base := w.left(w.length() - end.length()) + String(c[1])
+			out.append(base)
+			# a doubled consonant before -ed / -ing: slipped -> slip, hugged -> hug
+			var n := base.length()
+			if String(c[1]).is_empty() and (end == "ed" or end == "ing") and n >= 4 and base[n - 1] == base[n - 2]:
+				out.append(base.left(n - 1))
+	return out
+
+
+## The average SNR loss over lists (dB); -1 before the first list.
+static func sin_average(losses: Array) -> float:
+	if losses.is_empty():
+		return -1.0
+	var sum := 0.0
+	for l: Variant in losses:
+		sum += float(l)
+	return sum / float(losses.size())
+
+
+## The critical difference for comparing two conditions with `lists` lists each (SIN_CRIT_DIFF_DB:
+## 3.9 dB for one against one, 2.7 for two against two).
+static func sin_crit_diff(lists: int) -> float:
+	return float(SIN_CRIT_DIFF_DB[clampi(lists, 1, 2)])
+
+
+## Is a benefit (the compared condition's loss minus this one's) a real improvement, not list luck?
+## Only above the critical difference; a benefit at or under it could be luck, and a loss of benefit
+## never counts as one.
+static func sin_real_change(benefit_db: float, lists: int) -> bool:
+	return benefit_db > sin_crit_diff(lists)
+
+
+## Par for one party list (D3, D19): the sentences the player scores, one stroke each.
+static func sin_par(player_sentences: int) -> int:
+	return maxi(0, player_sentences)
+
+
+## Marco's forks for a condition's slips (CHAPTER5 §8.3): 3 with none, 2 for one, 1 for two or
+## three, 0 ("sent back") for four or more.
+static func sin_forks(slips: int) -> int:
+	if slips <= 0:
+		return 3
+	if slips == 1:
+		return 2
+	if slips <= 3:
+		return 1
+	return 0

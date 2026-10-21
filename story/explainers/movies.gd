@@ -14,10 +14,18 @@ const MOVIES: Dictionary = {
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
 	## (clinical review D2-7) Day 2's two-card short on air, bone and the gap, after the air results
 	"bone_gap": "res://story/explainers/movies/bone_gap.gd",
+	## (clinical review S7 / A3) Day 3's spondee movie: spondees, the SRT and PTA/SRT agreement
+	"srt_ladder": "res://story/explainers/movies/srt_ladder.gd",
+	"letter_choir": "res://story/explainers/movies/letter_choir.gd",
+	"party_noise": "res://story/explainers/movies/party_noise.gd",
 	## (cases, clinical review C12) Hoot's case movies, on every case day (also_chapters)
 	"case_files": "res://story/explainers/movies/case_files.gd",
 	"tymp": "res://story/explainers/movies/tymp.gd",
 	"shapes": "res://story/explainers/movies/shapes.gd",
+	## (cases, CASES.md question 26) Day 13's masking-dilemma movie, as the dilemma first shows
+	"dilemma": "res://story/explainers/movies/dilemma.gd",
+	## (Day 15, docs/TUNEUP.md) Hoot's tune-up movie, before Gus arrives for his follow-up
+	"tuneup": "res://story/explainers/movies/tuneup.gd",
 }
 ## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
 ## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.
@@ -125,11 +133,12 @@ static func for_level(chapter_id: String, masks: bool) -> Array[String]:
 
 
 ## Every movie the replay lists show (the pause menu's and the title's "Hoot's Movies"): all but
-## the recaps, in registry order.
+## the recaps, in registry order. (Days 4-5) A movie whose chapter is not in Game.CHAPTERS yet (a
+## stub registered before its day exists) is left out too, so nobody sees it before its day.
 static func replay_ids() -> Array[String]:
 	var out: Array[String] = []
 	for id: String in ids():
-		if not is_short(id):
+		if not is_short(id) and not Game.chapter(String(movie(id).get("chapter", ""))).is_empty():
 			out.append(id)
 	return out
 

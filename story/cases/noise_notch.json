@@ -101,6 +101,10 @@
 	"after_audiometry": [
 		["Hoot", "Bone sits right on the air: no gap. Not the middle ear."]
 	],
+	"speech_check": {
+		"ears": ["right", "left"],
+		"after": [["Rocco", "Words at a party? Try hearing them over a drum kit, owl!"]]
+	},
 	"reveal": {
 		"pattern": "notch",
 		"burst": "cymbal",
@@ -155,7 +159,7 @@
 		["Hoot", "We fit because his hearing trips him up at the pub."],
 		["Hoot", "Same chart, no trouble yet? Counsel, earplugs, and a recheck in a year."],
 		["Hoot", "Hearing aids tuned for the high pitches. They often make the ringing less noticeable, too."],
-		["Hoot", "A full fitting also checks words in each ear."],
+		["Hoot", "At the fitting, a tiny mic in his ear checks the aids hit their target."],
 		{"do": "hearing_aids"},
 		{"react": "cheer"},
 		["Rocco", "Whoa. I can hear the hi-hat AND my bandmates' terrible jokes!"],

@@ -1,0 +1,10 @@
+{
+	"id": "party_practice",
+	"title": "Practice sentence",
+	"kind": "sentence",
+	"original": true,
+	"note": "Every sentence, key word and mishear here was written fresh for Booth Camp (docs/CHAPTER5.md Appendix A): everyday, low-context sentences of 6-9 words with five key words each, in a fixed order. None copies or paraphrases a published sentence test (HINT, BKB, IEEE/Harvard, QuickSIN, WIN, BKB-SIN, SPIN, AzBio): no sentence, list, order or recording. core/tests/test_speech_sin.gd checks the structure and that no sentence repeats. Mishears: one group per key word, the first a sound-alike, a second often a plural or tense trap; none is a homophone of its key word.",
+	"items": [
+		{"id": "pp_1", "text": "A greedy cat stole three sausages.", "key_words": ["greedy", "cat", "stole", "three", "sausages"], "mishears": [["needy"], ["hat"], ["stove", "steal"], ["tree"], ["sausage"]]}
+	]
+}

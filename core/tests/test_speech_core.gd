@@ -86,8 +86,18 @@ func test_pta_and_start() -> void:
 	assert_near(SpeechRules.pta_for_speech({500: 10, 1000: 20, 2000: 60}), 15.0, 0.01)
 	assert_eq(SpeechRules.srt_start(71.7), 85)
 	assert_true(SpeechRules.srt_start_ok(85, 71.7))
-	assert_false(SpeechRules.srt_start_ok(110, 71.7))
+	assert_true(SpeechRules.srt_start_ok(110, 71.7), "PTA + 38: ASHA's 30 to 40 above (S4)")
+	assert_false(SpeechRules.srt_start_ok(115, 71.7), "past PTA + 40")
 	assert_false(SpeechRules.srt_start_ok(75, 71.7))
+
+
+## S6: the SRT ears go better first (the lower PTA), right on a tie or when a PTA is missing.
+func test_srt_ears_better_first() -> void:
+	assert_eq(SpeechRules.ears_better_first(71.7, 73.3), ["right", "left"] as Array[String])
+	assert_eq(SpeechRules.ears_better_first(45.0, 15.0), ["left", "right"] as Array[String])
+	assert_eq(SpeechRules.ears_better_first(30.0, 30.0), ["right", "left"] as Array[String], "a tie keeps right first")
+	assert_eq(SpeechRules.ears_better_first(NAN, 30.0), ["left", "right"] as Array[String])
+	assert_eq(SpeechRules.ears_better_first(NAN, NAN), ["right", "left"] as Array[String])
 
 
 func test_srt_steps() -> void:
@@ -145,6 +155,66 @@ func test_speech_masking_rule() -> void:
 	assert_true(SpeechRules.speech_masking_needed(80, 10.0))
 	assert_false(SpeechRules.speech_masking_needed(85, 70.0))
 	assert_eq(SpeechRules.speech_mask_level(80), 60)
+	# the non-test ear's largest air-bone gap adds to the noise; no gap (or no bone) adds nothing
+	assert_eq(SpeechRules.speech_mask_level(80, 0), 60, "the old call and a zero gap agree")
+	assert_eq(SpeechRules.speech_mask_level(80, 25), 85, "a 25 dB gap: 25 dB more noise")
+	assert_eq(SpeechRules.speech_mask_level(80, -10), 60, "a negative gap (bone worse than air) adds nothing")
+	assert_eq(SpeechRules.speech_mask_level(100, 40), ClinicRules.MASK_MAX_DB, "clamped to the masker's range")
+	assert_eq(SpeechRules.speech_mask_level(10), ClinicRules.MASK_MIN_DB)
+
+
+## Tone results (§5.1) for the gap tests: air in both ears, plus optional bone sheets of one ear.
+static func _tones_with_bone(air: int, bone: Dictionary, bone_masked: Dictionary = {}, ear: String = "left") -> Dictionary:
+	var ears := {}
+	for e: String in ClinicRules.EARS:
+		var freqs := {}
+		for f: int in ClinicRules.AC_FREQS:
+			freqs[f] = {"stored_db": air, "by_hoot": true}
+		ears[e] = {"freqs": freqs}
+	for pair: Array in [["bc", bone], ["bc_masked", bone_masked]]:
+		var sheet := {}
+		for f: int in (pair[1] as Dictionary):
+			sheet[f] = {"stored_db": int((pair[1] as Dictionary)[f]), "by_hoot": true}
+		if not sheet.is_empty():
+			(ears[ear] as Dictionary)[String(pair[0])] = sheet
+	return {"ears": ears}
+
+
+func test_nontest_largest_abg() -> void:
+	assert_eq(SpeechRules.nontest_largest_abg({}, "right"), 0, "no tone results: no gap")
+	assert_eq(SpeechRules.nontest_largest_abg(SpeechSession.tone_results_from(_mike()), "right"), 0, "air only (Mike): no gap")
+	# left ear: air 50, bone 30 at 1k and 40 at 2k, 0 at 250 and 8000 (outside 500-4000: ignored)
+	var t := _tones_with_bone(50, {250: 0, 1000: 30, 2000: 40, 8000: 0})
+	assert_eq(SpeechRules.nontest_largest_abg(t, "right"), 20, "the left ear's largest gap at 500-4000 Hz")
+	assert_eq(SpeechRules.nontest_largest_abg(t, "left"), 0, "the other ear of a left test is the right: no bone there")
+	# masked bone wins where measured
+	var m := _tones_with_bone(50, {1000: 30, 2000: 40}, {1000: 45})
+	assert_eq(SpeechRules.nontest_largest_abg(m, "right"), 10, "masked bone at 1k (45) replaces the unmasked 30")
+	# bone worse than air never makes a negative gap
+	assert_eq(SpeechRules.nontest_largest_abg(_tones_with_bone(30, {1000: 40}), "right"), 0)
+
+
+func test_session_mask_level_adds_the_gap() -> void:
+	# Mike (no bone): unchanged, level - 20
+	var s := _session(_mike())
+	s.begin("right")
+	s.set_level(85)
+	s.set_mask(true)
+	assert_eq(s.mask_level(), 65, "Mike: 85 - 20, as before")
+	assert_eq(s.sim.mask_db, 65, "the simulator hears the same noise")
+	assert_eq(int(s.get_state()["mask_db"]), 65)
+	# a left ear with a 20 dB gap: testing the right ear, the noise goes up by the gap
+	var g := SpeechSession.new(_mike(), 3)
+	g.configure({"test": "srt", "tones": _tones_with_bone(50, {500: 30, 1000: 35, 2000: 40, 4000: 45})})
+	g.begin("right")
+	g.set_level(80)
+	g.set_mask(true)
+	assert_eq(g.mask_level(), 80 - SpeechRules.SPEECH_MASK_BELOW_DB + 20, "level - 20 + the left ear's 20 dB gap")
+	g.begin("left")
+	g.set_mask(true)
+	assert_eq(g.mask_level(), int(g.db) - SpeechRules.SPEECH_MASK_BELOW_DB, "testing the left ear: the right has no bone, no gap")
+	g.set_mask(false)
+	assert_eq(g.mask_level(), -1, "off")
 
 
 # ---------------------------------------------------------------- material
@@ -377,7 +447,8 @@ func test_more_words_at_one_level() -> void:
 
 
 ## A first word below the start window is an srt_start error, unless the plan allows an ascending
-## start (low_start_ok): then it is a clean srt_low_start with Hoot's line. Too high stays an error.
+## start (low_start_ok): then it is a clean start, and Hoot's srt_low_start praise waits for the first
+## step up (test_low_start_praise_waits_for_the_ascent). Too high stays an error.
 func test_low_start_ok() -> void:
 	var s := _session(_mike())
 	var got := _record(s)
@@ -390,20 +461,21 @@ func test_low_start_ok() -> void:
 	ok.begin("right")
 	ok.set_level(60)
 	ok.present()
-	assert_eq(_kinds(got_ok), [&"srt_low_start"] as Array[StringName])
+	assert_eq(_kinds(got_ok), [&"srt_good_start"] as Array[StringName], "a low first word alone earns no praise (S2)")
 	var d: Dictionary = got_ok[0][1]
-	assert_eq(String(d.get("message", "")), "Starting low and coming up: smart when answers look exaggerated.")
+	assert_false(d.has("message"))
 	assert_eq(ok.combo, 1, "a clean check: combo +1")
 	assert_eq(ok.checks, 1)
 	assert_eq(ok.clean_checks, 1)
 	assert_true(int(d.get("points", 0)) > 0)
 	assert_true(ok.errors.is_empty())
-	var high := _session(_mike(), 11, {"low_start_ok": true})
+	# (S4) Mike's PTA + 40 is past the dial's top, so too high is shown on Gus (PTA 22.5: 65 is + 42.5)
+	var high := _session(Game.load_patient("gus") as PatientProfile, 11, {"low_start_ok": true})
 	var got_high := _record(high)
 	high.begin("right")
-	high.set_level(100)
+	high.set_level(65)
 	high.present()
-	assert_eq(_kinds(got_high), [&"srt_start"] as Array[StringName], "too high is still an error")
+	assert_eq(_kinds(got_high)[0], &"srt_start", "too high is still an error")
 	var good := _session(_mike(), 11, {"low_start_ok": true})
 	var got_good := _record(good)
 	good.begin("right")
@@ -419,6 +491,94 @@ func test_low_start_ok() -> void:
 	lazy.present()
 	assert_eq(_kinds(got_lazy), [&"srt_start"] as Array[StringName], "the untouched dial is a start error")
 	assert_false((got_good[0][1] as Dictionary).has("message"), "a plain clean kind has no line")
+
+
+## S2: after a low first word (low_start_ok) the praise comes with the first step after it, when it
+## goes up (straight after a miss). A step down first (a descending search) spends it, as does a wrong
+## step up.
+func test_low_start_praise_waits_for_the_ascent() -> void:
+	var praise := "Starting below his beeps and coming up: smart when answers look exaggerated."
+	var up := _session(_mike(), 11, {"low_start_ok": true})
+	var got_up := _record(up)
+	up.begin("right")
+	up.set_level(60)
+	up.present()
+	up.score(false)
+	up.set_level(65)
+	var n := got_up.size()
+	var checks := up.checks
+	up.present()
+	var at_step := got_up.slice(n)
+	var step_kinds := _kinds(at_step)
+	assert_true(step_kinds.has(&"srt_low_start"), "the step up 5 earns the praise: %s" % str(step_kinds))
+	assert_false(step_kinds.has(&"speech_textbook"), "in place of the plain step check")
+	assert_eq(String((at_step[step_kinds.find(&"srt_low_start")][1] as Dictionary).get("message", "")), praise)
+	assert_eq(up.checks, checks + 1, "one check, as any step")
+	up.score(false)
+	up.set_level(70)
+	up.present()
+	assert_eq(_kinds(got_up).count(&"srt_low_start"), 1, "once per ear")
+	# he repeats the low first word: down first, a descending search, and no praise follows later
+	var down := _session(_mike(), 11, {"low_start_ok": true})
+	var got_down := _record(down)
+	down.begin("right")
+	down.set_level(60)
+	down.present()
+	down.score(true)
+	down.set_level(50)
+	down.present()
+	assert_false(_kinds(got_down).has(&"srt_low_start"), "no ascent yet")
+	down.score(false)
+	down.set_level(55)
+	down.present()
+	assert_false(_kinds(got_down).has(&"srt_low_start"), "a descent first spends it")
+	# a wrong step up (up 10 after a miss) is the wrong-step slip, and no praise follows later
+	var wrong := _session(_mike(), 11, {"low_start_ok": true})
+	var got_wrong := _record(wrong)
+	wrong.begin("right")
+	wrong.set_level(60)
+	wrong.present()
+	wrong.score(false)
+	wrong.set_level(70)
+	wrong.present()
+	wrong.score(false)
+	wrong.set_level(75)
+	wrong.present()
+	assert_true(_kinds(got_wrong).has(&"srt_wrong_step"))
+	assert_false(_kinds(got_wrong).has(&"srt_low_start"), "spent on the wrong step")
+	# a first word in the window never earns it, however the dial moves
+	var std := _session(_mike(), 11, {"low_start_ok": true})
+	var got_std := _record(std)
+	std.begin("right")
+	std.set_level(85)
+	std.present()
+	std.score(false)
+	std.set_level(90)
+	std.present()
+	assert_false(_kinds(got_std).has(&"srt_low_start"), "not a low start")
+
+
+## S4: a first word 30 to 40 dB above the PTA (ASHA 1988) is a clean start, with par counted from it;
+## the recommended start stays PTA + 15.
+func test_asha_start_is_clean() -> void:
+	var gus := Game.load_patient("gus") as PatientProfile
+	var s := _session(gus)
+	var got := _record(s)
+	s.begin("right")
+	assert_eq(s.recommended_start(), 40, "still PTA (22.5 -> 25) + 15")
+	s.set_level(60)
+	s.present()
+	assert_eq(_kinds(got)[0], &"srt_good_start", "PTA + 37.5: no penalty (then a masking note: his left ear is good)")
+	assert_true(s.errors.is_empty())
+	var truth := s.sim.true_srt("right")
+	assert_true(SpeechRules.srt_par(60, truth) > SpeechRules.srt_par(40, truth), "par counts from the first word: the extra words cost nothing")
+	# Mike: the dial's top (100) is his PTA + 28, now inside the window
+	var m := _session(_mike())
+	var got_m := _record(m)
+	m.begin("right")
+	m.set_level(SpeechRules.MAX_DB)
+	m.present()
+	assert_eq(_kinds(got_m), [&"srt_good_start"] as Array[StringName])
 
 
 ## Every SRT sheet says whether it was stored at the bracketed SRT.
@@ -459,8 +619,11 @@ func test_agreement_tips_by_direction() -> void:
 	assert_has(better, "recheck")
 	var worse := s.agreement_tip(&"poor", 20)
 	assert_has(worse, "20 dB worse")
-	for w: String in ["instructions", "language", "word recognition", "sloping loss"]:
+	for w: String in ["instructions", "language", "word recognition"]:
 		assert_has(worse, w)
+	# (A8) a sloping loss makes the SRT better than the PTA, if anything: never a reason for a worse one
+	for k: StringName in SpeechSession.AGREEMENT_TIPS:
+		assert_false(String(SpeechSession.AGREEMENT_TIPS[k]).to_lower().contains("slop"), "%s names a slope" % k)
 	assert_false(worse.contains("non-organic"), "a worse SRT is not a sign of a non-organic loss")
 	assert_has(s.agreement_tip(&"fair", -9), "9 dB better")
 	assert_has(s.agreement_tip(&"fair", 9), "9 dB worse")

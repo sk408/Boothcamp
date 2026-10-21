@@ -55,13 +55,18 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Tones:** Hoot runs both ears on the AudiOtron (`hoot_turn_after` 0, coached false, `montage` and
   `skip_hoot_retest` as on Day 2: a few seconds per ear). The AudiOtron only starts Hoot's turn at once
   with quick visit on, so the level sets the screen's public `quick_visit = true` right after `add_child`
-  (see the request below). Hoot then names the degree from `ClinicRules.degree_name` and defines the PTA
+  (see the request below). After the right ear Hoot retests 1 kHz in the level (`retest_1k(tones)`: the
+  measured 1 kHz minus `RETEST_BETTER_DB` 15, a test-retest mismatch; Hoot says the numbers, Mike blames the
+  earphones) and it goes on the record as the right ear's `retest_1k` (`by_hoot`, PTA unchanged); not on the
+  OBJECTION! board, where SRT vs PTA stays the clue. Hoot then names the degree from `ClinicRules.degree_name` and defines the PTA
   (`pta_line()`, best two when `SpeechRules.pta_method` says so).
 - **SPEECH screen:** one instance for both ears (`start_test(patient, ear, coached, plan)`, then
   `await test_finished`); plan `{test: "srt", tones, list: "spondee_a", words: the 12 familiarised ids,
-  exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after: 8`
-  (`LEFT_SOLO_WORDS`: enough to reach his first miss below the SRT) on the left ear with quick
-  visit on. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
+  exclude: ["windmill"] once dropped, transducer, intro, low_start_ok}`, plus `hoot_turn_after_up`
+  with `hoot_turn_after: 12` (`LEFT_SOLO_WORDS`, the cap) on the second ear with quick visit on: the
+  player scores down to his first miss below the SRT and the word stepped up 5 after it, then Hoot
+  finishes the bracket. The ears go better first (`srt_ears()`: the lower tone PTA, right on a tie; clinical
+  review S6) and the first is the coached one: for Mike the right, then the left. `low_start_ok` is true once Hoot's coffee whisper has been on screen (`_whisper_seen`, never
   the hidden `non_organic` tag). Mike's response button is put away first (`hold_response_button(false)`).
   Hoot defines the SRT before the words. "The tell" lives in the SPEECH screen only (§9.7; the level no
   longer listens to `speech_response`). If the SPEECH scene is missing, Hoot runs the words himself
@@ -72,8 +77,10 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   `hoot_turn_after` 0, the screen's `quick_visit` on for it and restored after; without a screen a new
   `SpeechSession` + `hoot_runs_ear`). His sheet goes in `LevelMike.recheck`; `board_sheet()` returns it for
   the board and Hoot's verdict, while the results keep the player's sheet for the grade.
-- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)`,
-  `read_along(from, to, s)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
+- **Board** (`story/games/mike_board.gd`, story-internal): `run_cards(items, title)` (the cards face the
+  clinician: a "CLINICIAN'S SIDE: Mike can't see this" sign, anchor `familiarize_cue`), `say_along(from, to, s)`
+  (Hoot says each card, Mike says it back by ear: the "now saying" line and a tick per card),
+  `finish_say_along()`, `say_word(id, echo)`, `stumble(id)`, `run_drop(id)` (beat `familiarize_cards`, info
   `{targets: ["word_card_windmill"], mouse: {click: "word_card_windmill"}}`, solver drops it; other cards
   are slips with a kind tip), `show_objection(claim, clues)`, `run_objection()` (beat `objection_present`,
   info `{targets: ["objection_claim"], mouse: {drag: ["clue_srt_pta", "objection_claim"]}}`, solver
@@ -83,14 +90,26 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
   ("Hoot's recheck: SRT %d vs PTA %d" after a recheck) is always the best one, the coffee and canals
   captions stay neutral, and the verdict and `claim_note()` follow the direction.
   OBJECTION! slams in with `Events.screen_shake` and settles into a corner sticker; reduced motion
-  keeps it still. Anchors: `word_card_<id>`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
+  keeps it still. Anchors: `word_card_<id>`, `familiarize_cue`, `objection_claim`, `clue_srt_pta`, `clue_coffee`,
   `clue_canals`, `referral_stamp`.
 - **Daily Decibel:** headlines, subheads and the medal row (Chat, Explain, Words, Case, Next) for
   `mike`; with `audiometry.speech.srt` present, column 2 is the word golf card (per ear stored SRT,
-  PTA, agreement chip with the gap, words vs par, golf; "no bracket" instead of the golf for an
-  unbracketed store) with half-words and Hoot's words in the facts line. A speech C grade's subhead
-  names the most frequent slip (`SPEECH_C_SUBHEADS`, `speech_c_subhead()`). Tone-only results keep the
-  beep golf card.
+  PTA, agreement chip with the gap, words vs par, golf) with half-words and Hoot's words in the facts line.
+  - Golf cell: "no bracket" for an unbracketed player store, and "N slip(s)" / "no golf" for a bracketed
+    player store with errors (`sheet.errors`, like the screen's "Oops!"). Hoot's rows and clean player
+    stores keep the golf name.
+  - C subhead: the most frequent slip (`SPEECH_C_SUBHEADS`, `speech_c_subhead()`). When misscoring tops
+    it, `misscore_way()` (from the errors' `scored`) picks the `SPEECH_C_MISSCORED` line, generous or
+    strict; a tie, or no direction on record, keeps the `SPEECH_C_SUBHEADS` line.
+  - Under the card, `recheck_note(sp)` prints "Hoot's recheck: SRT N dB on the right, by the book (X
+    agreement). Not graded." when `speech.recheck.srt.right` exists.
+  - The legend (`agreement_legend()`, two lines) gives the bands and the direction: words better than
+    beeps point to a non-organic loss; words worse, to instructions, language or word recognition.
+  - Tone-only results keep the beep golf card.
+- **Daily Decibel fit (any day):** `show_summary` settles the paper at `fit_scale(size, window)`: exactly
+  1 when its tilted box fits the window's height, else scaled down to fit with 8 px to spare above and
+  below. Papers that fit are unchanged; a tall one (masked golf rows plus three buttons, e.g. Days 2, 7
+  and 8 in autoplay) no longer runs off the window.
 - **Shared story bits:** Mike's portrait (`portraits.gd`), display name "Mike Lenders" (no joke
   nickname), a gruff voice (f0 105 Hz). Mike's day card uses his chapter entry's own `"face": "Mike"`
   and `"tint"` keys (no `title_screen.gd` change). The HUD tracker, the Hoot notes and the pause
@@ -102,6 +121,13 @@ No new Events signals and no new beats. Every blocking moment emits a §3.2 beat
 - **Tests:** `story/tests/test_level_mike.gd` (board beats, keyboard paths and solvers, the plans and
   objection cards with real numbers and by sheet, the recheck with and without the screen, every Hoot
   line 18 words or fewer, Hoot's textbook fallback, the Day 3 paper, a smoke run to the instructions).
+- **(Clinical review A1 and A2, all days: Days 3 to 5.)** The cases' routine, in their words: `LevelMike.ROUTINE_LINE`
+  (the morning listening check, the button, the dials out of view) once, seated, before the first tone test,
+  and `LevelMike.SPECULUM_CAPTION` ("Fresh speculum. ...") on the otoscope card; Days 4 and 5 use both (Day 5
+  as `HOOT["routine"]`). Ungraded, no new beat. Days 4 and 5 copy `level_case._recap` (the masking recap before
+  the visit's first masked test while the movie is unseen, then Hoot's pointer; CONTRACTS.md §9.20); Day 3 masks
+  nothing. These lines draw on `Game.rng` (Hoot's voice), so Days 3 to 5 replay with different seeded answers
+  than before. Tests: each day's level test plays to the first tone test (Day 3) or the first masked test.
 
 ## Dev tool
 
@@ -201,7 +227,23 @@ Requests for the integrator and the title owner:
   `tools/monkey.gd` mirrors the loan. The case movies list Bev. `story/games/case_props.gd`: a wax-jar sparkle under
   a pixel wide is skipped (its star polygon could fail to triangulate, an engine error that flaked
   `test_new_gadgets_draw_every_view`).
-- **Tests:** `story/tests/test_cases.gd` (49 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
+- **Day 13's dilemma movie (CASES.md question 26).** Hoot's "The Masking Dilemma"
+  (`story/explainers/movies/dilemma.gd`, its own sets in `story/case_movies/dilemma_sets.gd`) plays after Bev's
+  `on_dilemma` lines and before the loan, while unwatched. Shared files, additive: one line in `Movies.MOVIES`; a
+  case key `dilemma_movie` (`CaseData.TOP_TYPES`, validated: needs `on_dilemma`, a registered movie; case_data.gd
+  now preloads movies.gd); `LevelCase._movie(id, lead_in)` takes an optional lead-in (always played, never an
+  offer) and `DILEMMA_MOVIE_LEAD_IN`; `tools/autoplay_bot.gd` `_check_dilemma_case` also checks the movie started
+  on a fresh save. Its chapter is `bev`, so it is not one of the "Days 6-13" case movies (`CASE_MOVIES` keeps its
+  three) and the masking-level pause menus list it with the others. No new data files: the Web preset needs nothing.
+- **Words before a FIT (clinical review C13 and A4).** A case with `speech_check` (`{"ears": [...], "after": script}`;
+  Rocco and Ginger) adds the HUD's Words step after the tones: Hoot runs the SRT and a word score on each ear, then
+  one unaided Party Noise Test list (`SpeechRules.SIN_LISTS[0]`, slot `both`), with `SpeechScreen.run_hidden` (Day 5's
+  montage; `SpeechSession.run_by_textbook` without the screen). Hoot's sheets are unscored (`units` 0), so
+  `merge_results` keeps the tone grade. `LevelCase.speech_lines(res, ears)` and `speech_clues(res, ears)` are static
+  and read only `res.speech`, so **freestyle's FS-13 can reuse them** after its own hidden runs: the lines never hint
+  at the call. Marina's payoff gains the "hearing nerve" line. `ui/speech/speech_screen.gd`: `run_hidden` names
+  the patient in the bubble (see `ui/INTEGRATION_NOTES.md`).
+- **Tests:** `story/tests/test_cases.gd` (52 tests). `tools/run_tests.sh` runs `python3 tools/case_scripts.py
   --check` after the full suite, so a stale `docs/CASE_SCRIPTS.md` fails the run (skipped under `--filter`, and only
   a warning without python3).
 
@@ -216,7 +258,9 @@ Requests for the integrator and the title owner:
   are now `[sheet key, ear]`; `_row_tag` draws the symbol.
 - **Pause corner.** Hidden while the AudiOtron, the SPEECH screen (Speech) or one of Hoot's movies (v4) is up.
 - **Hoot's movies** stay Day 2 only: Days 3 and 6-9 have no movie, and their pause menu shows no movie button
-  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save).
+  (the title's Options and its "Hoot's Movies" button still offer the masking movie on any save). **(clinical
+  review S7)** Day 3 now opens with Hoot's spondee movie (`level_mike._movie`, as Day 4's), and its pause menu
+  offers "Watch Hoot's spondee movie".
 
 ## Freestyle (the walk-in clinic; freestyle branch; CONTRACTS.md §12, docs/FREESTYLE.md)
 
@@ -294,3 +338,70 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   (`abg_red_flag`, `ABG_RED_FLAG_DB`, `ac_masking_needed` and `bc_masking_needed` for charting, `combo_multiplier`, `required_interoctaves`),
   the Audiogram (`show_gap` for the gap tell), `CasePortraits.register` and `Portraits.draw`.
 - **No new data files**, so the Web preset's include_filter needs nothing.
+- **Shift 3 (DOCTOR TODAY), a later PR:** arcade-owned files only. The third stamp opens, every shift 3 file
+  carries the alarm-clock card (anchor `desk_sudden`; `desk_prove` can now carry target {kind: "sudden"}), two
+  missed same-day patients close the desk, and `ArcadeScores.BOARD_SEEDS` gains `ears_please:table_3`. No shared
+  file changes and no new data files.
+
+## The fitting (Day 14; cases branch; docs/FITTING.md, CONTRACTS.md §13)
+
+- **Game.CHAPTERS** gains `gus_fit` (Day 14, patient `gus_fit`: chapter id = patient id, `requires: "bev"`, face Gus). **Game.PHASES** gains
+  `aid_style` and `real_ear`. Both additive, after every existing entry.
+- **New beat** `fitting_target` (CONTRACTS.md §3.2 table): info {}, the solver matches each band in one move and
+  presses Done.
+- **tools/autoplay_bot.gd** (additive): the mouse route for `fitting_target` (each band's + or - button, then
+  Done), and on the `gus_fit` chapter `_check_fitting` replaces the per-ear check (the day tests no ears). The
+  report gains `fitting` {errs, moves, par, style_tries, overshoots, medals}.
+- **Clinic**, used as is: `put_on_hearing_aids`, `set_world_saturation` (0 to 1 as bands match; the last one
+  crosses 0.6, which plays the birdsong), `doris_enter`, `doris_react`, `gus_look`, the `fitting` and
+  `fitting_close` shots.
+- **The Daily Decibel**, used as is: the summary's headlines, subheads, medal_beats, weather and
+  `sports_script` (`story/papers/paper_fitting.gd`).
+- **No new data files** (a .tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
+- **PR 2** (the probe tube, the loud-sound check, the counselling): **Game.PHASES** gains `probe_tube` and
+  `loud_check` (additive; the counselling uses Days 4-5's `counselling`). **New beats** `probe_tube` and
+  `loud_check` (CONTRACTS.md §3.2), each with a mouse route in the bot (the In button then Lock; the dial's - or
+  + then Drop). `_check_fitting` also wants a probe, loud and counsel medal; the report gains probe_mistakes,
+  loud_drops and counsel_slips. `LevelFitting.results_for(right, picks, left)` now takes a picks dictionary.
+  Still no new data files.
+
+
+## The tune-up (Day 15; cases branch; docs/TUNEUP.md, CONTRACTS.md §15)
+
+- **Game.CHAPTERS** gains `gus_tune` (Day 15, patient `gus_tune`: chapter id = patient id, `requires: "gus_fit"`,
+  face Gus). **Game.PHASES** gains `datalog` and `tune_desk` (the opening question uses `history`). Both additive.
+- **New beat** `tune_desk` (CONTRACTS.md §3.2): info {ticket}, the solver uses the ticket's right tool.
+- **tools/autoplay_bot.gd** (additive): the mouse route for `tune_desk` (a click on the right tool), and on the
+  `gus_tune` chapter `_check_tuneup` replaces the per-ear check like Day 14's. The report gains `tuneup`.
+- **Clinic and CaseProps**, used as is: `walk_in`, `put_on_hearing_aids`, `doris_enter`, `doris_react`,
+  `gus_look`, `hoot_emote`, the `fitting` shot, and CaseProps' `later` card ("TWO WEEKS LATER").
+- **No new data files** (.tres, .tscn and .gd only), so the Web preset's include_filter needs nothing.
+- **Part 2**: **Movies.MOVIES** gains `tuneup` (one line). **Game.PHASES** gains `listening_check` (additive).
+  **New beat** `wax_guard` {step} with a mouse route in the bot; `_check_tuneup` also wants the `check` and `plan`
+  medals. Still no new data files.
+
+## The career-fair demo (cases branch; docs/DEMO.md, CONTRACTS.md §14)
+
+- **Game** (additive): `is_demo()` (`--demo`, or `?demo` in the web page's address: `_parse_cli()` reads
+  `window.location.search` on the web only, and only the names in `WEB_FLAGS`), `reset_demo_visitor()`
+  (progress back to `DEFAULT_PROGRESS`, settings kept), `DEMO_SAVE_PATH` (`user://demo_save.json`, after autoplay
+  and `--scene=` in the save-path order; `--save=` still wins). Demo mode sets `cli["quick"]` unless `--full`.
+- **title_screen.gd** (additive): in demo mode the menu is one Play button (`_on_demo_start()`, the `title_start`
+  solver, goes to `DEMO_SCENE` = `res://story/level_demo.tscn`), with `DEMO_TAGLINE` under it, no movies button
+  and no stats; the safety notice shows for every visitor; `_ready()` calls `Game.reset_demo_visitor()`. Outside
+  demo mode nothing changes.
+- **New level** `story/level_demo.gd` (patient `gus`, so it scores as Day 1 in the demo's own save). Reuses
+  `LevelGus.HISTORY[0]`, Day 1's otoscopy, earphones and reveal, and Day 14's TargetMatch and
+  `LevelFitting.match_medal` / `SAT_BY_MATCHED`, unchanged. Phases: intro, history, otoscopy, earphones,
+  audiometry, reveal, real_ear, results (all existing). No new beats.
+- **Audiometer plan key** `montage_after` (ui/INTEGRATION_NOTES.md).
+- **tools/autoplay_bot.gd** (additive): `_check_demo` when the summary has `demo: true` (the four medals, the
+  right ear's bands within 5 dB, no next day, "Next visitor"); the report gains `demo` {medals, errs}.
+- **tools/export_win.sh**: the delivery zip also carries `BoothCamp-Demo.cmd` (from `tools/booth/`). Steve's
+  build folder needs it next to `BoothCamp.exe` to start the demo with a double-click.
+- **No new data files** (.gd, .tscn and a .cmd outside the export), so the Web preset needs nothing.
+- **(demo polish)** **daily_decibel.gd** (additive): a summary with `demo: true` hides the coins and the shop (B buys
+  nothing) and moves the WANTED ad to the bottom row. **title_screen.gd** (additive): in demo mode (not under
+  autoplay) the title adds `story/demo_attract.gd` and starts it after `attract_after()` seconds with nobody there
+  (`ATTRACT_S` 30, `--attract-after=N`), hiding the menu and the notice; a key, click or mouse movement ends it and the
+  notice shows. CONTRACTS.md §14.

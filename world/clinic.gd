@@ -87,6 +87,8 @@ var _bone_box: Node3D
 var _bone_rings: Node3D
 var _mask_phone: Node3D
 var _mask_cup: Node3D
+## (Days 4-5) Day 5's two booth speakers (show_soundfield): the talker in front, the party behind.
+var _soundfield: Node3D
 var _basket: Node3D
 var _clipboard: Node3D
 var _transducer: StringName = &"phones"
@@ -589,6 +591,53 @@ func _head_gear_on() -> bool:
 		if n != null and is_instance_valid(n) and not n.is_queued_for_deletion():
 			return true
 	return false
+
+
+## (Days 4-5) Day 5's sound field: two booth speakers on stands roll in, the TALKER in front of the
+## patient (a little to the side, so the booth window still shows his face) and the PARTY behind
+## him, both turned to face him. off: they roll away. Only Day 5 calls it.
+func show_soundfield(on: bool) -> void:
+	if _soundfield != null and is_instance_valid(_soundfield):
+		var old := _soundfield
+		_soundfield = null
+		if on:
+			old.queue_free()
+		else:
+			var t := old.create_tween()
+			t.tween_property(old, "scale", Vector3.ONE * 0.05, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+			t.tween_callback(old.queue_free)
+	if not on:
+		return
+	_soundfield = Node3D.new()
+	_soundfield.name = "SoundField"
+	add_child(_soundfield)
+	var chair: Vector3 = SPOTS[&"booth"]
+	var spots: Array = [[Vector3(-0.68, 0, 1.45), "TALKER", Color("#2f9e73")], [Vector3(0.62, 0, -1.0), "PARTY", Color("#e07a2f")]]
+	for i in spots.size():
+		var sp: Array = spots[i]
+		var at: Vector3 = chair + (sp[0] as Vector3)
+		var stand := Node3D.new()
+		stand.name = String(sp[1]).capitalize()
+		stand.position = at + Vector3(0, 0, 0.6 if i == 0 else -0.6)
+		_soundfield.add_child(stand)
+		# face the chair (yaw only)
+		var d := chair - at
+		stand.rotation.y = atan2(d.x, d.z)
+		Kit.cylinder(stand, 0.16, 0.2, 0.04, Vector3(0, 0.02, 0), Color("#4d4d5c"), {"outline": 0.008}, 16)
+		Kit.cylinder(stand, 0.022, 0.022, 0.92, Vector3(0, 0.48, 0), Color("#8d94a6"), {"outline": 0.005}, 10)
+		Kit.box(stand, Vector3(0.34, 0.46, 0.3), Vector3(0, 1.12, 0), Color("#2e2442"), {"outline": 0.012})
+		for k in 2:
+			var cone := Kit.cylinder(stand, 0.06 + 0.05 * k, 0.07 + 0.05 * k, 0.03, Vector3(0, 1.22 - 0.2 * k, 0.15), Color("#5c6370") if k == 0 else Color("#8d94a6"), {"outline": 0.004}, 16)
+			cone.rotation.x = PI / 2.0
+		var sign := Kit.label(stand, String(sp[1]), Vector3(0, 1.48, 0.0), 54, sp[2] as Color, 12, 700)
+		sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sign.no_depth_test = true
+		sign.render_priority = 3
+		# roll in from outside the booth wall, then settle
+		var t := stand.create_tween()
+		t.tween_interval(0.18 * i)
+		t.tween_property(stand, "position", at, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Sfx.play(&"whoosh", 0.8, -10.0)
 
 
 ## Fitting teaser: two tiny teal behind-the-ear aids pop onto Gus with a sparkle.

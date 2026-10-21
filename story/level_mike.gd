@@ -7,12 +7,15 @@ extends Node
 ##   ui:     res://ui/audiometer/audiometer_screen.tscn (Hoot runs both tone ears)
 ##           res://ui/speech/speech_screen.tscn start_test(patient, ear, coached, plan) (§9.7)
 ##   global: Game (visit, medals, scores), Events (phases, awaiting_input), Hoot (tips)
-## Beats: dialogue, choice, familiarize_cards, the SPEECH screen's speech beats, objection_present,
-## referral_stamp, results_continue. Board: story/games/mike_board.gd.
+## Beats: the movie's own explainer beat (or a choice on replays), dialogue, choice,
+## familiarize_cards, the SPEECH screen's speech beats, objection_present, referral_stamp,
+## results_continue. Board: story/games/mike_board.gd. (Clinical review S7) The day opens with
+## Hoot's spondee movie (story/explainers/movies/srt_ladder.gd), played as Day 4 plays its own.
 
 const Hud := preload("res://story/hud.gd")
 const MikeBoard := preload("res://story/games/mike_board.gd")
 const Otoscopy := preload("res://story/games/otoscopy.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -20,15 +23,36 @@ const SPEECH_SCENE := "res://ui/speech/speech_screen.tscn"
 const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_mike.tscn"
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
 const PATIENT_ID := "mike"
+## (Clinical review S7) Hoot's spondee movie, The Spondee Ladder.
+const MOVIE_ID := "srt_ladder"
 
-## The spondee list, how many cards Mike reads, and the one he has never heard of.
+## The spondee list, how many cards Hoot says for Mike to repeat, and the one he has never heard of.
 const LIST_ID := "spondee_a"
 const FAMILIAR_WORDS := 12
 const UNKNOWN_WORD := "windmill"
-## Words the player scores on the solo (left) ear before Hoot finishes it (quick visit). Eight
-## reach Mike's first miss below his SRT (down 10 per hit from PTA + 15), and maybe the step back up.
-const LEFT_SOLO_WORDS := 8
+## Seconds for Hoot and Mike to go through the known cards (a short step: the player may click on).
+const SAY_ALONG_S := 4.4
+## Mike says back this many of them in his dialogue line (the rest are on the cards).
+const ECHO_WORDS := 8
+## Hoot's 1 kHz retest after the right-ear montage comes back this much BETTER than the first 1 kHz
+## result: past ClinicRules.RETEST_TOLERANCE_DB (5), a test-retest mismatch, one more sign of a
+## non-organic loss. Mike's simulated tones are steady, so the level derives the retest from the
+## measured result (the shared tone code is left as it is).
+const RETEST_BETTER_DB := 15
+## The solo (second, normally left) ear on a quick visit: the player scores words down to Mike's
+## first miss below his SRT (down 10 per hit from PTA + 15: eight words) and the step back up 5,
+## then Hoot finishes the bracket (plan hoot_turn_after_up). This many words is the cap, for a
+## descent that never misses.
+const LEFT_SOLO_WORDS := 12
+## (Clinical review A1, all days) The routine around the test, short and ungraded, in the cases'
+## own words (story/level_case.gd ROUTINE_LINE and OTHER_EAR_CAPTION); Days 4 and 5 use these too.
+## Once a visit, before the first tone test: the morning listening check, the response button and
+## the dials out of the patient's view. At the otoscope: a fresh speculum (%s: the patient, then the
+## ear in capitals).
+const ROUTINE_LINE := "This morning's listening check: every beep clean, the button works. Dials stay out of view."
+const SPECULUM_CAPTION := "Fresh speculum. %s's %s ear: clear canal, healthy eardrum."
 
 const STEPS: Array[StringName] = [&"chat", &"peek", &"explain", &"beeps", &"words", &"srt_r", &"srt_l", &"case", &"next"]
 const STEP_LABELS: Dictionary = {
@@ -64,6 +88,8 @@ var screen: CanvasLayer
 ## The tone results from Hoot's run (§5.1), then the merged visit results (§9.5).
 var tones: Dictionary = {}
 var results: Dictionary = {}
+## Hoot's right-ear 1 kHz retest (retest_1k(); {} before the tones).
+var tone_retest: Dictionary = {}
 ## Familiarisation: the word ids used, and the ones dropped.
 var words: Array[String] = []
 var dropped: Array[String] = []
@@ -72,6 +98,8 @@ var dropped: Array[String] = []
 var recheck: Dictionary = {}
 ## Hoot's coffee whisper has been on screen: from then on a low (ascending) SRT start is smart.
 var _whisper_seen := false
+## The movie reached its seen_at scene this visit (lines may refer to it).
+var _movie_watched := false
 var _session: SpeechSession   # only when the SPEECH screen is missing (Hoot's fallback run)
 
 
@@ -83,11 +111,26 @@ func _ready() -> void:
 	add_child(clinic)
 	hud = Hud.new()
 	add_child(hud)
-	hud.call("set_steps", STEPS, STEP_LABELS, "MIKE LENDERS' VISIT", {&"srt_r": Palette.RIGHT_RED, &"srt_l": Palette.LEFT_BLUE})
+	_set_hud_steps("right")
 	dialogue = DialogueBox.new()
 	add_child(dialogue)
 	Events.level_started.emit(PATIENT_ID)
 	_run.call_deferred()
+
+
+## The visit's steps on the HUD, with the SRT ears in test order (`first` ear first).
+func _set_hud_steps(first: String) -> void:
+	hud.call("set_steps", steps_for(first), STEP_LABELS, "MIKE LENDERS' VISIT", {&"srt_r": Palette.RIGHT_RED, &"srt_l": Palette.LEFT_BLUE})
+
+
+## STEPS with the SRT ears in test order: "SRT L" before "SRT R" when the left goes first.
+static func steps_for(first: String) -> Array[StringName]:
+	var out: Array[StringName] = STEPS.duplicate()
+	if first == "left":
+		var i := out.find(&"srt_r")
+		out[i] = &"srt_l"
+		out[i + 1] = &"srt_r"
+	return out
 
 
 func _phase(p: StringName, info: Dictionary = {}) -> void:
@@ -123,6 +166,7 @@ static func quick_visit() -> bool:
 
 
 func _run() -> void:
+	await _movie()
 	await _intro()
 	await _history()
 	await _otoscopy()
@@ -134,6 +178,39 @@ func _run() -> void:
 	await _referral(board)
 	await _payoff(board)
 	await _results()
+
+
+# ---------------------------------------------------------------- 0. the movie (contract §9.20)
+
+## (Clinical review S7) Hoot's spondee movie, played as Day 4 plays its own (level_nora._movie): a
+## one-line announcement before the first play only; once seen, just the replay offer (best: skip).
+func _movie() -> void:
+	if not Movies.has(MOVIE_ID):
+		return
+	var seen := Game.is_movie_seen(MOVIE_ID)
+	_phase(&"explainer", {"movie": MOVIE_ID, "source": "day_start", "seen": seen})
+	clinic.call("focus_camera", &"door", 0.0)
+	if seen:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(MOVIE_ID) / 10.0) * 10.0),
+			"Skip it: I know my spondees."]
+		var c: int = await dialogue.choose("Hoot's spondee movie again? Popcorn's on me!", opts, 1)
+		if c != 0:
+			return
+	else:
+		await _say("Hoot", "New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!")
+	var r := await _play_movie(MOVIE_ID)
+	_movie_watched = bool(r.get("watched", not bool(r.get("skipped", false))))
+	Game.set_visit_flag("movie_watched", _movie_watched)
+	if bool(r.get("skipped", false)):
+		await _say("Hoot", "Skipped! Rewatch it any time: pause menu, \"Watch %s\"." % Movies.title(MOVIE_ID))
+
+
+func _play_movie(id: String) -> Dictionary:
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", id, "day_start")
+	player.queue_free()
+	return r
 
 
 # ---------------------------------------------------------------- 1. intro: the coffee whisper
@@ -219,7 +296,7 @@ func _otoscopy() -> void:
 	await clinic.call("focus_camera", &"otoscope", 0.8)
 	var g := Otoscopy.new()
 	hud.call("add_game", g)
-	await g.show_clear("right", "Mike's RIGHT ear: clear canal, healthy eardrum.")
+	await g.show_clear("right", SPECULUM_CAPTION % ["Mike", "RIGHT"])
 	await _say("Hoot", "Look before you beep! Canals clear, eardrums normal. Nothing blocking the way in.")
 	await _say("Mike", "See? Nothing in there. Not even the beep.")
 	hud.call("add_clue", "Canals clear, eardrums look normal")
@@ -286,6 +363,7 @@ func _tones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
+	await _say("Hoot", ROUTINE_LINE)
 	await _say("Hoot", "Earphones on! I'll run the beeps myself today, at top speed.")
 	clinic.call("put_on_earphones", true)
 	await _wait(0.6)
@@ -297,9 +375,11 @@ func _tones() -> void:
 	await _tone_test("right", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Beeps first. I'll run them; watch the stamps fly in.",
 		"hoot_turn_text": "My turn! Right ear at 8x. Watch the dance card!"})
+	await _retest_right_1k()
 	await _tone_test("left", {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true,
 		"intro": "Left ear, Hoot speed!",
 		"hoot_turn_text": "Left ear at 8x. Same dance, other ear!"})
+	_record_retest()
 	screen.queue_free()
 	screen = null
 	cam.current = true
@@ -316,6 +396,43 @@ func _tones() -> void:
 		await _say("Mike", "Severe! Write that down. In big letters. Skip the 'moderately'.")
 	else:
 		await _say("Mike", "%s! Write that down. In big letters." % _cap(degree))
+
+
+## The right ear's 1 kHz retest from Hoot's tone results: the first 1 kHz result minus
+## RETEST_BETTER_DB, in the §5.1 retest_1k shape (plus by_hoot). {} when 1 kHz wasn't measured.
+static func retest_1k(tone_results: Dictionary) -> Dictionary:
+	var ac := ClinicRules.sheet_thresholds(tone_results, "right", &"ac")
+	if not ac.has(ClinicRules.START_FREQ):
+		return {}
+	var first := int(ac[ClinicRules.START_FREQ])
+	var again := maxi(ClinicRules.MIN_DB, first - RETEST_BETTER_DB)
+	return {"first_db": first, "stored_db": again, "diff": first - again, "strokes": 0, "par": 0, "by_hoot": true}
+
+
+## Hoot's remark on the retest: the numbers and the 5 dB rule, never a verdict on Mike.
+static func retest_remark(rt: Dictionary) -> String:
+	return "1000 Hz again: %d dB, %d better than before. Retests usually agree within %d dB." % [
+		int(rt.get("stored_db", 0)), int(rt.get("diff", 0)), ClinicRules.RETEST_TOLERANCE_DB]
+
+
+## After the right-ear montage: Hoot retests 1 kHz and it comes back better (test-retest mismatch).
+func _retest_right_1k() -> void:
+	tone_retest = retest_1k(tones)
+	if tone_retest.is_empty():
+		return
+	await _say("Hoot", retest_remark(tone_retest))
+	_react(&"wince")
+	await _say("Mike", "Must be the earphones warming up. Happens to my forklift too.")
+
+
+## The retest goes on the record (results.ears.right.retest_1k), next to Hoot's first 1 kHz stamp;
+## the PTA keeps the first one (the two disagree by more than ClinicRules.RETEST_TOLERANCE_DB).
+func _record_retest() -> void:
+	if tone_retest.is_empty() or not (tones.get("ears", {}) as Dictionary).has("right"):
+		return
+	((tones["ears"] as Dictionary)["right"] as Dictionary)["retest_1k"] = tone_retest.duplicate()
+	results = tones
+	Game.set_audiometry_results(results)
 
 
 ## Hoot's PTA definition, true to the average the speech tests use (SpeechRules.pta_method).
@@ -342,6 +459,17 @@ func ear_pta(ear: String) -> float:
 
 # ---------------------------------------------------------------- 6. familiarise the word list
 
+## Mike's line while he says the cards back after Hoot (the first ECHO_WORDS; all of them are on
+## the cards): "Lighthouse! Rainbow! Sunbeam! Bookshelf! Easy! Moonlight! ...".
+static func echo_line(items: Array) -> String:
+	var said: Array[String] = []
+	for it: Variant in items.slice(0, ECHO_WORDS):
+		said.append(_cap(String((it as Dictionary).get("text", ""))))
+	var first := "! ".join(PackedStringArray(said.slice(0, 4)))
+	var rest := "! ".join(PackedStringArray(said.slice(4)))
+	return "%s! Easy! %s..." % [first, rest] if rest != "" else "%s! Easy!" % first
+
+
 ## Returns the board: the objection and the referral happen on it later.
 func _familiarize() -> Control:
 	_phase(&"familiarize")
@@ -364,16 +492,17 @@ func _familiarize() -> Control:
 	var b := MikeBoard.new()
 	hud.call("add_game", b)
 	await b.run_cards(items, SpeechMaterial.title(LIST_ID))
+	# by ear, not by eye: Hoot says each word, Mike says it back, and the cards face Hoot (the
+	# board's "Mike can't see this" sign); every word is on the cards and the "now saying" line
+	await _say("Hoot", "I'll say each word, nice and loud. You say it back. No peeking: the cards face me!")
 	var unknown := words.find(UNKNOWN_WORD)
 	var last_known := (unknown - 1) if unknown > 0 else words.size() - 1
-	b.read_along(0, last_known, 2.6)
-	var texts: Array[String] = []
-	for it: Dictionary in items.slice(0, mini(8, last_known + 1)):
-		texts.append(String(it.get("text", "")))
-	var first := ", ".join(PackedStringArray(texts.slice(0, 4)))
-	var rest := ", ".join(PackedStringArray(texts.slice(4)))
-	await _say("Mike", "%s... easy! %s..." % [_cap(first), _cap(rest)])
+	b.say_along(0, last_known, SAY_ALONG_S)
+	_react(&"nod")
+	await _say("Mike", echo_line(items.slice(0, last_known + 1)))
+	b.finish_say_along()   # the player may click on before the sweep ends
 	if unknown >= 0:
+		b.say_word(UNKNOWN_WORD, "Wind... mill?")
 		b.stumble(UNKNOWN_WORD)
 		_react(&"confused")
 		await _say("Mike", "Wind... mill? Never seen one. Is it a fan for a field?")
@@ -383,6 +512,8 @@ func _familiarize() -> Control:
 		dropped = b.dropped.duplicate()
 		_react(&"nod")
 		await _say("Mike", "The rest? Know 'em all. Not that I'll HEAR any of 'em.")
+	# his instructions for the SRT: the answers come from this list
+	await _say("Hoot", "Every test word comes from this list, Mike. Say back what you hear, and guess if unsure.")
 	var problems := (0 if said_yes else 1) + b.drop_slips
 	Game.record_medal("familiarize", "gold" if problems == 0 else ("silver" if problems == 1 else "bronze"))
 	Game.set_visit_flag("familiarized_first", said_yes)
@@ -396,21 +527,39 @@ func _familiarize() -> Control:
 
 # ---------------------------------------------------------------- 7-8. SRT: the SPEECH screen
 
+## The SRT ear order (clinical review S6): the better ear first, by the lower tone PTA, right on a
+## tie. The first ear is the coached one; Mike's right is normally the better (71.7 against 73.3).
+func srt_ears() -> Array[String]:
+	return SpeechRules.ears_better_first(ear_pta("right"), ear_pta("left"))
+
+
+## Hoot's lead-in on the first SRT ear: the better one by name, else the ear srt_ears() picks (a tie,
+## or a missing PTA).
+func first_ear_lead() -> String:
+	var r := ear_pta("right")
+	var l := ear_pta("left")
+	var first: String = srt_ears()[0]
+	if is_nan(r) or is_nan(l) or is_equal_approx(r, l):
+		return "%s ear first." % _cap(first)
+	return "Better ear first: the %s." % first
+
+
 ## The SPEECH screen plan for one ear (§9.7).
 func speech_plan(ear: String) -> Dictionary:
 	var plan := {"test": "srt", "tones": tones, "list": LIST_ID, "words": words.duplicate(), "transducer": String(_air_transducer())}
 	if not dropped.is_empty():
 		plan["exclude"] = dropped.duplicate()
-	# once the coffee whisper has been on screen, starting low and coming up is smart, not a slip
+	# once the coffee whisper has been on screen, starting below his beeps is smart, not a slip
 	plan["low_start_ok"] = _whisper_seen
 	var start := SpeechRules.srt_start(ear_pta(ear))
-	if ear == "right":
-		plan["intro"] = "Start at his PTA plus 15: %d dB. He should repeat that easily." % start
+	if ear == srt_ears()[0]:
+		plan["intro"] = "%s Start at his PTA plus 15: %d dB, easy to repeat." % [first_ear_lead(), start]
 	elif quick_visit():
-		plan["intro"] = "Left ear, yours for %d words! PTA plus 15 is %d dB." % [LEFT_SOLO_WORDS, start]
+		plan["intro"] = "%s ear: yours to the first miss and back up 5! PTA plus 15 is %d dB." % [_cap(ear), start]
 		plan["hoot_turn_after"] = LEFT_SOLO_WORDS
+		plan["hoot_turn_after_up"] = true
 	else:
-		plan["intro"] = "Left ear, your turn! PTA plus 15 is %d dB." % start
+		plan["intro"] = "%s ear, your turn! PTA plus 15 is %d dB." % [_cap(ear), start]
 	return plan
 
 
@@ -422,6 +571,8 @@ func _speech() -> void:
 	await _say("Hoot", "Now the words. He repeats each one; you score what he SAID.")
 	# the same-level rule (SpeechRules.SRT_MAX_WORDS_PER_LEVEL), as the wrong-step tip says
 	await _say("Hoot", "Got it: down 10. Missed: up 5. Another word at the same level is fine too!")
+	# (clinical review S5) one common routine, not the only one
+	await _say("Hoot", "Down 10, up 5 is one common way, not the only method.")
 	var cam: Camera3D = clinic.call("get_main_camera")
 	var packed: PackedScene = load(SPEECH_SCENE) as PackedScene if ResourceLoader.exists(SPEECH_SCENE) else null
 	if packed != null:
@@ -431,20 +582,26 @@ func _speech() -> void:
 	else:
 		push_warning("LevelMike: no SPEECH screen (%s); Hoot runs the words himself" % SPEECH_SCENE)
 	recheck = {}
-	for ear: String in ["right", "left"]:
+	# better ear first (S6); Hoot coaches the first ear
+	var order := srt_ears()
+	if order[0] != "right":
+		_set_hud_steps(order[0])
+	for ear: String in order:
 		hud.call("set_step", &"srt_r" if ear == "right" else &"srt_l")
 		_phase(&"speech", {"ear": ear, "test": "srt"})
 		var plan := speech_plan(ear)
 		var r: Dictionary
 		if screen != null:
-			screen.call("start_test", patient, ear, ear == "right", plan)
+			screen.call("start_test", patient, ear, ear == order[0], plan)
 			r = await screen.test_finished
 		else:
 			r = await _fallback_speech(ear, plan)
-		results = r
+		results = with_recheck(r)
 		Game.set_audiometry_results(results)
 		if ear == "right" and not _srt_shows_mismatch(srt_sheet("right")):
 			await _recheck_right()
+			results = with_recheck(results)
+			Game.set_audiometry_results(results)
 		hud.call("complete_step", &"srt_r" if ear == "right" else &"srt_l")
 	if screen != null:
 		screen.queue_free()
@@ -463,9 +620,21 @@ func _speech() -> void:
 	elif poor:
 		# words WORSE than beeps point elsewhere (never at his story)
 		await _say("Hoot", "%s His is %d dB worse. Poor agreement!" % [within, diff])
-		await _say("Hoot", "Words worse than beeps? Think instructions, language, word scores or a sloping loss.")
+		await _say("Hoot", "Words worse than beeps? Think instructions, language or word scores.")
 	else:
 		await _say("Hoot", "%s His is %d dB apart. Let's look closer." % [within, absi(diff)])
+
+
+## The visit results with Hoot's recheck on the record when he ran one (speech.recheck {srt: {right}},
+## §9.5): the paper notes it; the sheets and the grade stay the player's.
+func with_recheck(r: Dictionary) -> Dictionary:
+	if recheck.is_empty() or not (r.get("speech", null) is Dictionary):
+		return r
+	var out := r.duplicate()
+	var sp: Dictionary = (out["speech"] as Dictionary).duplicate()
+	sp["recheck"] = {"srt": {"right": recheck.duplicate(true)}}
+	out["speech"] = sp
+	return out
 
 
 ## The right SRT can carry the board only when it shows the mismatch for real: poor agreement,
@@ -500,6 +669,7 @@ func _recheck_right() -> void:
 func rerun_right() -> void:
 	var plan := speech_plan("right")
 	plan.erase("intro")
+	plan.erase("hoot_turn_after_up")
 	plan["hoot_turn_after"] = 0
 	plan["fresh_session"] = true
 	plan["hoot_turn_text"] = "Right ear again, by the book, at 8x. Watch the ladder!"
@@ -680,11 +850,13 @@ func _payoff(b: Control) -> void:
 	await _say("Mike", "Objective tests? The kind where I don't have to answer anything?")
 	await _say("Hoot", "Exactly. Tiny sounds, tiny sensors. Your ears do all the talking.")
 	_react(&"wince")
-	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. My ears are fine.")
+	# his own words, no more than the test showed: an SRT of 30 is an upper bound on his hearing, never "fine ears"
+	await _say("Mike", "...Okay. Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine.")
 	clinic.call("hoot_emote", &"nod")
 	await _say("Hoot", "Thank you for telling us, Mike. That took guts.")
 	# the main path must not teach "non-organic = faking"
-	await _say("Hoot", "Most non-organic losses aren't fibs: stress, worry, even a real loss underneath. So we never accuse.")
+	await _say("Hoot", "Non-organic loss has many causes: money, stress, worry, even a real loss underneath.")
+	await _say("Hoot", "We can't tell which from the booth, so we never accuse.")
 	await _say("Hoot", "We'll still finish the objective tests and send your results to your doctor.")
 	await _say("Mike", "The neck brace goes back to Vinnie too.")
 	clinic.call("focus_camera", &"door", 1.6)

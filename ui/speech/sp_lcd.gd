@@ -8,8 +8,17 @@ extends Control
 ##        the level is well below the PTA ("he is still repeating words down here").
 ##  Right: the PTA (from the tone test), the "start = PTA + 15" chip, this level's tally
 ##        ("30 dB: 2 of 2") and the NOISE box (speech noise in the other ear, its level and ear).
+## (Days 4-5) A test mode's optional view keys (CONTRACTS.md §9.10.7); a view without them draws
+## exactly as before: test_chip (String, replaces "SRT"), ear_chip (String, replaces the ear's name;
+## "BOTH" draws in ink, with no ear symbol), chips (Array of String, replaces PHONE / SPEECH),
+## info_line (String, replaces the list-and-words line), big_caption (String, replaces "dB HL" by the
+## big digits), aux (Array of {label, value}: a row in the THIS LEVEL line's place), start_chip
+## (String, the START chip's text), noise_note (Array of String: a dim note in the NOISE box's place,
+## for a test with no masking).
 
 signal level_step(direction: int)
+
+const OPTIONAL_KEYS: Array[String] = ["test_chip", "ear_chip", "chips", "info_line", "big_caption", "aux", "start_chip", "noise_note"]
 
 var view: Dictionary = {
 	"ear": "right", "db": 40, "talking": false, "test": "srt", "list_title": "", "word_n": 0, "words_left": 0,
@@ -17,6 +26,11 @@ var view: Dictionary = {
 	"tally": [], "mask_on": false, "mask_db": -1, "mask_ear": "left", "masking_needed": false, "accepting": false,
 }
 var talk_glow: float = 0.0
+## (Days 4-5) No THIS LEVEL line (a mode's hidden_base_widgets() names &"tally").
+var hide_tally := false:
+	set(v):
+		hide_tally = v
+		queue_redraw()
 var _t := 0.0
 var _hot: Dictionary = {}
 var _hover := ""
@@ -34,6 +48,13 @@ func update_view(d: Dictionary) -> void:
 	if int(d.get("db", 0)) != int(view.get("db", 0)):
 		_bump = 1.0
 	view.merge(d, true)
+	queue_redraw()
+
+
+## (Days 4-5) Drop every optional key: the Day 3 display again.
+func clear_optional() -> void:
+	for k: String in OPTIONAL_KEYS:
+		view.erase(k)
 	queue_redraw()
 
 
@@ -110,19 +131,33 @@ func _draw_readout(a: Rect2) -> void:
 	var e := String(view["ear"])
 	var ec := Palette.ear_color(e)
 	var chip := Rect2(a.position + Vector2(12, 12), Vector2(98, 28))
-	AoDraw.rbox(self, chip, ec, 14)
-	draw_circle(chip.position + Vector2(15, 14), 9.0, Palette.PAPER)
-	UiDraw.ear_symbol(self, chip.position + Vector2(15, 14), e, 10.0, 2.5)
-	AoDraw.text_l(self, chip.position + Vector2(30, 14), e.to_upper(), 16, Palette.PAPER, AoDraw.FONT_BOLD)
+	if view.has("ear_chip"):
+		# (Days 4-5) a mode's ear chip: "BOTH" (or no single ear) in ink, with no ear symbol
+		var et := String(view["ear_chip"])
+		var one := e in ["right", "left"] and et != "BOTH"
+		AoDraw.rbox(self, chip, ec if one else Palette.BOTH_INK, 14)
+		if one:
+			draw_circle(chip.position + Vector2(15, 14), 9.0, Palette.PAPER)
+			UiDraw.ear_symbol(self, chip.position + Vector2(15, 14), e, 10.0, 2.5)
+			AoDraw.text_l(self, chip.position + Vector2(30, 14), et, 16, Palette.PAPER, AoDraw.FONT_BOLD)
+		else:
+			AoDraw.text_c(self, chip.get_center(), et, 16, Palette.PAPER, AoDraw.FONT_BOLD)
+	else:
+		AoDraw.rbox(self, chip, ec, 14)
+		draw_circle(chip.position + Vector2(15, 14), 9.0, Palette.PAPER)
+		UiDraw.ear_symbol(self, chip.position + Vector2(15, 14), e, 10.0, 2.5)
+		AoDraw.text_l(self, chip.position + Vector2(30, 14), e.to_upper(), 16, Palette.PAPER, AoDraw.FONT_BOLD)
 	var x := chip.end.x + 8.0
 	var tr := String(view.get("transducer", "phones"))
-	for label: String in ["INSERT" if tr == "inserts" else "PHONE", "SPEECH"]:
+	var labels: Array = (view["chips"] as Array) if view.has("chips") else ["INSERT" if tr == "inserts" else "PHONE", "SPEECH"]
+	for lv: Variant in labels:
+		var label := String(lv)
 		var w := AoDraw.text_size(label, 12, AoDraw.FONT_BOLD).x + 14.0
 		var cr := Rect2(Vector2(x, chip.position.y + 3), Vector2(w, 22))
 		AoDraw.ring(self, cr, Palette.SELECT_ORANGE, 11, 2)
 		AoDraw.text_c(self, cr.get_center(), label, 12, Palette.SELECT_ORANGE, AoDraw.FONT_BOLD)
 		x += w + 6.0
-	var test_txt := String(view.get("test", "srt")).to_upper()
+	var test_txt := String(view["test_chip"]) if view.has("test_chip") else String(view.get("test", "srt")).to_upper()
 	var tw := AoDraw.text_size(test_txt, 13, AoDraw.FONT_BOLD).x + 18.0
 	var trr := Rect2(Vector2(x, chip.position.y + 3), Vector2(tw, 22))
 	if trr.end.x <= a.end.x - 2.0:
@@ -137,6 +172,8 @@ func _draw_readout(a: Rect2) -> void:
 		sub += "   %d word%s" % [n, "" if n == 1 else "s"]
 	if left > 0:
 		sub += ", %d left" % left
+	if view.has("info_line"):
+		sub = String(view["info_line"])
 	AoDraw.text_l(self, a.position + Vector2(14, 58), sub, 14, Color(Palette.LCD_TEXT, 0.72), AoDraw.FONT_SEMI)
 	# level row
 	var ly := a.position.y + a.size.y - 40.0
@@ -152,7 +189,7 @@ func _draw_readout(a: Rect2) -> void:
 		lcol = Palette.TONE_CYAN.lerp(Palette.LCD_TEXT, 0.3)
 	var lwid := AoDraw.text_size(ltxt, ls, AoDraw.FONT_BOLD).x
 	AoDraw.text_l(self, Vector2(lx, ly - _bump * 5.0), ltxt, ls, lcol, AoDraw.FONT_BOLD)
-	AoDraw.text_l(self, Vector2(lx + lwid + 8.0, ly + 10.0), "dB HL", 19, Color(Palette.LCD_TEXT, 0.7), AoDraw.FONT_SEMI)
+	AoDraw.text_l(self, Vector2(lx + lwid + 8.0, ly + 10.0), String(view.get("big_caption", "dB HL")), 19, Color(Palette.LCD_TEXT, 0.7), AoDraw.FONT_SEMI)
 	_chevron(Rect2(Vector2(a.position.x + 10, ly - 30), Vector2(28, 26)), Vector2.UP, "db_up")
 	_chevron(Rect2(Vector2(a.position.x + 10, ly + 4), Vector2(28, 26)), Vector2.DOWN, "db_down")
 	_hot["db"] = Rect2(Vector2(lx, ly - 30), Vector2(lwid + 70.0, 60))
@@ -186,7 +223,10 @@ func _draw_info(a: Rect2) -> void:
 	AoDraw.text_l(self, Vector2(x0, y0 + 74), "from the beeps", 11, Color(Palette.LCD_TEXT, 0.45), AoDraw.FONT_SEMI)
 	# NOISE box (speech noise in the other ear)
 	var bw := minf(126.0, a.size.x * 0.48)
-	_draw_noise(Rect2(Vector2(a.end.x - bw, y0 + 8.0), Vector2(bw, 76.0)))
+	if view.has("noise_note"):
+		_draw_noise_note(Rect2(Vector2(a.end.x - bw, y0 + 8.0), Vector2(bw, 76.0)), view["noise_note"])
+	else:
+		_draw_noise(Rect2(Vector2(a.end.x - bw, y0 + 8.0), Vector2(bw, 76.0)))
 	# start chip: PTA + 15
 	var start := int(view.get("start_db", 40))
 	var at_start := int(view["db"]) == start and not bool(view.get("started", false))
@@ -195,6 +235,8 @@ func _draw_info(a: Rect2) -> void:
 	var stxt := "START: no PTA yet"
 	if not is_nan(pta):
 		stxt = "START = %d + 15 = %d" % [base, start] if base + SpeechRules.SRT_START_ABOVE_PTA_DB == start else "START = %d dB" % start
+	if view.has("start_chip"):
+		stxt = String(view["start_chip"])
 	var sw := minf(a.size.x, AoDraw.text_size(stxt, 12, AoDraw.FONT_BOLD).x + 22.0)
 	var sr := Rect2(Vector2(x0 - 2.0, y0 + 92.0), Vector2(sw, 22.0))
 	if at_start:
@@ -206,6 +248,9 @@ func _draw_info(a: Rect2) -> void:
 	# this level's tally
 	var tally: Array = view.get("tally", [])
 	var ty := y0 + 132.0
+	if hide_tally or view.has("aux"):
+		_draw_aux(Vector2(x0, ty), a.end.x)
+		return
 	var lw := AoDraw.text_l(self, Vector2(x0, ty), "THIS LEVEL", 11, Color(Palette.LCD_TEXT, 0.55), AoDraw.FONT_BOLD)
 	var right := int(tally[0]) if tally.size() >= 2 else 0
 	var total := int(tally[1]) if tally.size() >= 2 else 0
@@ -216,6 +261,30 @@ func _draw_info(a: Rect2) -> void:
 	elif total > 0 and float(right) < SpeechRules.SRT_MIN_FRACTION * total:
 		tcol = Palette.CORAL.lightened(0.15)
 	AoDraw.text_l(self, Vector2(x0 + lw + 10.0, ty), ttxt, 17, tcol, AoDraw.FONT_BOLD)
+
+
+## (Days 4-5) A mode's aux row ({label, value} pairs) where the tally was.
+func _draw_aux(at: Vector2, right: float) -> void:
+	var x := at.x
+	for it: Variant in view.get("aux", []):
+		var d: Dictionary = it if it is Dictionary else {}
+		var lw := AoDraw.text_size(String(d.get("label", "")), 11, AoDraw.FONT_BOLD).x
+		var vw := AoDraw.text_size(String(d.get("value", "")), 17, AoDraw.FONT_BOLD).x
+		if x + lw + 8.0 + vw > right:
+			break
+		AoDraw.text_l(self, Vector2(x, at.y), String(d.get("label", "")), 11, Color(Palette.LCD_TEXT, 0.55), AoDraw.FONT_BOLD)
+		AoDraw.text_l(self, Vector2(x + lw + 8.0, at.y), String(d.get("value", "")), 17, Palette.LCD_TEXT, AoDraw.FONT_BOLD)
+		x += lw + vw + 22.0
+
+
+## (Days 4-5) A mode's note where the NOISE box was (the party test: one mix in both ears, no masking).
+func _draw_noise_note(r: Rect2, note: Variant) -> void:
+	var lines: Array = note if note is Array else [String(note)]
+	AoDraw.rbox(self, r, Color(Palette.PLUM, 0.08), 12, 2, Palette.LCD_DIM)
+	for i in mini(3, lines.size()):
+		var px := 11 if i == 0 else 10
+		var col := Color(Palette.LCD_TEXT, 0.6) if i == 0 else Color(Palette.LCD_TEXT, 0.45)
+		AoDraw.text_l(self, Vector2(r.position.x + 8.0, r.position.y + 15.0 + i * 20.0), String(lines[i]), px, col, AoDraw.FONT_BOLD)
 
 
 func _draw_noise(r: Rect2) -> void:

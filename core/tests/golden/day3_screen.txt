@@ -1,0 +1,9226 @@
+{
+"anchors": [["agreement_meter", Rect2(687.2, 212, 268.8, 894)], ["speech_correct_button", Rect2(627.325, 1144, 128, 118)], ["speech_incorrect_button", Rect2(490.325, 1144, 128, 118)], ["speech_ladder", Rect2(316, 212, 359.2, 894)], ["speech_louder_button", Rect2(354.075, 1144, 96, 118)], ["speech_mask_button", Rect2(971.825, 1144, 115.99994, 118)], ["speech_present_button", Rect2(149.075, 1144, 196.00002, 118)], ["speech_response", Rect2(12, 198, 292, 210)], ["speech_softer_button", Rect2(44.075, 1144, 96, 118)], ["speech_store_button", Rect2(795.575, 1144, 136, 118)], ["speech_word_card", Rect2(12, 420, 292, 686)]],
+"layout": {
+"_booth": [Vector2(12, 20), Vector2(292, 176), true],
+"_bubble": [Vector2(12, 198), Vector2(292, 210), true],
+"_card": [Vector2(12, 420), Vector2(292, 686), true],
+"_dance": [Vector2(968, 1050), Vector2(300, 56), true],
+"_deck": [Vector2(12, 1118), Vector2(1256, 150), true],
+"_ff_banner": [Vector2(370.6, 174), Vector2(249.99997, 44), false],
+"_hoot_spot": [Vector2(968, 206), Vector2(300, 834), true],
+"_ladder": [Vector2(316, 212), Vector2(359.2, 894), true],
+"_lcd": [Vector2(316, 20), Vector2(640, 176), true],
+"_meter": [Vector2(687.2, 212), Vector2(268.8, 894), true],
+"_status": [Vector2(968, 20), Vector2(300, 176), true],
+"groups": [["LEVEL + WORD", Rect2(44.075, 1124, 406, 16)], ["SCORE WHAT HE SAID", Rect2(490.325, 1124, 265, 16)], ["SRT", Rect2(795.575, 1124, 136, 16)], ["NOISE", Rect2(971.825, 1124, 116, 16)]],
+"keys_toggle": [Vector2(1120, 1132), Vector2(132, 56), true, "Keys: ON", "", 0, 0, &"toggle_key_hints", 14, Color(0.35686275, 0.78431374, 0.6392157, 1)],
+"pause_button": [Vector2(1216, 32), Vector2(40, 36), true, "II", "", 0, 0, &"", 16, Color(1, 0.9843137, 0.9490196, 1)],
+"speech_correct_button": [Vector2(627.325, 1144), Vector2(128, 118), true, "CORRECT", "", 5, 1, &"speech_correct", 22, Color(0.61960787, 0.8901961, 0.29411766, 1)],
+"speech_incorrect_button": [Vector2(490.325, 1144), Vector2(128, 118), true, "MISSED", "", 5, 2, &"speech_incorrect", 22, Color(1, 0.43529412, 0.34901962, 1)],
+"speech_louder_button": [Vector2(354.075, 1144), Vector2(96, 118), true, "LOUDER", "", 1, 0, &"louder", 19, Color(1, 0.8235294, 0.24705882, 1)],
+"speech_mask_button": [Vector2(971.825, 1144), Vector2(115.99994, 118), true, "MASK OFF", "", 5, 4, &"toggle_mask", 17, Color(1, 0.9529412, 0.8627451, 1)],
+"speech_present_button": [Vector2(149.075, 1144), Vector2(196.00002, 118), true, "PRESENT", "", 5, 3, &"present_tone", 24, Color(0.7490196, 0.9019608, 1, 1)],
+"speech_softer_button": [Vector2(44.075, 1144), Vector2(96, 118), true, "SOFTER", "", 2, 0, &"softer", 19, Color(1, 0.8235294, 0.24705882, 1)],
+"speech_store_button": [Vector2(795.575, 1144), Vector2(136, 118), true, "STORE", "", 5, 0, &"store", 22, Color(0.35686275, 0.78431374, 0.6392157, 1)],
+"style_toggle": [Vector2(1120, 1198), Vector2(132, 56), true, "Up = LOUDER", "(default)", 0, 0, &"", 14, Color(1, 0.9843137, 0.9490196, 1)]
+},
+"layout_left": {
+"_booth": [Vector2(12, 20), Vector2(292, 176), true],
+"_bubble": [Vector2(12, 198), Vector2(292, 210), true],
+"_card": [Vector2(12, 420), Vector2(292, 686), true],
+"_dance": [Vector2(968, 1050), Vector2(300, 56), true],
+"_deck": [Vector2(12, 1118), Vector2(1256, 150), true],
+"_ff_banner": [Vector2(370.6, 174), Vector2(249.99997, 44), false],
+"_hoot_spot": [Vector2(968, 206), Vector2(300, 834), true],
+"_ladder": [Vector2(316, 212), Vector2(359.2, 894), true],
+"_lcd": [Vector2(316, 20), Vector2(640, 176), true],
+"_meter": [Vector2(687.2, 212), Vector2(268.8, 894), true],
+"_status": [Vector2(968, 20), Vector2(300, 176), true],
+"groups": [["LEVEL + WORD", Rect2(44.075, 1124, 406, 16)], ["SCORE WHAT HE SAID", Rect2(490.325, 1124, 265, 16)], ["SRT", Rect2(795.575, 1124, 136, 16)], ["NOISE", Rect2(971.825, 1124, 116, 16)]],
+"keys_toggle": [Vector2(1120, 1132), Vector2(132, 56), true, "Keys: ON", "", 0, 0, &"toggle_key_hints", 14, Color(0.35686275, 0.78431374, 0.6392157, 1)],
+"pause_button": [Vector2(1216, 32), Vector2(40, 36), true, "II", "", 0, 0, &"", 16, Color(1, 0.9843137, 0.9490196, 1)],
+"speech_correct_button": [Vector2(627.325, 1144), Vector2(128, 118), true, "CORRECT", "", 5, 1, &"speech_correct", 22, Color(0.61960787, 0.8901961, 0.29411766, 1)],
+"speech_incorrect_button": [Vector2(490.325, 1144), Vector2(128, 118), true, "MISSED", "", 5, 2, &"speech_incorrect", 22, Color(1, 0.43529412, 0.34901962, 1)],
+"speech_louder_button": [Vector2(354.075, 1144), Vector2(96, 118), true, "LOUDER", "", 1, 0, &"louder", 19, Color(1, 0.8235294, 0.24705882, 1)],
+"speech_mask_button": [Vector2(971.825, 1144), Vector2(115.99994, 118), true, "MASK OFF", "", 5, 4, &"toggle_mask", 17, Color(1, 0.9529412, 0.8627451, 1)],
+"speech_present_button": [Vector2(149.075, 1144), Vector2(196.00002, 118), true, "PRESENT", "", 5, 3, &"present_tone", 24, Color(0.7490196, 0.9019608, 1, 1)],
+"speech_softer_button": [Vector2(44.075, 1144), Vector2(96, 118), true, "SOFTER", "", 2, 0, &"softer", 19, Color(1, 0.8235294, 0.24705882, 1)],
+"speech_store_button": [Vector2(795.575, 1144), Vector2(136, 118), true, "STORE", "", 5, 0, &"store", 22, Color(0.35686275, 0.78431374, 0.6392157, 1)],
+"style_toggle": [Vector2(1120, 1198), Vector2(132, 56), true, "Up = LOUDER", "(default)", 0, 0, &"", 14, Color(1, 0.9843137, 0.9490196, 1)]
+},
+"left": [{
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 1, 16, ""],
+"coach": ["His PTA is 73: call it 75. Start 15 above: tap [Up] 3 times to 90 dB.", "speech_louder_button", "start75"],
+"dance": -1,
+"info": {
+"action": "louder",
+"ear": "left",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 90,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 75,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 29,
+"current": {},
+"db": 75,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "milkshake",
+"points": 1450,
+"presentations": 14,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 1, 16, ""],
+"coach": ["His PTA is 73: call it 75. Start 15 above: tap [Up] twice to 90 dB.", "speech_louder_button", "start80"],
+"dance": -1,
+"info": {
+"action": "louder",
+"ear": "left",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 90,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 80,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 29,
+"current": {},
+"db": 80,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "milkshake",
+"points": 1450,
+"presentations": 14,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 1, 16, ""],
+"coach": ["His PTA is 73: call it 75. Start 15 above: tap [Up] once to 90 dB.", "speech_louder_button", "start85"],
+"dance": -1,
+"info": {
+"action": "louder",
+"ear": "left",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 90,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 85,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 29,
+"current": {},
+"db": 85,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "milkshake",
+"points": 1450,
+"presentations": 14,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 1, 16, ""],
+"coach": ["Start level set! Press [SPACE] (or PRESENT) to say the first word.", "speech_present_button", "present0"],
+"dance": -1,
+"info": {
+"action": "present",
+"ear": "left",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 90,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 90,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 29,
+"current": {},
+"db": 90,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "milkshake",
+"points": 1450,
+"presentations": 14,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "left", 1, 15, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score1"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "left",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 90,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 90,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 30,
+"current": {
+"db": 90,
+"said": "Milkshake!",
+"scored": null,
+"word": "milkshake"
+},
+"db": 90,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "windmill",
+"points": 1500,
+"presentations": 15,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 2, 15, ""],
+"coach": ["Got it: DOWN 10! Tap [Down] twice.", "speech_softer_button", "down1_90"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "left",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 80,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 90,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 31,
+"current": {
+"db": 90,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+},
+"db": 90,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "windmill",
+"points": 1550,
+"presentations": 15,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 2, 15, ""],
+"coach": ["One more tap of [Down], to 80 dB.", "speech_softer_button", "step1_85"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "left",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 80,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 85,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 31,
+"current": {
+"db": 90,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+},
+"db": 85,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "windmill",
+"points": 1550,
+"presentations": 15,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 2, 15, ""],
+"coach": ["Now say a word at 80 dB: press [SPACE].", "speech_present_button", "present1"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "left",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 80,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 80,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 31,
+"current": {
+"db": 90,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+},
+"db": 80,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "windmill",
+"points": 1550,
+"presentations": 15,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "left", 2, 14, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score2"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "left",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 80,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 80,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 32,
+"current": {
+"db": 80,
+"said": "Windmill!",
+"scored": null,
+"word": "windmill"
+},
+"db": 80,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "raincoat",
+"points": 1600,
+"presentations": 16,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 80,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 3, 14, ""],
+"coach": ["Got it: DOWN 10! Tap [Down] twice.", "speech_softer_button", "down2_80"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "left",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 70,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 80,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 33,
+"current": {
+"db": 80,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+},
+"db": 80,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "raincoat",
+"points": 1650,
+"presentations": 16,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 80,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 3, 14, ""],
+"coach": ["One more tap of [Down], to 70 dB.", "speech_softer_button", "step2_75"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "left",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 70,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 75,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 33,
+"current": {
+"db": 80,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+},
+"db": 75,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "raincoat",
+"points": 1650,
+"presentations": 16,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 80,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "left", 3, 14, ""],
+"coach": ["Now say a word at 70 dB: press [SPACE].", "speech_present_button", "present2"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "left",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 70,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 70,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 33,
+"current": {
+"db": 80,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+},
+"db": 70,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "raincoat",
+"points": 1650,
+"presentations": 16,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 80,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "left", 3, 13, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score3"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "left",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 70,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 70,
+"ear": "left",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"start_db": 90,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 3,
+"words_left": 13
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": false,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": 3,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 34,
+"current": {
+"db": 70,
+"said": "Raincoat!",
+"scored": null,
+"word": "raincoat"
+},
+"db": 70,
+"diff": 0,
+"done": false,
+"ear": "left",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "right",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "pinecone",
+"points": 1700,
+"presentations": 17,
+"pta": 73.33333333333333,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 90,
+"scoring": true,
+"stored_db": -1,
+"strokes": 3,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 90,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 80,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 70,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 13
+}
+}, ["finished", true, false, 8.0]],
+"left_results": {
+"accuracy": 1.0,
+"ears": {
+"left": {
+"complete": true,
+"freqs": {
+250: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 250,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+500: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 500,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+750: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 750,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+1000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 1000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+1500: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 1500,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+2000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 2000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+3000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 3000,
+"stored_db": 80,
+"test": "ac",
+"true_db": 80
+},
+4000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 4000,
+"stored_db": 80,
+"test": "ac",
+"true_db": 80
+},
+6000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 6000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+8000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 8000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+}
+},
+"pta": 73.33333333333333
+},
+"right": {
+"complete": true,
+"freqs": {
+250: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 250,
+"stored_db": 65,
+"test": "ac",
+"true_db": 65
+},
+500: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 500,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+750: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 750,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+1000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 1000,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+1500: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 1500,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+2000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 2000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+3000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 3000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+4000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 4000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+6000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 6000,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+8000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 8000,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+}
+},
+"pta": 71.66666666666667
+}
+},
+"efficiency": 0.8571428571428571,
+"grade": "S",
+"patient_id": "mike",
+"patient_name": "Mike Lenders",
+"score": 97.47899159663865,
+"speech": {
+"accuracy": 1.0,
+"checks": 35,
+"clean_checks": 35,
+"efficiency": 0.8571428571428571,
+"grade": "S",
+"hoot_presentations": 10,
+"max_combo": 35,
+"points": 1750,
+"presentations": 17,
+"pta": {
+"left": 73.33333333333333,
+"right": 71.66666666666667
+},
+"score": 97.47899159663865,
+"scored_sheets": 1,
+"sin": {},
+"srt": {
+"left": {
+"accuracy": 1.0,
+"agreement": &"poor",
+"bracketed": true,
+"by_hoot": true,
+"candidate_db": 30,
+"clean": true,
+"coached": false,
+"diff": -43,
+"ear": "left",
+"error_db": 0.0,
+"errors": [],
+"golf": &"hoot",
+"golf_raw": -8,
+"half_words": 2,
+"list_id": "spondee_a",
+"mask_db": -1,
+"masked": false,
+"par": 11,
+"pta": 73.33333333333333,
+"pta_method": "three",
+"recommended_start": 90,
+"start_db": 90,
+"stored_db": 30,
+"strokes": 3,
+"test": "srt",
+"transducer": "phones",
+"trials": [{
+"by_hoot": false,
+"correct": true,
+"db": 90,
+"delay_s": 0.9906018,
+"heard_by": &"test",
+"item_id": "milkshake",
+"kind": &"correct",
+"mask_db": -1,
+"n": 1,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 80,
+"delay_s": 1.263344,
+"heard_by": &"test",
+"item_id": "windmill",
+"kind": &"correct",
+"mask_db": -1,
+"n": 2,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 70,
+"delay_s": 1.0224128,
+"heard_by": &"test",
+"item_id": "raincoat",
+"kind": &"correct",
+"mask_db": -1,
+"n": 3,
+"said": "Raincoat!",
+"scored": true,
+"word": "raincoat"
+}, {
+"by_hoot": true,
+"correct": true,
+"db": 60,
+"delay_s": 0.90658295,
+"heard_by": &"test",
+"item_id": "pinecone",
+"kind": &"correct",
+"mask_db": -1,
+"n": 4,
+"said": "Pinecone!",
+"scored": true,
+"word": "pinecone"
+}, {
+"by_hoot": true,
+"correct": true,
+"db": 50,
+"delay_s": 1.2006404,
+"heard_by": &"test",
+"item_id": "lighthouse",
+"kind": &"correct",
+"mask_db": -1,
+"n": 5,
+"said": "Lighthouse!",
+"scored": true,
+"word": "lighthouse"
+}, {
+"by_hoot": true,
+"correct": true,
+"db": 40,
+"delay_s": 1.1378218,
+"heard_by": &"test",
+"item_id": "teapot",
+"kind": &"correct",
+"mask_db": -1,
+"n": 6,
+"said": "Teapot!",
+"scored": true,
+"word": "teapot"
+}, {
+"by_hoot": true,
+"correct": true,
+"db": 30,
+"delay_s": 1.3865315675735475,
+"heard_by": &"test",
+"item_id": "doorbell",
+"kind": &"correct",
+"mask_db": -1,
+"n": 7,
+"said": "Doorbell.",
+"scored": true,
+"word": "doorbell"
+}, {
+"by_hoot": true,
+"correct": false,
+"db": 20,
+"delay_s": 1.1170926,
+"heard_by": &"",
+"item_id": "sandbox",
+"kind": &"silence",
+"mask_db": -1,
+"n": 8,
+"said": "...",
+"scored": false,
+"word": "sandbox"
+}, {
+"by_hoot": true,
+"correct": false,
+"db": 25,
+"delay_s": 1.3261727452278138,
+"heard_by": &"",
+"item_id": "bookshelf",
+"kind": &"half",
+"mask_db": -1,
+"n": 9,
+"said": "...shelf?",
+"scored": false,
+"word": "bookshelf"
+}, {
+"by_hoot": true,
+"correct": false,
+"db": 30,
+"delay_s": 1.5022589921951295,
+"heard_by": &"",
+"item_id": "beehive",
+"kind": &"half",
+"mask_db": -1,
+"n": 10,
+"said": "Bee...?",
+"scored": false,
+"word": "beehive"
+}, {
+"by_hoot": true,
+"correct": true,
+"db": 35,
+"delay_s": 1.0029477,
+"heard_by": &"test",
+"item_id": "seashell",
+"kind": &"correct",
+"mask_db": -1,
+"n": 11,
+"said": "Seashell!",
+"scored": true,
+"word": "seashell"
+}, {
+"by_hoot": true,
+"correct": false,
+"db": 25,
+"delay_s": 1.7965469121932984,
+"heard_by": &"",
+"item_id": "goldfish",
+"kind": &"wrong",
+"mask_db": -1,
+"n": 12,
+"said": "Doorbell?",
+"scored": false,
+"word": "goldfish"
+}, {
+"by_hoot": true,
+"correct": true,
+"db": 30,
+"delay_s": 1.277276372909546,
+"heard_by": &"test",
+"item_id": "sunbeam",
+"kind": &"correct",
+"mask_db": -1,
+"n": 13,
+"said": "Sunbeam.",
+"scored": true,
+"word": "sunbeam"
+}],
+"true_db": 30,
+"words": 13
+},
+"right": {
+"accuracy": 1.0,
+"agreement": &"poor",
+"bracketed": true,
+"by_hoot": false,
+"candidate_db": 30,
+"clean": true,
+"coached": true,
+"diff": -42,
+"ear": "right",
+"error_db": 0.0,
+"errors": [],
+"golf": &"par",
+"golf_raw": 2,
+"half_words": 5,
+"list_id": "spondee_a",
+"mask_db": -1,
+"masked": false,
+"par": 12,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"recommended_start": 85,
+"start_db": 85,
+"stored_db": 30,
+"strokes": 14,
+"test": "srt",
+"transducer": "phones",
+"trials": [{
+"by_hoot": false,
+"correct": true,
+"db": 85,
+"delay_s": 1.3026154,
+"heard_by": &"test",
+"item_id": "doorbell",
+"kind": &"correct",
+"mask_db": -1,
+"n": 1,
+"said": "Doorbell!",
+"scored": true,
+"word": "doorbell"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 75,
+"delay_s": 1.0631013,
+"heard_by": &"test",
+"item_id": "sandbox",
+"kind": &"correct",
+"mask_db": -1,
+"n": 2,
+"said": "Sandbox!",
+"scored": true,
+"word": "sandbox"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 65,
+"delay_s": 0.81455284,
+"heard_by": &"test",
+"item_id": "goldfish",
+"kind": &"correct",
+"mask_db": -1,
+"n": 3,
+"said": "Goldfish!",
+"scored": true,
+"word": "goldfish"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 55,
+"delay_s": 0.92853653,
+"heard_by": &"test",
+"item_id": "milkshake",
+"kind": &"correct",
+"mask_db": -1,
+"n": 4,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 45,
+"delay_s": 1.1019918,
+"heard_by": &"test",
+"item_id": "windmill",
+"kind": &"correct",
+"mask_db": -1,
+"n": 5,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 35,
+"delay_s": 1.3309249,
+"heard_by": &"test",
+"item_id": "lighthouse",
+"kind": &"correct",
+"mask_db": -1,
+"n": 6,
+"said": "Lighthouse!",
+"scored": true,
+"word": "lighthouse"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 25,
+"delay_s": 1.2134961247444154,
+"heard_by": &"",
+"item_id": "moonlight",
+"kind": &"half",
+"mask_db": -1,
+"n": 7,
+"said": "...light?",
+"scored": false,
+"word": "moonlight"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 30,
+"delay_s": 1.38407621383667,
+"heard_by": &"test",
+"item_id": "rainbow",
+"kind": &"correct",
+"mask_db": -1,
+"n": 8,
+"said": "Rainbow.",
+"scored": true,
+"word": "rainbow"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 20,
+"delay_s": 1.4063256,
+"heard_by": &"",
+"item_id": "pinecone",
+"kind": &"half",
+"mask_db": -1,
+"n": 9,
+"said": "...cone?",
+"scored": false,
+"word": "pinecone"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 25,
+"delay_s": 1.5882400035858155,
+"heard_by": &"",
+"item_id": "teapot",
+"kind": &"half",
+"mask_db": -1,
+"n": 10,
+"said": "...pot?",
+"scored": false,
+"word": "teapot"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 30,
+"delay_s": 1.4267784118652345,
+"heard_by": &"",
+"item_id": "seashell",
+"kind": &"half",
+"mask_db": -1,
+"n": 11,
+"said": "Sea...?",
+"scored": false,
+"word": "seashell"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 35,
+"delay_s": 1.0636036,
+"heard_by": &"test",
+"item_id": "sunbeam",
+"kind": &"correct",
+"mask_db": -1,
+"n": 12,
+"said": "Sunbeam!",
+"scored": true,
+"word": "sunbeam"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 25,
+"delay_s": 1.5852728843688966,
+"heard_by": &"",
+"item_id": "hairbrush",
+"kind": &"half",
+"mask_db": -1,
+"n": 13,
+"said": "...brush?",
+"scored": false,
+"word": "hairbrush"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 30,
+"delay_s": 1.542779302597046,
+"heard_by": &"test",
+"item_id": "bookshelf",
+"kind": &"correct",
+"mask_db": -1,
+"n": 14,
+"said": "Bookshelf.",
+"scored": true,
+"word": "bookshelf"
+}],
+"true_db": 30,
+"words": 14
+}
+},
+"technique": 1.0,
+"technique_errors": Array[Dictionary]([]),
+"tests": Array[String](["srt"]),
+"wrs": {}
+},
+"technique": 1.0,
+"tone_scores": {
+"accuracy": 0.0,
+"efficiency": 0.0,
+"stamps": 0,
+"technique": 0.0
+}
+},
+"right": [{
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 1, 16, ""],
+"coach": ["His PTA is 72: call it 70. Start 15 above: tap [Up] 3 times to 85 dB.", "speech_louder_button", "start70"],
+"dance": -1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 85,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 70,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 0,
+"current": {},
+"db": 70,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "doorbell",
+"points": 0,
+"presentations": 0,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 1, 16, ""],
+"coach": ["His PTA is 72: call it 70. Start 15 above: tap [Up] twice to 85 dB.", "speech_louder_button", "start75"],
+"dance": -1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 85,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 75,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 0,
+"current": {},
+"db": 75,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "doorbell",
+"points": 0,
+"presentations": 0,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 1, 16, ""],
+"coach": ["His PTA is 72: call it 70. Start 15 above: tap [Up] once to 85 dB.", "speech_louder_button", "start80"],
+"dance": -1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 85,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 80,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 0,
+"current": {},
+"db": 80,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "doorbell",
+"points": 0,
+"presentations": 0,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 1, 16, ""],
+"coach": ["Start level set! Press [SPACE] (or PRESENT) to say the first word.", "speech_present_button", "present0"],
+"dance": -1,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 85,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 85,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": false,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 0,
+"words_left": 16
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": false,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 0,
+"current": {},
+"db": 85,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "doorbell",
+"points": 0,
+"presentations": 0,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 0,
+"test": &"srt",
+"trail": [],
+"transducer": &"phones",
+"words_left": 16
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 1, 15, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score1"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 85,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 85,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 1,
+"current": {
+"db": 85,
+"said": "Doorbell!",
+"scored": null,
+"word": "doorbell"
+},
+"db": 85,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "sandbox",
+"points": 10,
+"presentations": 1,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 2, 15, ""],
+"coach": ["Got it: DOWN 10! Tap [Down] twice.", "speech_softer_button", "down1_85"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 75,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 85,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 2,
+"current": {
+"db": 85,
+"said": "Doorbell!",
+"scored": true,
+"word": "doorbell"
+},
+"db": 85,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "sandbox",
+"points": 20,
+"presentations": 1,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 2, 15, ""],
+"coach": ["One more tap of [Down], to 75 dB.", "speech_softer_button", "step1_80"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 75,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 80,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 2,
+"current": {
+"db": 85,
+"said": "Doorbell!",
+"scored": true,
+"word": "doorbell"
+},
+"db": 80,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "sandbox",
+"points": 20,
+"presentations": 1,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 2, 15, ""],
+"coach": ["Now say a word at 75 dB: press [SPACE].", "speech_present_button", "present1"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 75,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 75,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 1,
+"words_left": 15
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 2,
+"current": {
+"db": 85,
+"said": "Doorbell!",
+"scored": true,
+"word": "doorbell"
+},
+"db": 75,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 1,
+"next_word": "sandbox",
+"points": 20,
+"presentations": 1,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 1,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 15
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 2, 14, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score2"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 75,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 75,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 3,
+"current": {
+"db": 75,
+"said": "Sandbox!",
+"scored": null,
+"word": "sandbox"
+},
+"db": 75,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 2,
+"next_word": "goldfish",
+"points": 40,
+"presentations": 2,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 3, 14, ""],
+"coach": ["Got it: DOWN 10! Tap [Down] twice.", "speech_softer_button", "down2_75"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 65,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 75,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 4,
+"current": {
+"db": 75,
+"said": "Sandbox!",
+"scored": true,
+"word": "sandbox"
+},
+"db": 75,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 2,
+"next_word": "goldfish",
+"points": 60,
+"presentations": 2,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 3, 14, ""],
+"coach": ["One more tap of [Down], to 65 dB.", "speech_softer_button", "step2_70"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 65,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 70,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 4,
+"current": {
+"db": 75,
+"said": "Sandbox!",
+"scored": true,
+"word": "sandbox"
+},
+"db": 70,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 2,
+"next_word": "goldfish",
+"points": 60,
+"presentations": 2,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 3, 14, ""],
+"coach": ["Now say a word at 65 dB: press [SPACE].", "speech_present_button", "present2"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 65,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 65,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 2,
+"words_left": 14
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 4,
+"current": {
+"db": 75,
+"said": "Sandbox!",
+"scored": true,
+"word": "sandbox"
+},
+"db": 65,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 2,
+"next_word": "goldfish",
+"points": 60,
+"presentations": 2,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 2,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 14
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 3, 13, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score3"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 65,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 65,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 3,
+"words_left": 13
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 5,
+"current": {
+"db": 65,
+"said": "Goldfish!",
+"scored": null,
+"word": "goldfish"
+},
+"db": 65,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 2,
+"next_word": "milkshake",
+"points": 80,
+"presentations": 3,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 3,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 13
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 4, 13, ""],
+"coach": ["Got it: DOWN 10! Tap [Down] twice.", "speech_softer_button", "down3_65"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 55,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 65,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 3,
+"words_left": 13
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 6,
+"current": {
+"db": 65,
+"said": "Goldfish!",
+"scored": true,
+"word": "goldfish"
+},
+"db": 65,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "milkshake",
+"points": 110,
+"presentations": 3,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 3,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 13
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 4, 13, ""],
+"coach": ["One more tap of [Down], to 55 dB.", "speech_softer_button", "step3_60"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 55,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 60,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 3,
+"words_left": 13
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 6,
+"current": {
+"db": 65,
+"said": "Goldfish!",
+"scored": true,
+"word": "goldfish"
+},
+"db": 60,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "milkshake",
+"points": 110,
+"presentations": 3,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 3,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 13
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 4, 13, ""],
+"coach": ["Now say a word at 55 dB: press [SPACE].", "speech_present_button", "present3"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 55,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 55,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 3,
+"words_left": 13
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 6,
+"current": {
+"db": 65,
+"said": "Goldfish!",
+"scored": true,
+"word": "goldfish"
+},
+"db": 55,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "milkshake",
+"points": 110,
+"presentations": 3,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 3,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 13
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 4, 12, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score4"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 55,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 55,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 4,
+"words_left": 12
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 7,
+"current": {
+"db": 55,
+"said": "Milkshake!",
+"scored": null,
+"word": "milkshake"
+},
+"db": 55,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "windmill",
+"points": 140,
+"presentations": 4,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 4,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 12
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 5, 12, ""],
+"coach": ["Got it: DOWN 10! Tap [Down] twice.", "speech_softer_button", "down4_55"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 45,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 55,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 4,
+"words_left": 12
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 8,
+"current": {
+"db": 55,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+},
+"db": 55,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "windmill",
+"points": 170,
+"presentations": 4,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 4,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 12
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 5, 12, ""],
+"coach": ["One more tap of [Down], to 45 dB.", "speech_softer_button", "step4_50"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 45,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 50,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 4,
+"words_left": 12
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 8,
+"current": {
+"db": 55,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+},
+"db": 50,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "windmill",
+"points": 170,
+"presentations": 4,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 4,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 12
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 5, 12, ""],
+"coach": ["Now say a word at 45 dB: press [SPACE].", "speech_present_button", "present4"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 45,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 45,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 4,
+"words_left": 12
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 8,
+"current": {
+"db": 55,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+},
+"db": 45,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "windmill",
+"points": 170,
+"presentations": 4,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 4,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 12
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 5, 11, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score5"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 45,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 45,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 5,
+"words_left": 11
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 9,
+"current": {
+"db": 45,
+"said": "Windmill!",
+"scored": null,
+"word": "windmill"
+},
+"db": 45,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 3,
+"next_word": "lighthouse",
+"points": 200,
+"presentations": 5,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 5,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 11
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 6, 11, ""],
+"coach": ["Got it at 45, way below his PTA! DOWN 10: tap [Down] twice.", "speech_softer_button", "down5_45"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 45,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 5,
+"words_left": 11
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 10,
+"current": {
+"db": 45,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+},
+"db": 45,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "lighthouse",
+"points": 250,
+"presentations": 5,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 5,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 11
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 6, 11, ""],
+"coach": ["One more tap of [Down], to 35 dB.", "speech_softer_button", "step5_40"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 40,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 5,
+"words_left": 11
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 10,
+"current": {
+"db": 45,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+},
+"db": 40,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "lighthouse",
+"points": 250,
+"presentations": 5,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 5,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 11
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 6, 11, ""],
+"coach": ["Now say a word at 35 dB: press [SPACE].", "speech_present_button", "present5"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 35,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 5,
+"words_left": 11
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 10,
+"current": {
+"db": 45,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+},
+"db": 35,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "lighthouse",
+"points": 250,
+"presentations": 5,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 5,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 11
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 6, 10, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score6"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 35,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 6,
+"words_left": 10
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 11,
+"current": {
+"db": 35,
+"said": "Lighthouse!",
+"scored": null,
+"word": "lighthouse"
+},
+"db": 35,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "moonlight",
+"points": 300,
+"presentations": 6,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 6,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 10
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 7, 10, ""],
+"coach": ["Got it at 35, way below his PTA! DOWN 10: tap [Down] twice.", "speech_softer_button", "down6_35"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 35,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 6,
+"words_left": 10
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 12,
+"current": {
+"db": 35,
+"said": "Lighthouse!",
+"scored": true,
+"word": "lighthouse"
+},
+"db": 35,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "moonlight",
+"points": 350,
+"presentations": 6,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 6,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 10
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 7, 10, ""],
+"coach": ["One more tap of [Down], to 25 dB.", "speech_softer_button", "step6_30"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 6,
+"words_left": 10
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 12,
+"current": {
+"db": 35,
+"said": "Lighthouse!",
+"scored": true,
+"word": "lighthouse"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "moonlight",
+"points": 350,
+"presentations": 6,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 6,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 10
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 7, 10, ""],
+"coach": ["Now say a word at 25 dB: press [SPACE].", "speech_present_button", "present6"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 6,
+"words_left": 10
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 12,
+"current": {
+"db": 35,
+"said": "Lighthouse!",
+"scored": true,
+"word": "lighthouse"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "moonlight",
+"points": 350,
+"presentations": 6,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 6,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 10
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 7, 9, ""],
+"coach": ["Half a word is a miss! Score it MISSED: press [Left].", "speech_incorrect_button", "score7"],
+"dance": -1,
+"info": {
+"action": "score_missed",
+"ear": "right",
+"mouse": {
+"click": "speech_incorrect_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 7,
+"words_left": 9
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 13,
+"current": {
+"db": 25,
+"said": "...light?",
+"scored": null,
+"word": "moonlight"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "rainbow",
+"points": 400,
+"presentations": 7,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 7,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 9
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 8, 9, ""],
+"coach": ["Missed: UP 5. Tap [Up] once.", "speech_louder_button", "up7_25"],
+"dance": 1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 7,
+"words_left": 9
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 14,
+"current": {
+"db": 25,
+"said": "...light?",
+"scored": false,
+"word": "moonlight"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "rainbow",
+"points": 450,
+"presentations": 7,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 7,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 9
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 8, 9, ""],
+"coach": ["Now say a word at 30 dB: press [SPACE].", "speech_present_button", "present7"],
+"dance": 1,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 7,
+"words_left": 9
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 14,
+"current": {
+"db": 25,
+"said": "...light?",
+"scored": false,
+"word": "moonlight"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "rainbow",
+"points": 450,
+"presentations": 7,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 7,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 9
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 8, 8, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score8"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 8,
+"words_left": 8
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 15,
+"current": {
+"db": 30,
+"said": "Rainbow.",
+"scored": null,
+"word": "rainbow"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "pinecone",
+"points": 500,
+"presentations": 8,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 8,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 8
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 9, 8, ""],
+"coach": ["Got it at 30, way below his PTA! DOWN 10: tap [Down] twice.", "speech_softer_button", "down8_30"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 20,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 8,
+"words_left": 8
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 16,
+"current": {
+"db": 30,
+"said": "Rainbow.",
+"scored": true,
+"word": "rainbow"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "pinecone",
+"points": 550,
+"presentations": 8,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 8,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 8
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 9, 8, ""],
+"coach": ["One more tap of [Down], to 20 dB.", "speech_softer_button", "step8_25"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 20,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 8,
+"words_left": 8
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 16,
+"current": {
+"db": 30,
+"said": "Rainbow.",
+"scored": true,
+"word": "rainbow"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "pinecone",
+"points": 550,
+"presentations": 8,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 8,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 8
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 9, 8, ""],
+"coach": ["Now say a word at 20 dB: press [SPACE].", "speech_present_button", "present8"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 20,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 20,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 8,
+"words_left": 8
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 16,
+"current": {
+"db": 30,
+"said": "Rainbow.",
+"scored": true,
+"word": "rainbow"
+},
+"db": 20,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "pinecone",
+"points": 550,
+"presentations": 8,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 8,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 8
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 9, 7, ""],
+"coach": ["Half a word is a miss! Score it MISSED: press [Left].", "speech_incorrect_button", "score9"],
+"dance": -1,
+"info": {
+"action": "score_missed",
+"ear": "right",
+"mouse": {
+"click": "speech_incorrect_button"
+},
+"target_db": 20,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 20,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 0],
+"test": "srt",
+"transducer": "phones",
+"word_n": 9,
+"words_left": 7
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 17,
+"current": {
+"db": 20,
+"said": "...cone?",
+"scored": null,
+"word": "pinecone"
+},
+"db": 20,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "teapot",
+"points": 600,
+"presentations": 9,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 9,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 7
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 10, 7, ""],
+"coach": ["Missed: UP 5. Tap [Up] once.", "speech_louder_button", "up9_20"],
+"dance": 1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 20,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 9,
+"words_left": 7
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 18,
+"current": {
+"db": 20,
+"said": "...cone?",
+"scored": false,
+"word": "pinecone"
+},
+"db": 20,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "teapot",
+"points": 650,
+"presentations": 9,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 9,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 7
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 10, 7, ""],
+"coach": ["Now say a word at 25 dB: press [SPACE].", "speech_present_button", "present9"],
+"dance": 1,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 9,
+"words_left": 7
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 18,
+"current": {
+"db": 20,
+"said": "...cone?",
+"scored": false,
+"word": "pinecone"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "teapot",
+"points": 650,
+"presentations": 9,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 9,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 7
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 10, 6, ""],
+"coach": ["Half a word is a miss! Score it MISSED: press [Left].", "speech_incorrect_button", "score10"],
+"dance": -1,
+"info": {
+"action": "score_missed",
+"ear": "right",
+"mouse": {
+"click": "speech_incorrect_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 10,
+"words_left": 6
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 19,
+"current": {
+"db": 25,
+"said": "...pot?",
+"scored": null,
+"word": "teapot"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "seashell",
+"points": 700,
+"presentations": 10,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 10,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 6
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 11, 6, ""],
+"coach": ["Missed: UP 5. Tap [Up] once.", "speech_louder_button", "up10_25"],
+"dance": 1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 10,
+"words_left": 6
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 20,
+"current": {
+"db": 25,
+"said": "...pot?",
+"scored": false,
+"word": "teapot"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "seashell",
+"points": 750,
+"presentations": 10,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 10,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 6
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 11, 6, ""],
+"coach": ["Now say a word at 30 dB: press [SPACE].", "speech_present_button", "present10"],
+"dance": 1,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 10,
+"words_left": 6
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 20,
+"current": {
+"db": 25,
+"said": "...pot?",
+"scored": false,
+"word": "teapot"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "seashell",
+"points": 750,
+"presentations": 10,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 10,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 6
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 11, 5, ""],
+"coach": ["Half a word is a miss! Score it MISSED: press [Left].", "speech_incorrect_button", "score11"],
+"dance": -1,
+"info": {
+"action": "score_missed",
+"ear": "right",
+"mouse": {
+"click": "speech_incorrect_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 11,
+"words_left": 5
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 21,
+"current": {
+"db": 30,
+"said": "Sea...?",
+"scored": null,
+"word": "seashell"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "sunbeam",
+"points": 800,
+"presentations": 11,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 11,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 5
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 12, 5, ""],
+"coach": ["Missed: UP 5. Tap [Up] once.", "speech_louder_button", "up11_30"],
+"dance": 1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 11,
+"words_left": 5
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 22,
+"current": {
+"db": 30,
+"said": "Sea...?",
+"scored": false,
+"word": "seashell"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "sunbeam",
+"points": 850,
+"presentations": 11,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 11,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 5
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 12, 5, ""],
+"coach": ["Now say a word at 35 dB: press [SPACE].", "speech_present_button", "present11"],
+"dance": 1,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 35,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 11,
+"words_left": 5
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 22,
+"current": {
+"db": 30,
+"said": "Sea...?",
+"scored": false,
+"word": "seashell"
+},
+"db": 35,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "sunbeam",
+"points": 850,
+"presentations": 11,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 11,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 5
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 12, 4, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score12"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 35,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 35,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 1],
+"test": "srt",
+"transducer": "phones",
+"word_n": 12,
+"words_left": 4
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 23,
+"current": {
+"db": 35,
+"said": "Sunbeam!",
+"scored": null,
+"word": "sunbeam"
+},
+"db": 35,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "hairbrush",
+"points": 900,
+"presentations": 12,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 12,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 4
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 13, 4, ""],
+"coach": ["Got it at 35, way below his PTA! DOWN 10: tap [Down] twice.", "speech_softer_button", "down12_35"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 35,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [2, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 12,
+"words_left": 4
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 24,
+"current": {
+"db": 35,
+"said": "Sunbeam!",
+"scored": true,
+"word": "sunbeam"
+},
+"db": 35,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "hairbrush",
+"points": 950,
+"presentations": 12,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 12,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 4
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, true, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 13, 4, ""],
+"coach": ["One more tap of [Down], to 25 dB.", "speech_softer_button", "step12_30"],
+"dance": 0,
+"info": {
+"action": "softer",
+"ear": "right",
+"mouse": {
+"click": "speech_softer_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 12,
+"words_left": 4
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 24,
+"current": {
+"db": 35,
+"said": "Sunbeam!",
+"scored": true,
+"word": "sunbeam"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "hairbrush",
+"points": 950,
+"presentations": 12,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 12,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 4
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 13, 4, ""],
+"coach": ["Now say a word at 25 dB: press [SPACE].", "speech_present_button", "present12"],
+"dance": 0,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 12,
+"words_left": 4
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 24,
+"current": {
+"db": 35,
+"said": "Sunbeam!",
+"scored": true,
+"word": "sunbeam"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "hairbrush",
+"points": 950,
+"presentations": 12,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 12,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 4
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 13, 3, ""],
+"coach": ["Half a word is a miss! Score it MISSED: press [Left].", "speech_incorrect_button", "score13"],
+"dance": -1,
+"info": {
+"action": "score_missed",
+"ear": "right",
+"mouse": {
+"click": "speech_incorrect_button"
+},
+"target_db": 25,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 13,
+"words_left": 3
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 25,
+"current": {
+"db": 25,
+"said": "...brush?",
+"scored": null,
+"word": "hairbrush"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "bookshelf",
+"points": 1000,
+"presentations": 13,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 13,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 3
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, true, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 14, 3, ""],
+"coach": ["Missed: UP 5. Tap [Up] once.", "speech_louder_button", "up13_25"],
+"dance": 1,
+"info": {
+"action": "louder",
+"ear": "right",
+"mouse": {
+"click": "speech_louder_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 25,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [0, 3],
+"test": "srt",
+"transducer": "phones",
+"word_n": 13,
+"words_left": 3
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 26,
+"current": {
+"db": 25,
+"said": "...brush?",
+"scored": false,
+"word": "hairbrush"
+},
+"db": 25,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "bookshelf",
+"points": 1050,
+"presentations": 13,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 13,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 3
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, true, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 14, 3, ""],
+"coach": ["Now say a word at 30 dB: press [SPACE].", "speech_present_button", "present13"],
+"dance": 1,
+"info": {
+"action": "present",
+"ear": "right",
+"mouse": {
+"click": "speech_present_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 13,
+"words_left": 3
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": -1,
+"combo": 26,
+"current": {
+"db": 25,
+"said": "...brush?",
+"scored": false,
+"word": "hairbrush"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "bookshelf",
+"points": 1050,
+"presentations": 13,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 13,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}],
+"transducer": &"phones",
+"words_left": 3
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", false, true, true, true],
+"speech_incorrect_button": ["MISSED", false, true, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", true, false, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"score", "Spondee list A", "right", 14, 2, ""],
+"coach": ["He said the whole word! Score it CORRECT: press [Right].", "speech_correct_button", "score14"],
+"dance": -1,
+"info": {
+"action": "score_correct",
+"ear": "right",
+"mouse": {
+"click": "speech_correct_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [1, 2],
+"test": "srt",
+"transducer": "phones",
+"word_n": 14,
+"words_left": 2
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": true,
+"candidate_db": -1,
+"combo": 27,
+"current": {
+"db": 30,
+"said": "Bookshelf.",
+"scored": null,
+"word": "bookshelf"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "beehive",
+"points": 1100,
+"presentations": 14,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 14,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": null
+}],
+"transducer": &"phones",
+"words_left": 2
+}
+}, {
+"buttons": {
+"keys_toggle": ["Keys: ON", false, false, true, true],
+"pause_button": ["II", false, false, true, true],
+"speech_correct_button": ["CORRECT", true, false, true, true],
+"speech_incorrect_button": ["MISSED", true, false, true, true],
+"speech_louder_button": ["LOUDER", false, false, true, true],
+"speech_mask_button": ["MASK OFF", false, false, true, true],
+"speech_present_button": ["PRESENT", false, false, true, true],
+"speech_softer_button": ["SOFTER", false, false, true, true],
+"speech_store_button": ["STORE", false, true, true, true],
+"style_toggle": ["Up = LOUDER", false, false, true, true]
+},
+"card": [&"idle", "Spondee list A", "right", 15, 2, ""],
+"coach": ["Bracketed! 30 dB: the softest level with half or more right. Press [S] to STORE.", "speech_store_button", "store14"],
+"dance": 2,
+"info": {
+"action": "store",
+"ear": "right",
+"mouse": {
+"click": "speech_store_button"
+},
+"target_db": 30,
+"test": "srt"
+},
+"lcd": {
+"accepting": true,
+"db": 30,
+"ear": "right",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"start_db": 85,
+"started": true,
+"talking": false,
+"tally": [2, 3],
+"test": "srt",
+"transducer": "phones",
+"word_n": 14,
+"words_left": 2
+},
+"screen": {
+"accepting_input": true,
+"answer_shown": true,
+"coached": true,
+"finishing": false,
+"hoot_turn": false,
+"hoot_turn_after": -1,
+"listening": false,
+"patient_id": "mike",
+"quick_visit": true,
+"talking": false
+},
+"session": {
+"agreement": &"",
+"awaiting_score": false,
+"candidate_db": 30,
+"combo": 28,
+"current": {
+"db": 30,
+"said": "Bookshelf.",
+"scored": true,
+"word": "bookshelf"
+},
+"db": 30,
+"diff": 0,
+"done": false,
+"ear": "right",
+"list_id": "spondee_a",
+"list_title": "Spondee list A",
+"mask_db": -1,
+"mask_ear": "left",
+"mask_on": false,
+"masking_needed": false,
+"max_db": 100,
+"min_db": -10,
+"multiplier": 5,
+"next_word": "beehive",
+"points": 1150,
+"presentations": 14,
+"pta": 71.66666666666667,
+"pta_left": 73.33333333333333,
+"pta_right": 71.66666666666667,
+"recommended_start": 85,
+"scoring": true,
+"stored_db": -1,
+"strokes": 14,
+"test": &"srt",
+"trail": [{
+"by_hoot": false,
+"db": 85,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 75,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 65,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 55,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 45,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 20,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 35,
+"kind": &"correct",
+"scored": true
+}, {
+"by_hoot": false,
+"db": 25,
+"kind": &"half",
+"scored": false
+}, {
+"by_hoot": false,
+"db": 30,
+"kind": &"correct",
+"scored": true
+}],
+"transducer": &"phones",
+"words_left": 2
+}
+}, ["finished", true, false, 8.0]],
+"right_results": {
+"accuracy": 1.0,
+"ears": {
+"left": {
+"complete": true,
+"freqs": {
+250: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 250,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+500: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 500,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+750: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 750,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+1000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 1000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+1500: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 1500,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+2000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 2000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+3000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 3000,
+"stored_db": 80,
+"test": "ac",
+"true_db": 80
+},
+4000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 4000,
+"stored_db": 80,
+"test": "ac",
+"true_db": 80
+},
+6000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 6000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+8000: {
+"by_hoot": true,
+"ear": "left",
+"error_db": 0.0,
+"freq": 8000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+}
+},
+"pta": 73.33333333333333
+},
+"right": {
+"complete": true,
+"freqs": {
+250: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 250,
+"stored_db": 65,
+"test": "ac",
+"true_db": 65
+},
+500: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 500,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+750: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 750,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+1000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 1000,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+1500: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 1500,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+2000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 2000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+3000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 3000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+4000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 4000,
+"stored_db": 75,
+"test": "ac",
+"true_db": 75
+},
+6000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 6000,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+},
+8000: {
+"by_hoot": true,
+"ear": "right",
+"error_db": 0.0,
+"freq": 8000,
+"stored_db": 70,
+"test": "ac",
+"true_db": 70
+}
+},
+"pta": 71.66666666666667
+}
+},
+"efficiency": 0.8571428571428571,
+"grade": "S",
+"patient_id": "mike",
+"patient_name": "Mike Lenders",
+"score": 97.47899159663865,
+"speech": {
+"accuracy": 1.0,
+"checks": 29,
+"clean_checks": 29,
+"efficiency": 0.8571428571428571,
+"grade": "S",
+"hoot_presentations": 0,
+"max_combo": 29,
+"points": 1450,
+"presentations": 14,
+"pta": {
+"left": 73.33333333333333,
+"right": 71.66666666666667
+},
+"score": 97.47899159663865,
+"scored_sheets": 1,
+"sin": {},
+"srt": {
+"right": {
+"accuracy": 1.0,
+"agreement": &"poor",
+"bracketed": true,
+"by_hoot": false,
+"candidate_db": 30,
+"clean": true,
+"coached": true,
+"diff": -42,
+"ear": "right",
+"error_db": 0.0,
+"errors": [],
+"golf": &"par",
+"golf_raw": 2,
+"half_words": 5,
+"list_id": "spondee_a",
+"mask_db": -1,
+"masked": false,
+"par": 12,
+"pta": 71.66666666666667,
+"pta_method": "three",
+"recommended_start": 85,
+"start_db": 85,
+"stored_db": 30,
+"strokes": 14,
+"test": "srt",
+"transducer": "phones",
+"trials": [{
+"by_hoot": false,
+"correct": true,
+"db": 85,
+"delay_s": 1.3026154,
+"heard_by": &"test",
+"item_id": "doorbell",
+"kind": &"correct",
+"mask_db": -1,
+"n": 1,
+"said": "Doorbell!",
+"scored": true,
+"word": "doorbell"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 75,
+"delay_s": 1.0631013,
+"heard_by": &"test",
+"item_id": "sandbox",
+"kind": &"correct",
+"mask_db": -1,
+"n": 2,
+"said": "Sandbox!",
+"scored": true,
+"word": "sandbox"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 65,
+"delay_s": 0.81455284,
+"heard_by": &"test",
+"item_id": "goldfish",
+"kind": &"correct",
+"mask_db": -1,
+"n": 3,
+"said": "Goldfish!",
+"scored": true,
+"word": "goldfish"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 55,
+"delay_s": 0.92853653,
+"heard_by": &"test",
+"item_id": "milkshake",
+"kind": &"correct",
+"mask_db": -1,
+"n": 4,
+"said": "Milkshake!",
+"scored": true,
+"word": "milkshake"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 45,
+"delay_s": 1.1019918,
+"heard_by": &"test",
+"item_id": "windmill",
+"kind": &"correct",
+"mask_db": -1,
+"n": 5,
+"said": "Windmill!",
+"scored": true,
+"word": "windmill"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 35,
+"delay_s": 1.3309249,
+"heard_by": &"test",
+"item_id": "lighthouse",
+"kind": &"correct",
+"mask_db": -1,
+"n": 6,
+"said": "Lighthouse!",
+"scored": true,
+"word": "lighthouse"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 25,
+"delay_s": 1.2134961247444154,
+"heard_by": &"",
+"item_id": "moonlight",
+"kind": &"half",
+"mask_db": -1,
+"n": 7,
+"said": "...light?",
+"scored": false,
+"word": "moonlight"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 30,
+"delay_s": 1.38407621383667,
+"heard_by": &"test",
+"item_id": "rainbow",
+"kind": &"correct",
+"mask_db": -1,
+"n": 8,
+"said": "Rainbow.",
+"scored": true,
+"word": "rainbow"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 20,
+"delay_s": 1.4063256,
+"heard_by": &"",
+"item_id": "pinecone",
+"kind": &"half",
+"mask_db": -1,
+"n": 9,
+"said": "...cone?",
+"scored": false,
+"word": "pinecone"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 25,
+"delay_s": 1.5882400035858155,
+"heard_by": &"",
+"item_id": "teapot",
+"kind": &"half",
+"mask_db": -1,
+"n": 10,
+"said": "...pot?",
+"scored": false,
+"word": "teapot"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 30,
+"delay_s": 1.4267784118652345,
+"heard_by": &"",
+"item_id": "seashell",
+"kind": &"half",
+"mask_db": -1,
+"n": 11,
+"said": "Sea...?",
+"scored": false,
+"word": "seashell"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 35,
+"delay_s": 1.0636036,
+"heard_by": &"test",
+"item_id": "sunbeam",
+"kind": &"correct",
+"mask_db": -1,
+"n": 12,
+"said": "Sunbeam!",
+"scored": true,
+"word": "sunbeam"
+}, {
+"by_hoot": false,
+"correct": false,
+"db": 25,
+"delay_s": 1.5852728843688966,
+"heard_by": &"",
+"item_id": "hairbrush",
+"kind": &"half",
+"mask_db": -1,
+"n": 13,
+"said": "...brush?",
+"scored": false,
+"word": "hairbrush"
+}, {
+"by_hoot": false,
+"correct": true,
+"db": 30,
+"delay_s": 1.542779302597046,
+"heard_by": &"test",
+"item_id": "bookshelf",
+"kind": &"correct",
+"mask_db": -1,
+"n": 14,
+"said": "Bookshelf.",
+"scored": true,
+"word": "bookshelf"
+}],
+"true_db": 30,
+"words": 14
+}
+},
+"technique": 1.0,
+"technique_errors": Array[Dictionary]([]),
+"tests": Array[String](["srt"]),
+"wrs": {}
+},
+"technique": 1.0,
+"tone_scores": {
+"accuracy": 0.0,
+"efficiency": 0.0,
+"stamps": 0,
+"technique": 0.0
+}
+}
+}

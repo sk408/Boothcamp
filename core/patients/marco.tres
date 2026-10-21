@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="PatientProfile" format=3]
+
+[ext_resource type="Script" path="res://core/patient_profile.gd" id="1_marc0"]
+
+[resource]
+script = ExtResource("1_marc0")
+id = "marco"
+display_name = "Marco Polenta"
+age = 54
+complaint = "My ears are perfect, in quiet. At a busy table, every word turns to soup."
+thresholds_right = Dictionary[int, int]({
+250: 10,
+500: 15,
+750: 15,
+1000: 20,
+1500: 25,
+2000: 30,
+3000: 35,
+4000: 40,
+6000: 40,
+8000: 35
+})
+thresholds_left = Dictionary[int, int]({
+250: 10,
+500: 15,
+750: 15,
+1000: 25,
+1500: 25,
+2000: 30,
+3000: 35,
+4000: 40,
+6000: 45,
+8000: 40
+})
+ia_phones_db = 60
+ia_inserts_db = 75
+false_alarms_per_minute = 0.3
+reaction_time_min_s = 0.7
+reaction_time_max_s = 1.3
+psychometric_slope_db = 2.5
+attention = 0.95
+fatigue_per_tone = 0.0005
+min_tone_s = 0.5
+rhythm_sensitivity = 0.5
+speech = {
+"directional_benefit": 4.0,
+"snr_loss": 9.0,
+"wrs_max": {
+"left": 92,
+"right": 96
+}
+}
+tags = PackedStringArray("speech", "speech_in_noise", "chapter_5")
+pronoun = "he"
+nickname = "Marco"

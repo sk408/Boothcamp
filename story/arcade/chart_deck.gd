@@ -1,7 +1,7 @@
 extends RefCounted
 ## ChartDeck (arcade, story-internal): seeded audiograms for Chart Chute (docs/ARCADE.md). Every
-## chart is labelled by ClinicRules.classify_shape, the same rule the story's reveals use, and kept
-## clear of its edges: the shape still holds if any one frequency is 5 dB off, so a right answer is
+## chart is labelled by shape_of (ClinicRules.classify_shape, the same rule the story's reveals use,
+## plus the reverse cookie bite) and kept clear of its edges: the shape still holds if any one frequency is 5 dB off, so a right answer is
 ## never a coin toss. Pure and static apart from the RandomNumberGenerator it is handed.
 ##   const ChartDeck := preload("res://story/arcade/chart_deck.gd")
 ##   var card := ChartDeck.make_card(rng, &"notch", {"ear": "right", "lookalike": false}, 7)
@@ -10,10 +10,29 @@ extends RefCounted
 ##   ChartDeck.stable(thresholds, shape)    # the margin check every card passes
 ##   ChartDeck.golden_card(&"notch", 3)     # a story patient's own chart (Rocco's notch)
 
-## The chutes, in key order (1-4).
-const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"rising"]
+## The chutes, in key order (1-5).
+const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"rising", &"reverse_bite"]
 ## One word under each chute's picture.
-const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING"}
+const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING",
+	&"reverse_bite": "REVERSE BITE", &"sensorineural": "SENSORINEURAL", &"conductive": "CONDUCTIVE", &"mixed": "MIXED"}
+## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
+const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
+## The two belts: the shape belt (Chart Chute) and the type belt (AIR & BONE).
+const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES}
+## Bone on a type card: these frequencies (the ones hearing_type reads).
+const BONE_FREQS: Array[int] = [500, 1000, 2000, 4000]
+## A type card's gaps are big (20 dB or more) or none (5 or less), so any one point 5 dB off
+## keeps the call; conductive bone averages 15 or better, mixed bone 35 or worse.
+const GAP_BIG_DB := 20
+const GAP_NONE_DB := 5
+const BONE_NORMAL_MAX := 15.0
+const BONE_DOWN_MIN := 35.0
+## The air line's shape on each type (docs/ARCADE.md section 17).
+const TYPE_AIR: Dictionary[StringName, Array] = {&"sensorineural": [&"sloping", &"flat"], &"conductive": [&"flat", &"rising"],
+	&"mixed": [&"sloping", &"flat"]}
+## A reverse cookie bite: the lows (250 / 500) and the highs (4k / 8k) each this much worse than
+## the middle (1k / 2k), on average (docs/ARCADE.md section 16).
+const REVERSE_BITE_DB := 15.0
 ## The chart's test frequencies (plus 750 / 1500 where ClinicRules.required_interoctaves asks).
 const FREQS: Array[int] = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
 const MARGIN_DB := 5
@@ -44,6 +63,33 @@ const ARCH: Dictionary[StringName, Dictionary] = {
 		# gentle: only the lowest pitches are clearly worse
 		"lookalike": [[45, 40, 35, 25, 20, 15, 15, 15], [50, 45, 35, 25, 25, 20, 20, 20]],
 	},
+	&"reverse_bite": {
+		"plain": [[50, 40, 25, 25, 30, 40, 50, 55], [50, 45, 30, 25, 30, 40, 50, 55], [55, 45, 30, 30, 35, 45, 55, 60]],
+		# one end only just worse: it looks rising (the top barely turns down) or sloping (the
+		# bottom barely turns up), but both ends are past the line
+		"lookalike": [[60, 50, 30, 25, 30, 40, 50, 50], [45, 40, 25, 25, 40, 50, 60, 65]],
+	},
+}
+
+## Type archetypes: [air over FREQS, bone over BONE_FREQS]. Lookalikes: a sensorineural chart
+## split 5 dB all along, a conductive one with bone at 20, a mixed one whose bone is only just down
+## or whose gap is only at the low end.
+const TYPE_ARCH: Dictionary[StringName, Dictionary] = {
+	&"sensorineural": {
+		"plain": [[[20, 25, 30, 40, 50, 55, 60, 65], [25, 30, 35, 55]], [[40, 40, 45, 45, 50, 50, 55, 55], [35, 45, 45, 50]],
+			[[15, 20, 30, 45, 55, 60, 65, 70], [20, 25, 45, 60]]],
+		"lookalike": [[[30, 35, 40, 50, 55, 60, 65, 70], [30, 35, 45, 55]], [[20, 20, 25, 35, 55, 65, 70, 75], [20, 25, 35, 60]]],
+	},
+	&"conductive": {
+		"plain": [[[40, 40, 40, 40, 35, 35, 40, 40], [5, 10, 15, 10]], [[50, 45, 40, 30, 25, 25, 25, 30], [10, 5, 10, 20]],
+			[[45, 45, 45, 40, 40, 35, 40, 45], [10, 10, 15, 10]]],
+		"lookalike": [[[45, 45, 40, 40, 40, 40, 45, 45], [5, 10, 20, 15]], [[40, 35, 35, 30, 30, 30, 35, 40], [10, 10, 10, 5]]],
+	},
+	&"mixed": {
+		"plain": [[[55, 60, 60, 65, 70, 70, 75, 80], [35, 40, 45, 50]], [[65, 65, 65, 65, 65, 70, 70, 70], [40, 40, 45, 45]],
+			[[50, 55, 60, 70, 75, 80, 85, 90], [30, 35, 45, 55]]],
+		"lookalike": [[[55, 55, 55, 60, 60, 65, 70, 70], [30, 35, 35, 40]], [[60, 60, 55, 55, 60, 65, 70, 75], [35, 35, 50, 60]]],
+	},
 }
 
 ## The story patients whose charts turn up as golden cards (x3). Marina's rising loss is in her
@@ -63,6 +109,10 @@ const LINES: Dictionary = {
 	&"notch": ["Thirty years of loud gigs...", "My workshop is LOUD.", "Jet engines, every day.", "I never wore earplugs."],
 	&"cookie_bite": ["Mum's chart looks like this too!", "Middle voices just vanish.", "Grandad had the same bite."],
 	&"rising": ["The fridge hum is gone!", "Deep voices are hard.", "Low notes went missing."],
+	&"reverse_bite": ["Mid voices are fine, the rest fades.", "Low hum AND birdsong are gone.", "I hear you best in the middle."],
+	&"sensorineural": ["Loud enough, just not clear.", "Everyone mumbles!", "It's the S sounds."],
+	&"conductive": ["Like my head's under water.", "My own voice booms!", "It feels blocked."],
+	&"mixed": ["Blocked AND fuzzy.", "Ear trouble since I was a lad, and now this.", "Louder helps, but not enough."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -71,6 +121,10 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"notch": {"text": "Dips at 3-6k, comes back up at 8k", "freq_lo": 3000, "freq_hi": 8000},
 	&"cookie_bite": {"text": "Worst in the middle, better at both ends", "freq_lo": 500, "freq_hi": 4000},
 	&"rising": {"text": "The low pitches are the worst", "freq_lo": 250, "freq_hi": 1000},
+	&"reverse_bite": {"text": "Better in the middle, worse at both ends", "freq_lo": 250, "freq_hi": 8000},
+	&"sensorineural": {"text": "Bone sits on air: the inner ear", "freq_lo": 500, "freq_hi": 4000},
+	&"conductive": {"text": "Bone is normal, air is down: the middle ear", "freq_lo": 500, "freq_hi": 4000},
+	&"mixed": {"text": "Bone is down too, AND a gap: both", "freq_lo": 500, "freq_hi": 4000},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -86,7 +140,10 @@ const BGS: PackedStringArray = ["#ffe6a8", "#d9e6ff", "#d6f5e3", "#ffd9e8", "#ff
 ## (seeded) One card whose chart (on the ear it asks you to sort) has `shape`.
 ## opts: {"ear": "right" | "left" | "both", "lookalike": bool}. "both" puts a different shape on
 ## the other ear, so you have to sort the colour the card names.
+## A type id (TYPES) deals a one-ear air-and-bone card instead (make_type_card).
 static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	if TYPES.has(shape):
+		return make_type_card(rng, shape, opts, serial)
 	var ear := String(opts.get("ear", "right"))
 	var sort_ear := ear
 	if ear == "both":
@@ -107,6 +164,90 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		"name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]], "who": "chute_%d" % (serial % PORTRAIT_IDS),
 		"look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"), "line": lines[rng.randi() % lines.size()],
 	}
+
+
+## (seeded) One AIR & BONE card: one ear's air and bone whose type (ClinicRules.hearing_type) is
+## `type`. Adds "bc" {ear: {freq: dB}} and "bc_masked" {ear: {freq: true}} (bone drawn masked [ ]
+## where it sits BC_MASK_GAP_DB or more better than air) to the usual card keys.
+static func make_type_card(rng: RandomNumberGenerator, type: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+	var chart := make_type_chart(rng, type, bool(opts.get("lookalike", false)))
+	var ac: Dictionary = chart.get("ac", {})
+	var bc: Dictionary = chart.get("bc", {})
+	var masked := {}
+	for f: int in bc:
+		if int(ac[f]) - int(bc[f]) >= ClinicRules.BC_MASK_GAP_DB:
+			masked[f] = true
+	var lines: Array = LINES[type]
+	var first := FIRST[rng.randi() % FIRST.size()]
+	return {
+		"serial": serial, "shape": type, "ear": ear, "sort_ear": ear, "ac": {ear: ac}, "bc": {ear: bc}, "bc_masked": {ear: masked},
+		"golden": false, "other_shape": &"", "name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]],
+		"who": "chute_%d" % (serial % PORTRAIT_IDS), "look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"),
+		"line": lines[rng.randi() % lines.size()],
+	}
+
+
+## (seeded) {"ac": {freq: dB}, "bc": {freq: dB}} of `type`, clear of every rule edge (stable_type).
+static func make_type_chart(rng: RandomNumberGenerator, type: StringName, lookalike: bool) -> Dictionary:
+	var pool: Array = TYPE_ARCH[type]["lookalike" if lookalike else "plain"]
+	for attempt in MAX_TRIES:
+		var base: Array = pool[rng.randi() % pool.size()]
+		var lift := 5 * rng.randi_range(-1, 1)
+		var ac := {}
+		for i in FREQS.size():
+			var f: int = FREQS[i]
+			var wobble := 5 * rng.randi_range(-1, 1) if rng.randf() < 0.35 else 0
+			ac[f] = ClinicRules.clamp_db(int(base[0][i]) + lift + wobble, f)
+		var bc := {}
+		for i in BONE_FREQS.size():
+			var f: int = BONE_FREQS[i]
+			var wobble := 5 * rng.randi_range(-1, 1) if rng.randf() < 0.35 else 0
+			bc[f] = int(base[1][i]) + lift + wobble
+		if stable_type(ac, bc, type):
+			_add_interoctaves(ac)
+			return {"ac": ac, "bc": bc}
+	push_error("ChartDeck: no stable %s chart" % type)
+	return {}
+
+
+## The type card's honesty and margin check: hearing_type says `type` and still does with any one
+## air or bone point 5 dB better or worse; bone is never poorer than air, never past the bone
+## limits, and each gap is big (GAP_BIG_DB) or none (GAP_NONE_DB); conductive bone is clearly
+## normal and mixed bone clearly down; the air line has the type's shape and is clearly a loss.
+static func stable_type(ac: Dictionary, bc: Dictionary, type: StringName) -> bool:
+	if ClinicRules.hearing_type(ac, bc) != type:
+		return false
+	if not (TYPE_AIR[type] as Array).has(shape_of(ac)):
+		return false
+	var worst := -999
+	for f: int in FREQS:
+		worst = maxi(worst, int(ac.get(f, -999)))
+	if worst <= 25 + 2 * MARGIN_DB:
+		return false
+	var bone_sum := 0
+	for f: int in BONE_FREQS:
+		var b := int(bc.get(f, 999))
+		var gap := int(ac[f]) - b
+		if b < -10 or b > int(ClinicRules.BC_MAX_DB[f]) or gap < 0:
+			return false
+		if gap > GAP_NONE_DB and gap < GAP_BIG_DB:
+			return false
+		bone_sum += b
+	var bone_avg := float(bone_sum) / BONE_FREQS.size()
+	if type == &"conductive" and bone_avg > BONE_NORMAL_MAX:
+		return false
+	if type == &"mixed" and bone_avg < BONE_DOWN_MIN:
+		return false
+	for f: int in BONE_FREQS:
+		for d: int in [-MARGIN_DB, MARGIN_DB]:
+			var a := ac.duplicate()
+			a[f] = int(ac[f]) + d
+			var b := bc.duplicate()
+			b[f] = int(bc[f]) + d
+			if ClinicRules.hearing_type(a, bc) != type or ClinicRules.hearing_type(ac, b) != type:
+				return false
+	return true
 
 
 ## A story patient's own chart, as a golden card ({} if the patient file is missing).
@@ -133,7 +274,7 @@ static func golden_card(shape: StringName, serial: int) -> Dictionary:
 ## finished (a story chart shows the day's pattern and, for Marina, a clue to her call), and of
 ## those the ones not found yet; once all of those are found they come round again.
 static func golden_pool(found: PackedStringArray) -> Array:
-	var done: Array = SHAPES.filter(func(s: StringName) -> bool: return Game.is_chapter_done(String(GOLDEN[s]["patient"])))
+	var done: Array = SHAPES.filter(func(s: StringName) -> bool: return GOLDEN.has(s) and Game.is_chapter_done(String(GOLDEN[s]["patient"])))
 	var left: Array = done.filter(func(s: StringName) -> bool: return not found.has(String(s)))
 	return left if not left.is_empty() else done
 
@@ -156,11 +297,29 @@ static func make_chart(rng: RandomNumberGenerator, shape: StringName, lookalike:
 	return {}
 
 
-## The margin check: classify_shape says `shape`, it still says so with any one frequency 5 dB
+## The belt's label for one ear's chart: ClinicRules.classify_shape, except that a chart it calls
+## sloping, rising or flat is a reverse bite when both ends are REVERSE_BITE_DB worse than the
+## middle (classify_shape has no reverse bite and mostly calls one flat).
+static func shape_of(t: Dictionary) -> StringName:
+	var base := ClinicRules.classify_shape(t)
+	if base != &"sloping" and base != &"rising" and base != &"flat":
+		return base
+	for f: int in [250, 500, 1000, 2000, 4000, 8000]:
+		if not t.has(f):
+			return base
+	var mid := (float(t[1000]) + float(t[2000])) * 0.5
+	var low := (float(t[250]) + float(t[500])) * 0.5
+	var high := (float(t[4000]) + float(t[8000])) * 0.5
+	if low - mid >= REVERSE_BITE_DB and high - mid >= REVERSE_BITE_DB:
+		return &"reverse_bite"
+	return base
+
+
+## The margin check: shape_of says `shape`, it still says so with any one frequency 5 dB
 ## better or worse, the chart is clearly not normal, a notch bottoms out at NOTCH_FLOOR_MIN, and a
 ## slope never recovers 10 dB at 6k.
 static func stable(t: Dictionary, shape: StringName) -> bool:
-	if ClinicRules.classify_shape(t) != shape:
+	if shape_of(t) != shape:
 		return false
 	var worst := -999
 	for f: int in FREQS:
@@ -177,7 +336,7 @@ static func stable(t: Dictionary, shape: StringName) -> bool:
 		for d: int in [-MARGIN_DB, MARGIN_DB]:
 			var p := t.duplicate()
 			p[f] = int(t[f]) + d
-			if ClinicRules.classify_shape(p) != shape:
+			if shape_of(p) != shape:
 				return false
 	return true
 

@@ -2,20 +2,28 @@ extends TestCase
 ## (Speech) Day 3, Mike (story/level_mike.gd, story/games/mike_board.gd): the board's three beats
 ## and their solvers, the level's SPEECH plans and objection cards with real numbers (and Hoot's
 ## recheck when the player's SRT can't show the mismatch), Hoot's textbook fallback run, Hoot's
-## line lengths, the Daily Decibel's word golf card, and a smoke run of the first beats.
+## line lengths, the Daily Decibel's word golf card, a smoke run of the first beats, (clinical
+## review A1 and A2, all days) the routine lines and why the day has no masking recap, and (S7)
+## the spondee movie beat (announced only before its first play).
 
 const MikeBoard := preload("res://story/games/mike_board.gd")
 const LevelMike := preload("res://story/level_mike.gd")
+const LevelCase := preload("res://story/level_case.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 var beats: Array = []
 var phases: Array[StringName] = []
+var phase_info: Array[Dictionary] = []
 var resolved: Array[StringName] = []
+var _progress: Dictionary = {}
 
 
 func before_each() -> void:
 	beats.clear()
 	phases.clear()
+	phase_info.clear()
 	resolved.clear()
+	_progress = Game.progress.duplicate(true)
 	Events.awaiting_input.connect(_on_awaiting)
 	Events.phase_changed.connect(_on_phase)
 	Events.input_resolved.connect(_on_resolved)
@@ -26,6 +34,7 @@ func after_each() -> void:
 	Events.awaiting_input.disconnect(_on_awaiting)
 	Events.phase_changed.disconnect(_on_phase)
 	Events.input_resolved.disconnect(_on_resolved)
+	Game.progress = _progress
 	Hoot.clear()
 	Hoot.clear_bubble_hint()
 	Engine.time_scale = 1.0
@@ -37,8 +46,9 @@ func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
 	beats.append({"beat": beat, "info": info, "solver": solver})
 
 
-func _on_phase(p: StringName, _info: Dictionary) -> void:
+func _on_phase(p: StringName, info: Dictionary) -> void:
 	phases.append(p)
+	phase_info.append(info)
 
 
 func _on_resolved(beat: StringName) -> void:
@@ -109,7 +119,7 @@ func test_board_familiarize_drop_slip_then_solver() -> void:
 	assert_eq((info.get("mouse", {}) as Dictionary).get("click", ""), "word_card_windmill", "mouse route: click it")
 	b.call("_try_drop", "rainbow")
 	await wait_frames(2)
-	assert_eq(b.drop_slips, 1, "dropping a word he read fine is a slip")
+	assert_eq(b.drop_slips, 1, "dropping a word he said back fine is a slip")
 	assert_false(done[0], "still waiting for the windmill")
 	assert_true(Hoot.is_showing(), "Hoot nudges kindly")
 	(beat["solver"] as Callable).call()
@@ -133,6 +143,60 @@ func test_board_familiarize_keyboard() -> void:
 	await tap_action(&"ui_accept")
 	assert_true(b.is_dropped("windmill"), "arrows + Enter drop it")
 	assert_eq(b.drop_slips, 0)
+
+
+## Familiarisation by ear: the cards face the clinician (the sign), Hoot says each word and Mike
+## says it back (the "now saying" line, a tick per card); the windmill gets his echo but no tick.
+func test_board_familiarize_by_ear() -> void:
+	var b := MikeBoard.new()
+	add_node(b)
+	await wait_frames(2)
+	Engine.time_scale = 6.0
+	await b.run_cards(_twelve())
+	var sign := _find_label(b, MikeBoard.CUE_TEXT)
+	assert_true(sign != null and sign.is_visible_in_tree(), "the 'Mike can't see this' sign is up")
+	assert_true(_find_label(b, MikeBoard.CUE_HEAD) != null, "the clinician's side")
+	assert_true(Hoot.has_anchor("familiarize_cue"))
+	assert_true(_find_label(b, "SPONDEE LIST A: HOOT SAYS, MIKE REPEATS") != null, "the header says who says what")
+	var done := [false]
+	var sweep := func() -> void:
+		await b.say_along(0, 10, 3.0)
+		done[0] = true
+	sweep.call()
+	var seen_hoot := false
+	var seen_mike := false
+	var t0 := Time.get_ticks_msec()
+	while not done[0] and Time.get_ticks_msec() - t0 < 5000:
+		var line := b.echo_line()
+		seen_hoot = seen_hoot or line.begins_with("Hoot: \"")
+		seen_mike = seen_mike or line.contains("Mike: \"")
+		await wait_frames(1)
+	assert_true(done[0], "the sweep ends by itself")
+	assert_true(seen_hoot and seen_mike, "the line shows Hoot's word, then Mike's echo")
+	for it: Dictionary in _twelve().slice(0, 11):
+		assert_true(b.is_echoed(String(it["id"])), "Mike said %s back" % it["id"])
+	assert_false(b.is_echoed("windmill"), "the windmill isn't said yet")
+	assert_eq(b.echo_line(), "", "the line clears after the sweep")
+	b.say_word("windmill", "Wind... mill?")
+	assert_eq(b.echo_line(), "Hoot: \"windmill\"      Mike: \"Wind... mill?\"", "every word on screen, his echo too")
+	assert_false(b.is_echoed("windmill"), "no tick: he doesn't know it")
+	assert_eq(b.echo_of("rainbow"), "Rainbow!")
+	# a sweep cut short (the player clicked on) still ticks its cards and returns
+	var b2 := MikeBoard.new()
+	add_node(b2)
+	await wait_frames(2)
+	await b2.run_cards(_twelve())
+	var done2 := [false]
+	var sweep2 := func() -> void:
+		await b2.say_along(0, 10, 60.0)
+		done2[0] = true
+	sweep2.call()
+	await wait_frames(3)
+	b2.finish_say_along()
+	await wait_frames(1)
+	assert_true(done2[0], "finish_say_along ends the sweep")
+	assert_true(b2.is_echoed("raincoat"), "every card it covered is ticked")
+	b2.finish_say_along()   # a second call is harmless
 
 
 func test_board_objection_wrong_pick_then_solver_then_stamp() -> void:
@@ -242,7 +306,10 @@ func test_speech_plans_and_pta() -> void:
 	assert_true(String(r["intro"]).split(" ", false).size() <= 18)
 	assert_false((r["tones"] as Dictionary).is_empty(), "tones for the PTA")
 	assert_eq(int(l.get("hoot_turn_after", -1)), LevelMike.LEFT_SOLO_WORDS, "quick visit: Hoot finishes the left ear")
-	assert_true(LevelMike.LEFT_SOLO_WORDS >= 7, "the solo ear reaches the bracket (first miss, then up 5)")
+	assert_true(bool(l.get("hoot_turn_after_up", false)),
+		"the player's words run to the first miss and the step back up 5; Hoot finishes the bracket")
+	assert_true(LevelMike.LEFT_SOLO_WORDS >= 9, "the cap leaves room: eight words down to the first miss (90 to 20), then up 5")
+	assert_true(String(l["intro"]).contains("90"), "PTA 75 + 15 = 90: " + String(l["intro"]))
 	assert_true(String(l["intro"]).split(" ", false).size() <= 18)
 	assert_false(bool(r.get("low_start_ok", true)), "no low start before the whisper is on screen")
 	lv.set("_whisper_seen", true)
@@ -279,6 +346,66 @@ func _level_with_tones() -> Node:
 	lv.set("words", ws)
 	lv.set("dropped", ["windmill"] as Array[String])
 	return lv
+
+
+## Mike's tones with each left stamp set by `fn` (the right stamp at that frequency -> the new left).
+func _tones_with_left(fn: Callable) -> Dictionary:
+	var tones := SpeechSession.tone_results_from(_mike())
+	var ears: Dictionary = tones["ears"]
+	var right: Dictionary = (ears["right"] as Dictionary)["freqs"]
+	var left: Dictionary = (ears["left"] as Dictionary)["freqs"]
+	for f: Variant in left:
+		var st: Dictionary = left[f]
+		st["stored_db"] = fn.call(int((right[f] as Dictionary)["stored_db"]), int(st["stored_db"]))
+	return tones
+
+
+## S6: the SRT goes better ear first (the lower tone PTA), and Hoot coaches that ear; a tie keeps
+## the right first, and a missing right PTA puts the left first, named. Mike's own tones (71.7
+## against 73.3) keep his order as it was.
+func test_srt_better_ear_first() -> void:
+	var quick: Variant = Game.settings.get("quick_visit", true)
+	Game.settings["quick_visit"] = true
+	var lv := _level_with_tones()
+	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "Mike: right first, as before")
+	assert_eq(String(lv.call("first_ear_lead")), "Better ear first: the right.")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Better ear first: the right. "))
+	assert_eq(LevelMike.steps_for("right"), LevelMike.STEPS)
+	# a better left ear goes first, coached (no Hoot turn); the right becomes the solo ear
+	lv.set("tones", _tones_with_left(func(_r: int, l: int) -> int: return l - 10))
+	assert_eq(lv.call("srt_ears"), ["left", "right"] as Array[String])
+	var l: Dictionary = lv.call("speech_plan", "left")
+	var r: Dictionary = lv.call("speech_plan", "right")
+	assert_true(String(l["intro"]).begins_with("Better ear first: the left. "), String(l["intro"]))
+	assert_true(String(l["intro"]).contains("80"), "PTA 63.3 -> 65 + 15 = 80: " + String(l["intro"]))
+	assert_false(l.has("hoot_turn_after"), "the coached first ear is all the player's")
+	assert_eq(int(r.get("hoot_turn_after", -1)), LevelMike.LEFT_SOLO_WORDS, "quick visit: Hoot finishes the second ear")
+	assert_true(String(r["intro"]).begins_with("Right ear: yours"), String(r["intro"]))
+	for plan: Dictionary in [l, r]:
+		assert_true(String(plan["intro"]).split(" ", false).size() <= Hoot.MAX_WORDS, String(plan["intro"]))
+	var steps := LevelMike.steps_for("left")
+	assert_true(steps.find(&"srt_l") < steps.find(&"srt_r"), "the HUD lists SRT L first")
+	assert_eq(steps.size(), LevelMike.STEPS.size())
+	# a tie keeps the right first
+	lv.set("tones", _tones_with_left(func(rt: int, _l: int) -> int: return rt))
+	assert_eq(lv.call("srt_ears"), ["right", "left"] as Array[String], "a tie: right first")
+	assert_eq(String(lv.call("first_ear_lead")), "Right ear first.")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).begins_with("Right ear first. "))
+	# no right PTA (fewer than two of 500, 1k and 2k Hz) but a known left: the left goes first, and
+	# Hoot names the ear on screen
+	var partial := SpeechSession.tone_results_from(_mike())
+	var right_freqs: Dictionary = ((partial["ears"] as Dictionary)["right"] as Dictionary)["freqs"]
+	right_freqs.erase(1000)
+	right_freqs.erase(2000)
+	lv.set("tones", partial)
+	assert_true(is_nan(float(lv.call("ear_pta", "right"))), "no right PTA")
+	assert_eq(lv.call("srt_ears"), ["left", "right"] as Array[String], "a missing right PTA: left first")
+	assert_eq(String(lv.call("first_ear_lead")), "Left ear first.")
+	var lone: String = (lv.call("speech_plan", "left") as Dictionary)["intro"]
+	assert_true(lone.begins_with("Left ear first. "), lone)
+	assert_true(lone.split(" ", false).size() <= Hoot.MAX_WORDS, lone)
+	Game.settings["quick_visit"] = quick
+	lv.free()
 
 
 func test_objection_cards_by_sheet() -> void:
@@ -380,6 +507,242 @@ func test_recheck_on_the_speech_screen() -> void:
 	assert_true(player_session.is_done("right"), "with the first right SRT still stored")
 	Game.settings["quick_visit"] = quick
 	lv.free()
+
+
+## A stand-in clinic for the speech step: the calls _speech() makes, and a camera to switch off.
+class StubClinic extends Node3D:
+	var cam := Camera3D.new()
+	var calls: Array[String] = []
+
+	func _init() -> void:
+		add_child(cam)
+
+	func focus_camera(_shot: StringName, _seconds: float = 0.0) -> void:
+		calls.append("focus_camera")
+
+	func hold_response_button(_on: bool) -> void:
+		calls.append("hold_response_button")
+
+	func get_main_camera() -> Camera3D:
+		return cam
+
+	func take_off_earphones() -> void:
+		calls.append("take_off_earphones")
+
+
+## The level without its _ready (no clinic scene, no _run): the test hands _speech() what it needs.
+class QuietLevel extends "res://story/level_mike.gd":
+	func _ready() -> void:
+		pass
+
+
+## The speech step itself (level_mike._speech()) through the recheck gate: the player's right SRT is
+## stored 5 dB off its bracket, so it can't show the mismatch; Hoot reruns the ear on the SPEECH
+## screen, the board uses his sheet, the results keep the player's for the grade, and the left
+## ear goes on (Hoot finishing it after the step up).
+func test_speech_step_through_the_recheck_gate() -> void:
+	Engine.time_scale = 8.0
+	var quick: Variant = Game.settings.get("quick_visit", true)
+	Game.settings["quick_visit"] = true
+	var lv: Node = QuietLevel.new()
+	lv.set("patient", _mike())
+	lv.set("tones", SpeechSession.tone_results_from(_mike()))
+	var ws: Array[String] = []
+	for it: Dictionary in _twelve():
+		ws.append(String(it["id"]))
+	lv.set("words", ws)
+	lv.set("dropped", ["windmill"] as Array[String])
+	var hud: CanvasLayer = (load("res://story/hud.gd") as GDScript).new()
+	add_node(hud)
+	var dlg := DialogueBox.new()
+	add_node(dlg)
+	var clinic := StubClinic.new()
+	add_node(clinic)
+	lv.set("hud", hud)
+	lv.set("dialogue", dlg)
+	lv.set("clinic", clinic)
+	add_node(lv)
+	var done := [false]
+	var run := func() -> void:
+		await lv.call("_speech")
+		done[0] = true
+	run.call()
+	var lines: Array[String] = []
+	var spoiled := [SpeechRules.NO_SRT]   # the bracketed SRT the player's right store stepped off
+	var handled := 0
+	var t0 := Time.get_ticks_msec()
+	while not done[0] and Time.get_ticks_msec() - t0 < 90000:
+		await wait_frames(1)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		var info: Dictionary = b["info"]
+		if b["beat"] == &"dialogue":
+			lines.append("%s: %s" % [info.get("speaker", ""), info.get("text", "")])
+		elif b["beat"] == &"speech" and String(info.get("ear", "")) == "right" and String(info.get("action", "")) == "store" \
+				and spoiled[0] == SpeechRules.NO_SRT:
+			# the player steps off the bracket, then stores: an SRT that can't carry the board
+			spoiled[0] = int(info["target_db"])
+			await tap_action(&"louder")
+			await tap_action(&"store")
+			continue
+		await wait_seconds(0.05)
+		(b["solver"] as Callable).call()
+	assert_true(done[0], "the speech step finished")
+	assert_ne(spoiled[0], SpeechRules.NO_SRT, "the right ear reached its store")
+	var mine: Dictionary = lv.call("srt_sheet", "right")
+	assert_eq(int(mine.get("stored_db", -1)), spoiled[0] + 5, "the player's right SRT, 5 dB off its bracket")
+	assert_false(LevelMike._srt_shows_mismatch(mine), "it can't carry the board")
+	var re: Dictionary = lv.get("recheck")
+	assert_false(re.is_empty(), "Hoot's recheck ran")
+	assert_true(bool(re.get("by_hoot", false)), "his run is not scored")
+	assert_true(LevelMike._srt_shows_mismatch(re), "by the book, Mike's SRT shows the mismatch")
+	assert_eq(lv.call("board_sheet"), re, "the board uses the recheck")
+	var cards: Array = lv.call("objection_cards")
+	assert_true(String((cards[1] as Array)[1]["title"]).begins_with("Hoot's recheck: SRT "), "the clue names his recheck")
+	var on_record: Dictionary = ((((lv.get("results") as Dictionary).get("speech", {}) as Dictionary).get("recheck", {}) as Dictionary) \
+		.get("srt", {}) as Dictionary).get("right", {})
+	assert_eq(int(on_record.get("stored_db", -1)), int(re.get("stored_db", -2)), "his recheck is on the visit's record (the paper's note)")
+	assert_eq(Game.visit.get("audiometry", {}), lv.get("results"), "and in the visit's results")
+	assert_has(lines, "Hoot: The bracket said %d dB, not that one. I'll recheck the right ear by the book." % spoiled[0])
+	var left: Dictionary = lv.call("srt_sheet", "left")
+	assert_false(left.is_empty(), "the left ear went on after the recheck")
+	assert_true(bool(left.get("by_hoot", false)), "Hoot finished the left bracket after the step up")
+	var verdict := false
+	for l: String in lines:
+		verdict = verdict or (l.begins_with("Hoot: SRT should sit within") and l.ends_with("better. Poor agreement!"))
+	assert_true(verdict, "the agreement verdict from the recheck: %s" % str(lines))
+	assert_has(clinic.calls, "take_off_earphones")
+	assert_eq(lv.get("screen"), null, "the SPEECH screen is gone")
+	Game.settings["quick_visit"] = quick
+
+
+## The familiarisation step on the level (board, dialogue and HUD, no clinic): Hoot says the words,
+## Mike says them back and the player drops the windmill; then Mike's SRT instructions.
+func test_familiarize_flow() -> void:
+	Engine.time_scale = 6.0
+	var lv: Node = LevelMike.new()
+	var hud: CanvasLayer = (load("res://story/hud.gd") as GDScript).new()
+	add_node(hud)
+	var dlg := DialogueBox.new()
+	add_node(dlg)
+	lv.set("hud", hud)
+	lv.set("dialogue", dlg)
+	var out: Array = [null]
+	var run := func() -> void:
+		out[0] = await lv.call("_familiarize")
+	run.call()
+	var lines: Array[String] = []
+	var handled := 0
+	var t0 := Time.get_ticks_msec()
+	while out[0] == null and Time.get_ticks_msec() - t0 < 40000:
+		await wait_frames(2)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		var info: Dictionary = b["info"]
+		if b["beat"] == &"dialogue":
+			lines.append("%s: %s" % [info.get("speaker", ""), info.get("text", "")])
+		elif b["beat"] == &"familiarize_cards":
+			lines.append("(drop)")
+		await wait_seconds(0.1)
+		(b["solver"] as Callable).call()
+	assert_true(out[0] != null, "the step finished")
+	var by_ear := lines.find("Hoot: I'll say each word, nice and loud. You say it back. No peeking: the cards face me!")
+	var echo := -1
+	for i in lines.size():
+		if lines[i].begins_with("Mike: Lighthouse! Rainbow!"):
+			echo = i
+	var windmill := lines.find("Mike: Wind... mill? Never seen one. Is it a fan for a field?")
+	var drop := lines.find("(drop)")
+	var told := lines.find("Hoot: Every test word comes from this list, Mike. Say back what you hear, and guess if unsure.")
+	assert_true(by_ear >= 0 and echo > by_ear, "Hoot says the words, Mike says them back: %s" % str(lines))
+	assert_true(windmill > echo and drop > windmill, "the windmill gag, then the player's drop")
+	assert_true(told > drop, "his SRT instructions: the words come from this list")
+	assert_eq(lv.get("dropped"), ["windmill"] as Array[String])
+	assert_eq(String((Game.visit.get("medals", {}) as Dictionary).get("familiarize", "")), "gold", "yes + a clean drop")
+	var board: Control = out[0]
+	for it: Dictionary in _twelve().slice(0, 11):
+		assert_true(bool(board.call("is_echoed", String(it["id"]))), "said back: " + String(it["id"]))
+	assert_true(LevelMike.echo_line(_twelve()).begins_with("Lighthouse! Rainbow! Sunbeam! Bookshelf! Easy! Moonlight!"))
+	lv.free()
+
+
+## A 1 kHz retest after the right-ear montage that comes back 15 dB better: derived from the measured
+## result, past the 5 dB test-retest tolerance, on the record, and the PTA keeps the first stamp.
+func test_retest_1k_comes_back_better() -> void:
+	var tones := SpeechSession.tone_results_from(_mike())
+	var rt := LevelMike.retest_1k(tones)
+	assert_eq(int(rt.get("first_db", -1)), 70, "Mike's first right 1 kHz")
+	var diff := int(rt["first_db"]) - int(rt["stored_db"])
+	assert_eq(diff, LevelMike.RETEST_BETTER_DB)
+	assert_true(diff >= 10 and diff <= 15, "10-15 dB better")
+	assert_true(diff > ClinicRules.RETEST_TOLERANCE_DB, "past the 5 dB test-retest tolerance")
+	assert_eq(int(rt["diff"]), diff)
+	assert_true(bool(rt["by_hoot"]), "Hoot's retest, not the player's")
+	var other := tones.duplicate(true)
+	other["ears"]["right"]["freqs"][1000]["stored_db"] = 60
+	assert_eq(int(LevelMike.retest_1k(other)["stored_db"]), 60 - LevelMike.RETEST_BETTER_DB, "from the measured result")
+	assert_true(LevelMike.retest_1k({}).is_empty(), "no tones: no retest")
+	var line := LevelMike.retest_remark(rt)
+	assert_true(line.split(" ", false).size() <= Hoot.MAX_WORDS, "%d words: %s" % [line.split(" ", false).size(), line])
+	assert_true(line.contains("55 dB") and line.contains("15 better"), line)
+	for word: String in ["fake", "faking", "liar", "lying", "fib", "pretend"]:
+		assert_false(line.to_lower().contains(word), "never accusing: " + line)
+	var lv := _level_with_tones()
+	var pta := float(lv.call("ear_pta", "right"))
+	lv.set("tone_retest", rt)
+	lv.call("_record_retest")
+	var right: Dictionary = ((lv.get("tones") as Dictionary)["ears"] as Dictionary)["right"]
+	assert_eq(int((right.get("retest_1k", {}) as Dictionary).get("stored_db", -1)), 55, "on the record")
+	assert_near(float(lv.call("ear_pta", "right")), pta, 0.001, "the PTA keeps the first 1 kHz stamp")
+	assert_true(String((lv.call("speech_plan", "right") as Dictionary)["intro"]).contains("85"), "the SRT start is unchanged")
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	var note := String(paper.call("_retest_line", lv.get("tones")))
+	paper.free()
+	assert_true(note.contains("Right 70 then 55") and note.contains("More than 5 dB apart"), "the paper's beep card: " + note)
+	lv.free()
+
+
+## (E2) Hoot's montage waives the AudiOtron's own 1 kHz retest on both ears, so its test plan never
+## shows "1k R" and neither sheet gets a retest; the visit's one retest is Hoot's retest_1k in the
+## level, on the first air ear (the right). The second air ear owes none.
+func test_montage_retest_on_the_first_air_ear_only() -> void:
+	var src := FileAccess.get_file_as_string((LevelMike as Script).resource_path)
+	assert_eq(src.count("\"montage\": true, \"skip_hoot_retest\": true"), 2, "both ears: Hoot's montage, no AudiOtron retest")
+	Engine.time_scale = 8.0
+	var screen: CanvasLayer = (load("res://ui/audiometer/audiometer_screen.tscn") as PackedScene).instantiate()
+	add_node(screen)
+	screen.set("quick_visit", true)
+	var shown: Dictionary = {}
+	var watch := func() -> void:
+		var q: Node = screen.get("_quest")
+		for it: Dictionary in q.get("items"):
+			if String(it.get("label", "")) == "1k R":
+				shown[String(q.get("ear"))] = true
+	tree.process_frame.connect(watch)
+	var r: Dictionary = {}
+	for ear: String in ["right", "left"]:
+		screen.call("start_test", _mike(), ear, false, {"test": "ac", "hoot_turn_after": 0, "montage": true, "skip_hoot_retest": true})
+		r = await screen.test_finished
+	tree.process_frame.disconnect(watch)
+	var s: AudiometrySession = screen.get("session")
+	assert_eq(s.air_ear_order, ["right", "left"] as Array[String], "right is the first air ear")
+	assert_true(shown.is_empty(), "the test plan never shows 1k R (%s)" % [shown])
+	for ear: String in ["right", "left"]:
+		assert_true((s.retest[ear] as Dictionary).is_empty(), "the AudiOtron retests no %s 1 kHz" % ear)
+	assert_false(s.retest_required("left"), "the second air ear owes no retest")
+	var lv: Node = LevelMike.new()
+	lv.set("tones", r)
+	lv.set("tone_retest", LevelMike.retest_1k(r))
+	lv.call("_record_retest")
+	var ears: Dictionary = (lv.get("tones") as Dictionary)["ears"]
+	assert_false(((ears["right"] as Dictionary).get("retest_1k", {}) as Dictionary).is_empty(), "Hoot's retest on the right")
+	assert_true(((ears["left"] as Dictionary).get("retest_1k", {}) as Dictionary).is_empty(), "and none on the left")
+	lv.free()
+	Engine.time_scale = 1.0
 
 
 func test_hoot_lines_fit() -> void:
@@ -495,6 +858,217 @@ func test_daily_decibel_c_grade_names_the_slip() -> void:
 	await wait_frames(2)
 	sp["technique_errors"] = []
 	assert_eq(String(paper.call("speech_c_subhead", aud)), String(heads["SPEECH_C_CLEAN"]), "no slips: the long-road line")
+
+
+## The paper after a misscored right ear that Hoot rechecked: no golf name for the slip, the C
+## subhead says which way the scores went, Hoot's recheck has its note, and the legend says which
+## way a poor gap points.
+func test_daily_decibel_after_a_misscored_ear() -> void:
+	var aud := _merged()
+	var sp: Dictionary = aud["speech"]
+	var hoots: Dictionary = ((sp["srt"] as Dictionary)["right"] as Dictionary).duplicate(true)
+	var right: Dictionary = (sp["srt"] as Dictionary)["right"]
+	right["by_hoot"] = false
+	right["errors"] = [&"misscored"]
+	right["golf"] = "par"
+	assert_true(SpeechScreen.is_bracketed(right), "stored at its bracket: only the misscore is wrong")
+	sp["technique_errors"] = [{"kind": "misscored", "scored": true, "said_kind": "half"}, {"kind": "misscored", "scored": true, "said_kind": "wrong"}]
+	sp["recheck"] = {"srt": {"right": hoots}}
+	var summary := _summary(aud)
+	summary["grade"] = "C"
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var run := func() -> void:
+		await paper.call("show_summary", summary)
+	run.call()
+	await wait_seconds(1.0)
+	var k: Dictionary = (load("res://story/daily_decibel.gd") as GDScript).get_script_constant_map()
+	assert_true(_find_label(paper, "1 slip") != null, "the golf cell names the slip")
+	assert_true(_find_label(paper, "par") == null, "no par for a misscored ear")
+	var generous := String((k["SPEECH_C_MISSCORED"] as Dictionary)["generous"])
+	assert_true(_find_label(paper, generous) != null, "the C subhead says which way: misses scored as repeated")
+	var note := String(paper.call("recheck_note", sp))
+	assert_true(note.begins_with("Hoot's recheck: SRT %d dB" % int(hoots["stored_db"])), note)
+	assert_true(_find_label(paper, note) != null, "Hoot's recheck on the paper")
+	var legend := String(paper.call("agreement_legend"))
+	assert_true(legend.contains("better than beeps point to a non-organic loss") and legend.contains("instructions, language or word recognition"), legend)
+	assert_false(legend.to_lower().contains("slop"), "(A8) a sloping loss is no reason for words worse than beeps: " + legend)
+	assert_true(_find_label(paper, legend) != null, "the legend says which way a poor gap points")
+	var b := _last(&"results_continue")
+	(b["solver"] as Callable).call()
+	await wait_frames(2)
+	sp["technique_errors"] = [{"kind": "misscored", "scored": false}, {"kind": "misscored", "scored": false}, {"kind": "misscored", "scored": true}]
+	assert_eq(String(paper.call("speech_c_subhead", aud)), String((k["SPEECH_C_MISSCORED"] as Dictionary)["strict"]), "whole words scored as misses")
+	sp["technique_errors"] = [{"kind": "misscored", "scored": false}, {"kind": "misscored", "scored": true}]
+	assert_eq(String(paper.call("speech_c_subhead", aud)), String((k["SPEECH_C_SUBHEADS"] as Dictionary)["misscored"]), "a tie: the plain line")
+	sp["technique_errors"] = [{"kind": "misscored"}]
+	assert_eq(String(paper.call("speech_c_subhead", aud)), String((k["SPEECH_C_SUBHEADS"] as Dictionary)["misscored"]), "no direction on record")
+	assert_eq(String(paper.call("recheck_note", {"srt": {}})), "", "no recheck: no note")
+
+
+## The tallest Day 3 paper (a C with Hoot's recheck note, the legend and the real visit's three
+## buttons) fits a 1280x720 window without scaling down.
+func test_daily_decibel_day3_paper_fits_the_window() -> void:
+	var aud := _merged()
+	var sp: Dictionary = aud["speech"]
+	var right: Dictionary = (sp["srt"] as Dictionary)["right"]
+	sp["recheck"] = {"srt": {"right": right.duplicate(true)}}
+	right["by_hoot"] = false
+	right["errors"] = [&"misscored", &"misscored"]
+	sp["technique_errors"] = [{"kind": "misscored", "scored": true, "said_kind": "half"}, {"kind": "misscored", "scored": true, "said_kind": "wrong"}]
+	var summary := _summary(aud)
+	summary["grade"] = "C"
+	summary["next_chapter_id"] = "rocco"
+	var paper: Node = (load("res://story/daily_decibel.tscn") as PackedScene).instantiate()
+	add_node(paper)
+	var run := func() -> void:
+		await paper.call("show_summary", summary)
+	run.call()
+	await wait_seconds(1.0)
+	var texts: Array[String] = []
+	for b: Node in paper.find_children("*", "Button", true, false):
+		texts.append((b as Button).text)
+	assert_true(texts.any(func(t: String) -> bool: return t.begins_with("Next: Day")), "three buttons: %s" % str(texts))
+	assert_true(_find_label(paper, String(paper.call("recheck_note", sp))) != null, "Hoot's recheck note")
+	var sz: Vector2 = (paper.get("_paper") as Control).size
+	assert_eq(float(paper.call("fit_scale", sz, Vector2(1280, 720))), 1.0, "fits at scale 1: %s" % sz)
+	var b := _last(&"results_continue")
+	(b["solver"] as Callable).call()
+	await wait_frames(2)
+
+
+## A misscore in the session's technique errors keeps which way it went (the paper's C subhead).
+func test_misscore_error_keeps_its_direction() -> void:
+	var s := SpeechSession.new(_mike(), 5)
+	s.configure({"test": "srt", "tones": SpeechSession.tone_results_from(_mike())})
+	s.begin("right")
+	var tr := s.present()
+	assert_false(tr.is_empty())
+	var truth := bool(s.current.get("correct", false))
+	s.score(not truth)
+	var e: Dictionary = s.errors.back()
+	assert_eq(String(e["kind"]), "misscored")
+	assert_eq(e.get("scored", null), not truth, "the player's score")
+	assert_true(e.has("said_kind"), "what was said")
+
+
+# ---------------------------------------------------------------- the routine (clinical review A1, A2)
+
+## (A1, all days) A fresh speculum on the otoscope's caption, and the cases' listening-check line
+## once, before the first tone test. (A2, all days) Day 3 never masks: with Mike's tones no speech
+## level on the dial needs noise in the other ear, and the day has no bone, so no masking recap.
+func test_routine_lines_and_no_masking_recap() -> void:
+	assert_eq(LevelMike.ROUTINE_LINE, LevelCase.ROUTINE_LINE, "the cases' own words")
+	assert_true(LevelMike.SPECULUM_CAPTION.begins_with(LevelCase.OTHER_EAR_CAPTION.substr(0, 15)), "a fresh speculum, as on the case days")
+	var caption := LevelMike.SPECULUM_CAPTION % ["Mike", "RIGHT"]
+	for line: String in [LevelMike.ROUTINE_LINE, caption]:
+		assert_true(line.split(" ", false).size() <= Hoot.MAX_WORDS, line)
+	var said: Array[String] = []
+	var on_line := func(speaker: String, text: String) -> void: said.append("%s: %s" % [speaker, text])
+	Events.dialogue_line.connect(on_line)
+	Engine.time_scale = 6.0
+	var lv: Node = (load(LevelMike.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var seen := false
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < 60000 and not phases.has(&"audiometry"):
+		await wait_frames(2)
+		if not seen and phases.has(&"otoscopy"):
+			seen = _find_label(lv, caption) != null
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	Events.dialogue_line.disconnect(on_line)
+	assert_has(phases, &"audiometry", "the visit reached the first tone test")
+	assert_true(seen, "the otoscope's caption: " + caption)
+	assert_eq(said.count("Hoot: " + LevelMike.ROUTINE_LINE), 1, "the listening check, once, before the first tone test")
+	assert_false(lv.has_method("_recap"), "no masking recap on Day 3")
+	lv.queue_free()
+	await wait_seconds(0.5)
+	var tones := SpeechSession.tone_results_from(_mike())
+	var masks := false
+	for ear: String in ClinicRules.EARS:
+		var other := SpeechRules.nontest_best_threshold(tones, ear)
+		assert_true(other > 0.0 and other < SpeechRules.MAX_DB, "his other ear's air (%s)" % str(other))
+		for tr: StringName in SpeechRules.SPEECH_IA_DB:
+			for level in range(SpeechRules.MIN_DB, SpeechRules.MAX_DB + 1, 5):
+				masks = masks or SpeechRules.speech_masking_needed(level, other, tr)
+	assert_false(masks, "no SRT level needs noise with Mike's tones")
+
+
+# ---------------------------------------------------------------- the movie (clinical review S7)
+
+## The level from the top until the phase `stop`, every beat solved as the bot solves it; the
+## dialogue lines land in `said` ("Hoot: ...").
+func _play_until(stop: StringName, said: Array[String], max_ms: int = 60000) -> Node:
+	var on_line := func(speaker: String, text: String) -> void: said.append("%s: %s" % [speaker, text])
+	Events.dialogue_line.connect(on_line)
+	Engine.time_scale = 6.0
+	var lv: Node = (load(LevelMike.LEVEL_SCENE) as PackedScene).instantiate()
+	add_node(lv)
+	var t0 := Time.get_ticks_msec()
+	var handled := 0
+	while Time.get_ticks_msec() - t0 < max_ms and not phases.has(stop):
+		await wait_frames(2)
+		if handled >= beats.size():
+			continue
+		var b: Dictionary = beats[handled]
+		handled += 1
+		await wait_seconds(0.05)
+		assert_true((b["solver"] as Callable).is_valid(), "beat %s has a solver" % b["beat"])
+		(b["solver"] as Callable).call()
+	Events.dialogue_line.disconnect(on_line)
+	return lv
+
+
+func _count(beat: StringName) -> int:
+	return beats.filter(func(b: Dictionary) -> bool: return b["beat"] == beat).size()
+
+
+## Hoot's spondee movie opens the day: one announcement line before its first play, then the movie
+## (the solver skips it, so Hoot says where it lives); once seen, only the replay offer (best: skip).
+func test_movie_announced_only_when_unseen() -> void:
+	(Game.progress.get("movies_seen", []) as Array).erase(LevelMike.MOVIE_ID)
+	assert_eq(Movies.for_chapter("mike"), [LevelMike.MOVIE_ID] as Array[String], "Day 3's own movie")
+	var said: Array[String] = []
+	var lv := await _play_until(&"intro", said)
+	assert_has(phases, &"intro", "the visit went on to the intro")
+	var announce := "Hoot: New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!"
+	assert_eq(said.count(announce), 1, "the one-line announcement before the first play")
+	assert_eq(_count(&"explainer"), 1, "the movie played (its explainer beat)")
+	var i := phases.find(&"explainer")
+	assert_true(i >= 0 and i < phases.find(&"intro"), "the movie comes before the intro")
+	assert_true(i >= 0 and not bool(phase_info[i].get("seen", true)), "phase explainer, seen false")
+	assert_eq(String(phase_info[i].get("movie", "")) if i >= 0 else "", LevelMike.MOVIE_ID)
+	assert_has(said, "Hoot: Skipped! Rewatch it any time: pause menu, \"Watch Hoot's spondee movie\".", "where it lives")
+	assert_false(bool(Game.get_visit_flag("movie_watched", true)), "an early skip is not watched")
+	assert_false(Game.is_movie_seen(LevelMike.MOVIE_ID), "so it plays again next visit")
+	lv.queue_free()
+	await wait_seconds(0.3)
+	# once seen (watched to its seen_at scene): only the replay choice, no announcement
+	Game.mark_movie_seen(LevelMike.MOVIE_ID)
+	beats.clear()
+	phases.clear()
+	phase_info.clear()
+	said.clear()
+	var lv2 := await _play_until(&"intro", said)
+	assert_false(said.has(announce), "no announcement once the movie is seen")
+	var first: Dictionary = beats[0] if not beats.is_empty() else {}
+	assert_eq(first.get("beat", &""), &"choice", "the first beat is the replay choice")
+	var info: Dictionary = first.get("info", {})
+	assert_eq(String(info.get("prompt", "")), "Hoot's spondee movie again? Popcorn's on me!", "a replay offer")
+	assert_eq(info.get("options", []), ["Roll the film! (about 80 s)", "Skip it: I know my spondees."] as Array[String])
+	assert_eq(int(info.get("best", -1)), 1, "skipping is the best answer")
+	assert_eq(_count(&"explainer"), 0, "the solver skips the replay")
+	var j := phases.find(&"explainer")
+	assert_true(j >= 0 and bool(phase_info[j].get("seen", false)), "phase explainer, seen true")
+	lv2.queue_free()
+	await wait_seconds(0.3)
 
 
 # ---------------------------------------------------------------- smoke: the first beats

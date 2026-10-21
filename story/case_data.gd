@@ -12,6 +12,8 @@ extends RefCounted
 ## name_color, voice}}. History options may end with that speaker's name to have them answer.
 
 const CASES_DIR := "res://story/cases/"
+## (CASES.md question 26) dilemma_movie names one of Hoot's movies.
+const Movies := preload("res://story/explainers/movies.gd")
 const REQUIRED_KEYS: PackedStringArray = [
 	"id", "patient_id", "speaker", "case_title", "look", "intro", "history", "red_flags", "otoscopy", "tymp",
 	"instructions", "audiometry", "reveal", "evidence", "findings", "decision", "clue_pick", "payoff", "paper",
@@ -50,7 +52,8 @@ const TOP_TYPES: Dictionary = {
 	"clue_pick": TYPE_DICTIONARY, "payoff": TYPE_ARRAY, "paper": TYPE_DICTIONARY,
 	"voice": TYPE_DICTIONARY, "voices": TYPE_DICTIONARY, "always_clues": TYPE_ARRAY, "joke_line": TYPE_STRING,
 	"after_history": TYPE_ARRAY, "after_audiometry": TYPE_ARRAY, "sudden_clock": TYPE_DICTIONARY,
-	"retest": TYPE_DICTIONARY, "on_dilemma": TYPE_ARRAY, "lend_inserts": TYPE_BOOL,
+	"retest": TYPE_DICTIONARY, "on_dilemma": TYPE_ARRAY, "lend_inserts": TYPE_BOOL, "speech_check": TYPE_DICTIONARY,
+	"dilemma_movie": TYPE_STRING,
 }
 ## Sub-keys the runner reads directly, with their types (ANY_TEXT: a line or a list of lines).
 const ANY_TEXT := -1
@@ -248,6 +251,9 @@ static func scripts(c: Dictionary) -> Array:
 		if c.has(key):
 			out.append([key, c[key]])
 	_section_scripts(c, "", out)
+	var sc: Variant = c.get("speech_check", null)
+	if sc is Dictionary and (sc as Dictionary).has("after"):
+		out.append(["speech_check.after", (sc as Dictionary)["after"]])
 	var rt: Variant = c.get("retest", null)
 	if rt is Dictionary:
 		for key: String in ["intro", "before", "instructions", "payoff"]:
@@ -492,6 +498,19 @@ static func validate(c: Dictionary) -> PackedStringArray:
 			out.append("lend_inserts: never an insert into a canal full of wax")
 		if not c.has("on_dilemma"):
 			out.append("lend_inserts needs on_dilemma (the lines that say why)")
+	if c.get("dilemma_movie", null) is String:
+		if not c.has("on_dilemma"):
+			out.append("dilemma_movie needs on_dilemma (it plays right after those lines)")
+		if not Movies.has(String(c["dilemma_movie"])):
+			out.append("dilemma_movie: no such movie in story/explainers/movies.gd")
+	if c.get("speech_check", null) is Dictionary:
+		var sce: Variant = (c["speech_check"] as Dictionary).get("ears", ["right", "left"])
+		if not sce is Array or (sce as Array).is_empty() or (sce as Array).size() > 2:
+			out.append("speech_check.ears: one or both ears")
+		else:
+			for e: Variant in sce:
+				if not ClinicRules.EARS.has(String(e)) or (sce as Array).count(e) > 1:
+					out.append("speech_check.ears: right and/or left, once each")
 	var cp: Dictionary = c["clue_pick"]
 	var guaranteed := false
 	for a: Variant in cp["answers"]:
@@ -713,11 +732,13 @@ static func bone_mask_window(res: Dictionary, ear: String, f: int, masker: Strin
 
 
 ## (Day 13) The frequencies of an ear's masked bone test that open in a masking dilemma with this
-## masker (the safe noise is too weak to mask the other ear), in the test's order.
+## masker (the safe noise is too weak to mask the other ear), or with too little room for a plateau
+## (where the purple ? will show), in the test's order.
 static func dilemma_freqs(res: Dictionary, ear: String, masker: StringName) -> Array[int]:
 	var out: Array[int] = []
 	for f: int in ClinicRules.masked_freqs_needed(res, ear, &"bc_masked"):
-		if bool(bone_mask_window(res, ear, f, masker).get("dilemma", false)):
+		var w := bone_mask_window(res, ear, f, masker)
+		if not w.is_empty() and (bool(w["dilemma"]) or int(w["raises"]) < ClinicRules.PLATEAU_STEPS):
 			out.append(f)
 	return out
 

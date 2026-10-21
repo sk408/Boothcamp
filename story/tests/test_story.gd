@@ -1,6 +1,6 @@
 extends TestCase
 ## Story (story/): dialogue box keys + solvers, mini-game solvers, Hoot bubble, pause menu,
-## results paper, title beats and the voice synth's safety ceiling.
+## results paper, title beats, the voice synth's safety ceiling and Hoot's line length on Days 1-2.
 
 const Otoscopy := preload("res://story/games/otoscopy.gd")
 const Evidence := preload("res://story/games/evidence.gd")
@@ -316,6 +316,21 @@ func test_daily_decibel_replay_has_no_stamp() -> void:
 	assert_true(has_next, "Next: Day 2 is offered")
 
 
+## A paper that fits the window settles at exactly scale 1 (Days 1, 2 and 6-9 unchanged); one
+## too tall for it is scaled down until its tilted box fits with a margin.
+func test_daily_decibel_fit_scale() -> void:
+	var paper_script := load("res://story/daily_decibel.gd") as GDScript
+	var window := Vector2(1280, 720)
+	assert_eq(float(paper_script.call("fit_scale", Vector2(1178, 688), window)), 1.0, "a tall paper that fits")
+	assert_eq(float(paper_script.call("fit_scale", Vector2(1060, 595), window)), 1.0, "a short paper")
+	var tilt := absf(float(paper_script.get("TILT")))
+	for sz: Vector2 in [Vector2(1178, 710), Vector2(1212, 836)]:
+		var fit := float(paper_script.call("fit_scale", sz, window))
+		assert_true(fit < 1.0, "scaled down: %s" % sz)
+		var box := (sz.y * cos(tilt) + sz.x * sin(tilt)) * fit
+		assert_near(box, window.y - float(paper_script.get("FIT_MARGIN")), 0.01, "fits with the margin: %s" % sz)
+
+
 func test_title_screen_beats() -> void:
 	var t: Node = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
 	add_node(t)
@@ -461,3 +476,19 @@ func test_title_day3_card_face() -> void:
 	var mike := Game.chapter("mike")
 	assert_eq(ts.call("card_face", mike), "Mike")
 	assert_eq(ts.call("card_tint", mike), Color("#fff0a6"))
+
+
+## Hoot's lines on Days 1 and 2 stay at 18 words or fewer (a reader's count; "%s" is one word).
+func test_day1_and_day2_hoot_lines_are_short() -> void:
+	var re := RegEx.create_from_string("_say\\(\"Hoot\", \"((?:[^\"\\\\]|\\\\.)*)\"")
+	var letters := RegEx.create_from_string("[A-Za-z0-9]")
+	for path: String in ["res://story/level_gus.gd", "res://story/level_bonnie.gd"]:
+		var found := 0
+		for m: RegExMatch in re.search_all(FileAccess.get_file_as_string(path)):
+			found += 1
+			var words := 0
+			for w: String in m.get_string(1).split(" ", false):
+				if letters.search(w) != null:
+					words += 1
+			assert_true(words <= 18, "%s, %d words: %s" % [path.get_file(), words, m.get_string(1)])
+		assert_true(found >= 20, "found Hoot's lines in %s (%d)" % [path.get_file(), found])

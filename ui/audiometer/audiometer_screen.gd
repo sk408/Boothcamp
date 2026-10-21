@@ -300,6 +300,8 @@ func demo_start() -> void:
 ##   (polish) "skip_hoot_retest": bool  Hoot's turn / montage skips the 1 kHz retest (Day 2)
 ##   (polish) "nothing_title": String   the callout when the goal sheet needs nothing (e.g. no masking)
 ##   (polish) "start_db": int           the first level of a non-air plan (default: the textbook start)
+##   (demo) "montage_after": bool       quick visit: when the player's stamps run out (hoot_turn_after),
+##                                      Hoot fills the rest of the ear in a montage, not an x8 turn
 ## A goal sheet that is already complete (nothing to mask) finishes at once with that callout.
 func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dictionary = {}) -> void:
 	if session == null or session.patient.id != patient.id:
@@ -1201,12 +1203,12 @@ func _on_stored(ear: String, freq: int, db: int, info: Dictionary) -> void:
 	if not _coached and quick_visit and not _auto_done_ears.has(_ear):
 		_solo_stamps += 1
 		if _solo_stamps >= _solo_limit:
-			_start_hoot_turn()
+			_hoot_takes_over()
 	elif _coached and quick_visit and _plan.has("hoot_turn_after") and not _auto_done_ears.has(_ear):
 		# v3: a coached Day 2 test: the coached stamp counts towards Hoot's turn too
 		_solo_stamps += 1
 		if _solo_stamps >= _solo_limit:
-			_start_hoot_turn()
+			_hoot_takes_over()
 
 
 ## The golf callout, sub-line and fanfare for a player's stamp (fair golf: Gus's wobbles never
@@ -1505,6 +1507,16 @@ func _start_hoot_turn() -> void:
 	if not get_tree().paused:
 		Engine.time_scale = _ff_scale()
 	_auto.run(self, session, _ear)
+
+
+## Quick visit: the player's stamps are used up, so Hoot finishes the ear: an x8 turn, or (demo, plan
+## "montage_after") a montage, with the plan's "hoot_turn_text" if it has one.
+func _hoot_takes_over() -> void:
+	if not bool(_plan.get("montage_after", false)):
+		_start_hoot_turn()
+		return
+	Hoot.say(String(_plan.get("hoot_turn_text", "Nice work! I'll fill in the rest in a flash.")), Hoot.HIGH, "", "", 2.4)
+	_run_montage()   # like _start_hoot_turn(): locks the controls at once
 
 
 ## (Polish) Hoot's montage: the ear in a few seconds. Each remaining measurement is a whole textbook

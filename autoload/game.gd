@@ -9,6 +9,11 @@ extends Node
 const SAVE_VERSION := 1
 const DEFAULT_SAVE_PATH := "user://save.json"
 const AUTOPLAY_SAVE_PATH := "user://save_autoplay.json"
+## (career-fair demo, docs/DEMO.md) --demo (or ?demo in the web page's address): its own save, so a
+## booth never touches a player's progress.
+const DEMO_SAVE_PATH := "user://demo_save.json"
+## The page-address flags the web build reads (?demo); anything else in the address is ignored.
+const WEB_FLAGS: PackedStringArray = ["demo"]
 const PATIENT_DIR := "res://core/patients/"
 ## (Clinical review D1-7) Visit flag: a safety slip in the story; finish_visit() caps the grade at A.
 const NO_S_FLAG := "no_s_grade"
@@ -29,6 +34,16 @@ const PHASES: Array[StringName] = [
 	&"retest",
 	# freestyle (docs/FREESTYLE.md): the waiting room, the tool tray, the chart question, the debrief
 	&"freestyle_room", &"freestyle_tray", &"freestyle_chart", &"freestyle_debrief",
+	# Speech, Days 4-5 (CONTRACTS.md §9.21): talking the results through with the patient
+	&"counselling",
+	# the fitting (Day 14, docs/FITTING.md): picking the aid style, matching the target in the real ear
+	&"aid_style", &"real_ear",
+	# the fitting, PR 2: placing the probe tube, the loud-sound check (the counselling uses &"counselling")
+	&"probe_tube", &"loud_check",
+	# the tune-up (Day 15, docs/TUNEUP.md): the aid's datalog, the tune-up desk (the ask uses &"history")
+	&"datalog", &"tune_desk",
+	# the tune-up, part 2: the listening check (the next-visit plan uses &"counselling")
+	&"listening_check",
 ]
 
 ## (v3) The chapters ("days"), in order. A chapter is one patient visit with its own level scene.
@@ -45,6 +60,11 @@ const CHAPTERS: Array[Dictionary] = [
 	# Speech (CONTRACTS.md §9). requires is the suggested order; every chapter can be picked.
 	{"id": "mike", "day": 3, "title": "Day 3: Mike Lenders", "patient_id": "mike", "teaches": "Speech recognition threshold",
 		"scene": "res://story/level_mike.tscn", "requires": "bonnie", "face": "Mike", "tint": Color("#fff0a6")},
+	{"id": "nora", "day": 4, "title": "Day 4: Nora Nightingale", "patient_id": "nora", "teaches": "Word recognition (WRS)",
+		"scene": "res://story/level_nora.tscn", "requires": "mike", "face": "Nora", "tint": Color("#d8f0e4")},
+	# Days 4-5: word recognition, then speech in noise. Keep this line between the two markers.
+	{"id": "marco", "day": 5, "title": "Day 5: Marco Polenta", "patient_id": "marco", "teaches": "Speech in noise (SNR loss)",
+		"scene": "res://story/level_marco.tscn", "requires": "nora", "face": "Marco", "tint": Color("#ffe1b8")},
 	# --- cases (docs/CASES.md, CONTRACTS.md §11): one shared runner plays the chapter's "case" file
 	# (story/cases/<case>.json). "face" = the portrait speaker, "tint" = the day card's colour.
 	{"id": "rocco", "day": 6, "title": "Day 6: Rocco Rimshot", "patient_id": "rocco", "teaches": "Case file: ringing ears",
@@ -66,6 +86,13 @@ const CHAPTERS: Array[Dictionary] = [
 	# (clinical review C9) the masking dilemma: big gaps in both ears
 	{"id": "bev", "day": 13, "title": "Day 13: Bev Bingham", "patient_id": "bev", "teaches": "Case file: the bingo caller",
 		"scene": "res://story/level_case.tscn", "requires": "morgan", "case": "bilateral_conductive", "face": "Bev", "tint": Color("#f3e1ff")},
+	# the finale (docs/FITTING.md): Gus comes back for his hearing aids. Its own patient (gus_fit, Gus's
+	# thresholds), because chapter_for_patient("gus") is Day 1; the chapter id is the patient id, as on every day
+	{"id": "gus_fit", "day": 14, "title": "Day 14: Gus's Fitting", "patient_id": "gus_fit", "teaches": "Fitting the hearing aids",
+		"scene": "res://story/level_fitting.tscn", "requires": "bev", "face": "Gus", "tint": Color("#c9f0dc")},
+	# the follow-up (docs/TUNEUP.md): Gus two weeks after his fitting. Its own patient (gus_tune), as above
+	{"id": "gus_tune", "day": 15, "title": "Day 15: Gus's Tune-Up", "patient_id": "gus_tune", "teaches": "The follow-up visit",
+		"scene": "res://story/level_tuneup.tscn", "requires": "gus_fit", "face": "Gus", "tint": Color("#d6ecff")},
 ]
 
 ## (v3) The upgrade shop. day = the first day the paper offers it. Owning one is never needed to
@@ -137,6 +164,10 @@ func _ready() -> void:
 		save_path = AUTOPLAY_SAVE_PATH
 	elif cli.has("scene"):
 		save_path = "user://save_scene.json"  # dev scene runs (monkey, shots) never touch the player's save
+	elif is_demo():
+		save_path = DEMO_SAVE_PATH
+	if is_demo() and not cli.has("full"):
+		cli["quick"] = true   # (demo) Hoot always takes his turn: the visit fits a booth stop
 	if cli.has("save"):
 		save_path = String(cli["save"])
 	# --keep-save (integrator): an autoplay run that continues an earlier run's save (Day 1 then Day 2)
@@ -215,6 +246,20 @@ func _parse_cli() -> void:
 			cli[body.substr(0, eq)] = body.substr(eq + 1)
 		else:
 			cli[body] = true
+	if OS.has_feature("web"):
+		var search: Variant = JavaScriptBridge.eval("window.location.search", true)
+		if search is String:
+			_parse_web_query(search)
+
+
+## (demo) The web build has no command line: "?demo" (or "?demo=1&...") in the page's address sets
+## the WEB_FLAGS it names. A flag already set stays as it is.
+func _parse_web_query(search: String) -> void:
+	for part: String in search.trim_prefix("?").split("&", false):
+		var eq := part.find("=")
+		var key := part.substr(0, eq) if eq >= 0 else part
+		if key in WEB_FLAGS and not cli.has(key):
+			cli[key] = part.substr(eq + 1) if eq >= 0 else true
 
 
 func cli_flag(name: String) -> bool:
@@ -233,6 +278,18 @@ func cli_value(name: String, default_value: String = "") -> String:
 
 func is_autoplay() -> bool:
 	return cli_flag("autoplay")
+
+
+## (career-fair demo, docs/DEMO.md) The short booth version: --demo, or ?demo on the web.
+func is_demo() -> bool:
+	return cli_flag("demo")
+
+
+## (demo) A fresh start for the next visitor: every record and coin goes, the settings stay (the
+## booth's volume and key style).
+func reset_demo_visitor() -> void:
+	progress = DEFAULT_PROGRESS.duplicate(true)
+	save_game()
 
 
 # ---------------------------------------------------------------- settings

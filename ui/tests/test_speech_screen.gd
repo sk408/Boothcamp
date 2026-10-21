@@ -420,6 +420,30 @@ func test_hoot_turn_after_two_words() -> void:
 		assert_eq(int(sheet.get("strokes", -1)), 2, "the player's two words")
 
 
+## Plan hoot_turn_after_up (Day 3's solo left ear): the player keeps the ear through a miss and
+## the word stepped up after it, then Hoot finishes the bracket; the count stays the cap.
+func test_hoot_turn_after_the_step_up() -> void:
+	Game.set_setting("quick_visit", true)
+	var s := _screen()
+	s.quick_visit = true
+	s.start_test(_mike(), "left", false, _plan({"hoot_turn_after": 12, "hoot_turn_after_up": true, "level": 40}))
+	# the player's own scores drive it: missed at 40, missed again at 40 (no step up yet), up 5, then any score
+	for move: StringName in [&"present_tone", &"speech_incorrect", &"present_tone", &"speech_incorrect", &"louder", &"present_tone"]:
+		var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
+		assert_true(ok)
+		if not ok:
+			return
+		assert_false(bool(s.get_state()["hoot_turn"]), "still the player's ear before the step-up word is scored (%s)" % move)
+		await tap_action(move)
+	var shown: bool = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(shown)
+	assert_eq(int(s.get_state()["db"]), 45, "the word stepped up 5")
+	await tap_action(&"speech_correct")
+	await wait_frames(2)
+	assert_true(bool(s.get_state()["hoot_turn"]), "Hoot takes over once the step-up word is scored")
+	assert_eq(int(s.get("_player_words")), 3, "after three of the player's words, well under the cap of 12")
+
+
 func test_hoot_turn_stops_when_the_screen_leaves() -> void:
 	Game.set_setting("quick_visit", true)
 	var s := _screen()
@@ -489,18 +513,72 @@ func test_tell_points_at_the_meter_and_the_coach_comes_back() -> void:
 func test_low_start_shows_hoot_s_praise() -> void:
 	Hoot.reset_visit()   # a once-per-visit tip: an earlier test may have used it
 	var s := _screen()
-	# PTA 72: the start window is 82-97, so 40 starts low and comes up
-	s.start_test(_mike(), "right", false, _plan({"low_start_ok": true, "level": 40}))
+	# PTA 72: 15 starts low and below his SRT of 30, so he misses it and the first step goes up (S2)
+	s.start_test(_mike(), "right", false, _plan({"low_start_ok": true, "level": 15}))
+	var praised := func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting below")
 	var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
 	assert_true(ok, "the player's turn")
 	if not ok:
 		return
 	await tap_action(&"present_tone")
-	var shown: bool = await _wait_until(func() -> bool: return String(Hoot.current_tip().get("text", "")).begins_with("Starting low"), 10.0)
+	var went_up := false
+	for i in 6:
+		ok = await _wait_until(_player_turn.bind(s), 10.0)
+		assert_true(ok, "the answer is shown")
+		assert_false(bool(praised.call()), "no praise before the dial comes up")
+		# score what he said; a miss steps up 5 (the ascent), a hit steps down 10 and tries again
+		var heard := bool(s.session.current.get("correct", false))
+		await tap_action(&"speech_correct" if heard else &"speech_incorrect")
+		await _wait_until(_player_turn.bind(s), 10.0)
+		for a: StringName in ([&"softer", &"softer"] if heard else [&"louder"]):
+			await tap_action(a)
+		await tap_action(&"present_tone")
+		if not heard:
+			went_up = true
+			break
+	assert_true(went_up, "a miss to step up from")
+	var shown: bool = await _wait_until(praised, 10.0)
 	assert_true(shown, "Hoot's praise: " + String(Hoot.current_tip().get("text", "")))
 	assert_eq(String(Hoot.current_tip().get("target", "")), "speech_ladder")
-	assert_eq(s.session.combo, 1, "a clean check: combo +1")
+	assert_true(s.session.combo >= 3, "clean checks all the way: the start, the scores and the steps")
 	assert_true(s.session.errors.is_empty(), "not an srt_start error")
+
+
+## A clean store on a combo step draws a combo callout ("Clean score!"), except when the ear's
+## sheet carries earlier slips: then the store's "Oops!" stands alone.
+func test_no_combo_callout_over_an_oops_store() -> void:
+	var calls_of := func(scr: SpeechScreen) -> Array[String]:
+		var out: Array[String] = []
+		for c: Dictionary in (scr.get("_fx") as AoFx).get("_calls"):
+			out.append(String(c["text"]))
+		return out
+	var clean := _screen()
+	clean.start_test(_mike(), "left", false, _plan())
+	await wait_frames(2)
+	clean.call("_handle_technique", &"srt_store_ok", {"combo": 3, "multiplier": 1, "points": 50})
+	var words: Array[String] = calls_of.call(clean)
+	var combo_word := false
+	for w: String in words:
+		combo_word = combo_word or SpeechScreen.TEXTBOOK_CALLOUTS.has(w)
+	assert_true(combo_word, "a clean ear: the combo callout at the store: %s" % str(words))
+	clean.queue_free()
+	await wait_frames(2)
+	var s := _screen()
+	s.start_test(_mike(), "left", false, _plan())
+	# one word scored the wrong way: a misscore on this ear
+	var ok: bool = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(ok)
+	await tap_action(&"present_tone")
+	ok = await _wait_until(_player_turn.bind(s), 10.0)
+	assert_true(ok)
+	var truth := bool(s.session.current.get("correct", false))
+	await tap_action(&"speech_incorrect" if truth else &"speech_correct")
+	assert_true(s.session.slips().has(&"misscored"), "the slip is on this ear's sheet: %s" % str(s.session.slips()))
+	(s.get("_fx") as AoFx).set("_calls", [] as Array[Dictionary])
+	s.call("_handle_technique", &"srt_store_ok", {"combo": 3, "multiplier": 1, "points": 50})
+	for w: String in calls_of.call(s):
+		assert_false(SpeechScreen.TEXTBOOK_CALLOUTS.has(w), "no combo callout under the Oops!: " + w)
+	assert_eq(SpeechScreen.golf_text({"errors": [&"misscored"], "candidate_db": 30, "stored_db": 30})[0], "Oops!")
 
 
 func test_coached_ear_never_stores_off_the_bracket() -> void:

@@ -42,6 +42,15 @@ TYMP_BLOCKED_ECV = rules_number(r"const TYMP_BLOCKED_ECV := ([\d.]+)")
 TYMP_ADULT_ECV_MAX = rules_number(r"const TYMP_ADULT_ECV := Vector2\([\d.]+, ([\d.]+)\)")
 
 
+def fill(template, values):
+    """A runner format line with its %s / %d holes filled by `values` (for reading, not playing)."""
+    parts = re.split(r"%[sd]", template.replace("%%", "\0"))
+    out = parts[0]
+    for i, rest in enumerate(parts[1:]):
+        out += str(values[i]) + rest
+    return out.replace("\0", "%")
+
+
 def runner_line(name):
     """One of level_case.gd's own Hoot lines (const NAME := "..."), so this page stays in step."""
     m = re.search(r'const %s := "([^"]*)"' % name, RUNNER.read_text(encoding="utf-8"))
@@ -195,11 +204,14 @@ def render(c):
     out.append("### Test plan")
     plan(c["audiometry"], out)
     if c.get("on_dilemma"):
-        out.append("- Before the first masked bone test that would open in a masking dilemma (the stamps say "
-                   "the safe noise is too weak), once:")
+        out.append("- Before the first masked bone test that would open in a masking dilemma or with no room for a "
+                   "plateau (the stamps say the safe noise is too weak), once:")
         for e in c["on_dilemma"]:
             if isinstance(e, list) and len(e) == 2:
                 out.append(f"  - **{e[0]}:** {e[1]}")
+        if c.get("dilemma_movie"):
+            out.append(f"  - While Hoot's `{c['dilemma_movie']}` movie is unwatched: **Hoot:** {runner_line('DILEMMA_MOVIE_LEAD_IN')} "
+                       "Then the movie (Esc skips it; replay from the pause menu or the title).")
         if c.get("lend_inserts"):
             out.append(f"  - When the player owns no inserts, Hoot lends his for the visit: **Hoot:** {runner_line('LEND_INSERTS')}")
     if c["reveal"].get("pattern") == "shadow":
@@ -214,6 +226,23 @@ def render(c):
                "otherwise **Hoot:** Bone's in. Let's lay it over the air and see what it says.):")
     out.append("")
     script(c.get("after_audiometry", []), out)
+    sc = c.get("speech_check")
+    if sc:
+        ears = sc.get("ears", ["right", "left"])
+        out.append("")
+        out.append("### Words before the call (Hoot speed)")
+        out.append("")
+        out.append(f"- **Hoot:** {runner_line('SPEECH_INTRO')}")
+        out.append(f"- Hoot runs the SRT and a word score on the {' and '.join(ears)} ear"
+                   f"{'s' if len(ears) > 1 else ''}, then one Party Noise Test list, off-screen. From his sheets:")
+        if len(ears) > 1:
+            words = fill(runner_line('SPEECH_WORDS'), ["match", "[R]", "[L]", "[band]"])
+        else:
+            words = fill(runner_line('SPEECH_WORD'), ["matches", ears[0], "[score]", "[band]"])
+        out.append(f"  - **Hoot:** {words} (\"sit near\" when an SRT and the beeps disagree)")
+        out.append(f"  - **Hoot:** {fill(runner_line('SPEECH_NOISE'), ['[loss]', '[Little / Mild / Real / Big]'])}")
+        out.append("  - Cards: \"Words in quiet\" and \"Party Noise Test\" join the case file.")
+        script(sc.get("after", []), out)
     rv = c["reveal"]
     ev = c["evidence"]
     out.append("")

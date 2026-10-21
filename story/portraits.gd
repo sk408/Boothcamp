@@ -1,13 +1,13 @@
 extends RefCounted
 ## Portraits: procedural 2D character portraits for the dialogue box and Hoot's bubble.
 ## Portraits.draw(ci, "Gus", center, radius, talk_open, blink)
-## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "Mike" (Speech), "You" (a clipboard), any case-file patient
+## Speakers: "Gus", "Hoot", "Doris", "Bonnie" (v3), "Mike" (Speech), "Nora", "Marco", "Rosa" (Days 4-5), "You" (a clipboard), any case-file patient
 ## (cases: story/case_portraits.gd draws them from their case's "look"), anything else = narrator star.
 
 const CasePortraits := preload("res://story/case_portraits.gd")
 
-const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "Bonnie": Color("#ffe3c2"), "Mike": Color("#fff0a6"), "You": Color("#d9e6ff")}
-const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "Bonnie": Color("#c46a1c"), "Mike": Color("#a3333d"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
+const BG: Dictionary = {"Gus": Color("#bfeee6"), "Hoot": Color("#ffe6a8"), "Doris": Color("#ffd9f2"), "Bonnie": Color("#ffe3c2"), "Mike": Color("#fff0a6"), "Nora": Color("#d8f0e4"), "Marco": Color("#ffe1b8"), "Rosa": Color("#e3ecff"), "You": Color("#d9e6ff")}
+const NAME_COLORS: Dictionary = {"Gus": Color("#2f8f88"), "Hoot": Color("#b9773f"), "Doris": Color("#c0479c"), "Bonnie": Color("#c46a1c"), "Mike": Color("#a3333d"), "Nora": Color("#2f7d5b"), "Marco": Color("#b5652a"), "Rosa": Color("#3e5fa8"), "You": Color("#2d6cdf"), "": Color("#6b5e7e")}
 
 const INK := Color("#2e2442")
 const SKIN := Color("#ffcf9e")
@@ -36,6 +36,12 @@ static func draw(ci: CanvasItem, who: String, c: Vector2, r: float, talk_open: b
 			_bonnie(ci, c, r, talk_open, blink)
 		"Mike":
 			_mike(ci, c, r, talk_open, blink)
+		"Nora":
+			_nora(ci, c, r, talk_open, blink)
+		"Marco":
+			_marco(ci, c, r, talk_open, blink)
+		"Rosa":
+			_rosa(ci, c, r, talk_open, blink)
 		"You":
 			_clipboard(ci, c, r)
 		_:
@@ -301,6 +307,160 @@ static func _mike(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: 
 		ci.draw_colored_polygon(pts, WHITE)
 		pts.append(pts[0])
 		ci.draw_polyline(pts, INK, 3.0, true)
+
+
+## (Days 4-5) Nora Nightingale: a silver bob with a tuning-fork pin, a forest-green cardigan, a navy
+## scarf printed with cream music notes, and pearl opera glasses on a gold chain.
+static func _nora(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: bool) -> void:
+	var hair := Color("#d7dbe3")
+	var skin := Color("#f2c4a0")
+	var navy := Color("#1f2f5c")
+	var cream := Color("#f6ecd2")
+	var gold := Color("#e0b84f")
+	_shoulders(ci, c, r, Color("#2f6b4f"), r * 0.42)
+	# the opera glasses on their chain, below the scarf
+	for s: float in [-1.0, 1.0]:
+		ci.draw_line(c + Vector2(r * 0.22 * s, r * 0.5), c + Vector2(r * 0.1 * s, r * 0.8), gold, 2.0, true)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_circle(c + Vector2(r * 0.09 * s, r * 0.84), r * 0.075 + 2.5, INK)
+		ci.draw_circle(c + Vector2(r * 0.09 * s, r * 0.84), r * 0.075, Color("#f4efe6"))
+		ci.draw_arc(c + Vector2(r * 0.09 * s, r * 0.84), r * 0.045, 0, TAU, 12, gold, 2.0, true)
+	# the scarf: a navy band under the chin, a knot and its notes
+	var scarf := PackedVector2Array()
+	for i in 17:
+		var a := lerpf(0.15, PI - 0.15, i / 16.0)
+		scarf.append(c + Vector2(cos(a) * r * 0.42, r * 0.36 + sin(a) * r * 0.2))
+	for i in 17:
+		var a := lerpf(PI - 0.15, 0.15, i / 16.0)
+		scarf.append(c + Vector2(cos(a) * r * 0.34, r * 0.3 + sin(a) * r * 0.1))
+	ci.draw_colored_polygon(scarf, navy)
+	_outlined_ellipse(ci, c + Vector2(-r * 0.16, r * 0.56), Vector2(r * 0.08, r * 0.07), navy.lightened(0.08), 2.0)
+	for p: Vector2 in [Vector2(-0.3, 0.44), Vector2(0.05, 0.53), Vector2(0.28, 0.45)]:
+		var at := c + p * r
+		_ellipse(ci, at, Vector2(r * 0.03, r * 0.022), cream, -0.4)
+		ci.draw_line(at + Vector2(r * 0.026, 0), at + Vector2(r * 0.026, -r * 0.08), cream, 1.5, true)
+	var h := c + Vector2(0, -r * 0.04)
+	var hr := r * 0.44
+	# the bob: a rounded helmet that falls to the jaw, behind the face
+	ci.draw_circle(h + Vector2(0, -hr * 0.2), hr * 1.12 + 3.0, INK)
+	ci.draw_circle(h + Vector2(0, -hr * 0.2), hr * 1.12, hair)
+	for s: float in [-1.0, 1.0]:
+		_outlined_ellipse(ci, h + Vector2(hr * 0.86 * s, hr * 0.38), Vector2(hr * 0.3, hr * 0.42), hair, 3.0)
+	ci.draw_circle(h, hr + 3.0, INK)
+	ci.draw_circle(h, hr, skin)
+	# the side-swept fringe and a soft highlight
+	_ellipse(ci, h + Vector2(hr * 0.12, -hr * 0.74), Vector2(hr * 0.95, hr * 0.36), hair, -0.12)
+	ci.draw_arc(h + Vector2(-hr * 0.2, -hr * 0.95), hr * 0.5, -2.6, -1.3, 10, Color(1, 1, 1, 0.7), 3.0, true)
+	# the tuning-fork pin over her left temple (the viewer's right)
+	var pin := h + Vector2(hr * 0.62, -hr * 0.82)
+	var steel := Color("#c3ccd6")
+	ci.draw_line(pin + Vector2(-hr * 0.16, hr * 0.2), pin, INK, 5.0, true)
+	ci.draw_line(pin + Vector2(-hr * 0.16, hr * 0.2), pin, steel, 3.0, true)
+	for s: float in [-1.0, 1.0]:
+		var base := pin + Vector2(hr * 0.06 * s, hr * 0.02)
+		ci.draw_line(base, base + Vector2(hr * 0.12, -hr * 0.2), INK, 4.5, true)
+		ci.draw_line(base, base + Vector2(hr * 0.12, -hr * 0.2), steel, 2.5, true)
+	for s: float in [-1.0, 1.0]:
+		var e := h + Vector2(hr * 0.38 * s, -hr * 0.04)
+		_eye(ci, e, hr * 0.19, blink)
+		# a gently raised, theatrical brow and a lash flick
+		ci.draw_arc(e + Vector2(0, hr * 0.02), hr * 0.36, -PI * 0.8, -PI * 0.2, 10, Color("#9aa1ad"), 3.0, true)
+		ci.draw_line(e + Vector2(hr * 0.17 * s, -hr * 0.1), e + Vector2(hr * 0.29 * s, -hr * 0.19), INK, 2.5, true)
+		_ellipse(ci, h + Vector2(hr * 0.55 * s, hr * 0.33), Vector2(hr * 0.15, hr * 0.08), Color(1, 0.5, 0.5, 0.45))
+	_ellipse(ci, h + Vector2(0, hr * 0.14), Vector2(hr * 0.12, hr * 0.1), Color("#e9ab88"))
+	if talk_open:
+		# mid-song: a round open "oh"
+		_ellipse(ci, h + Vector2(0, hr * 0.52), Vector2(hr * 0.15, hr * 0.17), Color("#7a2a3a"))
+		ci.draw_arc(h + Vector2(0, hr * 0.52), hr * 0.16, 0, TAU, 16, Color("#c4506a"), 3.0, true)
+	else:
+		ci.draw_arc(h + Vector2(0, hr * 0.32), hr * 0.25, 0.5, PI - 0.5, 12, Color("#c4506a"), 4.0, true)
+
+
+## (Days 4-5) Marco Polenta: silver hair swept back, a grand curled moustache, half-moon glasses low
+## on his nose on a gold chain, a tomato-red cravat, a mustard waistcoat and his napkin tucked in.
+static func _marco(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: bool) -> void:
+	var hair := Color("#dfe3ea")
+	var skin := Color("#e9b48c")
+	var gold := Color("#b88a3a")
+	var red := Color("#e2412f")
+	_shoulders(ci, c, r, Color("#d9a23a"), r * 0.42)
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.2, r * 0.48), c + Vector2(r * 0.2, r * 0.48), c + Vector2(0, r * 0.8)]), Color("#fbf1dc"))
+	# the napkin, tucked in under the cravat
+	var nap := PackedVector2Array([c + Vector2(-r * 0.3, r * 0.6), c + Vector2(r * 0.3, r * 0.6), c + Vector2(0, r * 0.98)])
+	ci.draw_colored_polygon(nap, WHITE)
+	nap.append(nap[0])
+	ci.draw_polyline(nap, INK, 2.5, true)
+	_outlined_ellipse(ci, c + Vector2(0, r * 0.54), Vector2(r * 0.14, r * 0.08), red, 2.0)
+	var h := c + Vector2(0, -r * 0.06)
+	var hr := r * 0.47
+	for s: float in [-1.0, 1.0]:
+		_outlined_ellipse(ci, h + Vector2(hr * 0.98 * s, hr * 0.12), Vector2(hr * 0.16, hr * 0.23), skin, 2.5)
+	# the hair, swept back: a silver cap behind the head, full at the sides
+	ci.draw_circle(h + Vector2(0, -hr * 0.18), hr * 1.04 + 3.0, INK)
+	ci.draw_circle(h + Vector2(0, -hr * 0.18), hr * 1.04, hair)
+	ci.draw_circle(h, hr + 3.0, INK)
+	ci.draw_circle(h, hr, skin)
+	_ellipse(ci, h + Vector2(0, -hr * 0.8), Vector2(hr * 0.86, hr * 0.32), hair)
+	for k in 3:
+		var x := (k - 1) * hr * 0.3
+		ci.draw_line(h + Vector2(x, -hr * 0.66), h + Vector2(x * 1.15, -hr * 1.02), hair.darkened(0.18), 2.0, true)
+	for s: float in [-1.0, 1.0]:
+		var e := h + Vector2(hr * 0.36 * s, -hr * 0.16)
+		_eye(ci, e, hr * 0.19, blink)
+		ci.draw_line(e + Vector2(-hr * 0.2, -hr * 0.3), e + Vector2(hr * 0.2, -hr * 0.34), hair.darkened(0.25), hr * 0.11, true)
+		# a half-moon lens below the eye: he looks over it
+		var lc := e + Vector2(0, hr * 0.12)
+		ci.draw_arc(lc, hr * 0.22, 0.05, PI - 0.05, 12, gold, 3.0, true)
+		ci.draw_line(lc + Vector2(-hr * 0.22, 0), lc + Vector2(hr * 0.22, 0), gold, 2.5, true)
+	# the chain from the glasses down past the jaw
+	for s: float in [-1.0, 1.0]:
+		ci.draw_line(h + Vector2(hr * 0.58 * s, -hr * 0.04), h + Vector2(hr * 0.86 * s, hr * 0.86), Color("#e0b84f"), 1.5, true)
+	_outlined_ellipse(ci, h + Vector2(0, hr * 0.1), Vector2(hr * 0.13, hr * 0.12), Color("#e09f7a"), 2.0)
+	if talk_open:
+		_ellipse(ci, h + Vector2(0, hr * 0.58), Vector2(hr * 0.17, hr * 0.15), Color("#7a2a3a"))
+	else:
+		ci.draw_arc(h + Vector2(0, hr * 0.4), hr * 0.2, 0.6, PI - 0.6, 10, Color("#a8503f"), 3.0, true)
+	# the grand moustache: two wings with curled tips
+	for s: float in [-1.0, 1.0]:
+		_outlined_ellipse(ci, h + Vector2(hr * 0.2 * s, hr * 0.32), Vector2(hr * 0.26, hr * 0.1), hair, 2.5, -0.25 * s)
+		ci.draw_arc(h + Vector2(hr * 0.48 * s, hr * 0.2), hr * 0.1, -PI * 0.5 if s > 0 else PI * 1.5, PI * 0.9 if s > 0 else PI * 0.1, 10, INK, 4.5, true)
+		ci.draw_arc(h + Vector2(hr * 0.48 * s, hr * 0.2), hr * 0.1, -PI * 0.5 if s > 0 else PI * 1.5, PI * 0.9 if s > 0 else PI * 0.1, 10, hair, 2.5, true)
+
+
+## (Days 4-5) Rosa Polenta, 28: curly dark hair, a denim jacket and a new sparkly ring.
+static func _rosa(ci: CanvasItem, c: Vector2, r: float, talk_open: bool, blink: bool) -> void:
+	var hair := Color("#3a2620")
+	var skin := Color("#e2a983")
+	_shoulders(ci, c, r, Color("#4f74b8"), r * 0.42)
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.15, r * 0.5), c + Vector2(r * 0.15, r * 0.5), c + Vector2(0, r * 0.78)]), Color("#fff3dc"))
+	var h := c + Vector2(0, -r * 0.06)
+	var hr := r * 0.44
+	# the curls: a ring of round puffs behind the head
+	for k in 11:
+		var a := lerpf(-PI * 1.05, PI * 0.05, k / 10.0)
+		var p := h + Vector2(cos(a), sin(a)) * hr * 1.0 + Vector2(0, hr * 0.08)
+		ci.draw_circle(p, hr * 0.3 + 3.0, INK)
+		ci.draw_circle(p, hr * 0.3, hair)
+	ci.draw_circle(h, hr + 3.0, INK)
+	ci.draw_circle(h, hr, skin)
+	for k in 4:
+		var p := h + Vector2((k - 1.5) * hr * 0.42, -hr * 0.82)
+		ci.draw_circle(p, hr * 0.24, hair)
+	for s: float in [-1.0, 1.0]:
+		var e := h + Vector2(hr * 0.37 * s, -hr * 0.06)
+		_eye(ci, e, hr * 0.19, blink)
+		ci.draw_line(e + Vector2(hr * 0.16 * s, -hr * 0.12), e + Vector2(hr * 0.27 * s, -hr * 0.2), INK, 2.5, true)
+		_ellipse(ci, h + Vector2(hr * 0.55 * s, hr * 0.32), Vector2(hr * 0.14, hr * 0.08), Color(1, 0.5, 0.5, 0.45))
+	_ellipse(ci, h + Vector2(0, hr * 0.14), Vector2(hr * 0.11, hr * 0.09), Color("#d9946e"))
+	if talk_open:
+		_ellipse(ci, h + Vector2(0, hr * 0.5), Vector2(hr * 0.18, hr * 0.15), Color("#7a2a3a"))
+	else:
+		ci.draw_arc(h + Vector2(0, hr * 0.32), hr * 0.25, 0.5, PI - 0.5, 12, Color("#c4506a"), 4.0, true)
+	# the ring, held up: a little hand with a sparkle
+	var hand := c + Vector2(r * 0.52, r * 0.56)
+	_outlined_ellipse(ci, hand, Vector2(r * 0.11, r * 0.13), skin, 2.0)
+	ci.draw_circle(hand + Vector2(-r * 0.02, -r * 0.11), r * 0.045, Color("#f2c94c"))
+	UiDraw.star(ci, hand + Vector2(-r * 0.02, -r * 0.18), r * 0.07, Color("#bfe6ff"))
 
 
 static func _clipboard(ci: CanvasItem, c: Vector2, r: float) -> void:

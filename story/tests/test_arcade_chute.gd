@@ -32,7 +32,7 @@ func test_every_chart_has_its_shape_with_a_margin() -> void:
 			for s in SEEDS:
 				var t := ChartDeck.make_chart(_rng(s * 7 + 1), shape, lookalike)
 				assert_false(t.is_empty(), "%s chart made (seed %d)" % [shape, s])
-				assert_eq(ClinicRules.classify_shape(t), shape, "%s classifies as itself (seed %d, lookalike %s)" % [shape, s, lookalike])
+				assert_eq(ChartDeck.shape_of(t), shape, "%s classifies as itself (seed %d, lookalike %s)" % [shape, s, lookalike])
 				assert_true(ChartDeck.stable(t, shape), "%s keeps its shape 5 dB either way (seed %d)" % [shape, s])
 
 
@@ -48,8 +48,8 @@ func test_every_card_sorts_by_the_ear_it_names() -> void:
 					assert_eq((c["ac"] as Dictionary).size(), 1, "a one-ear card shows one ear")
 				else:
 					var other := "left" if sort_ear == "right" else "right"
-					assert_ne(ClinicRules.classify_shape(c["ac"][other]), shape, "the other ear on a two-ear card is a different shape")
-				assert_eq(ClinicRules.classify_shape(c["ac"][sort_ear]), shape, "the named ear has the chute's shape")
+					assert_ne(ChartDeck.shape_of(c["ac"][other]), shape, "the other ear on a two-ear card is a different shape")
+				assert_eq(ChartDeck.shape_of(c["ac"][sort_ear]), shape, "the named ear has the chute's shape")
 				assert_true(String(c["name"]).contains(" "), "a first and last name")
 				assert_false(String(c["line"]).is_empty(), "a line for the right chute")
 
@@ -95,13 +95,13 @@ func test_the_same_seed_gives_the_same_belt() -> void:
 
 
 func test_story_charts_have_the_shape_their_chute_claims() -> void:
-	for shape: StringName in ChartDeck.SHAPES:
+	for shape: StringName in ChartDeck.GOLDEN:
 		var c := ChartDeck.golden_card(shape, 1)
 		assert_false(c.is_empty(), "%s: the story patient's file loads" % shape)
 		assert_true(bool(c["golden"]), "golden")
 		var g: Dictionary = ChartDeck.GOLDEN[shape]
 		var sort_ear := String(c["sort_ear"])
-		assert_eq(ClinicRules.classify_shape(c["ac"][sort_ear]), shape, "%s's %s ear really is %s" % [g["who"], sort_ear, shape])
+		assert_eq(ChartDeck.shape_of(c["ac"][sort_ear]), shape, "%s's %s ear really is %s" % [g["who"], sort_ear, shape])
 		assert_true(ChartDeck.stable(c["ac"][sort_ear], shape), "%s's chart keeps its shape 5 dB either way" % g["who"])
 
 
@@ -118,6 +118,23 @@ func test_story_charts_wait_for_their_day() -> void:
 	assert_eq(ChartDeck.golden_pool(PackedStringArray(["sloping", "notch", "cookie_bite", "rising"])).size(), 4, "all found: all again")
 
 
+## classify_shape has no reverse bite (it calls one flat); the belt's label adds it on top and
+## leaves every other shape where classify_shape put it.
+func test_reverse_bite_is_worse_at_both_ends() -> void:
+	var rb := {250: 50, 500: 40, 1000: 25, 2000: 25, 3000: 30, 4000: 40, 6000: 50, 8000: 55}
+	assert_eq(ClinicRules.classify_shape(rb), &"flat", "the clinic rule calls it flat")
+	assert_eq(ChartDeck.shape_of(rb), &"reverse_bite", "the belt calls it a reverse bite")
+	var low_only := {250: 50, 500: 40, 1000: 25, 2000: 25, 3000: 30, 4000: 30, 6000: 30, 8000: 30}
+	assert_ne(ChartDeck.shape_of(low_only), &"reverse_bite", "worse at one end only is not a reverse bite")
+	for shape: StringName in ChartDeck.SHAPES:
+		if shape == &"reverse_bite":
+			continue
+		for s in SEEDS:
+			var t := ChartDeck.make_chart(_rng(s + 1300), shape, s % 2 == 1)
+			assert_eq(ChartDeck.shape_of(t), ClinicRules.classify_shape(t), "%s: the belt agrees with the clinic rule" % shape)
+	assert_false(ChartDeck.GOLDEN.has(&"reverse_bite"), "no story patient has a reverse bite: no story chart")
+
+
 func test_marina_shows_only_her_left_ear() -> void:
 	var c := ChartDeck.golden_card(&"rising", 1)
 	assert_eq(String(c["ear"]), "left", "Marina's card is her left ear")
@@ -130,7 +147,9 @@ func test_warmup_opens_two_chutes_and_the_run_opens_the_rest_on_time() -> void:
 	assert_eq(ChuteRules.unlocked(9.9).size(), 2, "cookie bite opens at 10 s")
 	assert_has(ChuteRules.unlocked(10.0), &"cookie_bite", "cookie bite at 10 s")
 	assert_false(ChuteRules.unlocked(24.9).has(&"rising"), "rising waits for 25 s")
-	assert_eq(ChuteRules.unlocked(25.0).size(), 4, "all four at 25 s")
+	assert_eq(ChuteRules.unlocked(25.0).size(), 4, "four at 25 s")
+	assert_false(ChuteRules.unlocked(34.9).has(&"reverse_bite"), "reverse bite waits for 35 s")
+	assert_eq(ChuteRules.unlocked(35.0).size(), 5, "all five at 35 s")
 
 
 func test_the_ramp() -> void:
@@ -294,3 +313,58 @@ func test_scores_read_numbers_as_text() -> void:
 
 func test_arcade_save_key_is_in_the_defaults() -> void:
 	assert_true(Game.DEFAULT_PROGRESS.has("arcade"), "Game.DEFAULT_PROGRESS has an arcade key, or high scores never load")
+
+
+# ================================================================ AIR & BONE (the type belt)
+
+## Every type card is what the engine's own rule says, with a margin: any one air or bone point
+## 5 dB either way keeps the call; bone is honest (never poorer than air, inside the bone limits).
+func test_every_type_card_has_its_type_with_a_margin() -> void:
+	for type: StringName in ChartDeck.TYPES:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 11 + 3), type, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var ear := String(c["sort_ear"])
+				var ac: Dictionary = c["ac"][ear]
+				var bc: Dictionary = c["bc"][ear]
+				assert_false(bc.is_empty(), "%s: bone drawn (seed %d)" % [type, s])
+				assert_eq(ClinicRules.hearing_type(ac, bc), type, "%s is %s by hearing_type (seed %d, lookalike %s)" % [type, type, s, lookalike])
+				assert_true(ChartDeck.stable_type(ac, bc, type), "%s keeps its type 5 dB either way (seed %d)" % [type, s])
+				assert_has(ChartDeck.TYPE_AIR[type], ChartDeck.shape_of(ac), "%s: the air line has a %s shape" % [type, type])
+				for f: int in bc:
+					assert_true(int(bc[f]) <= int(ac[f]), "%s: bone never poorer than air at %d" % [type, f])
+					assert_true(int(bc[f]) <= int(ClinicRules.BC_MAX_DB[f]), "%s: bone inside the oscillator's range at %d" % [type, f])
+					assert_eq(int(bc[f]) % 5, 0, "5 dB steps")
+					var masked: bool = (c["bc_masked"][ear] as Dictionary).has(f)
+					assert_eq(masked, int(ac[f]) - int(bc[f]) >= ClinicRules.BC_MASK_GAP_DB, "%s: bone masked exactly where a clinician would" % type)
+				assert_eq(String(c["ear"]), ear, "a type card is one ear")
+				assert_eq((c["ac"] as Dictionary).size(), 1, "one ear's air")
+
+
+func test_type_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"types"), [&"sensorineural", &"conductive"], "warm-up: SN and conductive")
+	assert_false(ChuteRules.unlocked(14.9, &"types").has(&"mixed"), "mixed waits for 15 s")
+	assert_eq(ChuteRules.unlocked(15.0, &"types"), ChartDeck.TYPES, "all three at 15 s")
+	var r := _rng(9)
+	for i in 300:
+		var t := r.randf_range(0.0, ChuteRules.RUN_S)
+		var spec := ChuteRules.next_spec(r, t, [], [], &"types")
+		assert_has(ChartDeck.TYPES, spec["shape"], "only types on the type belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear cards on the type belt")
+		assert_false(bool(spec["golden"]), "no story charts on the type belt")
+
+
+func test_type_belt_reads_and_lines() -> void:
+	for type: StringName in ChartDeck.TYPES:
+		assert_true(ChartDeck.CHUTE_WORDS.has(type) and ChartDeck.TELLS.has(type) and ChartDeck.LINES.has(type), "%s has a word, a tell and lines" % type)
+		for pool: String in ["plain", "lookalike"]:
+			for arch: Array in ChartDeck.TYPE_ARCH[type][pool]:
+				var ac := {}
+				for i in ChartDeck.FREQS.size():
+					ac[ChartDeck.FREQS[i]] = int(arch[0][i])
+				var bc := {}
+				for i in ChartDeck.BONE_FREQS.size():
+					bc[ChartDeck.BONE_FREQS[i]] = int(arch[1][i])
+				assert_true(ChartDeck.stable_type(ac, bc, type), "%s %s archetype %s is itself a clean chart" % [type, pool, str(arch)])
+	var gap_free := {250: 20, 500: 25, 1000: 30, 2000: 40, 3000: 50, 4000: 55, 6000: 60, 8000: 65}
+	assert_eq(ClinicRules.hearing_type(gap_free, {500: 25, 1000: 30, 2000: 35, 4000: 55}), &"sensorineural", "bone on air: SN")

@@ -132,14 +132,25 @@ signal explainer_finished(movie_id: String, skipped: bool)
 ## AudiOtron: it never emits audiometry_started and never registers as Stage.audiometer.
 signal speech_started(patient_id: String, ear: String, test: StringName, coached: bool)
 ## A word began playing (the TALK lamp). item = {id, text, ...} from SpeechMaterial; db = dial level.
+## ear: "right" / "left", or "both" for a party test. (Days 4-5) item also carries slot and list_id.
 signal speech_presented(ear: String, test: StringName, db: int, item: Dictionary)
 ## The patient's answer appeared. answer = {said, kind: &"correct" | &"half" | &"wrong" | &"silence"}.
 signal speech_response(ear: String, test: StringName, db: int, answer: Dictionary)
 ## The player scored the word. correct = what the player clicked; right = whether that matched.
+## ear: "right" / "left", or "both" for a party test.
 signal speech_scored(ear: String, test: StringName, db: int, correct: bool, right: bool)
-## A measurement was stored. sheet: CONTRACTS.md §9.5.
+## A measurement was stored. sheet: CONTRACTS.md §9.5. ear: "right" / "left", or "both" for a
+## party test. (Days 4-5) sheet also carries slot (and list_id for word and party lists).
 signal speech_stored(ear: String, test: StringName, sheet: Dictionary)
 ## Any change of the SPEECH screen's controls or progress. state shape: CONTRACTS.md §9.4.
 signal speech_state_changed(state: Dictionary)
 ## Mirror of SpeechScreen.test_finished. results: the merged visit results (§9.5).
 signal speech_finished(results: Dictionary)
+
+# ---------------------------------------------------------------- speech, Days 4-5 (CONTRACTS.md §9.10-§9.24)
+## The WORD-mode lens ("NORA-VISION") was turned on or off. ear: the test ear.
+signal speech_lens_toggled(ear: String, on: bool)
+## A party sentence was locked in. condition: "unaided" / "omni" / "directional"; count: key words billed.
+signal party_sentence_locked(condition: String, n: int, snr: int, count: int)
+## A party list finished (6 sentences). snr_loss = SIN_CONSTANT - total.
+signal party_list_done(condition: String, list_id: String, total: int, snr_loss: float)

@@ -5,10 +5,16 @@ extends CanvasLayer
 ## a coin count-up and the one-item upgrade shop (comfy chair, saved in Game.progress).
 ## Keys: B buys, A plays again, Enter / Space continues to the title. Every control is clickable.
 ## Beat: results_continue. Left alone for IDLE_S (a booth display), it returns to the title.
+## A paper too tall for the window settles scaled down to fit it (fit_scale); one that fits keeps scale 1.
 ## (v3) Day-aware: headlines per chapter, "Vol. <day>", the shop item of that day (Game.SHOP_ITEMS)
 ## and a "Next day" button (key N, returns "next") once the next chapter is open.
 ## (Speech) On a speech day (audiometry results with "speech", CONTRACTS.md §9.5) column 2 is the
 ## word golf card instead: per ear the stored SRT, the PTA, the agreement chip and words vs par.
+## (Days 4-5) A summary may bring its day's "weather" line, "subheads" (by grade) and "sports_script"
+## (a script path whose build(c2, audiometry, summary) fills column 2), so this file serves every
+## speech day unchanged (CONTRACTS.md §9.10.7, D8).
+## (demo) A summary with "demo": true (the career-fair demo, docs/DEMO.md) has no Decibucks and no
+## shop: the WANTED ad sits in their place, next to the buttons, and B buys nothing.
 
 signal _continued
 
@@ -17,6 +23,10 @@ const NEWSPRINT := Color("#f5efdf")
 const CHAIR_ID := "comfy_chair"
 const CHAIR_COST := 40
 const IDLE_S := 90.0
+## The settled paper's tilt (radians).
+const TILT := -0.015
+## Kept clear above and below a paper too tall for the window, once scaled down (px, both together).
+const FIT_MARGIN := 16.0
 
 const HEADLINES: Dictionary = {
 	"S": "TRAINEE BEEPS PERFECTLY; OWL WEEPS WITH PRIDE",
@@ -96,6 +106,12 @@ const SPEECH_C_SUBHEADS: Dictionary = {
 	"speech_marathon": "A marathon of words. Bracket quickly and store: patients tire.",
 }
 const SPEECH_C_CLEAN := "Clean steps, but a long road. Bracket quickly, then store the softest level."
+## (Speech) A C whose top slip is misscoring: which way the scores went (the errors' "scored": the
+## player's score), when one way wins; a tie keeps SPEECH_C_SUBHEADS' line.
+const SPEECH_C_MISSCORED: Dictionary = {
+	"generous": "Some misses were scored as repeated. Half a word, a wrong word or silence: all misses.",
+	"strict": "Some whole words were scored as misses. Said back in full, a word is a hit.",
+}
 
 var _paper: PanelContainer
 var _coins_label: Label
@@ -136,9 +152,10 @@ func show_summary(summary: Dictionary) -> String:
 	_paper.pivot_offset = _paper.size * 0.5
 	_paper.rotation = -0.9
 	_paper.scale = Vector2(0.15, 0.15)
+	var fit := fit_scale(_paper.size, get_viewport().get_visible_rect().size)
 	var t := create_tween().set_parallel(true)
-	t.tween_property(_paper, "rotation", -0.015, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	t.tween_property(_paper, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(_paper, "rotation", TILT, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(_paper, "scale", Vector2(fit, fit), 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Sfx.play(&"whoosh")
 	await t.finished
 	Sfx.play(&"stamp")
@@ -152,6 +169,13 @@ func show_summary(summary: Dictionary) -> String:
 	_accepting = false
 	Events.input_resolved.emit(&"results_continue")
 	return _next
+
+
+## The settled paper's scale: exactly 1 whenever its tilted box fits the window's height (a paper
+## that fits is never touched), else small enough to fit with FIT_MARGIN to spare.
+static func fit_scale(paper: Vector2, window: Vector2) -> float:
+	var tall := paper.y * cos(TILT) + paper.x * sin(absf(TILT))
+	return 1.0 if tall <= window.y else (window.y - FIT_MARGIN) / tall
 
 
 func _continue() -> void:
@@ -233,6 +257,8 @@ func _shop_cost() -> int:
 
 
 func _try_buy() -> void:
+	if bool(_summary.get("demo", false)):
+		return
 	if Game.has_upgrade(_shop_id()):
 		return
 	if Game.buy_upgrade(_shop_id(), _shop_cost()):
@@ -326,7 +352,9 @@ func _build(s: Dictionary) -> void:
 	l1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(l1)
 	var aud0: Dictionary = s.get("audiometry", {})
-	top.add_child(UiKit.label("Weather: scattered spondees, clearing later" if _is_speech(aud0) else "Weather: 100% chance of beeps", 14, Palette.INK_SOFT, 600))
+	# (Days 4-5) D8: a day may bring its own weather line in the summary
+	var weather := "Weather: scattered spondees, clearing later" if _is_speech(aud0) else "Weather: 100% chance of beeps"
+	top.add_child(UiKit.label(String(s.get("weather", weather)), 14, Palette.INK_SOFT, 600))
 	var mast := UiKit.label("THE DAILY DECIBEL", 58, Palette.INK, 700)
 	mast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(mast)
@@ -401,7 +429,13 @@ func _build(s: Dictionary) -> void:
 	c2.add_theme_constant_override("separation", 4)
 	cols.add_child(c2)
 	var aud: Dictionary = s.get("audiometry", {})
-	if _is_speech(aud):
+	var sports := String(s.get("sports_script", ""))
+	if sports != "" and not ResourceLoader.exists(sports):
+		push_warning("DailyDecibel: no sports script " + sports)
+	if sports != "" and ResourceLoader.exists(sports):
+		# (Days 4-5) D8: the day's own sports column (a script with build(c2, audiometry, summary))
+		(load(sports) as GDScript).new().call("build", c2, aud, s)
+	elif _is_speech(aud):
 		_speech_column(c2, aud["speech"] as Dictionary)
 	else:
 		c2.add_child(UiKit.label("SPORTS: THE BEEP GOLF CARD", 16, Palette.INK, 700))
@@ -479,6 +513,15 @@ func _build(s: Dictionary) -> void:
 	_buy.pressed.connect(_try_buy)
 	_buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sh.add_child(_buy)
+	if bool(s.get("demo", false)):
+		# (demo) no Decibucks and no shop at the booth: the WANTED ad takes their place
+		coins_box.visible = false
+		shop.visible = false
+		c2.remove_child(wanted)
+		wanted.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		wanted.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		wl.add_theme_font_size_override("font_size", 18)
+		bottom.add_child(wanted)
 	var btns := VBoxContainer.new()
 	btns.add_theme_constant_override("separation", 6)
 	btns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -690,19 +733,29 @@ func _golf_card(res: Dictionary) -> Control:
 
 # ---------------------------------------------------------------- (Speech) the word golf card
 
-## A speech day: the results carry stored speech sheets (§9.5).
+## A speech day: the results carry stored speech sheets (§9.5): an SRT, (Days 4-5) a word list or a
+## party list.
 static func _is_speech(aud: Dictionary) -> bool:
 	var sp: Variant = aud.get("speech", {})
 	if not (sp is Dictionary):
 		return false
-	return not ((sp as Dictionary).get("srt", {}) as Dictionary).is_empty()
+	for t: String in ["srt", "wrs", "sin"]:
+		var per: Variant = (sp as Dictionary).get(t, {})
+		if per is Dictionary and not (per as Dictionary).is_empty():
+			return true
+	return false
 
 
 func _speech_column(c2: VBoxContainer, sp: Dictionary) -> void:
 	c2.add_child(UiKit.label("SPORTS: THE WORD GOLF CARD", 16, Palette.INK, 700))
 	c2.add_child(UiKit.label("SRT per ear vs the PTA from the beeps. Words vs par; brown = Hoot's.", 14, Palette.INK_SOFT, 500))
 	c2.add_child(_speech_card(sp))
-	var al := UiKit.label("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor: recheck and refer." % [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)], 14, Palette.INK, 600)
+	var note := recheck_note(sp)
+	if note != "":
+		var rn := UiKit.label(note, 14, Palette.INK, 600)
+		rn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		c2.add_child(rn)
+	var al := UiKit.label(agreement_legend(), 14, Palette.INK, 600)
 	al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	c2.add_child(al)
 	var half := 0
@@ -741,9 +794,13 @@ func _speech_card(sp: Dictionary) -> Control:
 		grid.add_child(_speech_cell("-" if is_nan(pta) else "%d dB" % roundi(pta), "beeps", Color(Palette.INK, 0.45)))
 		grid.add_child(_speech_cell(String(ag).to_upper() if ag != &"" else "-", "%d dB apart" % absi(int(sh.get("diff", 0))), AGREE_COLORS.get(ag, Color(Palette.INK, 0.3))))
 		grid.add_child(_speech_cell("%d / %d" % [strokes, int(sh.get("par", 0))], ("+%d by Hoot" % hoot_n) if hoot_n > 0 else "words / par", Color(Palette.INK, 0.45)))
+		var slips := (sh.get("errors", []) as Array).size()
 		if not bool(sh.get("by_hoot", false)) and not SpeechScreen.is_bracketed(sh):
 			# no golf for an SRT stored off its bracket ("par" would praise it)
 			grid.add_child(_speech_cell("no bracket", "", Color(Palette.INK, 0.3)))
+		elif not bool(sh.get("by_hoot", false)) and slips > 0:
+			# a slip on this ear (a misscore, a wrong step): no golf name either, like the screen's "Oops!"
+			grid.add_child(_speech_cell("%d slip%s" % [slips, "" if slips == 1 else "s"], "no golf", Color(Palette.INK, 0.3)))
 		else:
 			grid.add_child(_speech_cell(String(golf).replace("_", " ").replace("double ", "2x ").replace("triple ", "3x ") if golf != &"" else "-", "", GOLF_COLORS.get(golf, Color(Palette.INK, 0.3))))
 	return grid
@@ -760,7 +817,46 @@ static func speech_c_subhead(aud: Dictionary) -> String:
 	for k: String in SPEECH_C_SUBHEADS:
 		if int(counts.get(k, 0)) > int(counts.get(best, 0)):
 			best = k
+	if best == "misscored":
+		var way := misscore_way(aud)
+		if way != "":
+			return String(SPEECH_C_MISSCORED[way])
 	return String(SPEECH_C_SUBHEADS[best]) if best != "" else SPEECH_C_CLEAN
+
+
+## (Speech) Which way the misscores went: "generous" (misses scored as repeated), "strict" (whole
+## words scored as misses), "" for a tie or no direction on record.
+static func misscore_way(aud: Dictionary) -> String:
+	var generous := 0
+	var strict := 0
+	for e: Variant in ((aud.get("speech", {}) as Dictionary).get("technique_errors", []) as Array):
+		var d := e as Dictionary
+		if String(d.get("kind", "")) != "misscored" or not (d.get("scored", null) is bool):
+			continue
+		if bool(d["scored"]):
+			generous += 1
+		else:
+			strict += 1
+	if generous == strict:
+		return ""
+	return "generous" if generous > strict else "strict"
+
+
+## (Speech) Hoot's recheck on the paper when he reran the right ear (speech.recheck, never graded).
+static func recheck_note(sp: Dictionary) -> String:
+	var re: Dictionary = ((sp.get("recheck", {}) as Dictionary).get("srt", {}) as Dictionary).get("right", {})
+	if re.is_empty():
+		return ""
+	var ag := String(re.get("agreement", ""))
+	return "Hoot's recheck: SRT %d dB on the right, by the book%s. Not graded." % [int(re.get("stored_db", 0)),
+		(" (%s agreement)" % ag) if ag != "" else ""]
+
+
+## (Speech) The agreement legend, with which way a gap points (two lines at the paper's width).
+static func agreement_legend() -> String:
+	return ("Agreement: SRT within %d dB of the PTA is good, up to %d fair, more is poor. Words better than beeps " \
+		+ "point to a non-organic loss; worse, to instructions, language or word recognition.") \
+		% [int(SpeechRules.AGREE_GOOD_DB), int(SpeechRules.AGREE_FAIR_DB)]
 
 
 func _speech_cell(main: String, small: String, col: Color) -> PanelContainer:

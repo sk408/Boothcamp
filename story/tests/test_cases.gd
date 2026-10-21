@@ -394,6 +394,23 @@ func test_masked_air_follows_each_stamps_transducer() -> void:
 			"%s: headphone stamps keep the headphones' rule after the loan" % ear)
 
 
+## (C9) A player who owns inserts and gets Bev's bone 5 dB high at both 500 Hz and 1 kHz: neither window
+## is a strict dilemma (init 65 < limit 70), but neither has room for a plateau, so the purple ? will
+## show and Hoot's dilemma lines must play first.
+func test_dilemma_lines_play_wherever_room_runs_out() -> void:
+	var p := _patient("bilateral_conductive")
+	var res := _perfect(p, PackedStringArray(["right"]), PackedStringArray())
+	for f: int in [500, 1000]:
+		var info: Dictionary = (res["ears"] as Dictionary)["right"]["bc"][f]
+		info["stored_db"] = int(info["stored_db"]) + 5
+	for ear: String in ["right", "left"]:
+		for f: int in [500, 1000]:
+			var w := CaseData.bone_mask_window(res, ear, f, &"inserts")
+			assert_false(bool(w["dilemma"]), "%s %d: not a strict dilemma" % [ear, f])
+			assert_true(int(w["raises"]) < ClinicRules.PLATEAU_STEPS, "%s %d: no room for a plateau" % [ear, f])
+		assert_eq(CaseData.dilemma_freqs(res, ear, &"inserts"), [1000, 500] as Array[int], "%s: the lines play" % ear)
+
+
 ## (C9) Bev's windows, with perfect stamps and with any one stamp 5 dB off: masked bone through
 ## headphones opens in a dilemma at 1 kHz (the loan's trigger, the first frequency); through inserts
 ## there is no room for a plateau at 500 Hz and 1 kHz, but room at 2k and 4k; both ears need masked
@@ -411,6 +428,7 @@ func test_dilemma_case_windows() -> void:
 		var tag := str(w)
 		assert_eq(ClinicRules.masked_freqs_needed(res, "right", &"bc_masked")[0], 1000, "1 kHz first " + tag)
 		assert_true(CaseData.dilemma_freqs(res, "right", &"phones").has(1000), "headphones: a dilemma at 1 kHz " + tag)
+		assert_false(CaseData.dilemma_freqs(res, "right", &"inserts").is_empty(), "inserts owned: the lines still play " + tag)
 		for ear: String in ["right", "left"]:
 			assert_eq(ClinicRules.masked_freqs_needed(res, ear, &"bc_masked").size(), 4, "%s masked bone %s" % [ear, tag])
 			for f: int in ClinicRules.BC_REQUIRED:
@@ -639,6 +657,11 @@ func test_validate_survives_broken_files() -> void:
 		func(c: Dictionary) -> void: c["lend_inserts"] = "yes",
 		func(c: Dictionary) -> void: c["on_dilemma"] = "x",
 		func(c: Dictionary) -> void: c["lend_inserts"] = true,
+		func(c: Dictionary) -> void: c["speech_check"] = ["right"],
+		func(c: Dictionary) -> void: c["speech_check"] = {"ears": []},
+		func(c: Dictionary) -> void: c["speech_check"] = {"ears": ["right", "right"]},
+		func(c: Dictionary) -> void: c["speech_check"] = {"ears": ["both"]},
+		func(c: Dictionary) -> void: c["speech_check"] = {"after": [["Nobody", "hi"]]},
 	]
 	for i in breaks.size():
 		var got := _wax_problems(breaks[i])
@@ -814,8 +837,45 @@ func test_hoot_lines_cover_the_retest_and_runner() -> void:
 	for w: String in ["retest.intro", "retest.otoscopy.lines", "retest.tymp.after", "retest.before.choose", "retest.payoff"]:
 		assert_true(wheres.has(w), "Hoot's %s lines are counted" % w)
 	for line: String in [LevelCase.NO_MASKED_AIR, LevelCase.MISMATCH, LevelCase.RETEST_NEUTRAL, LevelCase.BRIEFING,
-			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU, LevelCase.NO_ROOM, LevelCase.LEND_INSERTS]:
+			LevelCase.MASKING_HINT, LevelCase.NO_PLATEAU, LevelCase.NO_ROOM, LevelCase.LEND_INSERTS, LevelCase.SPEECH_INTRO]:
 		assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
+
+
+## (Clinical review C13, A4) The FIT cases check words before the call: Hoot's SRT and word score on
+## each ear, then a Party Noise Test list. Every other case is unchanged.
+func test_fit_cases_check_words_first() -> void:
+	for id: String in CaseData.chapter_case_ids():
+		var c := _case(id)
+		assert_eq(c.has("speech_check"), id in ["noise_notch", "cookie_bite"], "%s checks words" % id)
+		if c.has("speech_check"):
+			assert_eq(String(c["decision"]["answer"]), "fit", "%s: words come before a FIT call" % id)
+			assert_eq(CaseData.validate(c).size(), 0, id)
+
+
+## The speech check's lines and cards read the visit's speech sheets; every line fits Hoot's budget,
+## whatever the numbers, and none names the call.
+func test_speech_check_lines_and_cards() -> void:
+	for agree: String in ["good", "fair"]:
+		for pct: int in [100, 92, 76, 40, 0]:
+			for loss: float in [0.5, 5.5, 12.5, 25.5]:
+				var res := {"speech": {
+					"srt": {"right": {"agreement": agree}, "left": {"agreement": "good"}},
+					"wrs": {"right": {"pct": pct}, "left": {"pct": 88}},
+					"sin": {"both": {"snr_loss": loss}}}}
+				var lines := LevelCase.speech_lines(res, ["right", "left"])
+				assert_eq(lines.size(), 2, "words and noise")
+				for line: String in lines + LevelCase.speech_lines(res, ["left"]):
+					assert_true(line.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, line)
+					for word: String in ["fit", "refer", "aid", "doctor"]:
+						assert_false(line.to_lower().contains(word), "%s: never hints at the call" % line)
+				assert_true(lines[0].contains("right %d%%" % pct), lines[0])
+				assert_true(lines[0].begins_with("SRTs match") == (agree == "good"), lines[0])
+				var cards := LevelCase.speech_clues(res, ["right", "left"])
+				assert_eq(cards.size(), 2)
+				assert_eq(String(cards[0]["text"]), "Words in quiet: R %d%%, L 88%%" % pct)
+				assert_true(String(cards[1]["text"]).begins_with("Party Noise Test: %s dB" % String.num(loss, 1)), String(cards[1]["text"]))
+	assert_eq(LevelCase.speech_lines({}, ["right", "left"]).size(), 0, "no sheets, no lines")
+	assert_eq(LevelCase.speech_clues({}, ["right", "left"]).size(), 0, "no sheets, no cards")
 
 
 func test_new_patients_get_portraits() -> void:
@@ -925,6 +985,108 @@ func test_case_movies_draw_every_scene() -> void:
 			assert_eq(String(st.get("scene_title")), String(sc.get("title", "")), "%s/%s title chip" % [id, sc["id"]])
 			# the opening marquee is entered like Day 2's: curtains, no iris, the chip after the card
 			assert_eq(bool(st.call("_card_scene")), sc == m["scenes"][0], "%s/%s opens with a title card" % [id, sc["id"]])
+	st.queue_free()
+
+
+## (CASES.md question 26) Hoot's dilemma movie: registered and valid, quiet, on the title's list and in
+## Day 13's pause menu as "Day 13" (not on every case day); only Bev's case plays it, after its
+## on_dilemma lines, with a short lead-in; a broken dilemma_movie key fails validation.
+func test_dilemma_movie_on_day_13() -> void:
+	var c := _case("bilateral_conductive")
+	var id := String(c.get("dilemma_movie", ""))
+	assert_eq(id, "dilemma", "Day 13 names the movie")
+	var bad := Movies.validate(id, Stage2D.SETS)
+	assert_true(bad.is_empty(), "%s: %s" % [id, ", ".join(bad)])
+	assert_false(Movies.is_short(id), "a full movie")
+	assert_has(Movies.replay_ids(), id, "on the title's list")
+	assert_eq(Movies.day_label(id), "Day 13")
+	assert_has(Movies.for_level("bev", true), id, "Day 13's pause menu")
+	assert_false(LevelCase.CASE_MOVIES.has(id), "not a movie for every case day")
+	var player_script: GDScript = load("res://story/explainers/explainer_player.gd")
+	var cue_max := float(player_script.get_script_constant_map()["CUE_MAX_DB"])
+	var m := Movies.movie(id)
+	assert_true(float((m["scenes"][0] as Dictionary).get("duration", 0.0)) >= 7.0, "the lead-in card holds")
+	for sc: Dictionary in m["scenes"]:
+		assert_true(String(sc["teaches"]) != "", "%s teaches one idea" % sc["id"])
+		for cue: Dictionary in sc.get("cues", []):
+			assert_has(Sfx.SOUNDS, StringName(String(cue["sfx"])), "%s: a known Sfx" % sc["id"])
+			assert_true(float(cue.get("vol_db", 0.0)) <= cue_max, "%s: %s is quiet" % [sc["id"], cue["sfx"]])
+	assert_true(LevelCase.DILEMMA_MOVIE_LEAD_IN.split(" ", false).size() <= CaseData.HOOT_MAX_WORDS, "a short lead-in")
+	for cid: String in CaseData.chapter_case_ids():
+		if cid != "bilateral_conductive":
+			assert_false(_case(cid).has("dilemma_movie"), "%s plays no dilemma movie" % cid)
+	var broken := c.duplicate(true)
+	broken["dilemma_movie"] = "no_such_movie"
+	assert_true("; ".join(CaseData.validate(broken)).contains("dilemma_movie: no such movie"), "an unknown movie")
+	broken = c.duplicate(true)
+	broken.erase("on_dilemma")
+	broken["lend_inserts"] = false
+	assert_true("; ".join(CaseData.validate(broken)).contains("dilemma_movie needs on_dilemma"), "it follows the lines")
+
+
+## (CASES.md question 26) Every number Hoot's dilemma movie shows is the game's own rule on Bev's truth:
+## Bev's air and bone, the noise's start (air + 10), the rule IA of headphones and inserts, the
+## window at 1 kHz through headphones (65 to mask, hushing from 50: a dilemma) and at 2 kHz through
+## inserts (55 to 75, room for a plateau), and where the chart's purple ? goes.
+func test_dilemma_movie_numbers_match_the_rules() -> void:
+	var p := _patient("bilateral_conductive")
+	var res := _perfect(p, PackedStringArray(["right"]), PackedStringArray())
+	var by := {}
+	for sc: Dictionary in Movies.movie("dilemma")["scenes"]:
+		by[String(sc["id"])] = sc["params"]
+	var corks: Dictionary = by["corks"]
+	var loud: Dictionary = by["loud"]
+	for ear: String in ["right", "left"]:
+		assert_eq(p.get_threshold(ear, 1000), int(corks["air"]), "%s air at 1k" % ear)
+		assert_eq(p.get_bc_threshold(ear, 1000), int(corks["bone"]), "%s bone at 1k" % ear)
+	assert_true(int(corks["soft"]) < int(corks["air"]), "the soft note bonks off the cork")
+	assert_eq(int(loud["safety"]), ClinicRules.MASK_SAFETY_DB, "the noise starts 10 over the other ear's air")
+	assert_eq(int(loud["ia"]), ClinicRules.IA_RULE_DB[&"phones"], "headphones' rule IA")
+	var phones := CaseData.bone_mask_window(res, "right", 1000, &"phones")
+	assert_eq(int(loud["air"]) + int(loud["safety"]), int(phones["initial"]), "65 to mask at 1k")
+	assert_eq(int(loud["bone"]) + int(loud["ia"]), int(phones["limit"]), "hushing from 50 at 1k")
+	assert_true(bool(phones["dilemma"]), "1k through headphones is the dilemma")
+	var win: Dictionary = by["window"]
+	assert_eq([int(win["enough"]), int(win["hushed"])], [int(phones["initial"]), int(phones["limit"])], "the window scene")
+	var ins: Dictionary = by["inserts"]
+	var f := int(ins["freq"])
+	assert_eq(int(ins["ia_phones"]), ClinicRules.IA_RULE_DB[&"phones"])
+	assert_eq(int(ins["ia_inserts"]), ClinicRules.IA_RULE_DB[&"inserts"], "inserts' rule IA")
+	assert_eq(p.get_threshold("left", f), int(ins["air"]), "the other ear's air at %d" % f)
+	assert_eq(p.get_bc_threshold("right", f), int(ins["bone"]), "the test ear's bone at %d" % f)
+	var at2k := CaseData.bone_mask_window(res, "right", f, &"inserts")
+	assert_eq(int(ins["air"]) + ClinicRules.MASK_SAFETY_DB, int(at2k["initial"]), "55 to mask at 2k")
+	assert_eq(int(ins["bone"]) + int(ins["ia_inserts"]), int(at2k["limit"]), "hushing from 80 with inserts")
+	assert_eq(int(at2k["initial"]) + int(at2k["raises"]) * ClinicRules.MASK_STEP_DB, 75, "safe up to 75")
+	assert_true(int(at2k["raises"]) >= ClinicRules.PLATEAU_STEPS, "room for a plateau with inserts")
+	var phones2k := CaseData.bone_mask_window(res, "right", f, &"phones")
+	assert_eq(int(ins["bone"]) + int(ins["ia_phones"]), int(phones2k["limit"]), "hushing from 65 with headphones")
+	assert_true(int(phones2k["raises"]) < ClinicRules.PLATEAU_STEPS, "no plateau at 2k with headphones")
+	var q: Dictionary = by["question"]
+	var freqs: Array[int] = [500, 1000, 2000, 4000]
+	for i in freqs.size():
+		for ear: String in ["right", "left"]:
+			assert_eq(p.get_threshold(ear, freqs[i]), int(q["air"][i]), "%s air at %d" % [ear, freqs[i]])
+			assert_eq(p.get_bc_threshold(ear, freqs[i]), int(q["bone"][i]), "%s bone at %d" % [ear, freqs[i]])
+		var room := int(CaseData.bone_mask_window(res, "right", freqs[i], &"inserts")["raises"]) >= ClinicRules.PLATEAU_STEPS
+		assert_eq(room, bool(q["room"][i]), "the purple ? at %d (inserts)" % freqs[i])
+
+
+## Every scene of Hoot's dilemma movie draws at its start, middle and end without a script error.
+func test_dilemma_movie_draws_every_scene() -> void:
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	var m := Movies.movie("dilemma")
+	st.call("use_movie", m)
+	for sc: Dictionary in m["scenes"]:
+		st.call("show_scene", sc)
+		var d := float(sc["duration"])
+		for tt: float in [0.0, d * 0.2, d * 0.45, d * 0.7, d * 0.9, d]:
+			st.set("t", tt)
+			st.queue_redraw()
+			await wait_frames(1)
+		assert_eq(String(st.get("scene_title")), String(sc.get("title", "")), "%s title chip" % sc["id"])
 	st.queue_free()
 
 

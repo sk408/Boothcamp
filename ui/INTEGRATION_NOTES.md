@@ -32,8 +32,9 @@ Lifecycle and ownership:
 - While it is in the tree it joins the group `speech_screen` and turns the booth view on.
 
 **Plan keys:** `test` ("srt"), `tones` (required for the PTA), `list`, `words`, `exclude`, `level`,
-`transducer`, `low_start_ok` (passed to the session), `hoot_turn_after`, `intro`, `hoot_turn_text`,
-`show_agreement` (default true), `done_title` (the big callout at the end of the ear) and `fresh_session`.
+`transducer`, `low_start_ok` (passed to the session), `hoot_turn_after`, `hoot_turn_after_up`, `intro`,
+`hoot_turn_text`, `show_agreement` (default true), `done_title` (the big callout at the end of the ear) and
+`fresh_session`.
 
 **`fresh_session` (Hoot's recheck on Day 3):** this ear runs on a new session. The player's session is parked
 (`_kept_session`) and comes back, with its sheets, on the next `start_test` without the key; the status card
@@ -44,9 +45,10 @@ sheet's `bracketed` (else `candidate_db` == `stored_db`). The word card's line r
 for a clean bracketed store ("ear done: check Hoot's tips" after slips, "stored before a bracket", "the bracket
 said N dB", "stored by Hoot, by the book"). `SpeechScreen.golf_text(sheet)` gives the golf callout: "Oops!" after
 a slip or an unbracketed store, "Clean!" for a clean run over par (never "Par!" over "14 words, par 12"). The
-fanfare and confetti only play for a bracketed or Hoot store.
+fanfare and confetti only play for a bracketed or Hoot store. A clean store on an ear with earlier slips
+(`session.slips()`) gets no combo callout, so no "Clean score!" appears under its "Oops!".
 
-**Clean kinds with a message:** `srt_low_start` (a first word at least 10 dB below the PTA with `low_start_ok`) takes the clean branch
+**Clean kinds with a message:** `srt_low_start` (the first step up after a first word at least 10 dB below the PTA with `low_start_ok`) takes the clean branch
 (combo note, "+points") and shows its `message` as a once-per-visit Hoot tip pointing at `speech_ladder`.
 
 **The tell:** once per visit, the first word rightly scored as repeated `TELL_GAP_DB` (30) dB or more below the
@@ -64,6 +66,9 @@ interrupts the coach's tip, which comes back after.
   - After 1.8 s `Engine.time_scale` is multiplied by 8 (base × 8, so x48 under the bot's `--speed=6`).
   - No player beat is emitted before or during his turn.
 - **N > 0:** Hoot takes over once the player has presented N words on this ear and scored the last one.
+- **With `hoot_turn_after_up`:** Hoot also takes over as soon as the player has scored a word stepped up after
+  a miss (the bracket's first "missed: up 5"); N stays the cap. Day 3's solo left ear uses N = 12
+  (`LevelMike.LEFT_SOLO_WORDS`).
 - **During his turn:**
   - `session.scoring` is false, so his words never count, and the sheet has `by_hoot: true`.
   - He presses the screen's own buttons, following `recommended_action()`, on pausable timers.
@@ -158,3 +163,11 @@ optional and additive:
   Morgan's deaf ear answered unmasked (the shadow) but gave no response masked, and the line was joining the
   arrows. Only a masked no-response mark changes anything, so Days 1-11 and Freestyle draw as before. The shadow
   itself is drawn by the case board, not the audiogram (the audiogram still hides an unmasked O under a masked mark).
+- **(C13, done, small) `SpeechScreen.run_hidden` names the patient.** Only `start_test` set the bubble's speaker, so a
+  hidden run before any `start_test` (Day 5's montage, the cases' words check) labelled the bubble "Mike says".
+  `run_hidden` now sets it from `patient.short_name()` too. Nothing else changes.
+- **(Career-fair demo, done, small) Plan key `montage_after`.** On a quick visit, when the player's stamps run out
+  (`hoot_turn_after`), Hoot fills in the rest of the ear in a montage instead of the x8 turn, saying the plan's
+  `hoot_turn_text` (default "Nice work! I'll fill in the rest in a flash."). Both places that started Hoot's
+  turn now call `_hoot_takes_over()`, which starts the x8 turn exactly as before unless the plan has the key, so
+  every existing plan plays as it did. Used by `story/level_demo.gd`'s right ear (docs/DEMO.md).
