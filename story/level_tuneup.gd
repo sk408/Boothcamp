@@ -6,7 +6,7 @@ extends Node
 ## contract, like level_fitting.gd:
 ##   world:  res://world/clinic.tscn (Clinic API §6 and its extras, called by name)
 ##   global: Game (visit, scores), Events (phases, awaiting_input), Hoot (tips)
-## Blocking beats: dialogue, choice, tune_desk, results_continue.
+## Blocking beats: explainer (Hoot's movie, or a choice on replays), dialogue, choice, tune_desk, results_continue.
 ## Scores (TUNEUP.md §4): accuracy from the desk's tickets, technique from the opening question and
 ## staying safe (no WHOLE AID UP), efficiency from tools against par, care from comfort (the first
 ## WHOLE AID UP costs a point).
@@ -15,6 +15,7 @@ const Hud := preload("res://story/hud.gd")
 const TuneDesk := preload("res://story/games/tune_desk.gd")
 const BingoNight := preload("res://story/games/bingo_night.gd")
 const CaseProps := preload("res://story/games/case_props.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const RESULTS_SCENE := "res://story/daily_decibel.tscn"
@@ -22,6 +23,13 @@ const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_tuneup.tscn"
 const PAPER_SCRIPT := "res://story/papers/paper_tuneup.gd"
 const PATIENT_ID := "gus_tune"
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
+## Hoot's tune-up movie (story/explainers/movies/tuneup.gd), before Gus arrives: the lead-in the
+## first time, a replay offer once watched (as Day 5 plays its party movie).
+const MOVIE_ID := "tuneup"
+const MOVIE_NEW := "New trick today: the TUNE-UP. A quick cartoon first, then Gus is back!"
+const MOVIE_AGAIN := "Hoot's tune-up movie again? Popcorn's on me!"
+const MOVIE_SKIPPED := "Skipped! Rewatch it any time: pause menu, \"Watch {title}\"."
 
 const STEPS: Array[StringName] = [&"hello", &"ask", &"log", &"tune", &"bingo"]
 const STEP_LABELS: Dictionary = {&"hello": "Hello", &"ask": "Ask", &"log": "Diary", &"tune": "Tune", &"bingo": "Bingo"}
@@ -115,12 +123,38 @@ func _shot(shot_name: String, delay: float = 0.0) -> void:
 
 
 func _run() -> void:
+	await _movie()
 	await _intro()
 	await _ask()
 	await _datalog()
 	await _tune()
 	await _bingo()
 	await _results()
+
+
+# ---------------------------------------------------------------- 0. Hoot's movie
+
+func _movie() -> void:
+	if not Movies.has(MOVIE_ID):
+		return
+	var seen := Game.is_movie_seen(MOVIE_ID)
+	_phase(&"explainer", {"movie": MOVIE_ID, "source": "day_start", "seen": seen})
+	clinic.call("focus_camera", &"door", 0.0)
+	if seen:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(MOVIE_ID) / 10.0) * 10.0),
+			"Skip it: I know my tune-ups."]
+		var c: int = await dialogue.choose(MOVIE_AGAIN, opts, 1)
+		if c != 0:
+			return
+	else:
+		await _say("Hoot", MOVIE_NEW)
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", MOVIE_ID, "day_start")
+	player.queue_free()
+	Game.set_visit_flag("movie_watched", bool(r.get("watched", not bool(r.get("skipped", false)))))
+	if bool(r.get("skipped", false)):
+		await _say("Hoot", MOVIE_SKIPPED.replace("{title}", Movies.title(MOVIE_ID)))
 
 
 # ---------------------------------------------------------------- 1. two weeks later

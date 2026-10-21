@@ -24,6 +24,8 @@ const MOVIES: Dictionary = {
 	"shapes": "res://story/explainers/movies/shapes.gd",
 	## (cases, CASES.md question 26) Day 13's masking-dilemma movie, as the dilemma first shows
 	"dilemma": "res://story/explainers/movies/dilemma.gd",
+	## (Day 15, docs/TUNEUP.md) Hoot's tune-up movie, before Gus arrives for his follow-up
+	"tuneup": "res://story/explainers/movies/tuneup.gd",
 }
 ## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
 ## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.
