@@ -380,6 +380,19 @@ func test_mask_status_light() -> void:
 	assert_eq(s.mask_status(), &"ok")
 
 
+## (Day 13) After Hoot lends his inserts, the lamp judges air stamped through headphones by the
+## headphones' rule, as the masked-air sheet does (Bev, 1 kHz: 55 - 40 >= 10 although 55 - 55 < 10).
+func test_mask_lamp_follows_each_stamps_transducer() -> void:
+	var s := AudiometrySession.new(Game.load_patient("bev") as PatientProfile, 7)
+	s.sim = FixedSim.new(s.patient)
+	_through_unmasked_bone(s)
+	s.configure({"test": &"ac_masked", "air_transducer": &"inserts"})
+	s.set_freq(1000)
+	assert_has(ClinicRules.masked_freqs_needed(s.results_view(), "right", &"ac_masked", &"inserts"), 1000)
+	assert_true(s.masking_needed_here("right", 1000), "the headphone stamp still needs masking")
+	assert_eq(s.mask_status(), &"needed", "the lamp agrees with the sheet")
+
+
 ## The real (wobbly) patient, following the coach through all of Day 2's tests: always finishes,
 ## never blasts, and the masked bone lands near her right cochlea (a plateau found one step up,
 ## after a wobble at threshold, is normal: within 5 dB most of the time, never more than 10).

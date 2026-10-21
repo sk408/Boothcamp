@@ -812,7 +812,8 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 
 
 ## (Clinical review C9) Before an ear's masked bone test: when the stamps say it opens in a masking
-## dilemma through today's earphones (CaseData.dilemma_freqs), the case's on_dilemma lines, once a
+## dilemma, or with no room for a plateau, through today's earphones (CaseData.dilemma_freqs), so
+## before any purple ? can show, the case's on_dilemma lines, once a
 ## visit; then, if the case lends them and the player has no inserts, Hoot's own pair for the rest of
 ## the visit (a loan, never an upgrade). Read from the stamps before the test, so Hoot's turns get it
 ## too (the session's masking_dilemma observation fires only on the player's own tones).

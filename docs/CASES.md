@@ -236,7 +236,8 @@ runner adds masked bone on the poorer ear wherever the rules ask. Every shape be
   2k (55 to 80) and 4k (45 to 70) have room for a full plateau. Pinned for every single 5 dB wobble
   (`test_dilemma_case_windows`).
 - The loan (`lend_inserts`): before the first masked bone test, the runner reads the windows from the stamps
-  (`CaseData.dilemma_freqs`, which mirrors the session). When it opens in a dilemma, Hoot says the case's
+  (`CaseData.dilemma_freqs`, which mirrors the session). When it opens in a dilemma, or with no room for a
+  plateau (a player who owns inserts and gets a bone stamp of 15 at 500 Hz and 1 kHz), Hoot says the case's
   `on_dilemma` lines (once; also for a player who owns inserts), then, if the player owns none, lends his inserts
   for the rest of the visit (`LEND_INSERTS`; never the save's upgrades, never into wax).
 - Masked air: the air was measured through headphones before the loan, and each air stamp is judged by its own
