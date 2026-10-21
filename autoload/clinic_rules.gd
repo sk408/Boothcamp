@@ -629,3 +629,49 @@ static func response_threshold(t_ac: int, t_bc: int, n_ac: int, n_bc: int, bone:
 	var occl := oe if (bone and masked and n_gap <= OCCLUSION_MAX_GAP_DB) else 0
 	var via_cross := n_cochlea + ia_test - occl
 	return {"threshold": mini(via_test, via_cross), "test": via_test, "cross": via_cross, "by": &"test" if via_test <= via_cross else &"cross"}
+
+
+# ---------------------------------------------------------------- (E18) chart notes
+
+## (E18) The notes strip under a finished audiogram (ASHA 2005 record keeping; BSA 2018, 10.4 and
+## 10.5): the air transducer, the mastoids the bone oscillator sat on, and how reliable the answers
+## looked, from the 1 kHz retest and the patient's false alarms per minute of testing.
+const RELIABILITY_POOR_RETEST_DB := 10   ## a retest off by more than this: poor (more than RETEST_TOLERANCE_DB: fair)
+const RELIABILITY_FAIR_FA_PER_MIN := 1.0
+const RELIABILITY_POOR_FA_PER_MIN := 2.0
+
+
+## "good", "fair" or "poor" for a session's results (AudiometrySession.results()).
+static func reliability(results: Dictionary) -> String:
+	var worst := 0
+	var ears: Dictionary = results.get("ears", {})
+	for e: String in ears:
+		var rt: Dictionary = (ears[e] as Dictionary).get("retest_1k", {})
+		if not rt.is_empty():
+			worst = maxi(worst, absi(int(rt.get("diff", 0))))
+	var minutes := maxf(1.0, float(results.get("duration_s", 0.0)) / 60.0)
+	var fa_rate := float(results.get("false_alarms", 0)) / minutes
+	if worst > RELIABILITY_POOR_RETEST_DB or fa_rate >= RELIABILITY_POOR_FA_PER_MIN:
+		return "poor"
+	if worst > RETEST_TOLERANCE_DB or fa_rate >= RELIABILITY_FAIR_FA_PER_MIN:
+		return "fair"
+	return "good"
+
+
+## The one-line chart note, e.g. "Headphones  ·  Bone on the left mastoid  ·  Reliability: good".
+static func chart_notes(results: Dictionary) -> String:
+	var parts: Array[String] = []
+	parts.append("Insert earphones" if String(results.get("air_transducer", "phones")) == "inserts" else "Headphones")
+	var ears: Dictionary = results.get("ears", {})
+	var mastoids: Array[String] = []
+	for e: String in ["right", "left"]:
+		var ear: Dictionary = ears.get(e, {})
+		if not (ear.get("bc", {}) as Dictionary).is_empty() or not (ear.get("bc_masked", {}) as Dictionary).is_empty():
+			mastoids.append(e)
+	if mastoids.size() == 2:
+		parts.append("Bone on both mastoids")
+	elif mastoids.size() == 1:
+		parts.append("Bone on the %s mastoid" % mastoids[0])
+	parts.append("Reliability: %s" % reliability(results))
+	return "  \u00b7  ".join(parts)
+

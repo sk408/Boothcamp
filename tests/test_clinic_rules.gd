@@ -74,3 +74,30 @@ func test_degree_names() -> void:
 	assert_eq(ClinicRules.degree_name(20), "normal")
 	assert_eq(ClinicRules.degree_name(35), "mild")
 	assert_eq(ClinicRules.degree_name(95), "profound")
+
+
+## (E18) The chart notes under a finished audiogram: transducer, mastoids, reliability.
+func test_chart_notes() -> void:
+	var r := {"air_transducer": "phones", "duration_s": 600.0, "false_alarms": 2, "ears": {
+		"right": {"retest_1k": {"diff": 0}, "bc": {}, "bc_masked": {1000: {}}},
+		"left": {"retest_1k": {}, "bc": {1000: {}}, "bc_masked": {}}}}
+	assert_eq(ClinicRules.reliability(r), "good", "retest agreed, 0.2 false alarms a minute")
+	var n := ClinicRules.chart_notes(r)
+	assert_true(n.begins_with("Headphones"), n)
+	assert_true(n.contains("Bone on both mastoids"), n)
+	assert_true(n.ends_with("Reliability: good"), n)
+	r["air_transducer"] = "inserts"
+	(r["ears"]["right"] as Dictionary)["bc_masked"] = {}
+	n = ClinicRules.chart_notes(r)
+	assert_true(n.begins_with("Insert earphones") and n.contains("Bone on the left mastoid"), n)
+	(r["ears"]["right"] as Dictionary)["retest_1k"] = {"diff": 10}
+	assert_eq(ClinicRules.reliability(r), "fair", "a retest 10 dB off")
+	(r["ears"]["right"] as Dictionary)["retest_1k"] = {"diff": 15}
+	assert_eq(ClinicRules.reliability(r), "poor", "a retest 15 dB off")
+	(r["ears"]["right"] as Dictionary)["retest_1k"] = {"diff": 0}
+	r["false_alarms"] = 12
+	assert_eq(ClinicRules.reliability(r), "fair", "1.2 false alarms a minute")
+	r["false_alarms"] = 25
+	assert_eq(ClinicRules.reliability(r), "poor", "2.5 false alarms a minute")
+	var air_only := {"air_transducer": "phones", "ears": {"right": {}, "left": {}}}
+	assert_false(ClinicRules.chart_notes(air_only).contains("Bone"), "no bone, no mastoid note")
