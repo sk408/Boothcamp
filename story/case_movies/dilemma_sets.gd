@@ -20,6 +20,11 @@ const RULER_X1 := 790.0
 const RULER_LO := 40.0
 const RULER_HI := 90.0
 const ROW_H := 34.0
+## The window chart's rows: Lefty's noise, Righty's noise, where both are fine (the brace's label
+## stays clear of the ruler).
+const ROW_LEFTY_Y := 140.0
+const ROW_RIGHTY_Y := 210.0
+const ROW_BOTH_Y := 270.0
 ## Bev's chart (the "question" scene): the four bone frequencies and the dB range shown.
 const CHART := Rect2(190, 74, 520, 290)
 const CHART_FREQS: Array[String] = ["500", "1k", "2k", "4k"]
@@ -181,11 +186,11 @@ func _set_dl_window() -> void:
 	var hushed := int(params.get("hushed", 50))
 	_ruler(_pop(0.2))
 	s._chip(String(params.get("transducer", "HEADPHONES")), Vector2(440, 74), Palette.SKY, 18, Stage2D.INK, _pop(0.4))
-	_row(140.0, "LEFTY", float(enough), Palette.SUNNY, Palette.MINT, "too little: the Ghost!", "enough: busy", _k(1.0, 1.8))
-	_row(222.0, "RIGHTY", float(hushed), Palette.MINT, Palette.CORAL, "safe", "too much: hushed", _k(3.2, 4.0))
+	_row(ROW_LEFTY_Y, "LEFTY", float(enough), Palette.SUNNY, Palette.MINT, "too little: the Ghost!", "enough: busy", _k(1.0, 1.8))
+	_row(ROW_RIGHTY_Y, "RIGHTY", float(hushed), Palette.MINT, Palette.CORAL, "safe", "too much: hushed", _k(3.2, 4.0))
 	if t > 1.9 and t < 6.4:
-		s._ghost(Vector2(_rx(enough) - 46.0, 140.0 - 52.0 + sin(t * 4.0) * 3.0 * s._motion), 20.0, {"boo": true})
-	_window_row(304.0, float(enough), float(hushed), _k(7.0, 7.4), 7.6)
+		s._ghost(Vector2(_rx(enough) - 46.0, ROW_LEFTY_Y - 52.0 + sin(t * 4.0) * 3.0 * s._motion), 20.0, {"boo": true})
+	_window_row(ROW_BOTH_Y, float(enough), float(hushed), _k(7.0, 7.4), 7.6)
 	s._hoot(Stage2D.HOOT_AT, 40.0, {"mood": &"gasp" if t > 7.6 else &"idle", "pop": _pop(0.6)})
 
 
@@ -223,13 +228,13 @@ func _set_dl_inserts() -> void:
 	var k := _pop(cut, 0.4)
 	_ruler(k)
 	s._chip("%s Hz: %s" % [str(freq), "HEADPHONES" if slide < 0.5 else "INSERTS"], Vector2(440, 74), Palette.SKY, 18, Stage2D.INK, k)
-	_row(140.0, "LEFTY", float(enough), Palette.SUNNY, Palette.MINT, "too little", "enough", k)
-	_row(222.0, "RIGHTY", hushed, Palette.MINT, Palette.CORAL, "safe", "hushed", k)
-	_window_row(304.0, float(enough), hushed, k, 99.0)
+	_row(ROW_LEFTY_Y, "LEFTY", float(enough), Palette.SUNNY, Palette.MINT, "too little", "enough", k)
+	_row(ROW_RIGHTY_Y, "RIGHTY", hushed, Palette.MINT, Palette.CORAL, "safe", "hushed", k)
+	_window_row(ROW_BOTH_Y, float(enough), hushed, k, 99.0)
 	if slide > 0.0 and slide < 1.0:
-		s._chip("+%d" % (ia_i - ia_p), Vector2(_rx(hushed) + 10.0, 222.0 - 46.0), Palette.SKY, 18, Stage2D.INK, 1.0)
+		s._chip("+%d" % (ia_i - ia_p), Vector2(_rx(hushed) + 10.0, ROW_RIGHTY_Y - 46.0), Palette.SKY, 18, Stage2D.INK, 1.0)
 	if t > 10.6:
-		s._sparkles(Vector2(_rx(enough + 10.0), 304.0), 10.6, 10, 80.0, Palette.MINT)
+		s._sparkles(Vector2(_rx(enough + 10.0), ROW_BOTH_Y), 10.6, 10, 80.0, Palette.MINT)
 	s._hoot(Stage2D.HOOT_AT, 40.0, {"mood": &"cheer" if t > 10.6 else &"idle", "pop": k})
 
 
