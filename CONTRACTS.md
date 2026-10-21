@@ -437,7 +437,7 @@ var start_scene := 0            # dev scenes only (dev_explainer --from=): the f
   After a day-start skip Hoot says where it lives: "Skipped! Rewatch it any time: pause menu, "Watch <title>"."
   (2) A level may play a `short` recap mid-day (`level_bonnie._recap()`, source `"recap"`, the same beat; Day 2: the
   masking card right before the masked bone test). (3) The pause menu offers the movies "here": the current
-  chapter's in a level (none on Day 1, nor on Days 3 and 6-9), every movie on the title's Options, never the recaps
+  chapter's in a level (none on Day 1; **(clinical review S7)** Day 3's is "Hoot's spondee movie"), every movie on the title's Options, never the recaps
   (`movie_ids_here()`). One movie: a "Watch <title>" button; two or more: **(polish)** a "Hoot's Movies..." button
   that opens a small vertical list (`open_movie_list(standalone := false)`, `is_movie_list_open()`,
   `close_movie_list()`, `movie_list_rows()`): one row per movie (the day chip, title and subtitle, the length, "Watch"),

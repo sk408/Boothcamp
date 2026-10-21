@@ -7,10 +7,10 @@ agreement check, and the signs of a non-organic loss. Shared speech rules and nu
 | | |
 |---|---|
 | Teaches | what PTA and SRT mean, spondees, familiarisation, the better ear first, SRT bracketing ("got it: down 10, missed: up 5", one common way, not the only one; another word at the same level is fine, half right twice), scoring what the patient actually said, PTA/SRT agreement and its direction, signs of a non-organic loss (many causes, and the booth can't tell which), never accuse, recheck, objective tests and the doctor for a sudden loss |
-| Length | 10-12 minutes with "quick visit" on (the default) |
+| Length | 10-12 minutes with "quick visit" on (the default), plus the 80-second movie on its first play |
 | Opens | always (chapter select; `requires` = `bonnie` is only the "suggested next" hint) |
 | New controls | the SPEECH screen: Space presents a word, Up / Down level, Right (or + / =) = repeated it, Left (or - ) = missed it, S stores the SRT; every control is a button too |
-| Level scene | `res://story/level_mike.tscn` (`story/level_mike.gd`) |
+| Level scene | `res://story/level_mike.tscn` (`story/level_mike.gd`). **(clinical review S7)** Movie data: `res://story/explainers/movies/srt_ladder.gd`, drawn by its own sets script `res://story/explainers/stages/srt_ladder_sets.gd` (`MOVIE.stage`), played by the shared `explainer_player.tscn` (§3.1) |
 
 ---------------------------------------------------------------------------------------------
 
@@ -69,12 +69,13 @@ reaction 0.8-1.5 s (dramatic pauses), rhythm sensitivity 0.3, tags non_organic, 
 | Speech masking | not needed (85 - 40 = 45 is below his claimed left ear) | not needed |
 | Hoot's 1 kHz retest (`story/tests/test_level_mike.gd`) | 15 dB better than his first 1 kHz (about 55 vs 70) | (right ear only: the first air ear, the one that owes it, E2) |
 
-## 3. Beat by beat (about 11 minutes)
+## 3. Beat by beat (about 11 minutes, plus the movie)
 
 Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at top speed (not scored).
 
 | # | Phase (`phase_changed`) | What happens | Beat(s) | Time |
 |---|---|---|---|---|
+| 0 | `explainer` | **(clinical review S7)** "The Spondee Ladder" (§3.1): until it has been seen (reached its `mismatch` scene) Hoot announces it ("New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!") and it plays; after that Hoot offers it ("Hoot's spondee movie again? Popcorn's on me!"; the best answer is to skip). A skip at day start gets "Skipped! Rewatch it any time: pause menu, "Watch Hoot's spondee movie"." | the player's own `explainer` beat; `choice` on replays | 1:25 |
 | 1 | `intro` | Mike swaggers in with his clipboard and neck brace. Hoot: "Day 3, trainee: speech! Today we check if words agree with the beeps." The coffee whisper gag. | dialogue | 0:50 |
 | 2 | `history` | Two rounds (table above). Red-flag card: "Sudden, both ears: a doctor must know fast." Medal `history`. The flag is closed at beat 10 (his doctor hears about it). | choice | 1:20 |
 | 3 | `otoscopy` | A quick look: canals clear, eardrums normal. The otoscope card: "Fresh speculum. Mike's RIGHT ear: clear canal, healthy eardrum." (clinical review A1, as on the case days). Medal `otoscopy` gold. | dialogue | 0:20 |
@@ -88,6 +89,46 @@ Every blocking beat emits `Events.awaiting_input`. "Hoot runs" = Hoot's turn at 
 | 9 | `evidence` | **OBJECTION!** Mike's claim card "I can't hear ANYTHING" and three clues: "SRT 30 vs PTA 72" (or "Hoot's recheck: SRT 30 vs PTA 72"), "answered a whispered coffee offer", "canals clear". The captions stay neutral ("Two sugars, thanks." Hoot whispered it at the desk. / Otoscopy, both ears: clear canals, normal-looking eardrums.); the explanations come in the "why" after a wrong pick. The measurement is always the strongest clue; the whisper never outranks it. Medal `evidence`. | objection_present | 0:45 |
 | 10 | `referral` | "What's next for Mike?" Fit strong hearing aids / **Re-instruct, retest, objective tests, tell his doctor** / Call him a fibber. Then the **RECHECK + OBJECTIVE TESTS + DOCTOR TODAY** stamp. Medal `referral`. | choice, referral_stamp | 0:45 |
 | 11 | `results` | Mike owns up ("Cousin Vinnie said to say I can't hear, for paid leave. I can hear you fine."; the game never says his ears are fine: an SRT of 30 is an upper bound on his hearing, and the objective tests still follow). Hoot thanks him, then the main-path lesson: "Non-organic loss has many causes: money, stress, worry, even a real loss underneath." and "We can't tell which from the booth, so we never accuse." (clinical review S11), then "We'll still finish the objective tests and send your results to your doctor." He leaves; Hoot whispers "free donuts in the break room" and Mike yells "GLAZED?!" from the hall. The Daily Decibel, Day 3. | results_continue | 1:00 |
+
+That is about 12:40 with quick visit on and the movie watched; about 11:15 on replays.
+
+### 3.1 Hoot's spondee movie: "The Spondee Ladder" (clinical review S7)
+
+Eight scenes, 80 s, one idea each. It opens with what the movie answers (Steve's rule, 2026-10-19: every movie first
+says what it will explain): why test with words when we already have beeps. Then: spondees, why they stay fair at
+the edge of hearing, the SRT as the halfway level, the game's ladder (one common way), familiarisation by ear, and
+PTA/SRT agreement both ways. It shows none of Mike's numbers; the windmill, the whisper and the OBJECTION! board are
+the day's own. Scene 5 is the familiarisation Mike then does for real (beat 6).
+
+"Hoot's Movie Matinee: The Spondee Ladder" (`MOVIE.title` "Hoot's spondee movie", `subtitle` "The Spondee Ladder").
+The lead-in is in rows 0 and 1: the announcement in the clinic, then the marquee that holds while Hoot asks the
+movie's question and names its answer.
+
+| # | Scene (`set`) | Visuals (the stage brief) | Caption(s), Hoot | s | The one idea |
+|---|---|---|---|---|---|
+| 0 | (the clinic, first play only) | The door camera, before the movie starts. A replay instead gets the offer (below), never this line. | Dialogue box: "New trick today: SPEECH THRESHOLDS. A quick cartoon first, then our next patient!" | ~4 | (Steve) What today is for, before the cartoon. |
+| 1 | `spondees` | Curtains swish open (0-1.2 s) on the marquee HOOT'S MOVIE MATINEE / The Spondee Ladder, a little ladder with two word blocks beside the title. **The marquee holds 8 s** (`params.card_hold`) while Hoot asks the question and names the answer, with **two question chips** under it ("Why test words after beeps?", "Do words and beeps agree?", `params.questions`). Then two balance beams: LIGHT and HOUSE, then RAIN and BOW, land as chunky blocks with faces; each beam tips as the first half lands and settles dead level with the second. Each half thumps its beat, DUM! DUM!, under the same accent mark; Hoot conducts. | "Hoot's Movie Matinee! Today's mystery: we already have beeps, so why test with words?" / "The answer is the SRT, a speech threshold, because words double-check the beeps." / "Meet the spondees: two-part words, both halves equally strong, like LIGHT-HOUSE and RAIN-BOW." (at 0.3, 4.4 and 8.4 s) | 15 | (Steve, 2026-10-19: the movie must say what it will explain) What the movie answers; then: spondees are two-part words with both halves stressed the same. |
+| 2 | `edge` | Hoot's slider from LOUD to soft slides almost to the soft end, into a dashed zone "the edge of hearing". A word bubble floats to a listener bean, LIGHT and HOUSE arriving equally faint. The bean squints, then beams: "Lighthouse!", a mint tick. Chips: "both halves equally soft", "easy to guess right". | "Two strong halves make a spondee easy to guess right, even at the edge of hearing." | 8 | Both halves are equally strong, so even a very soft spondee is easy to guess right. |
+| 3 | `half` | A score board like the SPEECH screen's, louder rows at the top: four word dots per row, 4 of 4 at 40, 3 of 4 at 35, 2 of 4 at 30, 0 of 4 at 25. The 30 row lights mint and a stamp lands: SRT 30 dB. A chip by the 25 row: "too soft". | "The SRT: the softest level where the patient repeats about half the words." / "Two of four at 30 dB, none at 25: the SRT is 30." | 9 | The SRT is the softest level where the patient repeats about half the words (the board's SRT is `SpeechRules.srt_candidate`'s). |
+| 4 | `ladder` | A tall ladder, one rung per 5 dB, LOUDER at the top (55), softer at the bottom (15). Hoot hops down two rungs ("-10") after a tick and climbs one ("+5") after a cross: 50, 40, 30 right, 20 and 25 missed, 30 right, the words landing as dots on a trail beside it. Chips: "one common way", "not the only one". | "Our ladder: a right word, step down 10 dB. A miss, climb up 5." / "That's one common way, not the only one. Clinics have their own recipes." | 11 | (S5) The game's search, down 10 after a repeated word and up 5 after a miss (`srt_next_level`): one common way, not the only one. |
+| 5 | `practice` | Hoot beside an easel of word cards that faces HIM (a "no peeking!" sign on its back). Three words: Hoot says it, the patient bean says it back, a mint tick. Then an ear chip "by ear", a crossed-out eye "not by reading", and a ribbon: "hearing, not vocabulary". | "Before any ladder, familiarise: Hoot says each word aloud, and the patient repeats it." / "By ear, never by reading: we test hearing, not vocabulary." | 9 | Familiarisation: each word said aloud and repeated by ear, never read, so the test measures hearing, not vocabulary. |
+| 6 | `agree` | A tall dB ruler, soft at the TOP: a beep (a music note) at the tone average, 40, and a two-block word at the SRT, 35. A mint band grows 10 dB either side of the beep, a dashed line says "5 dB apart", and a sign pops: THEY AGREE! | "The SRT usually lands within about 10 dB of the tone average. Beeps and words agree!" | 8 | PTA/SRT agreement: the SRT usually lands near the pure-tone average, so the words double-check the beeps ("about 10 dB" is the plain-words band; the day grades 6 good and 12 fair, beat 7b). |
+| 7 | `mismatch` | Two panels with small rulers. "Words much BETTER": beep at 45, word at 10; Hoot re-instructs kindly ("Every beep, even the faint ones!") and the rechecked beep slides up to 15, into the band, with a heart chip "never accuse". "Words much WORSE": beep at 40, word at 65; chips "instructions clear?", "words in their language?". Watching up to here counts as seen (`seen_at`). | "Words much better than beeps? Kindly re-instruct and recheck the beeps. Never accuse." / "Words much worse? Check the instructions, and that the words are in their language." | 12 | Poor agreement both ways: much better words, re-instruct kindly and recheck the beeps (never accuse); much worse, check the instructions and the language. |
+| 8 | `recap` | Four numbered tiles: two word blocks ("two-part words"), an ear ("say them first"), a little ladder with -10 and +5 ("find about half"), a beep beside a word block ("check the beeps"). Hoot bows, the curtains close: "Your turn, trainee!". | "Recap: two-part words, said first by ear. Find the halfway level, then check it against the beeps." | 8 | Recap: spondees said first by ear, down 10 / up 5 to about half right, then the SRT checked against the beeps. |
+
+Scene totals: 15 + 8 + 9 + 11 + 9 + 8 + 12 + 8 = **80 s**. The longest caption is 18 words. The words shown
+(lighthouse, rainbow, goldfish) are `spondee_a.json`'s own, in the game's own order. Reduced motion: fades and cuts
+only. Every sound is a quiet `Sfx` cue; the words are drawn, never played.
+
+**How the level plays it.** `level_mike._movie()` is `level_nora._movie()` with the id `"srt_ladder"`, before the
+intro: `_phase(&"explainer", {movie, source: "day_start", seen})`, then, until `Game.is_movie_seen("srt_ladder")`,
+row 0 and the movie; once seen, only the offer, "Hoot's spondee movie again? Popcorn's on me!" with ["Roll the film!
+(about 80 s)", "Skip it: I know my spondees."], best answer 1 (skip), and no announcement. `Game.set_visit_flag(
+"movie_watched", ...)` takes the result's `watched`. An Esc before the `mismatch` scene plays it again next visit.
+The pause menu offers "Watch Hoot's spondee movie" (`Movies.for_chapter("mike")`); the replay lists label it "Day 3".
+If `Movies.has("srt_ladder")` is false, the day starts at the intro. Tests: `story/tests/test_movie_srt_ladder.gd`
+(the data and its facts) and `test_level_mike.gd::test_movie_announced_only_when_unseen`. The bot reports `movies`
+on Day 3, and a fresh save must start `srt_ladder`.
 
 ## 4. Teaching moments (Hoot, 18 words or fewer)
 
