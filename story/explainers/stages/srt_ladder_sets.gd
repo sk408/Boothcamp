@@ -310,7 +310,9 @@ func _set_ladder() -> void:
 			continue
 		var dp := Vector2(TRAIL.position.x + 50.0 + 54.0 * i, _ly(levels[i], top, bottom))
 		if i > 0:
-			s.draw_line(prev, dp, Color(Palette.INK_SOFT, 0.6 * dk), 3.0, true)
+			# from the edge of the previous dot's ring (_tick: radius 17 plus half its 3 px outline), so the
+			# line never cuts its mark; the new dot's own tick, drawn next, covers the far end
+			s.draw_line(prev + (dp - prev).normalized() * 18.5, dp, Color(Palette.INK_SOFT, 0.6 * dk), 3.0, true)
 		_tick(dp, bool(answers[i]), dk)
 		prev = dp
 	# Hoot on the ladder: hop (or slide) from rung to rung
@@ -452,7 +454,8 @@ func _set_agree() -> void:
 	var jk := _k(3.4, 3.9)
 	if jk > 0.0:
 		s.draw_dashed_line(Vector2(col.position.x, bp.y), Vector2(col.end.x, wp.y), Palette.SELECT_ORANGE, 3.0, 8.0)
-		s._chip("%d dB apart" % int(absf(pta - srt)), Vector2(col.get_center().x, _ry(col, pta - within) - 24), Palette.PAPER, 15, Stage2D.INK, _pop(3.5))
+		# above the word marker, clear of the ruler's labels, the band and the SRT label
+		s._chip("%d dB apart" % int(absf(pta - srt)), Vector2(col.end.x + 100, _ry(col, srt) - 44), Palette.PAPER, 15, Stage2D.INK, _pop(3.5))
 	if t > 4.4:
 		s._sparkles(Vector2(440, 60), 4.4, 14, 140.0, Palette.SUNNY)
 		s._big_sign("THEY AGREE!", Vector2(670, 360), _pop(4.4, 0.45), sin(t * 3.0) * 0.03 * s._motion, Palette.MINT)
