@@ -52,12 +52,23 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			UiDraw.arrow(ci, c + Vector2(-s * 0.42, -s * 0.38), s * 0.34, Vector2.LEFT, SKIER)
 		&"tymp_ad":
 			_tower(ci, c, s, 0.0)
+		&"deg_mild":
+			_clock(ci, c, s, 0.0)
+		&"deg_moderate":
+			_talk(ci, c, s, 0.0)
+		&"deg_modsevere":
+			_megaphone(ci, c, s, 0.0)
+		&"deg_severe":
+			_drum(ci, c, s, 0.0)
+		&"deg_profound":
+			_jet(ci, c, s, 0.0)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
 ## rolls over, the rainbow sparkles, the snail shell spins, the cork pops out; for the tympanograms
 ## the mountain's snow glints (the low hill gets a sheep), the pancake flips, the moved-left
-## mountain slides, the skyscraper's windows light up.
+## mountain slides, the skyscraper's windows light up; for the degrees the clock's hand sweeps,
+## the speech bubble swells, the megaphone and the drum send out rings, the jet zooms on.
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -99,6 +110,16 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			UiDraw.arrow(ci, c + Vector2(-s * 0.42, -s * 0.38), s * 0.34, Vector2.LEFT, SKIER)
 		&"tymp_ad":
 			_tower(ci, c, s, t)
+		&"deg_mild":
+			_clock(ci, c, s, t)
+		&"deg_moderate":
+			_talk(ci, c, s, t)
+		&"deg_modsevere":
+			_megaphone(ci, c, s, t)
+		&"deg_severe":
+			_drum(ci, c, s, t)
+		&"deg_profound":
+			_jet(ci, c, s, t)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -336,3 +357,80 @@ static func _tower(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 			var lit := t > 0.0 and (5 - row) <= int(t * 7.0)
 			var w := Rect2(r.position + Vector2(s * 0.06 + col * s * 0.17, s * 0.08 + row * s * 0.16), Vector2(s * 0.1, s * 0.09))
 			ci.draw_rect(w, BRASS if lit else Color("#c9d6ea"))
+
+
+# ---------------------------------------------------------------- degrees (DEGREE DROP)
+
+## Rings of sound from a point, for the gags (t 0..1).
+static func _rings(ci: CanvasItem, at: Vector2, s: float, t: float, a0: float, a1: float) -> void:
+	if t <= 0.0:
+		return
+	for i in 3:
+		var r := s * (0.2 + 0.25 * i + 0.3 * t)
+		ci.draw_arc(at, r, a0, a1, 16, Color(BRASS, (1.0 - t) * (1.0 - i * 0.25)), 3.0, true)
+
+
+## A ticking clock (a quiet sound: MILD). t > 0: the second hand sweeps round.
+static func _clock(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var r := s * 0.45
+	ci.draw_circle(c, r + 3.0, INK)
+	ci.draw_circle(c, r, SNOW)
+	for i in 12:
+		var a := i * TAU / 12.0
+		ci.draw_line(c + Vector2(cos(a), sin(a)) * r * 0.8, c + Vector2(cos(a), sin(a)) * r * 0.92, INK, 2.0)
+	var hand := -PI * 0.5 + t * TAU
+	ci.draw_line(c, c + Vector2(cos(hand), sin(hand)) * r * 0.75, SKIER, 3.0)
+	ci.draw_line(c, c + Vector2(0.0, -r * 0.5).rotated(0.9), INK, 4.0)
+	ci.draw_circle(c, 3.0, INK)
+
+
+## A speech bubble (talking: MODERATE). t > 0: it swells.
+static func _talk(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var k := 1.0 + 0.25 * sin(t * PI)
+	var r := Rect2(c + Vector2(-s * 0.55, -s * 0.38) * k, Vector2(s * 1.1, s * 0.62) * k)
+	ci.draw_colored_polygon(PackedVector2Array([r.position + Vector2(s * 0.2, r.size.y - 4), r.position + Vector2(s * 0.45, r.size.y - 4), r.position + Vector2(s * 0.1, r.size.y + s * 0.24)]), INK)
+	UiDraw.rounded_rect(ci, r, SNOW, int(s * 0.2), 3, INK)
+	for i in 3:
+		ci.draw_circle(r.get_center() + Vector2((i - 1) * s * 0.25, 0), s * 0.07, INK)
+
+
+## A megaphone (a shout: MOD-SEVERE). t > 0: rings of sound.
+static func _megaphone(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var cone := PackedVector2Array([c + Vector2(-s * 0.4, -s * 0.12), c + Vector2(s * 0.3, -s * 0.38), c + Vector2(s * 0.3, s * 0.38), c + Vector2(-s * 0.4, s * 0.12)])
+	ci.draw_colored_polygon(cone, SKIER)
+	var ring := cone.duplicate()
+	ring.append(cone[0])
+	ci.draw_polyline(ring, INK, 3.0, true)
+	ci.draw_rect(Rect2(c + Vector2(-s * 0.55, -s * 0.1), Vector2(s * 0.16, s * 0.2)), Color("#c9c4bb"))
+	_rings(ci, c + Vector2(s * 0.3, 0), s, t, -0.7, 0.7)
+
+
+## A bass drum (loud: SEVERE). t > 0: the stick hits and rings go out.
+static func _drum(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var r := s * 0.42
+	ci.draw_circle(c, r + 3.0, INK)
+	ci.draw_circle(c, r, Color("#c0479c"))
+	ci.draw_circle(c, r * 0.72, SNOW)
+	var hit := sin(t * PI)
+	var tip := c + Vector2(-s * 0.05, -s * 0.15 + hit * s * 0.05)
+	ci.draw_line(c + Vector2(s * 0.3, -s * 0.6 + hit * s * 0.2), tip, Color("#b07d12"), 4.0)
+	ci.draw_circle(tip, s * 0.07, INK)
+	_rings(ci, c, s, t, 0.0, TAU)
+
+
+## A jet plane (very loud: PROFOUND). t > 0: it zooms on, with speed lines.
+static func _jet(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var at := c + Vector2(s * 0.4 * sin(t * PI), 0)
+	var wing := Color("#6c7a96")
+	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.05, 0), at + Vector2(-s * 0.3, -s * 0.42), at + Vector2(-s * 0.15, -s * 0.42), at + Vector2(s * 0.15, 0)]), wing)
+	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.05, 0), at + Vector2(-s * 0.3, s * 0.42), at + Vector2(-s * 0.15, s * 0.42), at + Vector2(s * 0.15, 0)]), wing)
+	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.5, 0), at + Vector2(-s * 0.62, -s * 0.24), at + Vector2(-s * 0.5, -s * 0.24), at + Vector2(-s * 0.4, 0)]), wing)
+	var body := PackedVector2Array([at + Vector2(-s * 0.55, -s * 0.07), at + Vector2(s * 0.45, -s * 0.08), at + Vector2(s * 0.62, 0), at + Vector2(s * 0.45, s * 0.08), at + Vector2(-s * 0.55, s * 0.07)])
+	ci.draw_colored_polygon(body, Color("#dfe7f2"))
+	var ring := body.duplicate()
+	ring.append(body[0])
+	ci.draw_polyline(ring, INK, 2.5, true)
+	if t > 0.0:
+		for i in 3:
+			var y := (i - 1) * s * 0.12
+			ci.draw_line(at + Vector2(-s * 0.7, y), at + Vector2(-s * (0.9 + 0.3 * t), y), Color(SNOW, 1.0 - t), 3.0)

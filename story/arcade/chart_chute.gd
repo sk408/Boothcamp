@@ -20,6 +20,8 @@ extends Control
 ## (ClinicRules.hearing_type); its own board and runs under MODE_TYPES, no story charts.
 ## belt = &"tymps" makes it TYMP TOSS (tymp_toss.tscn, section 19): each card is one ear's
 ## tympanogram, sorted into the five Jerger types (CaseRules.tymp_type); MODE_TYMPS, no story charts.
+## belt = &"degrees" makes it DEGREE DROP (degree_drop.tscn, section 21): one ear's audiogram,
+## sorted by degree of loss (ClinicRules.degree_name of the 500/1k/2k average); MODE_DEGREES.
 
 signal _sorted(pick: StringName)
 
@@ -35,9 +37,10 @@ const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const MODE := "chart_chute"
 const MODE_TYPES := "chart_chute_types"
 const MODE_TYMPS := "chart_chute_tymps"
+const MODE_DEGREES := "chart_chute_degrees"
 ## Each belt's save key and title.
-const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS}
-const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS"}
+const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES}
+const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -72,6 +75,8 @@ const WARMUP_HINTS: Dictionary = {
 	&"conductive": "Bone is normal, but air is way down. A gap: CONDUCTIVE!",
 	&"tymp_a": "Each card is a tympanogram. Its peak sits inside the box: TYPE A!",
 	&"tymp_b": "No peak at all, flat as a pancake: TYPE B!",
+	&"deg_mild": "Average 500, 1k and 2k. Between 26 and 40: MILD!",
+	&"deg_moderate": "Same three pitches. This average is 41 to 55: MODERATE!",
 }
 
 var seed_value := -1
@@ -369,6 +374,18 @@ class ChuteView extends Control:
 	func _draw_mini_chart(box: Rect2) -> void:
 		if ChartDeck.TYMPS.has(shape):
 			ArcadeArt.tymp_chart(self, box.grow(-2.0), MINI_TYMPS[shape], Palette.INK, false)
+			return
+		if ChartDeck.DEGREES.has(shape):
+			# the five bands as stripes, top (mild) to bottom (profound): this chute's lit, a line in it
+			UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
+			var n := ChartDeck.DEGREES.size()
+			var h := (box.size.y - 6) / n
+			var i := ChartDeck.DEGREES.find(shape)
+			for k in n:
+				var stripe := Rect2(box.position.x + 4, box.position.y + 3 + k * h, box.size.x - 8, h - 1)
+				draw_rect(stripe, Palette.SUNNY if k == i else Color(Palette.INK, 0.06 + 0.03 * k))
+			var ym := box.position.y + 3 + (i + 0.5) * h
+			draw_line(Vector2(box.position.x + 10, ym), Vector2(box.end.x - 10, ym), Palette.INK, 3.0, true)
 			return
 		UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
 		# the normal band (25 dB HL and better), as on the big chart
@@ -803,6 +820,8 @@ func _ramp_tips(card: Dictionary) -> void:
 			tip = "Blue X is the left ear. Its bone marks face the other way."
 		elif card.has("tymp"):
 			tip = "Blue is the left ear. Same five types!"
+		elif belt == &"degrees":
+			tip = "Blue X is the left ear. Same average, same chutes!"
 		_say("left", tip, "")
 	elif String(card["ear"]) == "both":
 		_say("both", "Two ears? Sort the colour on the tag.", "")
@@ -1201,6 +1220,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"degrees":
+		return "The degree is the average of 500, 1k and 2k, not the worst point on the chart."
 	if belt == &"tymps":
 		return "Where the peak sits is pressure. How tall it is: how freely the eardrum moves."
 	if belt == &"types":

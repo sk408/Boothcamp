@@ -15,15 +15,39 @@ const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"risin
 ## One word under each chute's picture.
 const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING",
 	&"reverse_bite": "REVERSE BITE", &"sensorineural": "SENSORINEURAL", &"conductive": "CONDUCTIVE", &"mixed": "MIXED",
-	&"tymp_a": "TYPE A", &"tymp_b": "TYPE B", &"tymp_as": "TYPE As", &"tymp_c": "TYPE C", &"tymp_ad": "TYPE Ad"}
+	&"tymp_a": "TYPE A", &"tymp_b": "TYPE B", &"tymp_as": "TYPE As", &"tymp_c": "TYPE C", &"tymp_ad": "TYPE Ad",
+	&"deg_mild": "MILD", &"deg_moderate": "MODERATE", &"deg_modsevere": "MOD-SEVERE", &"deg_severe": "SEVERE", &"deg_profound": "PROFOUND"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
 ## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
 const TYMPS: Array[StringName] = [&"tymp_a", &"tymp_b", &"tymp_as", &"tymp_c", &"tymp_ad"]
 ## Each tymp chute's Jerger type.
 const TYMP_TYPE: Dictionary[StringName, StringName] = {&"tymp_a": &"A", &"tymp_b": &"B", &"tymp_as": &"As", &"tymp_c": &"C", &"tymp_ad": &"Ad"}
-## The belts: shapes (Chart Chute), types (AIR & BONE) and tymps (TYMP TOSS).
-const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS}
+## DEGREE DROP's chutes, in key order (1-5): the degree of loss by the 500/1k/2k average.
+const DEGREES: Array[StringName] = [&"deg_mild", &"deg_moderate", &"deg_modsevere", &"deg_severe", &"deg_profound"]
+## Each degree chute's name in ClinicRules.degree_name, and its band (above lo, up to hi; dB HL).
+const DEGREE_NAME: Dictionary[StringName, String] = {&"deg_mild": "mild", &"deg_moderate": "moderate",
+	&"deg_modsevere": "moderately severe", &"deg_severe": "severe", &"deg_profound": "profound"}
+const DEGREE_BAND: Dictionary[StringName, Vector2i] = {&"deg_mild": Vector2i(25, 40), &"deg_moderate": Vector2i(40, 55),
+	&"deg_modsevere": Vector2i(55, 70), &"deg_severe": Vector2i(70, 90), &"deg_profound": Vector2i(90, 120)}
+## A degree card's average sits this far inside its band.
+const DEGREE_MARGIN_DB := 5
+## Degree shapes over FREQS, lifted or lowered to the band (make_degree_chart). Lookalikes: a steep
+## slope whose highs are far worse than its average, or a chart whose lows are the worst.
+const DEGREE_ARCH: Dictionary[StringName, Dictionary] = {
+	&"deg_mild": {"plain": [[15, 20, 25, 40, 50, 60, 65, 70], [20, 25, 30, 35, 45, 50, 60, 70], [40, 40, 45, 45, 50, 50, 55, 55], [45, 45, 45, 50, 50, 55, 55, 60]],
+		"lookalike": [[10, 15, 20, 30, 55, 70, 80, 85], [65, 55, 40, 30, 25, 20, 20, 20]]},
+	&"deg_moderate": {"plain": [[15, 20, 25, 40, 50, 60, 65, 70], [20, 25, 30, 35, 45, 50, 60, 70], [40, 40, 45, 45, 50, 50, 55, 55], [45, 45, 45, 50, 50, 55, 55, 60]],
+		"lookalike": [[10, 15, 20, 30, 55, 70, 80, 85], [65, 55, 40, 30, 25, 20, 20, 20]]},
+	&"deg_modsevere": {"plain": [[20, 25, 30, 35, 45, 50, 60, 70], [40, 40, 45, 45, 50, 50, 55, 55], [45, 45, 45, 50, 50, 55, 55, 60]],
+		"lookalike": [[20, 25, 30, 40, 60, 75, 85, 90], [65, 60, 50, 40, 35, 35, 35, 35]]},
+	&"deg_severe": {"plain": [[40, 40, 45, 45, 50, 50, 55, 55], [45, 45, 45, 50, 50, 55, 55, 60], [35, 40, 45, 50, 55, 55, 60, 65]],
+		"lookalike": [[60, 70, 75, 80, 90, 95, 95, 100], [90, 85, 80, 75, 70, 65, 65, 70]]},
+	&"deg_profound": {"plain": [[75, 95, 100, 105, 110, 115, 105, 95], [85, 100, 100, 100, 105, 110, 105, 100]],
+		"lookalike": [[60, 90, 100, 110, 115, 115, 110, 100]]},
+}
+## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS) and degrees (DEGREE DROP).
+const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES}
 ## A tymp card's peak keeps its type this far either way (daPa, mL).
 const TYMP_MARGIN_DAPA := 40
 const TYMP_MARGIN_ML := 0.04
@@ -142,6 +166,11 @@ const LINES: Dictionary = {
 	&"tymp_as": ["My hearing faded slowly.", "Mum had stiff ears too.", "Quieter every year, no pain."],
 	&"tymp_c": ["My ears won't pop since the flight.", "Bit of a cold lately.", "Like I'm still on the plane."],
 	&"tymp_ad": ["I took a knock to that ear once.", "Old scar on my eardrum.", "A big bang, years ago."],
+	&"deg_mild": ["I miss the odd word.", "Fine one-to-one, not in a crowd."],
+	&"deg_moderate": ["I live on 'pardon?'.", "The TV is too loud, says my wife."],
+	&"deg_modsevere": ["I only catch people who face me.", "Phone calls are hopeless."],
+	&"deg_severe": ["I hear voices, not words.", "Shouting is all I get."],
+	&"deg_profound": ["I feel the bass more than hear it.", "I lip-read everything."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -160,6 +189,11 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"tymp_as": {"text": "Peak too low: a stiff eardrum", "p_lo": -100, "p_hi": 50, "ml_lo": 0.0, "ml_hi": 0.3},
 	&"tymp_c": {"text": "Peak moved left: negative pressure", "p_lo": -400, "p_hi": -100, "ml_lo": 0.0, "ml_hi": 3.0},
 	&"tymp_ad": {"text": "Peak sky-high: a floppy eardrum", "p_lo": -100, "p_hi": 50, "ml_lo": 1.7, "ml_hi": 3.0},
+	&"deg_mild": {"text": "500-2k average 26 to 40", "freq_lo": 500, "freq_hi": 2000},
+	&"deg_moderate": {"text": "500-2k average 41 to 55", "freq_lo": 500, "freq_hi": 2000},
+	&"deg_modsevere": {"text": "500-2k average 56 to 70: moderately severe", "freq_lo": 500, "freq_hi": 2000},
+	&"deg_severe": {"text": "500-2k average 71 to 90", "freq_lo": 500, "freq_hi": 2000},
+	&"deg_profound": {"text": "500-2k average over 90", "freq_lo": 500, "freq_hi": 2000},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -181,6 +215,14 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		return make_type_card(rng, shape, opts, serial)
 	if TYMPS.has(shape):
 		return make_tymp_card(rng, shape, opts, serial)
+	if DEGREES.has(shape):
+		var dear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+		var dlines: Array = LINES[shape]
+		var dfirst := FIRST[rng.randi() % FIRST.size()]
+		return {"serial": serial, "shape": shape, "ear": dear, "sort_ear": dear,
+			"ac": {dear: make_degree_chart(rng, shape, bool(opts.get("lookalike", false)))}, "golden": false, "other_shape": &"",
+			"name": "%s %s" % [dfirst, LAST[rng.randi() % LAST.size()]], "who": "chute_%d" % (serial % PORTRAIT_IDS),
+			"look": _look(rng, "doris" if FIRST.find(dfirst) >= 12 else "gus"), "line": dlines[rng.randi() % dlines.size()]}
 	var ear := String(opts.get("ear", "right"))
 	var sort_ear := ear
 	if ear == "both":
@@ -342,6 +384,45 @@ static func stable_tymp(t: Dictionary, id: StringName) -> bool:
 		for dm: float in [-TYMP_MARGIN_ML, 0.0, TYMP_MARGIN_ML]:
 			if CaseRules.tymp_type(p + dp, ml + dm) != want:
 				return false
+	return true
+
+
+## (seeded) One ear's chart for a degree chute: a shape lifted or lowered so its 500/1k/2k average
+## lands inside the band (stable_degree).
+static func make_degree_chart(rng: RandomNumberGenerator, id: StringName, lookalike: bool) -> Dictionary:
+	var pool: Array = DEGREE_ARCH[id]["lookalike" if lookalike else "plain"]
+	var band: Vector2i = DEGREE_BAND[id]
+	for attempt in MAX_TRIES:
+		var base: Array = pool[rng.randi() % pool.size()]
+		var base_pta := (float(base[1]) + float(base[2]) + float(base[3])) / 3.0
+		var target := rng.randi_range(band.x + DEGREE_MARGIN_DB, mini(band.y - DEGREE_MARGIN_DB, 105))
+		var shift := snappedi(roundi(target - base_pta), 5)
+		var t := {}
+		for i in FREQS.size():
+			var f: int = FREQS[i]
+			var wobble := 5 * rng.randi_range(-1, 1) if rng.randf() < 0.35 else 0
+			t[f] = int(base[i]) + shift + wobble
+		if stable_degree(t, id):
+			_add_interoctaves(t)
+			return t
+	push_error("ChartDeck: no stable %s chart" % id)
+	return {}
+
+
+## The degree margin check: ClinicRules.degree_name of the 500/1k/2k average is the chute's, the
+## average sits DEGREE_MARGIN_DB inside the band (so any one point 5 dB off keeps it), and every
+## point is a real threshold inside the audiometer's range (no clamping, no "no response").
+static func stable_degree(t: Dictionary, id: StringName) -> bool:
+	var avg := ClinicRules.pta(t)
+	if ClinicRules.degree_name(avg) != DEGREE_NAME[id]:
+		return false
+	var band: Vector2i = DEGREE_BAND[id]
+	if avg < band.x + DEGREE_MARGIN_DB or (id != &"deg_profound" and avg > band.y - DEGREE_MARGIN_DB):
+		return false
+	for f: int in FREQS:
+		var v := int(t.get(f, -999))
+		if v < -10 or v % 5 != 0 or ClinicRules.clamp_db(v, f) != v:
+			return false
 	return true
 
 
