@@ -14,6 +14,7 @@ const Earphones := preload("res://story/games/earphones.gd")
 const Reveal := preload("res://story/games/reveal.gd")
 const Evidence := preload("res://story/games/evidence.gd")
 const Fitting := preload("res://story/games/fitting.gd")
+const Movies := preload("res://story/explainers/movies.gd")
 
 const CLINIC_SCENE := "res://world/clinic.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -21,6 +22,12 @@ const RESULTS_SCENE := "res://story/daily_decibel.tscn"
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const LEVEL_SCENE := "res://story/level_gus.tscn"
 const PATIENT_ID := "gus"
+## (clinical review D1-8) Hoot's Day 1 movie, before Gus arrives (as Day 15 plays its movie)
+const EXPLAINER_SCENE := "res://story/explainers/explainer_player.tscn"
+const MOVIE_ID := "first_beep"
+const MOVIE_NEW := "Welcome, trainee! A quick cartoon on beeps first, then our first patient."
+const MOVIE_AGAIN := "Hoot's first movie again? Popcorn's on me!"
+const MOVIE_SKIPPED := "Skipped! Rewatch it any time: pause menu, \"Watch {title}\"."
 
 ## Case-history rounds: options in display order, each [text, points (2 best, 1 good, 0 joke), reply, clue, tag].
 ## tag: "hardest" / "noise" / "duration" / "red_flags" feed the summary line; "" for jokes.
@@ -103,6 +110,7 @@ func _shot_line(shot_name: String) -> void:
 
 
 func _run() -> void:
+	await _movie()
 	await _intro()
 	await _history()
 	await _otoscopy()
@@ -113,6 +121,30 @@ func _run() -> void:
 	await _evidence()
 	await _fitting()
 	await _results()
+
+
+## Hoot's movie: announced once the first time; once watched, only a replay offer (default: skip).
+func _movie() -> void:
+	if not Movies.has(MOVIE_ID):
+		return
+	var seen := Game.is_movie_seen(MOVIE_ID)
+	_phase(&"explainer", {"movie": MOVIE_ID, "source": "day_start", "seen": seen})
+	clinic.call("focus_camera", &"door", 0.0)
+	if seen:
+		var opts: Array[String] = ["Roll the film! (about %d s)" % int(roundf(Movies.total_s(MOVIE_ID) / 10.0) * 10.0),
+			"Skip it: I know my beeps."]
+		var c: int = await dialogue.choose(MOVIE_AGAIN, opts, 1)
+		if c != 0:
+			return
+	else:
+		await _say("Hoot", MOVIE_NEW)
+	var player: Node = (load(EXPLAINER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	var r: Dictionary = await player.call("play", MOVIE_ID, "day_start")
+	player.queue_free()
+	Game.set_visit_flag("movie_watched", bool(r.get("watched", not bool(r.get("skipped", false)))))
+	if bool(r.get("skipped", false)):
+		await _say("Hoot", MOVIE_SKIPPED.replace("{title}", Movies.title(MOVIE_ID)))
 
 
 # ---------------------------------------------------------------- 1. intro
