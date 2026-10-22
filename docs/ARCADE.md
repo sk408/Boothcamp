@@ -588,3 +588,44 @@ Reply with a number only where you disagree. Each item says what the game will d
 4. FLUID is the name for a flat tymp with a normal volume (no "otitis media" on the chute).
 5. PEAK is the "not flat" chute: A, As and C peaks only (no Ad), normal volume.
 6. The pictures (drop, plug, doughnut, mountain) and the lines in section 23.
+
+## 25. OTO SPOT: a seventh cabinet (part 7)
+
+The hall gets a seventh cabinet, **OTO SPOT** ("Shine the light. What's in the ear?"). Before any beep, a
+newcomer looks in the ear, and what they see decides the next step. Each card is one ear seen down the
+otoscope, drawn in code like the story's own look in the ear: the pink canal, the pearly grey eardrum, the
+handle of the malleus and the cone of light (5 o'clock in a right ear, 7 o'clock in a left).
+
+| Key | Chute (picture) | What the card shows | The next step (on the tell) |
+|---|---|---|---|
+| 1 | **CLEAR** (a pearl) | grey drum, cone of light | test away |
+| 2 | **WAX** (a bath plug) | a brown plug hides the drum | clear it first |
+| 3 | **FLUID** (a water drop) | amber drum, a fluid line, bubbles, no cone of light | refer to the GP |
+| 4 | **HOLE** (a doughnut) | a dark hole in the drum | refer; no water, no impressions |
+| 5 | **OBJECT** (a ladybird) | a bead or a beetle in the canal | a doctor takes it out |
+
+- **The tell** glows over the drum and names the look and the next step ("WAX: A brown plug hides the drum. Clear
+  it first").
+- **The ramp:** warm-up with CLEAR and WAX; FLUID opens at 10 s, HOLE at 20 s, OBJECT at 30 s; left ears at 30 s;
+  lookalikes at 40 s: CLEAR with dry flakes of wax on the canal wall (the drum is still in full view), dark,
+  almost black wax, fluid with a line but no bubbles, a small hole, and a cotton-bud tip for the object.
+- It pairs with FLAT OUT: fluid, wax and a hole are the three flat tympanograms, here seen with the light.
+- **Lines:** clear "Just a check-up, please.", "Never had ear trouble."; wax "I use cotton buds every day.", "It went
+  dull after a swim."; fluid "Had a stinking cold for weeks.", "My ear feels full of water."; hole "It popped on a
+  dive.", "My ear runs now and then."; object "My grandson put something in there.", "I felt something crawl in!"
+- No story charts, no two-ear cards; its own board (save key `chart_chute_otos`). With seven cabinets the hall
+  draws each one narrower again.
+
+## 26. For Steve: clinical check (OTO SPOT)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. Five looks: clear, wax, fluid, hole and object. No red, angry drum (an infection is a doctor's call, and hard to
+   tell from fluid in a small drawing).
+2. The CLEAR lookalike has a few dry wax flakes on the canal wall but a fully visible drum, and still counts as
+   CLEAR: wax that doesn't block the canal doesn't stop the test.
+3. The next steps on the tells: clear "test away"; wax "clear it first"; fluid "refer to the GP"; hole "refer; no
+   water, no impressions"; object "a doctor takes it out".
+4. The left ear is the right ear mirrored (cone of light at 7 o'clock).
+5. Objects are a bead, a beetle and a cotton-bud tip.
+6. The pictures (pearl, plug, drop, doughnut, ladybird) and the lines in section 25.
