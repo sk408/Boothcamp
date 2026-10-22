@@ -12,11 +12,13 @@ var _pivot: Node3D
 var _cam: Camera3D
 var _dragging := false
 var _moved := 0.0
-var _yaw := 0.6
-var _pitch := -0.15
+var _yaw := 0.35
+var _pitch := -0.25
 var _dist := 7.5
 var _idle := 0.0
 var _labels: Array[Label3D] = []
+# --still (screenshots): no idle turning, so every shot shows the same angle.
+var _still := OS.get_cmdline_user_args().has("--still")
 
 
 func setup(style: String, shell: String, is_interactive: bool, labels: bool) -> void:
@@ -35,8 +37,8 @@ func setup(style: String, shell: String, is_interactive: bool, labels: bool) -> 
 		var e := Environment.new()
 		e.background_mode = Environment.BG_CLEAR_COLOR
 		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		e.ambient_light_color = Color(0.85, 0.88, 0.92)
-		e.ambient_light_energy = 0.55
+		e.ambient_light_color = Color(0.9, 0.92, 0.95)
+		e.ambient_light_energy = 0.9
 		env.environment = e
 		_vp.add_child(env)
 		var key := DirectionalLight3D.new()
@@ -47,6 +49,10 @@ func setup(style: String, shell: String, is_interactive: bool, labels: bool) -> 
 		rim.rotation_degrees = Vector3(-15, -150, 0)
 		rim.light_energy = 0.5
 		_vp.add_child(rim)
+		var fill := DirectionalLight3D.new()
+		fill.rotation_degrees = Vector3(20, -60, 0)
+		fill.light_energy = 0.35
+		_vp.add_child(fill)
 		_cam = Camera3D.new()
 		_cam.fov = 32
 		_vp.add_child(_cam)
@@ -61,16 +67,20 @@ func setup(style: String, shell: String, is_interactive: bool, labels: bool) -> 
 	# Centre the shape on the pivot.
 	var aabb := _bounds(model)
 	model.position = -aabb.get_center()
-	_dist = max(aabb.size.length() * (1.8 if interactive else 1.45), 5.0 if interactive else 3.5)
+	_dist = maxf(aabb.size.length() * (1.9 if interactive else 1.45), 3.5)
 	if show_labels:
+		# Numbered markers (the list beside the view names them): short, so they never cover each other.
+		var n := 0
 		for part in built.parts:
+			n += 1
 			var l := Label3D.new()
-			l.text = part
-			l.font_size = 40
-			l.pixel_size = 0.0045
-			l.outline_size = 10
-			l.modulate = Color(0.08, 0.1, 0.13)
-			l.outline_modulate = Color(1, 1, 1, 0.9)
+			l.text = str(n)
+			l.font = load("res://assets/fonts/fredoka-700.woff2")
+			l.font_size = 44
+			l.pixel_size = 0.0045 * _dist / 6.0  # same on-screen size whatever the shape's size
+			l.outline_size = 26
+			l.modulate = Color("#2e2442")
+			l.outline_modulate = Color("#ffd23f")
 			l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			l.no_depth_test = true
 			l.position = built.parts[part]
@@ -88,7 +98,7 @@ func _process(delta: float) -> void:
 	if _pivot == null:
 		return
 	_idle += delta
-	if not _dragging and (_idle > 2.5 or not interactive):
+	if not _dragging and (_idle > 2.5 or not interactive) and not _still:
 		_yaw += delta * 0.45
 	_place_camera()
 

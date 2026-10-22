@@ -10,7 +10,7 @@ Two readers at once, on the same page:
 
 - **New hearing aid users** read "what does this mean for me": plain words, a short "good for" line per aid, and
   filters phrased as needs ("I want to stream phone calls", "I use the loop at church").
-- **Engineers** flip the **Detail** switch and get the full spec sheet: channels and bands, receivers and their
+- **Engineers** pick **Full specs (for engineers)** and get the full spec sheet: channels and bands, receivers and their
   output, Bluetooth stack (Classic, ASHA, MFi, LE Audio, Auracast), battery hours with and without streaming,
   charge time, IP rating, telecoil, apps, platform and its premium sibling, and every feature name.
 
@@ -18,25 +18,38 @@ Every value carries a numbered source; clicking it shows the source's title, URL
 Anything not confirmed by a primary source (the manufacturer or Costco) is marked **reported** (third-party
 source only) or **not verified** (nothing found), never guessed.
 
-## 2. The page
+## 2. The page (reworked 2026-10-22 after Steve's first look)
 
-1. **Header.** "Hearing Aid Compare", "Models sold at Costco hearing aid centres", "Specs as of 2026-10-22", the
-   Plain / Detail switch.
-2. **Need filters** (chips, any mix): rechargeable, streams from iPhone, streams from Android, Auracast ready,
-   telecoil, hands-free calls, water and dust resistant (IP68), in-the-canal style available, CROS available.
-   Aids that miss a need dim but stay visible, with the missing need named on the card.
-3. **The line-up.** Five cards: a neutral 3D shape of the aid's style (no product photos or logos, names as plain
-   text), the name, maker and parent, the pair price, three plain "good for" lines and a check box. Tick up to
-   three to compare.
-4. **Side by side.** A table of the ticked aids, rows grouped (Price and care, Battery, Phone and streaming,
-   Sound and processing, Fit and build, Apps). Rows where the ticked aids differ are highlighted; "Only show
-   differences" hides the rest. In Plain mode each row has its one-line meaning ("Telecoil: picks up hearing
-   loops in theatres and churches").
-5. **3D view.** Click an aid's shape to open a turntable: drag to turn, scroll to zoom, the parts labelled
-   (microphones, button, receiver wire, receiver, dome; or the shell and vent for in-canal styles). The shapes are
-   generic per style (RIC, mini RIC, in-the-ear, in-the-canal), drawn from primitives in code.
-6. **Footer.** "Prices change. Check your warehouse." "Not medical advice: a hearing test and a fitting by a
-   licensed professional decide which aid suits you." Sources list.
+Steve's notes on the first version: too plain and disorganised, the pictures wrong, not phone friendly, and hard
+for older shoppers. "The game does such a great job separating information into colorful cards which indicate a
+clear purpose." "I could just push on a hearing aid and expand to see more details." So the page now uses the
+game's look (cream page, ink outlines, chunky shadows, Fredoka, Professor Hoot) and works by tapping.
+
+1. **Header band.** "HEARING AID COMPARE", "The five models sold at Costco hearing aid centres", the date the facts
+   were checked, and a **Text size** switch (A, A+, A++) that is remembered.
+2. **Hoot's card.** "Help me choose" opens Hoot's questions; "Show me all five" jumps to the cards.
+3. **Hoot's questions.** One question per screen, two or three big answers, a progress row, Back and "Skip this
+   one" (which phone, hands-free calls, hearing loops, charging, hidden in the ear). The answers only set the
+   needs. The results screen says "Ask about these at Costco", lists the aids that fit with why, then the ones that
+   miss something, and "Compare my shortlist side by side" puts just those in the table.
+4. **What matters to you?** The same needs as tap chips (one big toggle per line on a phone). Aids that miss one
+   move to a "These miss something you asked for" group with the missing need named; nothing is hidden.
+5. **The five cards.** One colour per aid (white text, contrast at least 4.7:1; no brand colours or logos), an ink
+   name band, a drawing of the style on the ear, the pair price, three "good for" lines, "See details" and a
+   Compare toggle. Tapping anywhere on a card opens it.
+6. **An opened card.** Full width under its row: four at-a-glance tiles (price, battery, iPhone and Android,
+   hearing loops), the drawings of each style it comes in, "Turn it around in 3D", then one colour-coded card per
+   topic (Price and care, How it's worn, Battery, Phone and TV, Hearing in noise, Apps and help, Who makes it),
+   each row with its plain meaning and a yes / no / some styles / not found pill, and the sources.
+7. **Side by side.** Plain words or Full specs (for engineers), "Only where they differ", topic cards with a
+   column per aid on wide screens and one coloured line per aid on phones.
+8. **3D view.** Drag to turn (finger or mouse), numbered markers that match a parts list, a button per style.
+9. **Footer.** Care terms, the price note, the sources (collapsed), and "Not medical advice".
+
+Sizing: the page works in logical pixels (the window over the screen's pixel ratio and the text size), so a
+phone gets a 390 px wide layout with body text at 18 px and buttons at least 50 px tall; layouts switch at 640
+and 980 px, and below 360 px (a phone at A++) rows stack. Checked in Chromium at 390x844 with pixel ratio 3 and
+touch, and at 1280x800.
 
 ## 3. Data (easy to edit)
 
@@ -45,7 +58,9 @@ source only) or **not verified** (nothing found), never guessed.
 - `compare/data/prices.json`: prices only, with the date each was checked, so a price change is a one-line edit.
 - `compare/data/sources.json`: every source with id, title, URL, kind (manufacturer, Costco, third party) and the
   date read.
-- `compare/data/glossary.json`: the plain-language line for each row and filter.
+- `compare/data/rows.json`: the rows (plain name, help line, topic), the topics with their colours and icons, the
+  needs, and Hoot's questions.
+- `compare/data/art.json`: the style drawings as SVG, generated by `compare/tools/make_art.py`.
 
 Changing a price or a spec needs no code. The page reads the JSON at start.
 
@@ -67,7 +82,7 @@ Changing a price or a spec needs no code. The page reads the JSON at start.
 | Jabra Enhance Pro 30 | Jabra (GN) | GN 360 chip + DNN chip | LE Audio, Auracast out of the box; RIE 60s rechargeable, RIE 62 size 13 with telecoil |
 | Philips HearLink 9050 | Philips (Demant) | Oticon Intent | MFi, ASHA, LE Audio; Auracast from firmware 1.3.0; Costco's own page lists 24 fitting bands where reviews say 64 channels |
 | Rexton Reach R Plus | Rexton (WS Audiology) | Signia Pure C&G BCT IX 7 class | Bluetooth Classic, telecoil, 54 h battery; Auracast "through a future firmware update" |
-| SoundGear AMP | SoundGear (Starkey) | Starkey Edge AI | LE Audio; pilot in about 100 warehouses since late 2025; no public "Amp 2" found |
+| SoundGear AMP 2 | SoundGear (Starkey) | Starkey Edge AI | LE Audio; pilot in about 100 warehouses since late 2025; soundgearamp.com shows the AMP 2 (Steve), reviews say AMP |
 
 Primary sources were thin: Costco's support pages exist for the Philips (read) and the old Sonite R; Rexton's own
 R Plus pages were read. Jabra's consumer site lists only its Enhance Select line, and soundgear.com lists only hearing
@@ -79,9 +94,9 @@ sheet for either would let them turn green.
 1. **Same repo or its own?** Default: this repo, folder `compare/`, served at `<Pages address>/compare/`. A
    separate repo would get its own Pages address.
 2. ~~Sonite R or Sonite Rise?~~ Answered 2026-10-22: **Sonite Rise** (items #2027784 pair, #2027785 single).
-3. **SoundGear Amp 2?** Every public source and Costco item found says **SoundGear AMP** (Edge AI). Default: show
-   "SoundGear AMP" and flag that an "Amp 2" could not be confirmed. If you have the Amp 2 spec sheet, a photo of
-   the specs page or the item number is enough.
+3. ~~SoundGear Amp 2?~~ Answered 2026-10-22: soundgearamp.com shows the **AMP 2**, so the page says SoundGear AMP 2.
+   Its specs still come from late-2025 reviews of the AMP (marked reported) because soundgearamp.com could not be
+   read from the build machine. An AMP 2 spec sheet would update them.
 4. **Which styles?** Default: one card per family, with the styles listed (Jabra RIE 60s and 62; SoundGear mRIC R,
    RIC 312, ITC R, CIC/IIC). A card per style would make about ten cards.
 5. **Prices:** show the pair price with "as of" and "varies by state" (default), or hide prices?
@@ -92,5 +107,9 @@ sheet for either would let them turn green.
    the platform has them. Default: show such limits with their source. Correct from your experience?
 8. **The name:** "Hearing Aid Compare" with "models sold at Costco" as plain text, no Costco or maker logos.
    Default stands unless you want another name.
-9. **A "help me choose" quiz** (four questions that set the filters, never naming a winner)? Default: yes, small.
-10. **Brand colours on cards?** Default: no, one neutral accent per card so no aid looks favoured.
+9. ~~A "help me choose" quiz?~~ Built as Hoot's five questions (section 2.3); it never names a winner.
+10. **Card colours:** each aid has its own bright colour, chosen to be distinct and not a brand colour. Default stands.
+11. **Pictures from real photos.** The drawings should follow the real products, but the makers' and Costco's
+    sites cannot be read from the build machine. Default: keep the hand-made drawings of each style. If you send
+    photos (yours from the warehouse, or saved from the makers' pages), the drawings get redrawn from them; product
+    photos themselves are not shown on the page unless they are your own.
