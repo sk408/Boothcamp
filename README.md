@@ -115,7 +115,8 @@ chart shows air and bone: call the loss sensorineural, conductive or mixed), **T
 tympanograms into types A, B, As, C and Ad), **Degree Drop** (sort charts mild to profound by
 the 500-2k average), **Flat Out** (read a flat tympanogram's canal volume: fluid, wax or a hole),
 **Oto Spot** (look in the ear: clear, wax, fluid, a hole or something that doesn't belong),
-and **Masquerade** (one pitch lit on a two-ear chart: no mask, mask bone, or mask air and bone).
+**Masquerade** (one pitch lit on a two-ear chart: no mask, mask bone, or mask air and bone),
+and **Goldilocks** (is the masking noise too little, too much, just right, or a dilemma?).
 None ever tests your own hearing.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
