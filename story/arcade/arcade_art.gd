@@ -80,6 +80,12 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_donut(ci, c, s, 0.0)
 		&"oto_object":
 			_ladybird(ci, c, s, 0.0)
+		&"mask_none":
+			_face(ci, c, s, 0.0)
+		&"mask_bone":
+			_eye_mask(ci, c, s, 0.0, false)
+		&"mask_both":
+			_eye_mask(ci, c, s, 0.0, true)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
@@ -89,7 +95,8 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 ## the speech bubble swells, the megaphone and the drum send out rings, the jet zooms on; for the
 ## flat tymps the drop splashes, the plug is yanked out on its chain, the doughnut spins and sheds
 ## sprinkles, and the PEAK mountain glints; for the looks in the ear the pearl gleams and the
-## ladybird flies off (the plug, drop and doughnut as above).
+## ladybird flies off (the plug, drop and doughnut as above); for the masks the bare face winks,
+## the eye mask twirls on its ribbon and the masquerade mask's feathers wave and sparkle.
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -159,6 +166,12 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_donut(ci, c, s, t)
 		&"oto_object":
 			_ladybird(ci, c, s, t)
+		&"mask_none":
+			_face(ci, c, s, t)
+		&"mask_bone":
+			_eye_mask(ci, c, s, t, false)
+		&"mask_both":
+			_eye_mask(ci, c, s, t, true)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -732,3 +745,74 @@ static func _ladybird(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 		for d: Vector2 in [Vector2(0.17, -0.1), Vector2(0.2, 0.14)]:
 			ci.draw_circle(at + Vector2(side * d.x, d.y).rotated(side * open) * s, s * 0.06, INK)
 	ci.draw_line(at + Vector2(0, -s * 0.36), at + Vector2(0, s * 0.36), INK, 3.0)
+
+
+# ---------------------------------------------------------------- the masks (MASQUERADE)
+
+const MASK_SKIN := Color("#ffcf9e")
+const MASK_BLACK := Color("#2b2440")
+const MASK_PURPLE := Color("#7b2cbf")
+const FEATHERS: Array[Color] = [Color("#e5383b"), Color("#f2b632"), Color("#5bc8a3")]
+
+
+## A bare, smiling face (no mask). t > 0: it winks.
+static func _face(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	ci.draw_circle(c, s * 0.5 + 3.0, INK)
+	ci.draw_circle(c, s * 0.5, MASK_SKIN)
+	var wink := t > 0.2 and t < 0.8
+	ci.draw_circle(c + Vector2(-s * 0.18, -s * 0.1), s * 0.06, INK)
+	if wink:
+		ci.draw_line(c + Vector2(s * 0.1, -s * 0.1), c + Vector2(s * 0.26, -s * 0.1), INK, 3.0)
+	else:
+		ci.draw_circle(c + Vector2(s * 0.18, -s * 0.1), s * 0.06, INK)
+	ci.draw_arc(c + Vector2(0, s * 0.04), s * 0.24, 0.35, PI - 0.35, 14, INK, 3.0)
+	ci.draw_circle(c + Vector2(-s * 0.3, s * 0.1), s * 0.07, Color("#f4a6c7", 0.8))
+	ci.draw_circle(c + Vector2(s * 0.3, s * 0.1), s * 0.07, Color("#f4a6c7", 0.8))
+
+
+## An eye mask on a ribbon (mask bone); fancy adds the masquerade mask's purple, gold trim, a stick
+## and three feathers (mask both). t > 0: the eye mask twirls; the feathers wave and sparkle.
+static func _eye_mask(ci: CanvasItem, c: Vector2, s: float, t: float, fancy: bool) -> void:
+	var tilt := 0.0
+	if t > 0.0 and not fancy:
+		tilt = sin(t * TAU) * 0.35
+	if fancy:
+		# the stick, down and to the right
+		ci.draw_line(c + Vector2(s * 0.3, s * 0.08), c + Vector2(s * 0.55, s * 0.6), INK, 6.0)
+		ci.draw_line(c + Vector2(s * 0.3, s * 0.08), c + Vector2(s * 0.55, s * 0.6), BRASS, 3.0)
+		for i in FEATHERS.size():
+			var sway := sin(t * TAU * 2.0 + i) * 0.18 if t > 0.0 else 0.0
+			var a := -PI * 0.5 + (i - 1) * 0.42 + sway
+			var root := c + Vector2(-s * 0.3 + i * s * 0.08, -s * 0.18)
+			var tip := root + Vector2(cos(a), sin(a)) * s * 0.55
+			var side := Vector2(-(tip - root).y, (tip - root).x).normalized() * s * 0.08
+			var mid := (root + tip) * 0.5
+			ci.draw_colored_polygon(PackedVector2Array([root, mid + side, tip, mid - side]), FEATHERS[i])
+			ci.draw_polyline(PackedVector2Array([root, mid + side, tip, mid - side, root]), INK, 2.0, true)
+	ci.draw_set_transform(c, tilt, Vector2.ONE)
+	if not fancy:
+		# the ribbon tails behind
+		ci.draw_line(Vector2(-s * 0.48, 0), Vector2(-s * 0.68, s * 0.22), MASK_BLACK, 4.0)
+		ci.draw_line(Vector2(s * 0.48, 0), Vector2(s * 0.68, s * 0.22), MASK_BLACK, 4.0)
+	var body := PackedVector2Array()
+	for i in 25:
+		var a := i * TAU / 24.0
+		# a wide lens shape with a dip over the nose
+		var r := Vector2(cos(a) * s * 0.52, sin(a) * s * 0.24)
+		if sin(a) > 0.0 and absf(cos(a)) < 0.3:
+			r.y -= sin(a) * s * 0.14
+		body.append(r)
+	var ring := body.duplicate()
+	ring.append(body[0])
+	ci.draw_colored_polygon(body, MASK_PURPLE if fancy else MASK_BLACK)
+	ci.draw_polyline(ring, BRASS if fancy else INK, 3.0, true)
+	for side in [-1.0, 1.0]:
+		ci.draw_set_transform(c + Vector2(side * s * 0.22, -s * 0.02).rotated(tilt), tilt, Vector2(1.0, 0.6))
+		ci.draw_circle(Vector2.ZERO, s * 0.12, SNOW)
+		ci.draw_arc(Vector2.ZERO, s * 0.12, 0.0, TAU, 14, BRASS if fancy else INK, 2.0)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if fancy and t > 0.0:
+		for i in 5:
+			var a := i * TAU / 5.0 + t * 3.0
+			var p := c + Vector2(cos(a), sin(a)) * s * (0.55 + 0.2 * t)
+			ci.draw_circle(p, s * 0.05 * (1.0 - t), BRASS)
