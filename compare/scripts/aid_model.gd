@@ -133,8 +133,8 @@ static func _along(dir: Vector3) -> Basis:
 
 
 static func _build_canal(root: Node3D, parts: Dictionary, col: Color, cic: bool) -> void:
-	var length := 1.6 if cic else 2.2
-	var r0 := 0.62 if cic else 0.82
+	var length := 1.5 if cic else 1.8
+	var r0 := 0.62 if cic else 0.9
 	var path := PackedVector3Array()
 	var radii := PackedFloat32Array()
 	var n := 32
@@ -142,7 +142,8 @@ static func _build_canal(root: Node3D, parts: Dictionary, col: Color, cic: bool)
 		var t := float(i) / n
 		# The canal bends a little: the shell follows it.
 		path.append(Vector3(t * t * 0.45, -t * length, t * t * 0.3))
-		var taper: float = lerp(r0, r0 * 0.6, t)
+		# A rounded body that fills the ear's bowl, narrowing to a short canal tip.
+		var taper: float = lerp(r0, r0 * (0.62 if cic else 0.5), smoothstep(0.25, 0.6, t))
 		# Round the deep end off smoothly over the last 30 %.
 		var cap := sqrt(max(0.0, 1.0 - pow((t - 0.7) / 0.3, 2.0))) if t > 0.7 else 1.0
 		radii.append(max(taper * cap, 0.01))

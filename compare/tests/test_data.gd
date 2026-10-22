@@ -21,8 +21,27 @@ func _initialize() -> void:
 	for n in d.needs:
 		if not fields.has(n.id):
 			fields.append(n.id)
+	var group_ids := []
+	for g in d.groups:
+		_ok(g.has_all(["id", "label", "color", "icon"]), "group has its keys: %s" % g.get("id"))
+		group_ids.append(g.id)
+	for r in d.rows:
+		_ok(group_ids.has(r.group), "row %s is in a known group" % r.id)
+	var need_ids := []
+	for n in d.needs:
+		need_ids.append(n.id)
+	_ok(d.quiz.size() >= 3, "Hoot has questions")
+	for q in d.quiz:
+		_ok(q.has_all(["q", "answers"]) and q.answers.size() >= 2, "question has two or more answers: %s" % q.get("q"))
+		for ans in q.answers:
+			for n in ans.get("needs", []):
+				_ok(need_ids.has(n), "quiz answer need %s is a known need" % n)
+	var art: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/art.json")).get("art", {})
 	for a in d.aids:
 		_ok(a.has_all(["id", "name", "model_styles", "shell", "good_for", "specs"]), "aid has its keys: " + a.get("id", "?"))
+		_ok(Color.html_is_valid(String(a.get("color", ""))), a.id + " has a card colour")
+		for s in a.model_styles:
+			_ok(art.has("%s-%s" % [s, a.shell]), "%s has a drawing for %s" % [a.id, s])
 		for f in fields:
 			if f.begins_with("price_"):
 				continue

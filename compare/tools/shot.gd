@@ -1,8 +1,8 @@
 extends SceneTree
 ## Renders the page and saves screenshots. Run under xvfb:
 ##   xvfb-run -a -s "-screen 0 1280x800x24" godot --path . --rendering-driver opengl3 -s res://tools/shot.gd -- --out=/abs/dir
-## Extras: --scroll=px (page scroll), --detail (Full specs), --needs=iphone,telecoil, --dpr=3 (phone pixel ratio),
-## --open=viewer:<aid> (--style=<button text>)|card:<aid>|quiz[:step]|results (--answers=0,1,0,0,1), --scroll-to=<anchor>
+## Extras: --scroll=px (page scroll), --detail (Full specs), --needs=iphone,telecoil, --dpr=3 (phone pixel ratio), --text=0|1|2 (A, A+, A++),
+## --open=viewer:<aid> (--style=<button text>)|card:<aid>|quiz[:step]|results (--answers=0,1,0,0,1), --scroll-to=<anchor> (--more=px scrolls on from there)
 
 var out := "/tmp"
 var args := {}
@@ -17,8 +17,11 @@ func _initialize() -> void:
 	var main: Control = load("res://main.tscn").instantiate()
 	root.add_child(main)
 	await _frames(20)
+	if args.has("text"):
+		main._set_text_scale(int(args.text))
+		await _frames(6)
 	if args.has("detail"):
-		main._set_mode(true)
+		main._set_full(true)
 	if args.has("needs"):
 		main._set_needs(Array(args.needs.split(",")))
 	await _frames(10)
@@ -31,7 +34,8 @@ func _initialize() -> void:
 			await _frames(2)
 			# Press the style's button in the viewer, like a click.
 			for b in main._overlay.find_children("*", "Button", true, false):
-				if b.text.contains(args.style):
+				if b.text.begins_with(args.style):
+					b.button_pressed = true
 					b.emit_signal("pressed")
 	elif open.begins_with("card:"):
 		main._toggle_expand(open.split(":")[1])
@@ -51,6 +55,9 @@ func _initialize() -> void:
 	if args.has("scroll-to"):
 		await _frames(4)
 		main._scroll_to(args["scroll-to"])
+	if args.has("more"):
+		await _frames(4)
+		main._scroll.scroll_vertical += int(args.more)
 	await _frames(40)
 	if args.has("widest"):
 		_widest(root, main.W)

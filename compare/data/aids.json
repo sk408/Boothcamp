@@ -1010,8 +1010,8 @@
     {
       "id": "soundgear_amp",
       "color": "#a8326a",
-      "name": "SoundGear AMP",
-      "short": "SoundGear AMP",
+      "name": "SoundGear AMP 2",
+      "short": "SoundGear AMP 2",
       "model_styles": [
         "ric",
         "itc",
@@ -1030,7 +1030,7 @@
           "src": [
             "ht_soundgear"
           ],
-          "note": "An 'Amp 2' could not be confirmed in any source; this is the AMP."
+          "note": "The maker's site, soundgearamp.com, shows the AMP 2. Reviews from late 2025 call it the SoundGear AMP; the specs below come from those reviews until the AMP 2 sheet is read."
         },
         "based_on": {
           "v": "Starkey Edge AI",

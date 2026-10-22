@@ -83,7 +83,7 @@ func _fit() -> void:
 	win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 	win.content_scale_size = Vector2i(maxi(320, int(win.size.x / factor)), maxi(320, int(win.size.y / factor)))
 	W = win.size.x / factor
-	var side: float = 14.0 if W < 640 else maxf(24.0, (W - 1180.0) * 0.5)
+	var side: float = (8.0 if W < 360 else 14.0) if W < 640 else maxf(24.0, (W - 1180.0) * 0.5)
 	_margin.add_theme_constant_override("margin_left", int(side))
 	_margin.add_theme_constant_override("margin_right", int(side))
 	_margin.add_theme_constant_override("margin_top", 16 if W < 640 else 28)
@@ -96,6 +96,11 @@ func _fit() -> void:
 
 func narrow() -> bool:
 	return W < 640
+
+
+## Very small: a phone with the biggest text size.
+func tiny() -> bool:
+	return W < 360
 
 
 func _rebuild(keep_scroll: bool = true) -> void:
@@ -153,7 +158,7 @@ func _build_header() -> void:
 		var b := Ui.button(["A", "A+", "A++"][i], "chip", [18, 22, 26][i], 48)
 		b.toggle_mode = true
 		b.button_pressed = i == text_scale_i
-		b.custom_minimum_size.x = 60
+		b.custom_minimum_size.x = 52
 		b.pressed.connect(_set_text_scale.bind(i))
 		row.add_child(b)
 
@@ -291,7 +296,9 @@ func _card_rows(aids: Array) -> void:
 				spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				row.add_child(spacer)
 		if not open_here.is_empty():
-			_page.add_child(_aid_details(open_here))
+			var det := _aid_details(open_here)
+			_anchors["details"] = det
+			_page.add_child(det)
 		i += cols
 
 
@@ -369,7 +376,7 @@ func _aid_card(a: Dictionary) -> Control:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(spacer)
-	var foot := Ui.hbox(10)
+	var foot: BoxContainer = Ui.vbox(10) if tiny() else Ui.hbox(10)
 	v.add_child(foot)
 	var open: bool = expanded == a.id
 	var more := Ui.button("Hide details" if open else "See details", "main", Ui.BODY, 52)
@@ -397,7 +404,8 @@ func _toggle_expand(aid_id: String) -> void:
 	expanded = "" if expanded == aid_id else aid_id
 	_rebuild()
 	if expanded != "":
-		_scroll_to("aid_" + expanded)
+		# A phone shows one card per row, so jump to the details; wider pages keep the card's row in view.
+		_scroll_to("details" if narrow() else "aid_" + expanded)
 
 
 func _toggle_selected(on: bool, aid_id: String) -> void:
@@ -447,11 +455,12 @@ func _aid_details(a: Dictionary) -> Control:
 	var ht := Ui.wrap("All about the " + a.name, Ui.H2, Ui.PAPER, 700)
 	head.add_child(ht)
 	var close := Ui.button("Close", "plain", Ui.BODY, 50)
+	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	close.pressed.connect(_toggle_expand.bind(a.id))
 	head.add_child(close)
 	# At a glance: four big tiles.
 	var tiles := GridContainer.new()
-	tiles.columns = 2 if narrow() else 4
+	tiles.columns = 1 if tiny() else (2 if narrow() else 4)
 	tiles.add_theme_constant_override("h_separation", 10)
 	tiles.add_theme_constant_override("v_separation", 10)
 	v.add_child(tiles)
@@ -631,15 +640,15 @@ func _build_compare() -> void:
 	_anchors["compare"] = head
 	head.add_child(Ui.wrap("Side by side", Ui.H2, Ui.INK, 700))
 	head.add_child(Ui.wrap("Tap Compare on a card to add or remove it. Each topic has its own card.", Ui.BODY, Ui.INK_SOFT))
-	var controls := Ui.flow(10)
+	var controls: Container = Ui.vbox(10) if narrow() else Ui.flow(10)
 	_page.add_child(controls)
 	for i in 2:
-		var b := Ui.button(["Plain words", "Full specs (for engineers)"][i], "chip", Ui.BODY, 50)
+		var b := Ui.button(["Plain words", "Full specs (for engineers)"][i], "chip", Ui.BODY, 50, narrow())
 		b.toggle_mode = true
 		b.button_pressed = (i == 1) == full
 		b.pressed.connect(_set_full.bind(i == 1))
 		controls.add_child(b)
-	var diff := Ui.button("Only where they differ", "chip", Ui.BODY, 50)
+	var diff := Ui.button("Only where they differ", "chip", Ui.BODY, 50, narrow())
 	diff.toggle_mode = true
 	diff.button_pressed = only_diff
 	diff.toggled.connect(func(on: bool) -> void:
@@ -737,9 +746,10 @@ func _compare_row(r: Dictionary, aids: Array, wide: bool) -> Control:
 	var v := Ui.vbox(8)
 	v.add_child(label_box)
 	for a in aids:
-		var line := Ui.hbox(10)
+		var line: BoxContainer = Ui.vbox(4) if tiny() else Ui.hbox(10)
 		var tag := Ui.pill(a.short, _aid_color(a), Ui.PAPER, Ui.SMALL, 700)
-		tag.custom_minimum_size = Vector2(118, 0)
+		tag.custom_minimum_size = Vector2(0 if tiny() else 118, 0)
+		tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		tag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		line.add_child(tag)
 		line.add_child(_value_view(r, data.cell(a, r.id), false))
@@ -781,7 +791,7 @@ func _sources_card(ids: Array, title: String) -> Control:
 	var card := Ui.card(Ui.PAPER, Ui.INK, 20, 14, 0)
 	var v := Ui.vbox(8)
 	card.add_child(v)
-	var b := Ui.button(title + "  (show)", "plain", Ui.BODY, 50)
+	var b := Ui.button(title + "  (show)", "plain", Ui.BODY, 50, true)
 	v.add_child(b)
 	var rt := RichTextLabel.new()
 	rt.bbcode_enabled = true
@@ -866,15 +876,17 @@ func _hoot_says(v: VBoxContainer, title: String, line: String) -> void:
 	var h := Ui.hbox(14)
 	v.add_child(h)
 	var hoot: Control = Hoot.new()
-	hoot.custom_minimum_size = Vector2(84, 84) if narrow() else Vector2(104, 104)
+	hoot.custom_minimum_size = Vector2(76, 76) if narrow() else Vector2(104, 104)
 	hoot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(hoot)
 	var words := Ui.vbox(4)
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(words)
 	if title != "":
-		words.add_child(Ui.wrap(title, Ui.SMALL, Ui.INK_SOFT, 600))
-	words.add_child(Ui.wrap(line, Ui.H2, Ui.INK, 700))
+		words.add_child(Ui.wrap(title, Ui.BODY if narrow() else Ui.SMALL, Ui.INK_SOFT, 600))
+	# On a phone the big line gets the whole width, under Hoot.
+	(v if narrow() else words).add_child(Ui.wrap(line, Ui.H2, Ui.INK, 700))
 	var x := Ui.button("Close", "plain", Ui.BODY, 50)
 	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	x.pressed.connect(_close_sheet)
@@ -921,10 +933,6 @@ func _open_quiz(step: int = 0) -> void:
 		var back := Ui.button("Back", "plain", Ui.BODY, 54, true)
 		back.pressed.connect(_open_quiz.bind(step - 1))
 		nav.add_child(back)
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	nav.add_child(gap)
 	var skip := Ui.button("Skip this one", "plain", Ui.BODY, 54, true)
 	skip.pressed.connect(_answer.bind(step, -1))
 	nav.add_child(skip)
@@ -1064,8 +1072,15 @@ func _open_viewer(aid_id: String) -> void:
 			c.queue_free()
 		var built: Dictionary = AidModel.build(style, a.shell)
 		built.root.free()
+		var n := 0
 		for part in built.parts:
-			parts.add_child(Ui.wrap(part, Ui.BODY, Ui.INK, 700))
+			n += 1
+			var name_row := Ui.hbox(8)
+			var num := Ui.pill(str(n), Ui.SUNNY, Ui.INK, Ui.SMALL, 700)
+			num.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			name_row.add_child(num)
+			name_row.add_child(Ui.wrap(part, Ui.BODY, Ui.INK, 700))
+			parts.add_child(name_row)
 			parts.add_child(Ui.wrap(AidModel.PART_HELP.get(part, ""), Ui.SMALL, Ui.INK_SOFT))
 	if a.model_styles.size() > 1:
 		side.add_child(Ui.label("Style", Ui.SMALL, Ui.INK_SOFT, 600))
@@ -1079,16 +1094,16 @@ func _open_viewer(aid_id: String) -> void:
 				tt.setup(s, a.shell, true, true)
 				show_parts.call(s))
 			side.add_child(b)
-	var labels := Ui.button("Hide part names", "plain", Ui.BODY, 50)
+	var labels := Ui.button("Hide the numbers", "plain", Ui.BODY, 50)
 	labels.toggle_mode = true
 	labels.toggled.connect(func(on: bool) -> void:
 		tt.set_labels_visible(not on)
-		labels.text = "Show part names" if on else "Hide part names")
+		labels.text = "Show part names" if on else "Hide the numbers")
 	side.add_child(labels)
 	side.add_child(Ui.label("The parts", Ui.SMALL, Ui.INK_SOFT, 600))
 	side.add_child(parts)
 	show_parts.call(a.model_styles[0])
-	v.add_child(Ui.wrap("Drag to turn it. A simple model of the style, not the product itself.", Ui.SMALL, Ui.INK_SOFT))
+	v.add_child(Ui.wrap("Drag with a finger or the mouse to turn it. The numbers match the list. A simple model of the style, not the product itself.", Ui.SMALL, Ui.INK_SOFT))
 
 
 static func _date(iso: String) -> String:
