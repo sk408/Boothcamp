@@ -456,3 +456,48 @@ Reply with a number only where you disagree. Each item says what the game will d
 6. Conductive charts are flat or rising (stiffness-type), sensorineural sloping or flat, mixed sloping or flat.
    Tell me if you want rising mixed losses or sloping conductive ones too.
 7. The lines in sections 16 and 17.
+
+## 19. TYMP TOSS: a fourth cabinet (part 4)
+
+The hall gets a fourth cabinet, **TYMP TOSS** ("Read the eardrum's peak. Which type?"). The same belt game as
+Chart Chute, on a third belt: each card is one ear's **tympanogram** instead of an audiogram, drawn like the Day 10-11
+tympanometer screen (pressure -400 to +200 daPa across, admittance in mL up, the shaded **normal box** from -100 to
++50 daPa and 0.3 to 1.7 mL, and the canal volume printed under the curve). Five chutes, named with the words the
+tympanometer already uses (`CaseRules.TYMP_SHAPES`), sorted by the engine's own `CaseRules.tymp_type`:
+
+| Key | Chute (picture) | Rule | Tell |
+|---|---|---|---|
+| 1 | **A** (a mountain) | peak inside the box | "Peak inside the box: the eardrum moves fine" |
+| 2 | **B** (a pancake) | no peak (under 0.1 mL) | "No peak at all: flat as a pancake" |
+| 3 | **As** (a low hill) | peak at normal pressure, under 0.3 mL | "Peak too low: a stiff eardrum" |
+| 4 | **C** (a mountain with a left arrow) | peak below -100 daPa | "Peak moved left: negative pressure" |
+| 5 | **Ad** (a skyscraper) | peak over 1.7 mL | "Peak sky-high: a floppy eardrum" |
+
+- **The ramp:** warm-up with A and B; As opens at 10 s, C at 20 s, Ad at 30 s; left ears (blue) at 35 s;
+  lookalikes at 40 s (an A near the box's edges, a C only 50 daPa past the line, an As at 0.25 mL, and a B with a
+  tiny or large canal volume, whose patient line hints at wax or an old hole; it still goes down B).
+- **Honest cards:** each peak sits at least 50 daPa and 0.05 mL from every line it could cross (a C's peak at -150
+  daPa or lower; an A's between -60 and +25 daPa and 0.4 to 1.5 mL). Canal volume is normal (0.8 to 1.6 mL) except
+  on those lookalike B cards.
+- **Lines:** A "Just here for a check-up.", "My ears feel fine, honest!", "The wife sent me."; B "My ear feels full
+  of water.", "Had a stinking cold for weeks.", "Everything's muffled on this side."; As "My hearing faded slowly.",
+  "Mum had stiff ears too.", "Quieter every year, no pain."; C "My ears won't pop since the flight.", "Bit of a
+  cold lately.", "Like I'm still on the plane."; Ad "I took a knock to that ear once.", "Old scar on my eardrum.",
+  "A big bang, years ago."; the lookalike B lines "Never cleaned my ears. Ever." (tiny volume) and "I had grommets
+  as a kid." (large volume).
+- No story charts on this belt, no two-ear cards; its own board (save key `chart_chute_tymps`), FLUENT and ranks
+  as in part 1. The hall's four cabinets sit a little smaller.
+
+## 20. For Steve: clinical check (TYMP TOSS)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. The five Jerger types use the game's tympanometer rules: normal box -100 to +50 daPa and 0.3 to 1.7 mL, flat
+   under 0.1 mL.
+2. The chutes are named by type letter with the tympanometer's pictures (mountain, pancake, low hill, mountain
+   moved left, skyscraper).
+3. A type B with a tiny or large canal volume still goes down **B**; only its line and the printed volume hint at
+   wax or a hole. Sorting B into fluid / blocked / hole could be a later belt.
+4. No story charts on this belt (Skye's and Barnaby's flat tymps could come later as gold cards).
+5. Type C here is any peak below -100 daPa (no C1/C2 split).
+6. The lines in section 19.
