@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Draws the side-view pictures of each hearing aid style sitting on an ear, as SVG files in compare/art/.
+"""Draws the page's pictures as SVG and packs them into data/art.json, which the page rasterizes at the screen's
+real resolution (previews go to compare/art/, which Godot ignores).
 
-Generic drawings of a style, never a product: an ear seen from the side (face to the left), with the aid where it
-is worn. One file per style and shell colour: art/<style>-<shell>.svg. Also packs them into data/art.json, which the page rasterizes at the screen's real resolution.
+Two kinds:
+- <style>-<shell>: how a style is worn, an ear seen from the side (face to the left) with the aid in place.
+- product-<aid id>[-<style>]: each hearing aid as it looks, drawn in the page's style over the outline traced
+  from its product photo (tools/outlines.json, made by tools/trace_photo.py). Colours, shading, buttons, lights and
+  microphones are drawn here; no photo, logo or lettering is used.
 Run: python3 compare/tools/make_art.py
 """
 import json
@@ -120,6 +124,125 @@ def svg(style, shell):
             f'{inner}</svg>\n')
 
 
+# ---------------------------------------------------------------- the products, from their traced outlines
+
+INK = "#2e2442"
+
+# Per drawing: the outline key, the case's light and dark colours, wire, receiver and dome colours, and the details,
+# placed by eye from the photo (in the outline's 300 x 300 box): ("shine", path), ("button", x, y, w, h, angle),
+# ("led", x, y), ("mic", x, y), ("dome", x, y, r) and ("core", x, y, r) for a round dome and its speaker,
+# ("plate", x, y, w, h, angle) for an in-ear faceplate, ("receiver", x, y, angle) where the photo hides it.
+PRODUCTS = {
+    "product-sonite_rise": dict(outline="sonite_rise", case=("#eceef1", "#a9adb4"), wire="#dfe3e8",
+                                recv="#9aa0a8", dome="#dfe6ee",
+                                details=[("shine", "M110,60 C100,110 96,170 98,240"), ("mic", 141, 40),
+                                         ("button", 129, 90, 13, 18, -10), ("button", 116, 156, 13, 18, -6),
+                                         ("mic", 104, 205)]),
+    "product-jabra_pro30": dict(outline="jabra_pro30", case=("#6a6b72", "#2a2b30"), wire="#e6eaf0",
+                                recv="#3a3c42", dome="#8fa5c6",
+                                details=[("shine", "M30,60 C24,110 22,180 26,250"), ("mic", 34, 58),
+                                         ("button", 34, 205, 16, 46, 0), ("mic", 76, 251)]),
+    "product-philips_9050": dict(outline="philips_9050", case=("#e6dccd", "#a8987f"), wire="#e9a7a2",
+                                 recv="#3a5a9c", dome="#e3ecf6",
+                                 details=[("shine", "M50,80 C40,130 38,200 44,260"), ("mic", 70, 66),
+                                          ("led", 58, 98), ("button", 52, 205, 18, 92, 0),
+                                          ("dome", 226, 206, 31), ("core", 226, 206, 12)]),
+    "product-rexton_rplus": dict(outline="rexton_rplus", case=("#5b5d63", "#232428"), wire="#e3e8ee",
+                                 recv="#4a4d54", dome="#d9e2ec",
+                                 details=[("shine", "M90,60 C66,100 56,160 56,240"), ("led", 156, 28),
+                                          ("button", 44, 112, 9, 18, 25), ("button", 37, 177, 9, 18, 10),
+                                          ("mic", 112, 140)]),
+    "product-soundgear_amp": dict(outline="soundgear_amp", case=("#f3cdbd", "#b97f6c"), wire="#d9dde3",
+                                  recv="#3a3c42", dome="#9aa1aa",
+                                  details=[("shine", "M40,70 C24,110 22,170 34,220"), ("led", 50, 128),
+                                           ("button", 52, 172, 16, 34, 0)]),
+    "product-soundgear_amp-cic": dict(outline="soundgear_amp-cic", case=("#55575d", "#1f2024"), wire="#9aa0a8",
+                                      recv="#3a3c42", dome="#9aa1aa",
+                                      details=[("plate", 104, 160, 60, 150, 8), ("mic", 104, 110),
+                                               ("mic", 104, 205), ("button", 104, 158, 22, 36, 0)]),
+}
+
+
+def _smooth(pts, closed=True, t=0.5):
+    """A Catmull-Rom curve through the traced points, as an SVG path."""
+    n = len(pts)
+    if n < 3:
+        return "M" + " L".join("%g,%g" % tuple(q) for q in pts)
+    def at(i):
+        return pts[i % n] if closed else pts[max(0, min(n - 1, i))]
+    d = "M%g,%g" % tuple(pts[0])
+    last = n if closed else n - 1
+    for i in range(last):
+        p0, p1, p2, p3 = at(i - 1), at(i), at(i + 1), at(i + 2)
+        c1 = (p1[0] + (p2[0] - p0[0]) * t / 3, p1[1] + (p2[1] - p0[1]) * t / 3)
+        c2 = (p2[0] - (p3[0] - p1[0]) * t / 3, p2[1] - (p3[1] - p1[1]) * t / 3)
+        d += " C%.1f,%.1f %.1f,%.1f %g,%g" % (c1[0], c1[1], c2[0], c2[1], p2[0], p2[1])
+    return d + (" Z" if closed else "")
+
+
+def product_svg(key, outlines):
+    spec = PRODUCTS[key]
+    o = outlines[spec["outline"]]
+    light, dark = spec["case"]
+    gid = key.replace("-", "_")
+    xs = [q[0] for q in o["case"]]
+    x0, x1 = min(xs), max(xs)
+    parts = [
+        f'<defs><linearGradient id="{gid}" x1="{x0}" y1="0" x2="{x1}" y2="0" gradientUnits="userSpaceOnUse">'
+        f'<stop offset="0" stop-color="{light}"/><stop offset="0.45" stop-color="{light}"/>'
+        f'<stop offset="1" stop-color="{dark}"/></linearGradient></defs>',
+        # A soft shadow on the "table".
+        f'<ellipse cx="150" cy="292" rx="120" ry="6" fill="{INK}" opacity="0.12"/>',
+    ]
+    if o["wire"]:
+        w = _smooth(o["wire"], closed=False)
+        parts.append(f'<path d="{w}" fill="none" stroke="{INK}" stroke-width="7" stroke-linecap="round" '
+                     'stroke-linejoin="round"/>')
+        parts.append(f'<path d="{w}" fill="none" stroke="{spec["wire"]}" stroke-width="3.2" '
+                     'stroke-linecap="round" stroke-linejoin="round"/>')
+    if o["recv"]:
+        parts.append(f'<path d="{_smooth(o["recv"])}" fill="{spec["dome"]}" stroke="{INK}" stroke-width="4" '
+                     'stroke-linejoin="round"/>')
+    parts.append(f'<path d="{_smooth(o["case"])}" fill="url(#{gid})" stroke="{INK}" stroke-width="4.5" '
+                 'stroke-linejoin="round"/>')
+    for det in spec["details"]:
+        kind = det[0]
+        if kind == "button":
+            _, x, y, w, h, a = det
+            parts.append(f'<rect x="{x - w / 2}" y="{y - h / 2}" width="{w}" height="{h}" rx="{min(w, h) / 2}" '
+                         f'fill="{dark}" stroke="{INK}" stroke-width="2.5" transform="rotate({a} {x} {y})"/>')
+        elif kind == "led":
+            _, x, y = det
+            parts.append(f'<circle cx="{x}" cy="{y}" r="4.5" fill="#57e389" stroke="{INK}" stroke-width="1.5"/>')
+        elif kind == "mic":
+            _, x, y = det
+            parts.append(f'<circle cx="{x}" cy="{y}" r="3.2" fill="{INK}"/>')
+        elif kind == "shine":
+            _, d = det
+            parts.append(f'<path d="{d}" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" '
+                         'opacity="0.55"/>')
+        elif kind == "dome":
+            _, x, y, r = det
+            parts.append(f'<circle cx="{x}" cy="{y}" r="{r}" fill="{spec["dome"]}" stroke="{INK}" stroke-width="4"/>'
+                         f'<circle cx="{x}" cy="{y}" r="{r * 0.62}" fill="none" stroke="{INK}" stroke-width="1.5" '
+                         'opacity="0.35"/>')
+        elif kind == "core":
+            _, x, y, r = det
+            parts.append(f'<circle cx="{x}" cy="{y}" r="{r}" fill="{spec["recv"]}" stroke="{INK}" stroke-width="2.5"/>')
+        elif kind == "plate":
+            _, x, y, w, h, a = det
+            parts.append(f'<rect x="{x - w / 2}" y="{y - h / 2}" width="{w}" height="{h}" rx="{w / 2.4}" '
+                         f'fill="{light}" stroke="{INK}" stroke-width="2.5" transform="rotate({a} {x} {y})"/>')
+        elif kind == "receiver":
+            _, x, y, a = det
+            parts.append(f'<g transform="translate({x} {y}) rotate({a})">'
+                         f'<rect x="-7" y="-4" width="20" height="13" rx="5" fill="{spec["recv"]}" stroke="{INK}" '
+                         f'stroke-width="3"/><path d="M13,-6 C27,-6 31,2 31,2.5 C31,3 27,11 13,11 Z" '
+                         f'fill="{spec["dome"]}" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/></g>')
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="380" height="380">'
+            + "".join(parts) + "</svg>\n")
+
+
 def main(root):
     """Writes art/<style>-<shell>.svg (previews; Godot ignores the folder) and data/art.json (what the page loads)."""
     art = os.path.join(root, "art")
@@ -131,6 +254,13 @@ def main(root):
         text = svg(style, shell)
         pack[f"{style}-{shell}"] = text
         with open(os.path.join(art, f"{style}-{shell}.svg"), "w") as f:
+            f.write(text)
+    with open(os.path.join(root, "tools", "outlines.json")) as f:
+        outlines = json.load(f)
+    for key in PRODUCTS:
+        text = product_svg(key, outlines)
+        pack[key] = text
+        with open(os.path.join(art, key + ".svg"), "w") as f:
             f.write(text)
     with open(os.path.join(root, "data", "art.json"), "w") as f:
         json.dump({"_comment": "Generated by tools/make_art.py: do not edit by hand.", "art": pack}, f, indent=1)

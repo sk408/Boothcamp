@@ -42,6 +42,7 @@ func _initialize() -> void:
 		_ok(Color.html_is_valid(String(a.get("color", ""))), a.id + " has a card colour")
 		for s in a.model_styles:
 			_ok(art.has("%s-%s" % [s, a.shell]), "%s has a drawing for %s" % [a.id, s])
+		_ok(art.has("product-" + a.id), a.id + " has a product drawing")
 		for f in fields:
 			if f.begins_with("price_"):
 				continue
