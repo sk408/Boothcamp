@@ -473,10 +473,10 @@ tympanometer already uses (`CaseRules.TYMP_SHAPES`), sorted by the engine's own 
 | 4 | **C** (a mountain with a left arrow) | peak below -100 daPa | "Peak moved left: negative pressure" |
 | 5 | **Ad** (a skyscraper) | peak over 1.7 mL | "Peak sky-high: a floppy eardrum" |
 
-- **The ramp:** warm-up with A and B; As opens at 10 s, C at 20 s, Ad at 30 s; left ears (blue) at 35 s;
+- **The ramp:** warm-up with A and B; As opens at 10 s, C at 20 s, Ad at 30 s; left ears (blue) at 30 s;
   lookalikes at 40 s (an A near the box's edges, a C only 50 daPa past the line, an As at 0.25 mL, and a B with a
   tiny or large canal volume, whose patient line hints at wax or an old hole; it still goes down B).
-- **Honest cards:** each peak sits at least 50 daPa and 0.05 mL from every line it could cross (a C's peak at -150
+- **Honest cards:** each peak sits at least 40 daPa and 0.05 mL from every line it could cross (a C's peak at -150
   daPa or lower; an A's between -60 and +25 daPa and 0.4 to 1.5 mL). Canal volume is normal (0.8 to 1.6 mL) except
   on those lookalike B cards.
 - **Lines:** A "Just here for a check-up.", "My ears feel fine, honest!", "The wife sent me."; B "My ear feels full

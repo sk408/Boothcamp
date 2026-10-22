@@ -110,9 +110,9 @@ debriefs at the end.
 **Arcade** (on the title) is the quick-play corner, a minute or two a run with a high-score table:
 **Chart Chute** (drop each audiogram down the chute of its shape: slope, notch, cookie bite,
 rising or reverse bite), **Ears, Please!** (stamp each patient file at the clinic's front desk FIT,
-REFER or DOCTOR TODAY, and point at the red flag behind every referral) and **Air & Bone** (each
-chart shows air and bone: call the loss sensorineural, conductive or mixed). None ever tests your
-own hearing.
+REFER or DOCTOR TODAY, and point at the red flag behind every referral), **Air & Bone** (each
+chart shows air and bone: call the loss sensorineural, conductive or mixed) and **Tymp Toss** (sort
+tympanograms into types A, B, As, C and Ad). None ever tests your own hearing.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet
 > on purpose (about -71 dBFS at 0 dB HL, never above -12 dBFS, with a limiter on top), and you

@@ -12,7 +12,8 @@ const WARMUP_CARDS := 3
 const RUN_S := 60.0
 ## When each chute opens (seconds into the run).
 const UNLOCK_AT: Dictionary[StringName, float] = {&"sloping": 0.0, &"notch": 0.0, &"cookie_bite": 10.0, &"rising": 25.0, &"reverse_bite": 35.0,
-	&"sensorineural": 0.0, &"conductive": 0.0, &"mixed": 15.0}
+	&"sensorineural": 0.0, &"conductive": 0.0, &"mixed": 15.0,
+	&"tymp_a": 0.0, &"tymp_b": 0.0, &"tymp_as": 10.0, &"tymp_c": 20.0, &"tymp_ad": 30.0}
 ## The ramp inside the run.
 const LEFT_FROM_S := 30.0       ## left-ear (blue) cards join
 const BOTH_FROM_S := 40.0       ## two-ear cards: sort the colour the card names

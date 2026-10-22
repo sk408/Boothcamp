@@ -18,6 +18,8 @@ extends Control
 ## belt = &"types" makes it AIR & BONE (air_bone.tscn, docs/ARCADE.md section 17): each chart shows
 ## one ear's air and bone, and the three chutes are SENSORINEURAL, CONDUCTIVE and MIXED
 ## (ClinicRules.hearing_type); its own board and runs under MODE_TYPES, no story charts.
+## belt = &"tymps" makes it TYMP TOSS (tymp_toss.tscn, section 19): each card is one ear's
+## tympanogram, sorted into the five Jerger types (CaseRules.tymp_type); MODE_TYMPS, no story charts.
 
 signal _sorted(pick: StringName)
 
@@ -32,6 +34,10 @@ const AUDIOGRAM_SCENE := "res://ui/audiogram/audiogram.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const MODE := "chart_chute"
 const MODE_TYPES := "chart_chute_types"
+const MODE_TYMPS := "chart_chute_tymps"
+## Each belt's save key and title.
+const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS}
+const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -64,6 +70,8 @@ const WARMUP_HINTS: Dictionary = {
 	&"notch": "This one dips at 4k and comes back up: NOTCH!",
 	&"sensorineural": "Each chart shows air AND bone. Here bone sits right on air: SENSORINEURAL!",
 	&"conductive": "Bone is normal, but air is way down. A gap: CONDUCTIVE!",
+	&"tymp_a": "Each card is a tympanogram. Its peak sits inside the box: TYPE A!",
+	&"tymp_b": "No peak at all, flat as a pancake: TYPE B!",
 }
 
 var seed_value := -1
@@ -136,6 +144,7 @@ class CardView extends Control:
 	var ear_cue := false          # a two-ear card sorted by the other ear's shape
 	var motion: Tween             # the card's one running move (slide, drop, nudge, fade)
 	var _over: Control
+	var _tymp: Control              # a tympanogram card's chart (the audiogram hides)
 	var _font: Font
 
 	func _init() -> void:
@@ -152,6 +161,11 @@ class CardView extends Control:
 		ag.size = Vector2(size.x - 28, size.y - 88)
 		add_child(ag)
 		ag.mouse_filter = Control.MOUSE_FILTER_IGNORE   # after add_child: Audiogram._ready sets PASS
+		_tymp = UiKit.full_rect()
+		_tymp.draw.connect(func() -> void:
+			if card.has("tymp"):
+				ArcadeArt.tymp_chart(_tymp, tymp_plot(), card["tymp"], Palette.ear_color(String(card["sort_ear"])), true, String(card["sort_ear"])))
+		add_child(_tymp)
 		_over = UiKit.full_rect()
 		_over.draw.connect(_draw_tell)
 		add_child(_over)
@@ -163,10 +177,16 @@ class CardView extends Control:
 		motion = create_tween()
 		return motion
 
+	## Where a tympanogram card's chart sits on the card.
+	func tymp_plot() -> Rect2:
+		return Rect2(70, 92, size.x - 100, size.y - 164)
+
 	func show_card(c: Dictionary) -> void:
 		card = c
 		tell = &""
 		ear_cue = false
+		ag.visible = not c.has("tymp")
+		_tymp.queue_redraw()
 		ag.ear = String(c["ear"]) if String(c["ear"]) != "" else "both"
 		ag.clear_points()
 		for ear: String in (c["ac"] as Dictionary):
@@ -228,7 +248,10 @@ class CardView extends Control:
 		var who := String(card.get("who", ""))
 		Portraits.draw(self, who, Vector2(48, 40), 26.0, false, false, true)
 		draw_string(_font, Vector2(86, 34), String(card.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, 250, 22, Palette.INK)
-		draw_string(UiKit.font(500), Vector2(86, 58), "Lower on the chart = harder to hear", HORIZONTAL_ALIGNMENT_LEFT, 260, 14, Palette.INK_SOFT)
+		var sub := "Lower on the chart = harder to hear"
+		if card.has("tymp"):
+			sub = "Canal volume: %.1f mL" % float(card["tymp"].get("ecv_ml", 1.0))
+		draw_string(UiKit.font(500), Vector2(86, 58), sub, HORIZONTAL_ALIGNMENT_LEFT, 260, 14 if not card.has("tymp") else 16, Palette.INK_SOFT)
 		var tag := _tag_rect()
 		UiDraw.rounded_rect(self, tag, Palette.ear_color(String(card.get("sort_ear", "right"))), 19)
 		draw_string(_font, tag.position + Vector2(14, 27), _tag_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.PAPER)
@@ -243,9 +266,17 @@ class CardView extends Control:
 			return
 		var steady := bool(Game.settings.get("reduced_motion", false))
 		var info: Dictionary = ChartDeck.TELLS[tell]
-		var gr := ag.get_region_global_rect(int(info["freq_lo"]), int(info["freq_hi"]))
 		var inv := _over.get_global_transform_with_canvas().affine_inverse()
-		var rr := Rect2(inv * gr.position, inv.basis_xform(gr.size)).abs()
+		var rr: Rect2
+		if info.has("p_lo"):
+			# a tympanogram's patch: pressure by admittance, in the card's own coordinates
+			var plot := tymp_plot()
+			var a := ArcadeArt.tymp_xy(plot, float(info["p_lo"]), float(info["ml_hi"]))
+			var b := ArcadeArt.tymp_xy(plot, float(info["p_hi"]), float(info["ml_lo"]))
+			rr = Rect2(a, b - a).abs()
+		else:
+			var gr := ag.get_region_global_rect(int(info["freq_lo"]), int(info["freq_hi"]))
+			rr = Rect2(inv * gr.position, inv.basis_xform(gr.size)).abs()
 		var pulse := 0.6 if steady else 0.5 + 0.5 * sin(tell_t * 9.0)
 		_over.draw_rect(rr, Color(Palette.SUNNY, 0.18 + 0.14 * pulse))
 		_over.draw_rect(rr, Color(Palette.SELECT_ORANGE, 0.7 + 0.3 * pulse), false, 4.0)
@@ -278,6 +309,10 @@ class CardView extends Control:
 
 ## One chute: its picture and word, its key, locked until its time, and the gag when a chart lands.
 class ChuteView extends Control:
+	## The tympanogram each tymp chute's mini chart shows.
+	const MINI_TYMPS: Dictionary = {&"tymp_a": {"type": "A", "peak_daPa": 0, "peak_ml": 0.9}, &"tymp_b": {"type": "B", "peak_ml": 0.05},
+		&"tymp_as": {"type": "As", "peak_daPa": 0, "peak_ml": 0.2}, &"tymp_c": {"type": "C", "peak_daPa": -220, "peak_ml": 0.8},
+		&"tymp_ad": {"type": "Ad", "peak_daPa": 0, "peak_ml": 2.5}}
 	signal picked(shape: StringName)
 	var shape: StringName
 	var key := 1
@@ -332,6 +367,9 @@ class ChuteView extends Control:
 
 	## The shape as a tiny chart (lower = harder to hear), so the picture links to the line.
 	func _draw_mini_chart(box: Rect2) -> void:
+		if ChartDeck.TYMPS.has(shape):
+			ArcadeArt.tymp_chart(self, box.grow(-2.0), MINI_TYMPS[shape], Palette.INK, false)
+			return
 		UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
 		# the normal band (25 dB HL and better), as on the big chart
 		draw_rect(Rect2(box.position + Vector2(4, 3), Vector2(box.size.x - 8, 2 + (box.size.y - 10) * 25.0 / 70.0)), Color(Palette.MINT, 0.25))
@@ -406,7 +444,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rng.seed = seed_value if seed_value >= 0 else Game.rng.randi()
 	_ids = ChartDeck.BELTS[belt]
-	_mode = MODE_TYPES if belt == &"types" else MODE
+	_mode = BELT_MODES[belt]
 	_build()
 	Hoot.clear()
 	get_viewport().size_changed.connect(_layout)
@@ -760,7 +798,12 @@ func _ramp_tips(card: Dictionary) -> void:
 	if _phase != "run":
 		return
 	if String(card["ear"]) == "left":
-		_say("left", "Blue X is the left ear. Its bone marks face the other way." if card.has("bc") else "Blue X is the left ear. Same shapes!", "")
+		var tip := "Blue X is the left ear. Same shapes!"
+		if card.has("bc"):
+			tip = "Blue X is the left ear. Its bone marks face the other way."
+		elif card.has("tymp"):
+			tip = "Blue is the left ear. Same five types!"
+		_say("left", tip, "")
 	elif String(card["ear"]) == "both":
 		_say("both", "Two ears? Sort the colour on the tag.", "")
 		_shot_queue.append("chute_both_ears")
@@ -779,7 +822,10 @@ func _refresh_locks() -> void:
 			Juice.pop(c, 1.25, 0.4)
 			Sfx.play(&"pop", 1.2, -4.0)
 			_flash_banner("NEW CHUTE!", Palette.SUNNY, 0.8, Vector2(c.position.x + c.size.x * 0.5, CHUTE_Y - 40))
-			_say("unlock_" + String(s), "New chute: %s. %s." % [ChartDeck.CHUTE_WORDS[s].to_lower(), ChartDeck.TELLS[s]["text"]], "")
+			var word := ChartDeck.CHUTE_WORDS[s]
+			if not ChartDeck.TYMPS.has(s):
+				word = word.to_lower()   # "TYPE As" keeps its capitals: the letters are the type
+			_say("unlock_" + String(s), "New chute: %s. %s." % [word, ChartDeck.TELLS[s]["text"]], "")
 			_shot_once("chute_unlock_" + String(s))
 			if _phase == "run":
 				_meet_new_chute(s)
@@ -978,7 +1024,7 @@ func _draw_bg(ci: Control) -> void:
 
 func _draw_top() -> void:
 	var f := UiKit.font(700)
-	_top.draw_string(f, Vector2(22, 52), "AIR & BONE" if belt == &"types" else "CHART CHUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.SUNNY)
+	_top.draw_string(f, Vector2(22, 52), BELT_TITLES[belt], HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.SUNNY)
 	# the clock bar
 	var bar := Rect2(330, 24, 560, 34)
 	UiDraw.rounded_rect(_top, bar, Color("#4a4363"), 17)
@@ -1035,6 +1081,9 @@ func _draw_preview() -> void:
 		var tag := "RED O" if sort_ear == "right" else "BLUE X"
 		_preview.draw_string(f, Vector2(r.position.x, r.position.y + 26), tag, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 14, 18, Palette.ear_color(sort_ear))
 	var plot := Rect2(r.position + Vector2(16, 40), Vector2(r.size.x - 32, r.size.y - 54))
+	if _next.has("tymp"):
+		ArcadeArt.tymp_chart(_preview, plot, _next["tymp"], Palette.ear_color(sort_ear), false)
+		return
 	_preview.draw_rect(plot, Color("#ffffff"))
 	for ear: String in (_next["ac"] as Dictionary):
 		var t: Dictionary = _next["ac"][ear]
@@ -1152,6 +1201,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"tymps":
+		return "Where the peak sits is pressure. How tall it is: how freely the eardrum moves."
 	if belt == &"types":
 		return "Bone shows the inner ear. The gap between air and bone shows the middle ear."
 	var found := ArcadeScores.found(_mode)

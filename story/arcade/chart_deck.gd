@@ -14,11 +14,35 @@ extends RefCounted
 const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"rising", &"reverse_bite"]
 ## One word under each chute's picture.
 const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING",
-	&"reverse_bite": "REVERSE BITE", &"sensorineural": "SENSORINEURAL", &"conductive": "CONDUCTIVE", &"mixed": "MIXED"}
+	&"reverse_bite": "REVERSE BITE", &"sensorineural": "SENSORINEURAL", &"conductive": "CONDUCTIVE", &"mixed": "MIXED",
+	&"tymp_a": "TYPE A", &"tymp_b": "TYPE B", &"tymp_as": "TYPE As", &"tymp_c": "TYPE C", &"tymp_ad": "TYPE Ad"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
-## The two belts: the shape belt (Chart Chute) and the type belt (AIR & BONE).
-const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES}
+## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
+const TYMPS: Array[StringName] = [&"tymp_a", &"tymp_b", &"tymp_as", &"tymp_c", &"tymp_ad"]
+## Each tymp chute's Jerger type.
+const TYMP_TYPE: Dictionary[StringName, StringName] = {&"tymp_a": &"A", &"tymp_b": &"B", &"tymp_as": &"As", &"tymp_c": &"C", &"tymp_ad": &"Ad"}
+## The belts: shapes (Chart Chute), types (AIR & BONE) and tymps (TYMP TOSS).
+const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS}
+## A tymp card's peak keeps its type this far either way (daPa, mL).
+const TYMP_MARGIN_DAPA := 40
+const TYMP_MARGIN_ML := 0.04
+## Peak ranges per chute: {"plain" | "lookalike": [[daPa lo, daPa hi], [mL lo, mL hi]]} (docs/ARCADE.md
+## section 19). A lookalike sits near a line: an A near the box's edges, a C just past -100.
+const TYMP_ARCH: Dictionary[StringName, Dictionary] = {
+	&"tymp_a": {"plain": [[-50, 20], [0.5, 1.2]], "lookalike": [[-60, 25], [0.4, 1.5]]},
+	&"tymp_b": {"plain": [[0, 0], [0.02, 0.05]], "lookalike": [[0, 0], [0.02, 0.05]]},
+	&"tymp_as": {"plain": [[-50, 20], [0.15, 0.2]], "lookalike": [[-50, 20], [0.25, 0.25]]},
+	&"tymp_c": {"plain": [[-300, -200], [0.4, 1.0]], "lookalike": [[-160, -150], [0.4, 1.0]]},
+	&"tymp_ad": {"plain": [[-40, 20], [2.2, 2.8]], "lookalike": [[-40, 20], [1.8, 1.9]]},
+}
+## Canal volume (mL): normal on every card but a lookalike B, which is tiny (a wax plug) or large
+## (an old hole or a grommet).
+const TYMP_ECV_NORMAL := Vector2(0.8, 1.6)
+const TYMP_ECV_TINY := Vector2(0.3, 0.45)
+const TYMP_ECV_LARGE := Vector2(2.6, 3.2)
+## The patient's line on a lookalike B, by its canal volume.
+const TYMP_B_LINES: Dictionary = {&"tiny": "Never cleaned my ears. Ever.", &"large": "I had grommets as a kid."}
 ## Bone on a type card: these frequencies (the ones hearing_type reads).
 const BONE_FREQS: Array[int] = [500, 1000, 2000, 4000]
 ## A type card's gaps are big (20 dB or more) or none (5 or less), so any one point 5 dB off
@@ -113,6 +137,11 @@ const LINES: Dictionary = {
 	&"sensorineural": ["Loud enough, just not clear.", "Everyone mumbles!", "It's the S sounds."],
 	&"conductive": ["Like my head's under water.", "My own voice booms!", "It feels blocked."],
 	&"mixed": ["Blocked AND fuzzy.", "Ear trouble since I was a lad, and now this.", "Louder helps, but not enough."],
+	&"tymp_a": ["Just here for a check-up.", "My ears feel fine, honest!", "The wife sent me."],
+	&"tymp_b": ["My ear feels full of water.", "Had a stinking cold for weeks.", "Everything's muffled on this side."],
+	&"tymp_as": ["My hearing faded slowly.", "Mum had stiff ears too.", "Quieter every year, no pain."],
+	&"tymp_c": ["My ears won't pop since the flight.", "Bit of a cold lately.", "Like I'm still on the plane."],
+	&"tymp_ad": ["I took a knock to that ear once.", "Old scar on my eardrum.", "A big bang, years ago."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -125,6 +154,12 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"sensorineural": {"text": "Bone sits on air: the inner ear", "freq_lo": 500, "freq_hi": 4000},
 	&"conductive": {"text": "Bone is normal, air is down: the middle ear", "freq_lo": 500, "freq_hi": 4000},
 	&"mixed": {"text": "Bone is down too, AND a gap: both", "freq_lo": 500, "freq_hi": 4000},
+	# tymp tells glow over a pressure (daPa) by admittance (mL) patch of the tympanogram instead
+	&"tymp_a": {"text": "Peak inside the box: the eardrum moves fine", "p_lo": -100, "p_hi": 50, "ml_lo": 0.3, "ml_hi": 1.7},
+	&"tymp_b": {"text": "No peak at all: flat as a pancake", "p_lo": -400, "p_hi": 200, "ml_lo": 0.0, "ml_hi": 0.3},
+	&"tymp_as": {"text": "Peak too low: a stiff eardrum", "p_lo": -100, "p_hi": 50, "ml_lo": 0.0, "ml_hi": 0.3},
+	&"tymp_c": {"text": "Peak moved left: negative pressure", "p_lo": -400, "p_hi": -100, "ml_lo": 0.0, "ml_hi": 3.0},
+	&"tymp_ad": {"text": "Peak sky-high: a floppy eardrum", "p_lo": -100, "p_hi": 50, "ml_lo": 1.7, "ml_hi": 3.0},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -144,6 +179,8 @@ const BGS: PackedStringArray = ["#ffe6a8", "#d9e6ff", "#d6f5e3", "#ffd9e8", "#ff
 static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dictionary, serial: int) -> Dictionary:
 	if TYPES.has(shape):
 		return make_type_card(rng, shape, opts, serial)
+	if TYMPS.has(shape):
+		return make_tymp_card(rng, shape, opts, serial)
 	var ear := String(opts.get("ear", "right"))
 	var sort_ear := ear
 	if ear == "both":
@@ -246,6 +283,64 @@ static func stable_type(ac: Dictionary, bc: Dictionary, type: StringName) -> boo
 			var b := bc.duplicate()
 			b[f] = int(bc[f]) + d
 			if ClinicRules.hearing_type(a, bc) != type or ClinicRules.hearing_type(ac, b) != type:
+				return false
+	return true
+
+
+## (seeded) One TYMP TOSS card: one ear's tympanogram whose Jerger type (CaseRules.tymp_type) is
+## the chute's. Adds "tymp" {"type", "peak_daPa", "peak_ml", "ecv_ml"} (CaseRules' own keys, so
+## CaseRules.tymp_admittance draws it); "ac" is empty.
+static func make_tymp_card(rng: RandomNumberGenerator, id: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+	var lookalike := bool(opts.get("lookalike", false))
+	var tymp := make_tymp(rng, id, lookalike)
+	var lines: Array = LINES[id]
+	var line: String = lines[rng.randi() % lines.size()]
+	if id == &"tymp_b" and lookalike:
+		var big := rng.randf() < 0.5
+		var r: Vector2 = TYMP_ECV_LARGE if big else TYMP_ECV_TINY
+		tymp["ecv_ml"] = snappedf(rng.randf_range(r.x, r.y), 0.1)
+		line = String(TYMP_B_LINES[&"large" if big else &"tiny"])
+	var first := FIRST[rng.randi() % FIRST.size()]
+	return {
+		"serial": serial, "shape": id, "ear": ear, "sort_ear": ear, "ac": {}, "tymp": tymp, "golden": false, "other_shape": &"",
+		"name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]], "who": "chute_%d" % (serial % PORTRAIT_IDS),
+		"look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"), "line": line,
+	}
+
+
+## (seeded) A tympanogram {"type", "peak_daPa", "peak_ml", "ecv_ml"} for a tymp chute, clear of its
+## type's lines (stable_tymp). Pressure on 5 daPa steps, admittance and volume on 0.05 / 0.1 mL.
+static func make_tymp(rng: RandomNumberGenerator, id: StringName, lookalike: bool) -> Dictionary:
+	var arch: Array = TYMP_ARCH[id]["lookalike" if lookalike else "plain"]
+	for attempt in MAX_TRIES:
+		var p := clampi(snappedi(rng.randi_range(int(arch[0][0]), int(arch[0][1])), 5), int(arch[0][0]), int(arch[0][1]))
+		var ml := snappedf(rng.randf_range(float(arch[1][0]), float(arch[1][1])), 0.05)
+		if id == &"tymp_a" and lookalike:
+			# near an edge: the low or high end of the box's height, or its left side
+			match rng.randi() % 3:
+				0: ml = 0.4
+				1: ml = 1.5
+				_: p = -60
+		var t := {"type": String(TYMP_TYPE[id]), "peak_daPa": p, "peak_ml": ml,
+			"ecv_ml": snappedf(rng.randf_range(TYMP_ECV_NORMAL.x, TYMP_ECV_NORMAL.y), 0.1)}
+		if stable_tymp(t, id):
+			return t
+	push_error("ChartDeck: no stable %s tymp" % id)
+	return {}
+
+
+## The tymp margin check: CaseRules.tymp_type says the chute's type, and still does with the peak
+## TYMP_MARGIN_DAPA either way or TYMP_MARGIN_ML higher or lower.
+static func stable_tymp(t: Dictionary, id: StringName) -> bool:
+	var want: StringName = TYMP_TYPE[id]
+	if CaseRules.tymp_type_of(t) != want:
+		return false
+	var p := int(t["peak_daPa"])
+	var ml := float(t["peak_ml"])
+	for dp: int in [-TYMP_MARGIN_DAPA, 0, TYMP_MARGIN_DAPA]:
+		for dm: float in [-TYMP_MARGIN_ML, 0.0, TYMP_MARGIN_ML]:
+			if CaseRules.tymp_type(p + dp, ml + dm) != want:
 				return false
 	return true
 

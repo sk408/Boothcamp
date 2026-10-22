@@ -15,9 +15,9 @@ extends Node
 ## --via-title: start on the title, open the arcade from its Arcade button and pick the Chart Chute
 ## cabinet in the hall (a click with --policy=mouse, Down arrows, Enter and key 1 otherwise), as a
 ## player would.
-## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; it has no
-## two-ear cards, so the slip bot slips each left-ear card once (first a wrong open chute) and no
-## story chart ever rides it.
+## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; --belt=tymps
+## plays TYMP TOSS (tymp_toss.tscn, the fourth). Neither has two-ear cards, so the slip bot slips
+## each left-ear card once (first a wrong open chute) and no story chart ever rides them.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
 ## The results are left with a click on "Back to the arcade" (mouse) or the T key (keys); the arcade
@@ -27,6 +27,13 @@ extends Node
 
 const CHUTE_SCENE := "res://story/arcade/chart_chute.tscn"
 const TYPES_SCENE := "res://story/arcade/air_bone.tscn"
+const TYMPS_SCENE := "res://story/arcade/tymp_toss.tscn"
+## Per belt: the scene, the save key and the hall cabinet's key.
+const BELT_RUNS: Dictionary = {
+	"shapes": {"scene": CHUTE_SCENE, "mode": "chart_chute", "key": KEY_1},
+	"types": {"scene": TYPES_SCENE, "mode": "chart_chute_types", "key": KEY_3},
+	"tymps": {"scene": TYMPS_SCENE, "mode": "chart_chute_tymps", "key": KEY_4},
+}
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
 const ChartDeck := preload("res://story/arcade/chart_deck.gd")
@@ -42,7 +49,7 @@ func _ready() -> void:
 	var d := Driver.new()
 	d.name = "ArcadeChuteDriver"
 	get_tree().root.add_child.call_deferred(d)
-	var scene := TYPES_SCENE if Game.cli_value("belt", "shapes") == "types" else CHUTE_SCENE
+	var scene: String = BELT_RUNS[Game.cli_value("belt", "shapes")]["scene"]
 	Events.goto_scene.emit.call_deferred(TITLE_SCENE if Game.cli_flag("via-title") else scene)
 
 
@@ -90,10 +97,9 @@ class Driver extends Node:
 		process_mode = Node.PROCESS_MODE_PAUSABLE
 		OS.add_logger(errors)
 		policy = Game.cli_value("policy", "careful")
-		if Game.cli_value("belt", "shapes") == "types":
-			belt = &"types"
-			scene = TYPES_SCENE
-			mode = "chart_chute_types"
+		belt = StringName(Game.cli_value("belt", "shapes"))
+		scene = BELT_RUNS[String(belt)]["scene"]
+		mode = BELT_RUNS[String(belt)]["mode"]
 		ids = ChartDeck.BELTS[belt]
 		_rng.seed = int(Game.cli.get("seed", 1))
 		Events.awaiting_input.connect(_on_awaiting)
@@ -152,7 +158,7 @@ class Driver extends Node:
 				if policy == "mouse":
 					await _click(_anchor("arcade_cabinet_" + mode))
 				else:
-					await _key(KEY_3 if belt == &"types" else KEY_1)
+					await _key(BELT_RUNS[String(belt)]["key"])
 				for i in 90:
 					if is_instance_valid(chute):
 						return
@@ -213,7 +219,7 @@ class Driver extends Node:
 				var card: Dictionary = chute.get("_card") if is_instance_valid(chute) else {}
 				var other: StringName = card.get("other_shape", &"")
 				var serial := int(card.get("serial", -1))
-				if belt == &"types" and String(card.get("ear", "")) == "left":
+				if belt != &"shapes" and String(card.get("ear", "")) == "left":
 					var wrong: Array = (info["options"] as Array).filter(func(w: String) -> bool: return w != ChartDeck.CHUTE_WORDS[shape])
 					other = ChartDeck.CHUTE_WORDS.find_key(wrong[0]) if not wrong.is_empty() else &""
 					if other != &"" and not _slipped.has(serial):
@@ -288,9 +294,9 @@ class Driver extends Node:
 		if policy == "mouse" and on_board and not table.any(func(r: Dictionary) -> bool: return r["initials"] == "BAA"):
 			problems.append("clicked initials BAA are not on the board")
 		var golden := String(st.get("golden", ""))
-		if belt == &"types":
+		if belt != &"shapes":
 			if golden != "":
-				problems.append("story chart %s rode the AIR & BONE belt" % golden)
+				problems.append("story chart %s rode the %s belt" % [golden, belt])
 			if not st.has("right"):
 				problems.append("no stats")
 		elif Game.cli_flag("days-done"):
