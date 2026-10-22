@@ -998,7 +998,7 @@ func _ramp_tips(card: Dictionary) -> void:
 		if belt == &"masks" or belt == &"noise":
 			tip = "Now the left ear is tested. Same rules!"
 		elif belt == &"speech":
-			tip = "Blue X is the left ear. Same average, same SRT check!"
+			tip = "Blue X is the left ear. Same check!"
 		elif card.has("bc"):
 			tip = "Blue X is the left ear. Its bone marks face the other way."
 		elif belt == &"flats":
