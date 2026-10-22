@@ -695,3 +695,44 @@ Reply with a number only where you disagree. Each item says what the game will d
 5. The cards never sit on a line: no gap or air 5 better than bone (never a 5 to 15 gap), 20 to 30 for MASK BONE, 50 or more for MASK
    BOTH.
 6. The pictures (bare face, eye mask, full masquerade mask) and the lines in section 29.
+
+## 31. GOLDILOCKS: a ninth cabinet (part 9)
+
+The hall's third page opens with a ninth cabinet, **GOLDILOCKS** ("Masking noise: too little, too much, or just
+right?"). MASQUERADE asks whether to mask; this one asks whether the noise is at a safe level, with the rules the
+story's masking help uses (`ClinicRules.initial_masking`, `overmask_limit`, `masking_dilemma`, `mask_status`).
+Each card is one masked bone test at 2k or 4k: the other ear's air threshold, the bone tone being played, and the
+noise in the other ear as a needle on a dial from 0 to 100 dB.
+
+| Key | Chute (picture) | The rule (bone, headphones on the other ear) |
+|---|---|---|
+| 1 | **TOO LITTLE** (a tiny porridge bowl) | the noise is under the start level: the other ear's air + 10 |
+| 2 | **JUST RIGHT** (the middle bowl, steaming) | from the start level up to just under the tone + 40 |
+| 3 | **TOO MUCH** (a big bowl spilling over) | the tone + 40 or more: the noise crosses back and masks the test ear too (overmasking) |
+| 4 | **DILEMMA** (a bowl split in two) | the start level already reaches the tone + 40: no safe level at all |
+
+- **Bone at 2k and 4k only**, so there is no occlusion allowance to add (it is 0 there); the plain start rule
+  "other ear + 10" and the plain ceiling "tone + 40" are all the player needs.
+- **The tell** draws the safe window on the dial (green from the start level to the ceiling) and says it:
+  "TOO LITTLE: Start at the other ear's air + 10", "JUST RIGHT: Over the start, under tone + 40", "TOO MUCH: Tone
+  + 40 or more: it crosses back", "DILEMMA: Start + 10 is past tone + 40: no window".
+- **The ramp:** warm-up with TOO LITTLE and JUST RIGHT; TOO MUCH opens at 10 s, DILEMMA at 25 s; left ears at 30 s;
+  lookalikes at 40 s: the needle sits 5 dB inside its window's edge.
+- **Honest cards:** each call holds with any one number (the other ear's air, the tone or the noise) 5 dB off;
+  every level is a 5 dB step inside the audiometer's range. A DILEMMA card's other ear has a big air loss
+  (a conductive loss on both sides, as Bev's on Day 13).
+- **Lines:** too little "Still hear it in the other ear!", "That hiss is very polite."; just right "Hiss on one side,
+  beep on the other.", "I can hear both, I think."; too much "The hiss is drowning everything!", "Now I hear nothing
+  at all."; dilemma "Both my ears are bunged up.", "They said I'm a tricky one."
+- No story charts and no two-ear sorting; its own board (save key `chart_chute_noise`).
+
+## 32. For Steve: clinical check (GOLDILOCKS)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. Bone only, at 2k and 4k (no occlusion allowance); masked air is left out of this belt.
+2. Start level: the other ear's air threshold + 10 (the story's MASK_SAFETY_DB).
+3. Overmasking from the bone tone + 40 (headphone interaural attenuation, the story's rule).
+4. DILEMMA when the start level reaches the ceiling, the story's `masking_dilemma`.
+5. The dial reads in dB, as the story's audiometer shows it, without "EM".
+6. The name, the bowls and the lines in section 31.
