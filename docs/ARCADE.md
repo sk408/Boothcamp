@@ -629,3 +629,26 @@ Reply with a number only where you disagree. Each item says what the game will d
 4. The left ear is the right ear mirrored (cone of light at 7 o'clock).
 5. Objects are a bead, a beetle and a cotton-bud tip.
 6. The pictures (pearl, plug, drop, doughnut, ladybird) and the lines in section 25.
+
+## 27. The hall's pages
+
+Seven cabinets made one row too small to read, so the hall now shows **four cabinets a page**, each as big as
+a four-cabinet hall's. Round arrows either side turn the page (greyed at either end), and dots under the row say
+which page you're on.
+
+- **Keys:** Left and Right walk from cabinet to cabinet and turn the page when they cross its edge; Page Up
+  and Page Down turn it; the number keys still open any cabinet on any page (5 opens DEGREE DROP from page 1);
+  Enter plays.
+- **Mouse:** hover and click as before; click an arrow to turn the page.
+- Coming back from a game, the hall opens on that game's page. A short slide when the page turns (none with
+  reduced motion).
+- Four or fewer cabinets: one page, no arrows, the hall as it was.
+
+## 28. For Steve: the hall's pages
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. Four cabinets a page, in key order: page 1 CHART CHUTE, EARS, PLEASE!, AIR & BONE, TYMP TOSS; page 2
+   DEGREE DROP, FLAT OUT, OTO SPOT.
+2. No page names or groups (such as "charts" and "ears"), just numbers and dots.
+3. New cabinets join the last page; a fresh one keeps its NEW! starburst until it is played.
