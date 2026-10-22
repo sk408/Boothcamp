@@ -16,7 +16,7 @@ extends Node
 ## cabinet in the hall (a click with --policy=mouse, Down arrows, Enter and key 1 otherwise), as a
 ## player would.
 ## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; --belt=tymps
-## plays TYMP TOSS (tymp_toss.tscn, the fourth). Neither has two-ear cards, so the slip bot slips
+## plays TYMP TOSS (tymp_toss.tscn, the fourth), --belt=degrees DEGREE DROP (the fifth). Neither has two-ear cards, so the slip bot slips
 ## each left-ear card once (first a wrong open chute) and no story chart ever rides them.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
@@ -33,6 +33,7 @@ const BELT_RUNS: Dictionary = {
 	"shapes": {"scene": CHUTE_SCENE, "mode": "chart_chute", "key": KEY_1},
 	"types": {"scene": TYPES_SCENE, "mode": "chart_chute_types", "key": KEY_3},
 	"tymps": {"scene": TYMPS_SCENE, "mode": "chart_chute_tymps", "key": KEY_4},
+	"degrees": {"scene": "res://story/arcade/degree_drop.tscn", "mode": "chart_chute_degrees", "key": KEY_5},
 }
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"

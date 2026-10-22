@@ -410,3 +410,45 @@ func test_tymp_belt_ramp() -> void:
 		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
 		var tell: Dictionary = ChartDeck.TELLS[id]
 		assert_true(tell.has("p_lo") and tell.has("ml_hi"), "%s's tell is a patch of the tympanogram" % id)
+
+
+# ================================================================ DEGREE DROP (the degree belt)
+
+## Every degree card's 500/1k/2k average names its chute's degree (ClinicRules.degree_name), sits
+## 5 dB inside the band, and every point is a real threshold inside the audiometer's range.
+func test_every_degree_card_has_its_degree_with_a_margin() -> void:
+	for id: StringName in ChartDeck.DEGREES:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 17 + 7), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var ear := String(c["sort_ear"])
+				var t: Dictionary = c["ac"][ear]
+				assert_false(t.is_empty(), "%s: a chart (seed %d, lookalike %s)" % [id, s, lookalike])
+				var avg := ClinicRules.pta(t)
+				assert_eq(ClinicRules.degree_name(avg), ChartDeck.DEGREE_NAME[id], "%s: average %.1f (seed %d)" % [id, avg, s])
+				for d: int in [-5, 5]:
+					for f: int in [500, 1000, 2000]:
+						var p := t.duplicate()
+						p[f] = int(t[f]) + d
+						assert_eq(ClinicRules.degree_name(ClinicRules.pta(p)), ChartDeck.DEGREE_NAME[id], "%s keeps its degree with %d Hz 5 dB off" % [id, f])
+				for f: int in t:
+					assert_eq(int(t[f]), ClinicRules.clamp_db(int(t[f]), f), "%s: inside the audiometer's range at %d" % [id, f])
+
+
+func test_degree_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"degrees"), [&"deg_mild", &"deg_moderate"], "warm-up: mild and moderate")
+	assert_eq(ChuteRules.unlocked(30.0, &"degrees"), ChartDeck.DEGREES, "all five at 30 s")
+	assert_false(ChuteRules.unlocked(29.9, &"degrees").has(&"deg_profound"), "profound waits for 30 s")
+	for id: StringName in ChartDeck.DEGREES:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+	# the lookalikes are the point of the belt: their worst point is in a worse band than their average
+	var r := _rng(4)
+	var traps := 0
+	for i in 40:
+		var t := ChartDeck.make_degree_chart(r, &"deg_mild", true)
+		var worst := 0
+		for f: int in t:
+			worst = maxi(worst, int(t[f]))
+		if ClinicRules.degree_name(float(worst)) != "mild":
+			traps += 1
+	assert_eq(traps, 40, "every mild lookalike has a point far worse than mild")
