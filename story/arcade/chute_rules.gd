@@ -17,7 +17,8 @@ const UNLOCK_AT: Dictionary[StringName, float] = {&"sloping": 0.0, &"notch": 0.0
 	&"deg_mild": 0.0, &"deg_moderate": 0.0, &"deg_modsevere": 10.0, &"deg_severe": 20.0, &"deg_profound": 30.0,
 	&"flat_fluid": 0.0, &"flat_wax": 0.0, &"flat_hole": 10.0, &"flat_peak": 25.0,
 	&"oto_clear": 0.0, &"oto_wax": 0.0, &"oto_fluid": 10.0, &"oto_hole": 20.0, &"oto_object": 30.0,
-	&"mask_none": 0.0, &"mask_bone": 0.0, &"mask_both": 15.0}
+	&"mask_none": 0.0, &"mask_bone": 0.0, &"mask_both": 15.0,
+	&"noise_under": 0.0, &"noise_ok": 0.0, &"noise_over": 10.0, &"noise_dilemma": 25.0}
 ## The ramp inside the run.
 const LEFT_FROM_S := 30.0       ## left-ear (blue) cards join
 const BOTH_FROM_S := 40.0       ## two-ear cards: sort the colour the card names

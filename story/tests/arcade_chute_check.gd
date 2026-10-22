@@ -17,7 +17,8 @@ extends Node
 ## cabinet on a later page; Down arrows, Enter and the cabinet's number key otherwise), as a player would.
 ## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; --belt=tymps
 ## plays TYMP TOSS (tymp_toss.tscn, the fourth), --belt=degrees DEGREE DROP (the fifth), --belt=flats
-## FLAT OUT (the sixth), --belt=otos OTO SPOT (the seventh), --belt=masks MASQUERADE (the eighth). None has two-ear cards, so the slip bot slips
+## FLAT OUT (the sixth), --belt=otos OTO SPOT (the seventh), --belt=masks MASQUERADE (the eighth),
+## --belt=noise GOLDILOCKS (the ninth). None has two-ear cards, so the slip bot slips
 ## each left-ear card once (first a wrong open chute) and no story chart ever rides them.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
@@ -38,6 +39,7 @@ const BELT_RUNS: Dictionary = {
 	"flats": {"scene": "res://story/arcade/flat_out.tscn", "mode": "chart_chute_flats", "key": KEY_6},
 	"otos": {"scene": "res://story/arcade/oto_spot.tscn", "mode": "chart_chute_otos", "key": KEY_7},
 	"masks": {"scene": "res://story/arcade/masquerade.tscn", "mode": "chart_chute_masks", "key": KEY_8},
+	"noise": {"scene": "res://story/arcade/goldilocks.tscn", "mode": "chart_chute_noise", "key": KEY_9},
 }
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"

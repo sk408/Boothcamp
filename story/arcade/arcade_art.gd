@@ -86,6 +86,8 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_eye_mask(ci, c, s, 0.0, false)
 		&"mask_both":
 			_eye_mask(ci, c, s, 0.0, true)
+		&"noise_under", &"noise_ok", &"noise_over", &"noise_dilemma":
+			_bowl(ci, c, s, 0.0, shape)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
@@ -96,7 +98,8 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 ## flat tymps the drop splashes, the plug is yanked out on its chain, the doughnut spins and sheds
 ## sprinkles, and the PEAK mountain glints; for the looks in the ear the pearl gleams and the
 ## ladybird flies off (the plug, drop and doughnut as above); for the masks the bare face winks,
-## the eye mask twirls on its ribbon and the masquerade mask's feathers wave and sparkle.
+## the eye mask twirls on its ribbon and the masquerade mask's feathers wave and sparkle; the porridge
+## bowls get a spoon (the small one a single lonely bean, the big one slops over, the split one wobbles).
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -172,6 +175,8 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_eye_mask(ci, c, s, t, false)
 		&"mask_both":
 			_eye_mask(ci, c, s, t, true)
+		&"noise_under", &"noise_ok", &"noise_over", &"noise_dilemma":
+			_bowl(ci, c, s, t, shape)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -816,3 +821,103 @@ static func _eye_mask(ci: CanvasItem, c: Vector2, s: float, t: float, fancy: boo
 			var a := i * TAU / 5.0 + t * 3.0
 			var p := c + Vector2(cos(a), sin(a)) * s * (0.55 + 0.2 * t)
 			ci.draw_circle(p, s * 0.05 * (1.0 - t), BRASS)
+
+
+# ---------------------------------------------------------------- the noise dial (GOLDILOCKS)
+
+const PORRIDGE := Color("#f3e3c3")
+const BOWL := Color("#e5383b")
+const DIAL_MAX_DB := 100.0
+const WINDOW_OK := Color("#5bc8a3")
+
+
+## A porridge bowl per noise chute: small and nearly empty (too little), middle and steaming (just
+## right), big and spilling over (too much), cracked in two (dilemma). t > 0: a spoon dips in.
+static func _bowl(ci: CanvasItem, c: Vector2, s: float, t: float, shape: StringName) -> void:
+	var k := {&"noise_under": 0.62, &"noise_ok": 0.82, &"noise_over": 1.0, &"noise_dilemma": 0.82}[shape] as float
+	var w := s * 0.62 * k
+	var top := c.y + s * 0.02
+	var split := shape == &"noise_dilemma"
+	var gap := s * 0.08 * (1.0 + 0.6 * sin(t * TAU * 3.0)) if split else 0.0
+	for side in ([-1.0, 1.0] if split else [0.0]):
+		var off := Vector2(side * gap, 0)
+		var body := PackedVector2Array()
+		for i in 17:
+			var a := PI * i / 16.0
+			if split and ((side < 0.0 and a < PI * 0.5) or (side > 0.0 and a > PI * 0.5)):
+				continue
+			body.append(Vector2(c.x + cos(a) * w, top + sin(a) * w * 0.8) + off)
+		if split:
+			body.append(Vector2(c.x, top) + off)
+		ci.draw_colored_polygon(body, BOWL)
+		var ring := body.duplicate()
+		ring.append(body[0])
+		ci.draw_polyline(ring, INK, 3.0, true)
+		ci.draw_line(Vector2(c.x - (w if side <= 0.0 else 0.0), top) + off, Vector2(c.x + (w if side >= 0.0 else 0.0), top) + off, INK, 3.0)
+	# the porridge: a thin skim, a heap, or a heap spilling down the side
+	if shape == &"noise_under":
+		ci.draw_circle(Vector2(c.x, top - 2), s * 0.04, PORRIDGE)
+	elif not split:
+		ci.draw_set_transform(Vector2(c.x, top), 0.0, Vector2(1.0, 0.45))
+		ci.draw_circle(Vector2.ZERO, w * 0.9, PORRIDGE)
+		ci.draw_arc(Vector2.ZERO, w * 0.9, PI, TAU, 16, INK, 2.5)
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		if shape == &"noise_over":
+			ci.draw_circle(Vector2(c.x + w * 0.95, top + w * 0.25), s * 0.08, PORRIDGE)
+			ci.draw_circle(Vector2(c.x + w * 0.9, top + w * 0.55 + s * 0.1 * t), s * 0.06, PORRIDGE)
+		else:
+			for i in 3:
+				var x := c.x + (i - 1) * s * 0.16
+				var wob := sin(i * 2.0 + t * TAU) * s * 0.03
+				ci.draw_polyline(PackedVector2Array([Vector2(x, top - s * 0.14), Vector2(x + wob + s * 0.04, top - s * 0.24), Vector2(x - wob, top - s * 0.34)]), Color(SNOW, 0.85), 2.5, true)
+	if t > 0.0:
+		var dip := s * 0.12 * sin(t * PI)
+		var tip := Vector2(c.x + w * 0.3, top - s * 0.05 + dip)
+		ci.draw_line(tip, tip + Vector2(s * 0.3, -s * 0.42), PIPE, 5.0)
+		ci.draw_circle(tip, s * 0.07, PIPE)
+
+
+## Where a noise card's dial sits inside panel r, and the x of a level on it.
+static func dial_rect(r: Rect2) -> Rect2:
+	return Rect2(r.position.x + 24, r.position.y + 150, r.size.x - 48, 34)
+
+
+static func dial_x(dial: Rect2, db: float) -> float:
+	return dial.position.x + dial.size.x * clampf(db / DIAL_MAX_DB, 0.0, 1.0)
+
+
+## A GOLDILOCKS card's face in r: two number tiles (the other ear's air in its colour, the bone tone in
+## the test ear's) and the noise dial, 0 to 100 dB, with its needle on the noise.
+## n: {"freq", "other_air", "tone", "mask", "other_ear"}; ear: the test ear.
+static func noise_panel(ci: CanvasItem, r: Rect2, n: Dictionary, ear: String) -> void:
+	var f := UiKit.font(700)
+	var other := String(n.get("other_ear", "left"))
+	var hz := "%dk" % (int(n.get("freq", 2000)) / 1000)
+	var tw := (r.size.x - 60) * 0.5
+	var tiles := [[Rect2(r.position.x + 20, r.position.y, tw, 104), "OTHER EAR'S AIR", int(n.get("other_air", 0)), other],
+		[Rect2(r.position.x + 40 + tw, r.position.y, tw, 104), "BONE TONE, %s" % hz, int(n.get("tone", 0)), ear]]
+	for tile: Array in tiles:
+		var tr: Rect2 = tile[0]
+		var col := Palette.ear_color(String(tile[3]))
+		UiDraw.rounded_rect(ci, tr, Color(col, 0.12), 14, 3, col)
+		ci.draw_string(f, tr.position + Vector2(0, 28), String(tile[1]), HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 17, col)
+		ci.draw_string(f, tr.position + Vector2(0, 86), "%d dB" % int(tile[2]), HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 46, INK)
+	var dial := dial_rect(r)
+	ci.draw_string(f, Vector2(dial.position.x, dial.position.y - 12), "NOISE IN THE OTHER EAR", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(INK, 0.7))
+	UiDraw.rounded_rect(ci, dial, Color(SNOW, 0.95), 10, 2, Color(INK, 0.45))
+	var uf := UiKit.font(600)
+	for db in range(0, 101, 10):
+		var x := dial_x(dial, db)
+		ci.draw_line(Vector2(x, dial.end.y - (12 if db % 20 == 0 else 7)), Vector2(x, dial.end.y), Color(INK, 0.5), 2.0)
+		if db % 20 == 0:
+			ci.draw_string(uf, Vector2(x - 20, dial.end.y + 18), str(db), HORIZONTAL_ALIGNMENT_CENTER, 40, 14, Color(INK, 0.7))
+	var m := float(n.get("mask", 0))
+	var nx := dial_x(dial, m)
+	ci.draw_rect(Rect2(dial.position.x + 4, dial.position.y + 8, nx - dial.position.x - 4, 10), Color(Palette.ear_color(other), 0.55))
+	var tip := Vector2(nx, dial.position.y + 4)
+	ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-9, -14), tip + Vector2(9, -14)]), INK)
+	var lab := "%d dB" % int(m)
+	var lw := f.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 16
+	var lx := clampf(nx - lw * 0.5, dial.position.x, dial.end.x - lw)
+	UiDraw.rounded_rect(ci, Rect2(lx, tip.y - 42, lw, 26), INK, 9)
+	ci.draw_string(f, Vector2(lx, tip.y - 22), lab, HORIZONTAL_ALIGNMENT_CENTER, lw, 18, SNOW)

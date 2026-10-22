@@ -598,3 +598,54 @@ func test_mask_belt_ramp() -> void:
 	assert_eq(ChartDeck.mask_call(15, 10), &"mask_none", "a 5 dB gap does not")
 	assert_eq(ChartDeck.mask_call(50, 10), &"mask_both", "40 over bone masks air too")
 	assert_eq(ChartDeck.mask_call(45, 10), &"mask_bone", "35 over bone masks bone only")
+
+
+# ================================================================ GOLDILOCKS (the masking-level belt)
+
+## Every noise card's call is its chute's by the story's masking help (ClinicRules.mask_status with the
+## start level and the overmasking ceiling), and still is with any one number 5 dB off.
+func test_every_noise_card_holds_its_call_with_a_margin() -> void:
+	var test := ClinicRules.test_id(true, true)
+	for id: StringName in ChartDeck.NOISES:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 23 + 11), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				assert_eq(c["shape"], id, "%s: the card names its chute" % id)
+				assert_true((c["ac"] as Dictionary).is_empty() and not c.has("tymp"), "%s: no chart" % id)
+				var n: Dictionary = c["noise"]
+				var f := int(n["freq"])
+				assert_has(ChartDeck.NOISE_FREQS, f, "%s: 2k or 4k" % id)
+				assert_eq(ClinicRules.occlusion_effect(f), 0, "%s: no occlusion allowance at %d" % [id, f])
+				var x := int(n["other_air"])
+				var y := int(n["tone"])
+				var m := int(n["mask"])
+				var start := ClinicRules.initial_masking(x, f, test)
+				var limit := ClinicRules.overmask_limit(y, test)
+				assert_eq(start, x + 10, "%s: the start is the other ear's air + 10" % id)
+				assert_eq(limit, y + 40, "%s: the ceiling is the tone + 40" % id)
+				assert_eq(ClinicRules.mask_status(true, true, m, start, limit), ChartDeck.NOISE_STATUS[id], "%s: x %d, tone %d, noise %d (seed %d)" % [id, x, y, m, s])
+				assert_true(ChartDeck.stable_noise(n, f, id), "%s: clear of every line (seed %d)" % [id, s])
+				assert_true(m >= 0 and m <= 100 and m % 5 == 0, "%s: a real noise level" % id)
+				assert_eq(String(n["other_ear"]), "left" if String(c["sort_ear"]) == "right" else "right", "%s: the other ear" % id)
+
+
+func test_noise_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"noise"), [&"noise_under", &"noise_ok"], "warm-up: too little and just right")
+	assert_false(ChuteRules.unlocked(9.9, &"noise").has(&"noise_over"), "too much waits for 10 s")
+	assert_false(ChuteRules.unlocked(24.9, &"noise").has(&"noise_dilemma"), "dilemma waits for 25 s")
+	assert_eq(ChuteRules.unlocked(25.0, &"noise"), ChartDeck.NOISES, "all four at 25 s")
+	var r := _rng(15)
+	for i in 300:
+		var spec := ChuteRules.next_spec(r, r.randf_range(0.0, ChuteRules.RUN_S), [], [], &"noise")
+		assert_has(ChartDeck.NOISES, spec["shape"], "only noise calls on the noise belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear sorting")
+		assert_false(bool(spec["golden"]), "no story charts")
+	for id: StringName in ChartDeck.NOISES:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+		assert_true(ChartDeck.TELLS[id].has("dial"), "%s's tell glows over the dial" % id)
+		assert_true(String(ChartDeck.TELLS[id]["text"]).split(" ").size() <= 12, "%s's tell is short" % id)
+	# the lines themselves (2 kHz bone): start 30 + 10 = 40, ceiling 20 + 40 = 60
+	assert_eq(ChartDeck.noise_call(30, 20, 35, 2000), &"noise_under", "under the start")
+	assert_eq(ChartDeck.noise_call(30, 20, 40, 2000), &"noise_ok", "the start itself is fine")
+	assert_eq(ChartDeck.noise_call(30, 20, 60, 2000), &"noise_over", "the ceiling itself overmasks")
+	assert_eq(ChartDeck.noise_call(50, 20, 40, 2000), &"noise_dilemma", "start 60 reaches the ceiling 60: no window")
