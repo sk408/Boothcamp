@@ -1,0 +1,28 @@
+{
+  "_comment": "Every source a value cites. kind: costco or maker = primary; third = third party. read = the date it was read.",
+  "sources": [
+    {"id": "cs_philips", "kind": "costco", "read": "2026-10-22", "title": "Costco Technical and Warranty Services: Philips HearLink 9050 MNR", "url": "https://productsupport.costco.com/customer/device/Philips/HearLink9050MNR/"},
+    {"id": "ph_pdf", "kind": "maker", "read": "2026-10-22", "title": "Philips HearLink 9050 overview, miniRITE and miniFit Detect (Demant, for Costco)", "url": "https://assets-ue.cas.dgs.com/-/media/stratus/main/us_materials/costco-tools-24_1/900159-241-philips-hearlink-9050-overview--final-91224.pdf?la=en-us&rev=89A2"},
+    {"id": "ph_hl50", "kind": "maker", "read": "2026-10-22", "title": "Philips Hearing Solutions: HearLink 50 miniBTE R", "url": "https://www.hearingsolutions.philips.com/en-us/products/845506/hearlink-50-minibte-r"},
+    {"id": "rx_rplus", "kind": "maker", "read": "2026-10-22", "title": "Rexton: Reach R Plus rechargeable hearing aid with Bluetooth Classic", "url": "https://www.rexton.com/en-us/hearing-aids/reach/r-plus/"},
+    {"id": "rx_rplus2", "kind": "maker", "read": "2026-10-22", "title": "Rexton: Reach R Plus (hearing.rexton.com)", "url": "https://hearing.rexton.com/hearing-solutions/hearing-aids/reach/r-plus/"},
+    {"id": "ht_costco", "kind": "third", "read": "2026-10-22", "title": "HearingTracker: Costco Hearing Aids Lab Reviewed by Audiologists (2026)", "url": "https://www.hearingtracker.com/hearing-aids/costco"},
+    {"id": "ht_jabra", "kind": "third", "read": "2026-10-22", "title": "HearingTracker: Jabra Enhance Pro 30 at Costco", "url": "https://www.hearingtracker.com/hearing-aids/jabra-enhance-pro-30-hearing-aids-at-costco"},
+    {"id": "ht_philips", "kind": "third", "read": "2026-10-22", "title": "HearingTracker: Philips HearLink 9050 review", "url": "https://www.hearingtracker.com/hearing-aids/philips-hearlink-9050"},
+    {"id": "ht_rexton", "kind": "third", "read": "2026-10-22", "title": "HearingTracker: Rexton Reach R Plus", "url": "https://www.hearingtracker.com/hearing-aids/rexton-reach-r-plus"},
+    {"id": "ht_soundgear", "kind": "third", "read": "2026-10-22", "title": "HearingTracker news: SoundGear AMP hearing aids debut at Costco (Nov 2025)", "url": "https://www.hearingtracker.com/news/starkey-tech-now-at-costco-soundgear-amp-hearing-aids-offered-at-select-stores"},
+    {"id": "hb_sonite", "kind": "third", "read": "2026-10-22", "title": "Hearing Buddy: Sennheiser Sonite Rise (Costco)", "url": "https://hearingbuddyapp.com/hearing-aids/sennheiser-sonite-rise"},
+    {"id": "hb_jabra", "kind": "third", "read": "2026-10-22", "title": "Hearing Buddy: Jabra Enhance Pro 30 (Costco)", "url": "https://hearingbuddyapp.com/hearing-aids/jabra-enhance-pro-30"},
+    {"id": "hb_philips", "kind": "third", "read": "2026-10-22", "title": "Hearing Buddy: Philips HearLink 9050 (Costco)", "url": "https://hearingbuddyapp.com/hearing-aids/philips-hearlink-9050"},
+    {"id": "hw_jabra", "kind": "third", "read": "2026-10-22", "title": "HearWell Lab: Jabra Enhance Pro 30 review", "url": "https://www.hearwelllab.com/best/jabra-enhance-pro/"},
+    {"id": "ncoa", "kind": "third", "read": "2026-10-22", "title": "NCOA: The Best Costco Hearing Aids of 2026", "url": "https://www.ncoa.org/product-resources/hearing-aids/best-costco-hearing-aids/"},
+    {"id": "wr_sonite_pair", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: Sennheiser Sonite Rise RIC pair (#2027784)", "url": "https://app.warehouserunner.com/costco/2027784"},
+    {"id": "wr_sonite_single", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: Sennheiser Sonite Rise RIC single (#2027785)", "url": "https://app.warehouserunner.com/costco/2027785"},
+    {"id": "wr_jabra_cros", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: Jabra Enhance Pro 30 CROS R transmitter with aid and charger (#1982594)", "url": "https://app.warehouserunner.com/costco/1982594-enhance-pro-30-cros-r-transmitter-ha-charger"},
+    {"id": "wr_philips", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: Philips HearLink 9050 pair with Charger Plus (#1817317)", "url": "https://app.warehouserunner.com/costco/1817317-hearlink-9050-tr-beige-pair-2-aids-w-charger"},
+    {"id": "wr_philips_single", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: Philips HearLink 9050 MiniBTE R single (#8581011)", "url": "https://app.warehouserunner.com/costco/8581011-hearlink9050-minibte-r-single-w-prem-charger"},
+    {"id": "wr_rexton", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: Rexton Reach Plus R-Li T pair with Premium Charger (#1931971)", "url": "https://app.warehouserunner.com/costco/1931971-reach-r-li-t-rose-gold-pair-w-prem-charger"},
+    {"id": "wr_sg_mric", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: SoundGear AMP mRIC R pair with Premium Charger (#1964710)", "url": "https://app.warehouserunner.com/costco/1964710-soundgear-amp-mric-r-pair-w-prem-charger"},
+    {"id": "wr_sg_cic", "kind": "third", "read": "2026-10-22", "title": "Warehouse Runner price tracker: SoundGear AMP CIC/IIC 312/10 pair (#1964716)", "url": "https://app.warehouserunner.com/costco/1964716-soundgear-amp-cic-iic-312-10-pair"}
+  ]
+}

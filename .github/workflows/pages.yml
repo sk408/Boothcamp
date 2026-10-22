@@ -49,6 +49,17 @@ jobs:
           test -f build/web/index.pck
           printf '' > build/web/.nojekyll
 
+      # Hearing Aid Compare (compare/, its own Godot project), served at <Pages address>/compare/.
+      - name: Export the compare page
+        run: |
+          set -euo pipefail
+          mkdir -p build/web/compare
+          godot --headless --path compare -s res://tests/test_data.gd
+          godot --headless --path compare --export-release "Web" "$PWD/build/web/compare/index.html"
+          ls -la build/web/compare
+          test -f build/web/compare/index.wasm
+          test -f build/web/compare/index.pck
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web

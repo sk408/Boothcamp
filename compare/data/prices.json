@@ -1,0 +1,26 @@
+{
+  "_comment": "Prices only, so a change is a one-line edit. usd = member price; null hides it. checked = the date the price was seen.",
+  "meta": {"currency": "USD", "note": "Costco member prices seen at most warehouses. Prices vary by state and change often: check your warehouse."},
+  "prices": {
+    "sonite_rise": {
+      "pair":   {"usd": 1599.99, "item": "2027784", "checked": "2026-10-22", "status": "reported", "src": ["wr_sonite_pair", "hb_sonite", "ht_costco"]},
+      "single": {"usd": 849.99,  "item": "2027785", "checked": "2026-10-22", "status": "reported", "src": ["wr_sonite_single"]}
+    },
+    "jabra_pro30": {
+      "pair":   {"usd": 1699.99, "item": "", "checked": "2026-10-22", "status": "reported", "src": ["ht_jabra", "hw_jabra", "ht_costco"], "note": "A CROS transmitter with one aid and the charger (#1982594) is also $1,699.99."},
+      "single": {"usd": null, "item": "", "checked": "2026-10-22", "status": "unverified", "src": [], "note": "No single-aid price found."}
+    },
+    "philips_9050": {
+      "pair":   {"usd": 1599.99, "item": "1817317", "checked": "2026-10-22", "status": "reported", "src": ["wr_philips", "hb_philips", "ht_costco"], "note": "Launched at $1,499.99 in 2024."},
+      "single": {"usd": 849.99,  "item": "8581011", "checked": "2026-10-22", "status": "reported", "src": ["wr_philips_single"], "note": "MiniBTE R single with charger."}
+    },
+    "rexton_rplus": {
+      "pair":   {"usd": 1599.99, "item": "1931971", "checked": "2026-10-22", "status": "reported", "src": ["wr_rexton", "ht_rexton", "ht_costco"], "note": "Up to $1,659.99 at some California warehouses."},
+      "single": {"usd": null, "item": "", "checked": "2026-10-22", "status": "unverified", "src": [], "note": "A single with charger is tracked at $849.99 (#1931974) but that page was not read."}
+    },
+    "soundgear_amp": {
+      "pair":   {"usd": 1699.99, "item": "1964710", "checked": "2026-10-22", "status": "reported", "src": ["wr_sg_mric", "ht_costco"], "note": "mRIC R pair with charger. The CIC/IIC pair (#1964716) is $1,999.99."},
+      "single": {"usd": null, "item": "", "checked": "2026-10-22", "status": "unverified", "src": [], "note": "No mRIC R single price found."}
+    }
+  }
+}

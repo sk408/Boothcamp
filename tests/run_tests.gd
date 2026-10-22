@@ -118,5 +118,10 @@ func _collect(dir: String, out: PackedStringArray) -> void:
 		if f.begins_with("test_") and f.ends_with(".gd"):
 			out.append(dir.path_join(f))
 	for sub in d.get_directories():
-		if not sub.begins_with("."):
+		if not sub.begins_with(".") and not _other_project(dir.path_join(sub)):
 			_collect(dir.path_join(sub), out)
+
+
+## A folder with its own project.godot (compare/) is a separate project, not part of the game.
+func _other_project(dir: String) -> bool:
+	return FileAccess.file_exists(dir.path_join("project.godot"))

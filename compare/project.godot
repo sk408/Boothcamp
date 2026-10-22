@@ -1,0 +1,29 @@
+; Hearing Aid Compare: a separate Godot project, not part of Booth Camp.
+; The game's editor and exports skip this folder because it holds its own project.godot.
+
+config_version=5
+
+[application]
+
+config/name="Hearing Aid Compare"
+config/description="Compare the hearing aids sold at Costco hearing aid centres, in plain words or full specs."
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+common/snap_controls_to_pixels=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+anti_aliasing/quality/msaa_3d=2
+environment/defaults/default_clear_color=Color(0.965, 0.969, 0.976, 1)
