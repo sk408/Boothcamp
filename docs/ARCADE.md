@@ -544,3 +544,47 @@ Reply with a number only where you disagree. Each item says what the game will d
    "familiar sounds" idea, not exact levels.
 5. No "normal" chute (every chart has a loss) and no profound charts with "no response" arrows.
 6. The lines in section 21.
+
+## 23. FLAT OUT: a sixth cabinet (part 6)
+
+The hall gets a sixth cabinet, **FLAT OUT** ("Flat tymp? Read the canal volume."). It follows on from TYMP TOSS:
+a flat (type B) tympanogram is not one finding but three, and the **canal volume** says which
+(`CaseRules.tymp_b_reading`, the same rule Day 10 and Day 11 use). Each card is one ear's tympanogram with a
+**volume gauge** across its top: TINY under 0.6 mL, NORMAL 0.6 to 2.0, BIG over 2.0, a pointer on the reading.
+
+| Key | Chute (picture) | The card |
+|---|---|---|
+| 1 | **FLUID** (a water drop) | flat, canal volume normal (0.8 to 1.6 mL): fluid behind the eardrum |
+| 2 | **WAX** (a bath plug) | flat, canal volume tiny (0.3 to 0.45 mL): wax, or the probe against the canal wall |
+| 3 | **HOLE** (a doughnut) | flat, canal volume big (2.6 to 3.2 mL): a hole in the eardrum, or an open grommet |
+| 4 | **PEAK** (a mountain) | not flat at all: a type A, As or C peak, normal volume |
+
+- **The tell** glows over the gauge for the three flat chutes ("WAX: Canal under 0.6 mL: blocked") and over the
+  curve for PEAK ("PEAK: A peak, so it isn't flat").
+- **The ramp:** warm-up with FLUID and WAX; HOLE opens at 10 s, PEAK at 25 s; left ears at 30 s; lookalikes at
+  40 s. A lookalike tells the wrong story: a flat card whose patient says something that fits another chute ("Never
+  cleaned my ears. Ever." over a normal volume), or a shallow As peak whose patient says "My ear feels full of
+  water." The numbers win.
+- **Honest cards:** every reading stays on its side of the line with the volume 0.1 mL either way, and a flat
+  card's peak stays under the flat line with 0.04 mL to spare; PEAK cards keep TYMP TOSS's margins and leave out Ad,
+  so the gauge never covers a peak.
+- **Lines:** fluid "My ear feels full of water.", "Had a stinking cold for weeks.", "Everything's muffled on this
+  side."; wax "Never cleaned my ears. Ever.", "I use cotton buds every day.", "It went dull after a swim."; hole "I
+  had grommets as a kid.", "It popped on a dive.", "My ear runs now and then."; peak "Just here for a check-up.", "My
+  ears feel fine, honest!", "Ears pop on planes, that's all."
+- No story charts, no two-ear cards; its own board (save key `chart_chute_flats`). With six cabinets the hall draws
+  each one narrower and fits long names to their marquee. The NEW! starburst sits on each cabinet's top edge.
+
+## 24. For Steve: clinical check (FLAT OUT)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. The volume lines are the game's own adult ones (`CaseRules`): under 0.6 mL tiny, over 2.0 mL big. No child
+   volumes.
+2. A tiny volume reads **WAX** on the chute; the tell adds "or the probe against the canal wall". That is what a
+   newcomer should check first: look in the ear, re-seat the probe.
+3. A big volume reads **HOLE**, and the tell says "or an open grommet", so a big volume in a child with tubes is
+   good news, not a fault.
+4. FLUID is the name for a flat tymp with a normal volume (no "otitis media" on the chute).
+5. PEAK is the "not flat" chute: A, As and C peaks only (no Ad), normal volume.
+6. The pictures (drop, plug, doughnut, mountain) and the lines in section 23.

@@ -452,3 +452,50 @@ func test_degree_belt_ramp() -> void:
 		if ClinicRules.degree_name(float(worst)) != "mild":
 			traps += 1
 	assert_eq(traps, 40, "every mild lookalike has a point far worse than mild")
+
+
+# ================================================================ FLAT OUT (the flat-tymp belt)
+
+## Every flat card is a type B whose canal volume reads its chute (CaseRules.tymp_b_reading), with
+## 0.1 mL to spare either way; every PEAK card is a TYMP TOSS-stable A, As or C with a normal volume.
+func test_every_flat_card_reads_its_chute_with_a_margin() -> void:
+	for id: StringName in ChartDeck.FLATS:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 13 + 5), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var t: Dictionary = c.get("tymp", {})
+				assert_false(t.is_empty(), "%s: a tympanogram (seed %d, lookalike %s)" % [id, s, lookalike])
+				assert_eq(c["shape"], id, "%s: the card names its chute" % id)
+				assert_true(ChartDeck.stable_flat(t, id), "%s: clear of every line (seed %d)" % [id, s])
+				var ecv := float(t["ecv_ml"])
+				if id == &"flat_peak":
+					assert_ne(CaseRules.tymp_type_of(t), &"B", "PEAK: not flat")
+					assert_ne(CaseRules.tymp_type_of(t), &"Ad", "PEAK: no Ad, its peak would climb under the gauge")
+					assert_eq(CaseRules.ecv_band(ecv), &"normal", "PEAK: a normal canal volume")
+				else:
+					assert_eq(CaseRules.tymp_type_of(t), &"B", "%s: flat" % id)
+					assert_eq(CaseRules.tymp_b_reading(ecv), ChartDeck.FLAT_READING[id], "%s: volume %.1f reads right" % [id, ecv])
+				if lookalike:
+					assert_eq(String(c["line"]), String(ChartDeck.FLAT_TRAP_LINES[id]), "%s: a lookalike tells the wrong story" % id)
+					if id == &"flat_peak":
+						assert_eq(CaseRules.tymp_type_of(t), &"As", "PEAK's lookalike is a shallow As")
+
+
+func test_flat_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"flats"), [&"flat_fluid", &"flat_wax"], "warm-up: fluid and wax")
+	assert_false(ChuteRules.unlocked(9.9, &"flats").has(&"flat_hole"), "hole waits for 10 s")
+	assert_false(ChuteRules.unlocked(24.9, &"flats").has(&"flat_peak"), "peak waits for 25 s")
+	assert_eq(ChuteRules.unlocked(25.0, &"flats"), ChartDeck.FLATS, "all four at 25 s")
+	var r := _rng(12)
+	for i in 300:
+		var spec := ChuteRules.next_spec(r, r.randf_range(0.0, ChuteRules.RUN_S), [], [], &"flats")
+		assert_has(ChartDeck.FLATS, spec["shape"], "only flat chutes on the flat belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear cards")
+		assert_false(bool(spec["golden"]), "no story charts")
+	for id: StringName in ChartDeck.FLATS:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+		var tell: Dictionary = ChartDeck.TELLS[id]
+		assert_true(tell.has("gauge") or tell.has("p_lo"), "%s's tell glows over the gauge or the curve" % id)
+	# the flat lines' own readings agree with the game's rule (the gauge draws CaseRules' numbers)
+	assert_eq(CaseRules.tymp_b_reading(0.59), &"blocked", "under 0.6 mL is blocked")
+	assert_eq(CaseRules.tymp_b_reading(2.01), &"hole", "over 2.0 mL is a hole")

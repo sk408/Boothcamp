@@ -62,13 +62,23 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_drum(ci, c, s, 0.0)
 		&"deg_profound":
 			_jet(ci, c, s, 0.0)
+		&"flat_fluid":
+			_drop(ci, c, s, 0.0)
+		&"flat_wax":
+			_plug(ci, c, s, 0.0)
+		&"flat_hole":
+			_donut(ci, c, s, 0.0)
+		&"flat_peak":
+			_mountain(ci, c, s, 0.0, 1.0)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
 ## rolls over, the rainbow sparkles, the snail shell spins, the cork pops out; for the tympanograms
 ## the mountain's snow glints (the low hill gets a sheep), the pancake flips, the moved-left
 ## mountain slides, the skyscraper's windows light up; for the degrees the clock's hand sweeps,
-## the speech bubble swells, the megaphone and the drum send out rings, the jet zooms on.
+## the speech bubble swells, the megaphone and the drum send out rings, the jet zooms on; for the
+## flat tymps the drop splashes, the plug is yanked out on its chain, the doughnut spins and sheds
+## sprinkles, and the PEAK mountain glints.
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -120,6 +130,14 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_drum(ci, c, s, t)
 		&"deg_profound":
 			_jet(ci, c, s, t)
+		&"flat_fluid":
+			_drop(ci, c, s, t)
+		&"flat_wax":
+			_plug(ci, c, s, t)
+		&"flat_hole":
+			_donut(ci, c, s, t)
+		&"flat_peak":
+			_mountain(ci, c, s, t, 1.0)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -434,3 +452,108 @@ static func _jet(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 		for i in 3:
 			var y := (i - 1) * s * 0.12
 			ci.draw_line(at + Vector2(-s * 0.7, y), at + Vector2(-s * (0.9 + 0.3 * t), y), Color(SNOW, 1.0 - t), 3.0)
+
+
+# ---------------------------------------------------------------- canal volume (FLAT OUT)
+
+## The volume gauge's scale (mL) and its parts: TINY, NORMAL, BIG (CaseRules' adult lines).
+const GAUGE_MAX_ML := 3.5
+const GAUGE_PARTS: Array = [["TINY", 0.0, CaseRules.TYMP_BLOCKED_ECV, Color("#ff8a80")],
+	["NORMAL", CaseRules.TYMP_BLOCKED_ECV, CaseRules.TYMP_ADULT_ECV.y, Color("#5bc8a3")], ["BIG", CaseRules.TYMP_ADULT_ECV.y, GAUGE_MAX_ML, Color("#7fb8f0")]]
+
+
+## A canal volume gauge in `r`: three coloured parts and a pointer on `ecv_ml`. labels: the part
+## names over the bar and the reading under the pointer (the big card); else the part the pointer
+## is in is lit and the others pale (the chutes).
+static func volume_gauge(ci: CanvasItem, r: Rect2, ecv_ml: float, labels: bool) -> void:
+	var f := UiKit.font(700)
+	if labels:
+		UiDraw.rounded_rect(ci, r, Color(SNOW, 0.94), 10, 2, Color(INK, 0.35))
+	var bar := Rect2(r.position.x + 12, r.position.y + (20.0 if labels else r.size.y * 0.3), r.size.x - 24, 16.0 if labels else r.size.y * 0.32)
+	var x_of := func(ml: float) -> float: return bar.position.x + bar.size.x * clampf(ml / GAUGE_MAX_ML, 0.0, 1.0)
+	for part: Array in GAUGE_PARTS:
+		var x0: float = x_of.call(float(part[1]))
+		var x1: float = x_of.call(float(part[2]))
+		var on := labels or (ecv_ml >= float(part[1]) and ecv_ml < float(part[2]))
+		ci.draw_rect(Rect2(x0, bar.position.y, x1 - x0, bar.size.y), part[3] if on else Color(part[3], 0.25))
+		if labels:
+			ci.draw_string(f, Vector2(x0, bar.position.y - 5), String(part[0]), HORIZONTAL_ALIGNMENT_CENTER, x1 - x0, 12, Color(INK, 0.75))
+	for edge: float in [CaseRules.TYMP_BLOCKED_ECV, CaseRules.TYMP_ADULT_ECV.y]:
+		var xe: float = x_of.call(edge)
+		ci.draw_line(Vector2(xe, bar.position.y), Vector2(xe, bar.end.y), INK, 2.0)
+	ci.draw_rect(bar, INK, false, 2.0)
+	var xp: float = x_of.call(ecv_ml)
+	var tip := Vector2(xp, bar.end.y + 1.0)
+	var k := 8.0 if labels else maxf(5.0, r.size.y * 0.18)
+	ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-k * 0.7, k), tip + Vector2(k * 0.7, k)]), INK)
+	if labels:
+		var v := "%.1f mL" % ecv_ml
+		ci.draw_string(f, Vector2(clampf(xp - 40, r.position.x, r.end.x - 80), r.end.y - 5), v, HORIZONTAL_ALIGNMENT_CENTER, 80, 14, INK)
+
+
+## A water drop (fluid behind the eardrum). t > 0: it lands with a splash.
+static func _drop(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var fall := s * 0.25 * sin(t * PI * 0.5) if t > 0.0 else 0.0
+	var at := c + Vector2(0, s * 0.12 + fall)
+	var r := s * 0.32
+	# a circle and the point above it, tangent to it
+	var poly := PackedVector2Array([at + Vector2(0, -r * 2.1)])
+	for i in 19:
+		var a := -PI * 0.5 + 0.5 + i * (TAU - 1.0) / 18.0
+		poly.append(at + Vector2(cos(a), sin(a)) * r)
+	var ring := poly.duplicate()
+	ring.append(poly[0])
+	ci.draw_colored_polygon(poly, WAVE)
+	ci.draw_polyline(ring, INK, 3.0, true)
+	ci.draw_circle(at + Vector2(-r * 0.4, -r * 0.2), r * 0.2, Color(SNOW, 0.8))
+	if t > 0.5:
+		var k := (t - 0.5) * 2.0
+		for i in 4:
+			var a := PI + 0.4 + i * 0.75
+			var o := c + Vector2(0, s * 0.45)
+			ci.draw_circle(o + Vector2(cos(a), sin(a)) * s * (0.3 + 0.35 * k), s * 0.06 * (1.0 - k), WAVE)
+
+
+## A bath plug on its chain (a canal blocked by wax). t > 0: the chain yanks it out.
+static func _plug(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var lift := Vector2(0, -s * 0.45 * sin(t * PI)) if t > 0.0 else Vector2.ZERO
+	# the plughole
+	ci.draw_set_transform(c + Vector2(0, s * 0.36), 0.0, Vector2(1.0, 0.35))
+	ci.draw_circle(Vector2.ZERO, s * 0.6, Color("#c9c4bb"))
+	ci.draw_circle(Vector2.ZERO, s * 0.44, INK)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var top := c + Vector2(0, s * 0.02) + lift
+	var body := Rect2(top + Vector2(-s * 0.42, 0), Vector2(s * 0.84, s * 0.32))
+	UiDraw.rounded_rect(ci, body, Color("#5a4f75"), 8, 3, INK)
+	ci.draw_rect(Rect2(body.position + Vector2(s * 0.1, s * 0.07), Vector2(s * 0.3, s * 0.06)), Color(SNOW, 0.35))
+	# the ring and the chain up to the corner
+	var ring := top + Vector2(0, -s * 0.1)
+	ci.draw_arc(ring, s * 0.1, 0.0, TAU, 14, INK, 4.0)
+	var hook := c + Vector2(s * 0.6, -s * 0.6)
+	var n := 6
+	for i in n:
+		var p := ring.lerp(hook, (i + 1.0) / (n + 1.0))
+		ci.draw_circle(p, s * 0.06 + 1.5, INK)
+		ci.draw_circle(p, s * 0.06, BRASS)
+	ci.draw_circle(hook, s * 0.08, INK)
+
+
+## A doughnut (a hole). t > 0: it spins and sheds sprinkles.
+static func _donut(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var spin := t * TAU
+	ci.draw_circle(c, s * 0.5 + 3.0, INK)
+	ci.draw_circle(c, s * 0.5, COOKIE)
+	ci.draw_circle(c, s * 0.42, Color("#f4a6c7"))
+	var cols := [SKIER, Color("#2d6cdf"), BRASS, Color("#5bc8a3"), SNOW]
+	for i in 10:
+		var a := spin + i * TAU / 10.0 + 0.3
+		var p := c + Vector2(cos(a), sin(a)) * s * (0.3 + 0.06 * (i % 2))
+		var d := Vector2(cos(a + 1.2), sin(a + 1.2)) * s * 0.05
+		ci.draw_line(p - d, p + d, cols[i % cols.size()], 3.0)
+	ci.draw_circle(c, s * 0.18 + 3.0, INK)
+	ci.draw_circle(c, s * 0.18, Color("#fff3dc"))
+	if t > 0.0:
+		for i in 6:
+			var a := i * TAU / 6.0 + 0.5
+			var o := c + Vector2(cos(a), sin(a)) * s * (0.6 + 0.4 * t) + Vector2(0, s * 0.3 * t * t)
+			ci.draw_line(o, o + Vector2(s * 0.06, s * 0.03), Color(cols[i % cols.size()], 1.0 - t), 3.0)
