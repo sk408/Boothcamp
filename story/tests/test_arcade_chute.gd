@@ -499,3 +499,38 @@ func test_flat_belt_ramp() -> void:
 	# the flat lines' own readings agree with the game's rule (the gauge draws CaseRules' numbers)
 	assert_eq(CaseRules.tymp_b_reading(0.59), &"blocked", "under 0.6 mL is blocked")
 	assert_eq(CaseRules.tymp_b_reading(2.01), &"hole", "over 2.0 mL is a hole")
+
+
+# ================================================================ OTO SPOT (the look-in-the-ear belt)
+
+## Every oto card names its chute's view, on the ear the card asks for, and a lookalike says so.
+func test_every_oto_card_shows_its_chutes_view() -> void:
+	for id: StringName in ChartDeck.OTOS:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 11 + 3), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				assert_eq(c["shape"], id, "%s: the card names its chute" % id)
+				var oto: Dictionary = c.get("oto", {})
+				assert_eq(oto.get("view", &""), ChartDeck.OTO_VIEW[id], "%s: the view is the chute's (seed %d)" % [id, s])
+				assert_eq(bool(oto.get("lookalike", false)), lookalike, "%s: the lookalike flag rides on the view" % id)
+				assert_true((c["ac"] as Dictionary).is_empty() and not c.has("tymp"), "%s: no chart, no tympanogram" % id)
+				assert_eq(String(c["sort_ear"]), "left" if s % 3 == 0 else "right", "%s: the asked ear" % id)
+
+
+func test_oto_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"otos"), [&"oto_clear", &"oto_wax"], "warm-up: clear and wax")
+	assert_false(ChuteRules.unlocked(9.9, &"otos").has(&"oto_fluid"), "fluid waits for 10 s")
+	assert_false(ChuteRules.unlocked(19.9, &"otos").has(&"oto_hole"), "hole waits for 20 s")
+	assert_false(ChuteRules.unlocked(29.9, &"otos").has(&"oto_object"), "object waits for 30 s")
+	assert_eq(ChuteRules.unlocked(30.0, &"otos"), ChartDeck.OTOS, "all five at 30 s")
+	var r := _rng(13)
+	for i in 300:
+		var spec := ChuteRules.next_spec(r, r.randf_range(0.0, ChuteRules.RUN_S), [], [], &"otos")
+		assert_has(ChartDeck.OTOS, spec["shape"], "only looks in the ear on the oto belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear cards")
+		assert_false(bool(spec["golden"]), "no story charts")
+	for id: StringName in ChartDeck.OTOS:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+		assert_true(ChartDeck.TELLS[id].has("view"), "%s's tell glows over the drum" % id)
+		# the tell is said by Hoot on the NEW CHUTE line: keep it short
+		assert_true(String(ChartDeck.TELLS[id]["text"]).split(" ").size() <= 12, "%s's tell is short" % id)

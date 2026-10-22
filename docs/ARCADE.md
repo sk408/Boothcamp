@@ -600,7 +600,7 @@ handle of the malleus and the cone of light (5 o'clock in a right ear, 7 o'clock
 |---|---|---|---|
 | 1 | **CLEAR** (a pearl) | grey drum, cone of light | test away |
 | 2 | **WAX** (a bath plug) | a brown plug hides the drum | clear it first |
-| 3 | **FLUID** (a water drop) | amber drum, a fluid line, bubbles, no cone of light | refer to the GP |
+| 3 | **FLUID** (a water drop) | amber drum, a fluid line, bubbles, no cone of light | refer to a doctor |
 | 4 | **HOLE** (a doughnut) | a dark hole in the drum | refer; no water, no impressions |
 | 5 | **OBJECT** (a ladybird) | a bead or a beetle in the canal | a doctor takes it out |
 
@@ -624,7 +624,7 @@ Reply with a number only where you disagree. Each item says what the game will d
    tell from fluid in a small drawing).
 2. The CLEAR lookalike has a few dry wax flakes on the canal wall but a fully visible drum, and still counts as
    CLEAR: wax that doesn't block the canal doesn't stop the test.
-3. The next steps on the tells: clear "test away"; wax "clear it first"; fluid "refer to the GP"; hole "refer; no
+3. The next steps on the tells: clear "test away"; wax "clear it first"; fluid "refer to a doctor"; hole "refer; no
    water, no impressions"; object "a doctor takes it out".
 4. The left ear is the right ear mirrored (cone of light at 7 o'clock).
 5. Objects are a bead, a beetle and a cotton-bud tip.

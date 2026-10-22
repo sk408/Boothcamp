@@ -17,7 +17,8 @@ const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notc
 	&"reverse_bite": "REVERSE BITE", &"sensorineural": "SENSORINEURAL", &"conductive": "CONDUCTIVE", &"mixed": "MIXED",
 	&"tymp_a": "TYPE A", &"tymp_b": "TYPE B", &"tymp_as": "TYPE As", &"tymp_c": "TYPE C", &"tymp_ad": "TYPE Ad",
 	&"deg_mild": "MILD", &"deg_moderate": "MODERATE", &"deg_modsevere": "MOD-SEVERE", &"deg_severe": "SEVERE", &"deg_profound": "PROFOUND",
-	&"flat_fluid": "FLUID", &"flat_wax": "WAX", &"flat_hole": "HOLE", &"flat_peak": "PEAK"}
+	&"flat_fluid": "FLUID", &"flat_wax": "WAX", &"flat_hole": "HOLE", &"flat_peak": "PEAK",
+	&"oto_clear": "CLEAR", &"oto_wax": "WAX", &"oto_fluid": "FLUID", &"oto_hole": "HOLE", &"oto_object": "OBJECT"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
 ## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
@@ -59,9 +60,15 @@ const FLAT_PEAKS: Array[StringName] = [&"tymp_a", &"tymp_as", &"tymp_c"]
 ## A lookalike's line: one that fits another chute (docs/ARCADE.md section 23). The numbers win.
 const FLAT_TRAP_LINES: Dictionary = {&"flat_fluid": "Never cleaned my ears. Ever.", &"flat_wax": "Had a stinking cold for weeks.",
 	&"flat_hole": "Never cleaned my ears. Ever.", &"flat_peak": "My ear feels full of water."}
-## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS), degrees (DEGREE DROP)
-## and flats (FLAT OUT).
-const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES, &"flats": FLATS}
+## OTO SPOT's chutes, in key order (1-5): what the otoscope shows (ArcadeArt.oto_view draws it).
+const OTOS: Array[StringName] = [&"oto_clear", &"oto_wax", &"oto_fluid", &"oto_hole", &"oto_object"]
+## Each oto chute's view in ArcadeArt.oto_view.
+const OTO_VIEW: Dictionary[StringName, StringName] = {&"oto_clear": &"clear", &"oto_wax": &"wax", &"oto_fluid": &"fluid",
+	&"oto_hole": &"hole", &"oto_object": &"object"}
+## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS), degrees (DEGREE DROP),
+## flats (FLAT OUT) and otos (OTO SPOT).
+const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES, &"flats": FLATS,
+	&"otos": OTOS}
 ## A tymp card's peak keeps its type this far either way (daPa, mL).
 const TYMP_MARGIN_DAPA := 40
 const TYMP_MARGIN_ML := 0.04
@@ -189,6 +196,11 @@ const LINES: Dictionary = {
 	&"flat_wax": ["Never cleaned my ears. Ever.", "I use cotton buds every day.", "It went dull after a swim."],
 	&"flat_hole": ["I had grommets as a kid.", "It popped on a dive.", "My ear runs now and then."],
 	&"flat_peak": ["Just here for a check-up.", "My ears feel fine, honest!", "Ears pop on planes, that's all."],
+	&"oto_clear": ["Just a check-up, please.", "Never had ear trouble."],
+	&"oto_wax": ["I use cotton buds every day.", "It went dull after a swim."],
+	&"oto_fluid": ["Had a stinking cold for weeks.", "My ear feels full of water."],
+	&"oto_hole": ["It popped on a dive.", "My ear runs now and then."],
+	&"oto_object": ["My grandson put something in there.", "I felt something crawl in!"],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -217,6 +229,12 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"flat_wax": {"text": "Canal under 0.6 mL: wax, or the probe on the wall", "gauge": true},
 	&"flat_hole": {"text": "Canal over 2 mL: a hole, or an open grommet", "gauge": true},
 	&"flat_peak": {"text": "A peak, so it isn't flat", "p_lo": -400, "p_hi": 200, "ml_lo": 0.1, "ml_hi": 1.7},
+	# oto tells glow over the drum ("view") and give the next step
+	&"oto_clear": {"text": "Grey drum, cone of light. Test away", "view": true},
+	&"oto_wax": {"text": "A brown plug hides the drum. Clear it first", "view": true},
+	&"oto_fluid": {"text": "Amber drum, a fluid line. Refer to a doctor", "view": true},
+	&"oto_hole": {"text": "A hole in the drum. Refer; no water, no impressions", "view": true},
+	&"oto_object": {"text": "It doesn't belong. A doctor takes it out", "view": true},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -238,6 +256,8 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		return make_type_card(rng, shape, opts, serial)
 	if TYMPS.has(shape) or FLATS.has(shape):
 		return make_tymp_card(rng, shape, opts, serial)
+	if OTOS.has(shape):
+		return make_oto_card(rng, shape, opts, serial)
 	if DEGREES.has(shape):
 		var dear := "left" if String(opts.get("ear", "right")) == "left" else "right"
 		var dlines: Array = LINES[shape]
@@ -410,6 +430,21 @@ static func stable_tymp(t: Dictionary, id: StringName) -> bool:
 			if CaseRules.tymp_type(p + dp, ml + dm) != want:
 				return false
 	return true
+
+
+## (seeded) One OTO SPOT card: one ear down the otoscope. Adds "oto" {"view", "lookalike",
+## "variant"} (ArcadeArt.oto_view's keys); "ac" is empty. A lookalike is the harder look (docs/ARCADE.md
+## section 25): flakes on the wall of a clear canal, dark wax, no bubbles, a small hole, a cotton-bud tip.
+static func make_oto_card(rng: RandomNumberGenerator, id: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+	var lines: Array = LINES[id]
+	var first := FIRST[rng.randi() % FIRST.size()]
+	return {
+		"serial": serial, "shape": id, "ear": ear, "sort_ear": ear, "ac": {}, "golden": false, "other_shape": &"",
+		"oto": {"view": OTO_VIEW[id], "lookalike": bool(opts.get("lookalike", false)), "variant": rng.randi() % 6},
+		"name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]], "who": "chute_%d" % (serial % PORTRAIT_IDS),
+		"look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"), "line": lines[rng.randi() % lines.size()],
+	}
 
 
 ## (seeded) A FLAT OUT tympanogram: a flat one with the chute's canal volume, or (PEAK) a TYMP TOSS

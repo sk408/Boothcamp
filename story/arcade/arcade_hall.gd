@@ -41,6 +41,8 @@ const CABINETS: Array[Dictionary] = [
 		"pitch": "How much loss? Drop it by degree.", "body": Color("#ff9f1c")},
 	{"id": "chart_chute_flats", "name": "FLAT OUT", "scene": "res://story/arcade/flat_out.tscn",
 		"pitch": "Flat tymp? Read the canal volume.", "body": Color("#c0479c")},
+	{"id": "chart_chute_otos", "name": "OTO SPOT", "scene": "res://story/arcade/oto_spot.tscn",
+		"pitch": "Shine the light. What's in the ear?", "body": Color("#2d6cdf")},
 ]
 
 ## The cabinet last opened this session: the hall comes back with it selected.
@@ -124,6 +126,8 @@ class Cabinet extends Control:
 			_draw_degrees_screen(screen)
 		elif String(info["id"]) == "chart_chute_flats":
 			_draw_flats_screen(screen)
+		elif String(info["id"]) == "chart_chute_otos":
+			_draw_otos_screen(screen)
 		else:
 			_draw_desk_screen(screen)
 		# the pitch, the top score, the play sign
@@ -214,6 +218,13 @@ class Cabinet extends Control:
 		var flats := [&"flat_fluid", &"flat_wax", &"flat_hole", &"flat_peak"]
 		for i in flats.size():
 			ArcadeArt.picture(self, flats[i], r.position + Vector2(40 + i * (r.size.x - 80) / (flats.size() - 1.0), 152), 30.0)
+
+	## A clear look down the otoscope, over the five oto pictures.
+	func _draw_otos_screen(r: Rect2) -> void:
+		ArcadeArt.oto_view(self, Rect2(r.position + Vector2(r.size.x * 0.5 - 54, 6), Vector2(108, 108)), {"view": &"clear"})
+		var otos := [&"oto_clear", &"oto_wax", &"oto_fluid", &"oto_hole", &"oto_object"]
+		for i in otos.size():
+			ArcadeArt.picture(self, otos[i], r.position + Vector2(36 + i * (r.size.x - 72) / (otos.size() - 1.0), 152), 30.0)
 
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:
