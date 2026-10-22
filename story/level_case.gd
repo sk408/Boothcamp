@@ -651,7 +651,7 @@ func _seat_with_earphones() -> void:
 	clinic.call("focus_camera", &"booth", 1.2)
 	await clinic.call("sit")
 	await clinic.call("focus_camera", &"face", 0.8)
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _wait(0.6)
 
 
@@ -774,7 +774,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 				clinic.call("put_on_bone_oscillator", ear)
 				oscillator_on = ear
 			clinic.call("focus_camera", &"face", 0.5)
-			clinic.call("put_on_masking_phone", other)
+			clinic.call("put_on_masking_phone", other, _air_transducer() == &"inserts")
 			await _recap()
 			await _say("Hoot", ("Bone buzzes both cochleas. I'll keep the %s ear busy with noise." if _quick()
 				else "Bone buzzes both cochleas. Your turn: masked bone, noise in the %s ear.") % other)
@@ -792,7 +792,7 @@ func _audiometry(steps: Array, first_pass: bool = true) -> void:
 			if not masked_air:
 				clinic.call("take_off_bone_oscillator")
 				oscillator_on = ""
-				clinic.call("put_on_earphones", true)
+				clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 				await _recap()
 				await _say("Hoot", "Loud air tones can cross the head too. " + ("Masked air, Hoot speed!" if _quick() else "Masked air, your turn!"))
 			_open_screen()
@@ -861,7 +861,7 @@ func _speech_check() -> void:
 	var spec: Dictionary = case_data["speech_check"]
 	var ears: Array = spec.get("ears", ["right", "left"])
 	hud.call("set_step", &"words")
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	clinic.call("hold_response_button", false)
 	clinic.call("focus_camera", &"face", 0.4)
 	await _say("Hoot", SPEECH_INTRO)

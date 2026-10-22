@@ -538,7 +538,7 @@ func _air() -> void:
 	await _to_booth()
 	_test_begins()
 	clinic.call("take_off_bone_oscillator")
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _wait(0.5)
 	_open_screen()
 	for ear: String in [first, "left" if first == "right" else "right"]:
@@ -630,10 +630,10 @@ func _masking() -> void:
 	if test == "bc_masked":
 		clinic.call("take_off_earphones")
 		clinic.call("put_on_bone_oscillator", ear)
-		clinic.call("put_on_masking_phone", other)
+		clinic.call("put_on_masking_phone", other, _air_transducer() == &"inserts")
 	else:
 		clinic.call("take_off_bone_oscillator")
-		clinic.call("put_on_earphones", true)
+		clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _recap()
 	await _wait(0.5)
 	_open_screen()

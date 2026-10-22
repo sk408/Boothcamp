@@ -86,6 +86,7 @@ var _bone: Node3D
 var _bone_box: Node3D
 var _bone_rings: Node3D
 var _mask_phone: Node3D
+var _inserts_shown := false   # (E17) the insert how-to caption shows once per clinic
 var _mask_cup: Node3D
 ## (Days 4-5) Day 5's two booth speakers (show_soundfield): the talker in front, the party behind.
 var _soundfield: Node3D
@@ -362,9 +363,12 @@ func focus_camera(shot: StringName, duration: float = 0.8) -> void:
 	await t.finished
 
 
-func put_on_earphones(red_on_right: bool = true) -> void:
+func put_on_earphones(red_on_right: bool = true, inserts: bool = false) -> void:
 	take_off_earphones()
 	_glasses_off_for_gear()
+	if inserts:
+		_put_on_inserts(red_on_right)
+		return
 	var head: Node3D = gus.get("parts")["head"]
 	var hc: Vector3 = gus.get("parts")["head_center"]
 	_phones = Node3D.new()
@@ -402,6 +406,58 @@ func put_on_earphones(red_on_right: bool = true) -> void:
 	Sfx.play(&"pop", 1.1, -6.0)
 	get_tree().create_timer(0.25).timeout.connect(Sfx.play.bind(&"pop", 0.9, -6.0))
 	gus.call("set_holding_button", true)
+
+
+## (E17) Foam insert earphones: a foam tip squeezed, slid into each canal until flush, then
+## swelling to seal (BSA 2018, 6.3), a red or blue tube down to its little transducer box.
+func _put_on_inserts(red_on_right: bool) -> void:
+	var head: Node3D = gus.get("parts")["head"]
+	var hc: Vector3 = gus.get("parts")["head_center"]
+	_phones = Node3D.new()
+	_phones.name = "InsertEarphones"
+	_phones.position = hc
+	head.add_child(_phones)
+	for side: int in [-1, 1]:
+		var his_right := side < 0
+		var red := his_right == red_on_right
+		_insert_tip(_phones, side, Color("#e5383b") if red else Color("#2d6cdf"), "R" if red else "L", 0.09 * (side + 1))
+	if not _inserts_shown:
+		_inserts_shown = true
+		var tip := Kit.label(_phones, "Squeeze, slide in flush, hold while it swells!", Vector3(0, 0.62, 0.1), 40, Color("#2e2442"), 12, 700)
+		var tt := tip.create_tween()
+		tt.tween_interval(2.6)
+		tt.tween_property(tip, "modulate:a", 0.0, 0.5)
+		tt.tween_callback(tip.queue_free)
+	Sfx.play(&"pop", 1.3, -8.0)
+	get_tree().create_timer(0.2).timeout.connect(Sfx.play.bind(&"pop", 1.2, -8.0))
+	gus.call("set_holding_button", true)
+
+
+## (E17) One foam insert in the ear on `side` (-1 his right, 1 his left) under `parent`; returns
+## the tip's node (the masking insert's "shh" hangs off it like the masking cup's).
+func _insert_tip(parent: Node3D, side: int, col: Color, letter: String, delay: float) -> Node3D:
+	var tip := Node3D.new()
+	tip.position = Vector3(0.41 * side, -0.02, 0.0)
+	parent.add_child(tip)
+	var foam := Kit.cylinder(tip, 0.045, 0.04, 0.08, Vector3(-0.005 * side, 0, 0), Color("#f2c14e"), {"outline": 0.008}, 14)
+	foam.rotation.z = PI / 2.0
+	var collar := Kit.cylinder(tip, 0.03, 0.03, 0.03, Vector3(0.05 * side, 0, 0), col, {"outline": 0.008}, 12)
+	collar.rotation.z = PI / 2.0
+	var tube := Kit.cylinder(tip, 0.012, 0.012, 0.36, Vector3(0.065 * side, -0.19, 0.02), col, {"outline": 0.004}, 8)
+	tube.rotation.z = -0.12 * side
+	var box := Kit.box(tip, Vector3(0.07, 0.1, 0.045), Vector3(0.09 * side, -0.41, 0.03), col, {"outline": 0.008})
+	Kit.label(box, letter, Vector3(0, 0, 0.026), 30, Color.WHITE, 0, 700)
+	# squeezed thin, slid in, then the foam swells to seal the canal
+	var rest := tip.position
+	tip.position = rest + Vector3(0.25 * side, 0.1, 0.15)
+	foam.scale = Vector3(0.55, 1.0, 0.55)
+	var t := tip.create_tween()
+	t.tween_interval(delay)
+	t.tween_property(tip, "position", rest, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_interval(0.25)
+	t.tween_property(foam, "scale", Vector3(1.15, 1.0, 1.15), 0.45).set_trans(Tween.TRANS_SINE)
+	t.tween_property(foam, "scale", Vector3.ONE, 0.2)
+	return tip
 
 
 func take_off_earphones() -> void:
@@ -743,7 +799,7 @@ func put_on_bone_oscillator(ear: String = "right") -> void:
 
 ## (v3) One earphone on the non-test ear, for the masking noise during bone tests. The other
 ## cup rests on the head behind the oscillator band (as in a real booth).
-func put_on_masking_phone(ear: String = "left") -> void:
+func put_on_masking_phone(ear: String = "left", inserts: bool = false) -> void:
 	if _mask_phone and is_instance_valid(_mask_phone):
 		_mask_phone.queue_free()
 	_glasses_off_for_gear()
@@ -755,6 +811,10 @@ func put_on_masking_phone(ear: String = "left") -> void:
 	_mask_phone.position = hc
 	head.add_child(_mask_phone)
 	var col := Color("#e5383b") if ear == "right" else Color("#2d6cdf")
+	if inserts:   # (E17) the masking noise through one foam insert in the non-test ear
+		_mask_cup = _insert_tip(_mask_phone, int(side), col, "R" if ear == "right" else "L", 0.0)
+		Sfx.play(&"pop", 1.2, -8.0)
+		return
 	var band_root := Node3D.new()
 	band_root.rotation.x = 0.32
 	_mask_phone.add_child(band_root)
