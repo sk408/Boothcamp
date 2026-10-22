@@ -24,6 +24,8 @@ extends Control
 ## sorted by degree of loss (ClinicRules.degree_name of the 500/1k/2k average); MODE_DEGREES.
 ## belt = &"flats" makes it FLAT OUT (flat_out.tscn, section 23): one ear's tympanogram with a canal
 ## volume gauge, sorted into FLUID, WAX or HOLE (CaseRules.tymp_b_reading) or PEAK; MODE_FLATS.
+## belt = &"otos" makes it OTO SPOT (oto_spot.tscn, section 25): one ear down the otoscope
+## (ArcadeArt.oto_view), sorted into CLEAR, WAX, FLUID, HOLE or OBJECT; MODE_OTOS.
 
 signal _sorted(pick: StringName)
 
@@ -41,9 +43,10 @@ const MODE_TYPES := "chart_chute_types"
 const MODE_TYMPS := "chart_chute_tymps"
 const MODE_DEGREES := "chart_chute_degrees"
 const MODE_FLATS := "chart_chute_flats"
+const MODE_OTOS := "chart_chute_otos"
 ## Each belt's save key and title.
-const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS}
-const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT"}
+const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS, &"otos": MODE_OTOS}
+const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT", &"otos": "OTO SPOT"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -82,6 +85,8 @@ const WARMUP_HINTS: Dictionary = {
 	&"deg_moderate": "Same three pitches. This average is 41 to 55: MODERATE!",
 	&"flat_fluid": "Flat tymp, normal canal volume on the gauge: FLUID!",
 	&"flat_wax": "Flat again, but the canal is tiny. Blocked: WAX!",
+	&"oto_clear": "Each card is a look in the ear. Grey drum, cone of light: CLEAR!",
+	&"oto_wax": "A brown plug hides the drum: WAX!",
 }
 
 var seed_value := -1
@@ -176,7 +181,9 @@ class CardView extends Control:
 			if card.has("tymp"):
 				ArcadeArt.tymp_chart(_tymp, tymp_plot(), card["tymp"], Palette.ear_color(String(card["sort_ear"])), true, String(card["sort_ear"]))
 				if ChartDeck.FLATS.has(StringName(card["shape"])):
-					ArcadeArt.volume_gauge(_tymp, gauge_rect(), float(card["tymp"].get("ecv_ml", 1.0)), true))
+					ArcadeArt.volume_gauge(_tymp, gauge_rect(), float(card["tymp"].get("ecv_ml", 1.0)), true)
+			elif card.has("oto"):
+				ArcadeArt.oto_view(_tymp, oto_rect(), card["oto"], String(card["sort_ear"])))
 		add_child(_tymp)
 		_over = UiKit.full_rect()
 		_over.draw.connect(_draw_tell)
@@ -193,6 +200,10 @@ class CardView extends Control:
 	func tymp_plot() -> Rect2:
 		return Rect2(70, 92, size.x - 100, size.y - 164)
 
+	## Where an OTO SPOT card's look in the ear sits: a round view under the name, over the tell.
+	func oto_rect() -> Rect2:
+		return Rect2(size.x * 0.5 - 122, 68, 244, 244)
+
 	## Where a FLAT OUT card's canal volume gauge sits: across the top of the tympanogram, above
 	## any peak the belt deals.
 	func gauge_rect() -> Rect2:
@@ -203,7 +214,7 @@ class CardView extends Control:
 		card = c
 		tell = &""
 		ear_cue = false
-		ag.visible = not c.has("tymp")
+		ag.visible = not c.has("tymp") and not c.has("oto")
 		_tymp.queue_redraw()
 		ag.ear = String(c["ear"]) if String(c["ear"]) != "" else "both"
 		ag.clear_points()
@@ -269,6 +280,8 @@ class CardView extends Control:
 		var sub := "Lower on the chart = harder to hear"
 		if card.has("tymp"):
 			sub = "Canal volume: %.1f mL" % float(card["tymp"].get("ecv_ml", 1.0))
+		elif card.has("oto"):
+			sub = "Shine the light: what's in there?"
 		draw_string(UiKit.font(500), Vector2(86, 58), sub, HORIZONTAL_ALIGNMENT_LEFT, 260, 14 if not card.has("tymp") else 16, Palette.INK_SOFT)
 		var tag := _tag_rect()
 		UiDraw.rounded_rect(self, tag, Palette.ear_color(String(card.get("sort_ear", "right"))), 19)
@@ -288,6 +301,9 @@ class CardView extends Control:
 		var rr: Rect2
 		if info.has("gauge"):
 			rr = gauge_rect().grow(4.0)
+		elif info.has("view"):
+			var o := oto_rect()
+			rr = Rect2(o.get_center() - o.size * 0.3, o.size * 0.6)
 		elif info.has("p_lo"):
 			# a tympanogram's patch: pressure by admittance, in the card's own coordinates
 			var plot := tymp_plot()
@@ -391,6 +407,11 @@ class ChuteView extends Control:
 	func _draw_mini_chart(box: Rect2) -> void:
 		if ChartDeck.TYMPS.has(shape):
 			ArcadeArt.tymp_chart(self, box.grow(-2.0), MINI_TYMPS[shape], Palette.INK, false)
+			return
+		if ChartDeck.OTOS.has(shape):
+			# the look itself, small
+			var side := minf(box.size.x, box.size.y) + 6.0
+			ArcadeArt.oto_view(self, Rect2(box.get_center() - Vector2(side, side) * 0.5, Vector2(side, side)), {"view": ChartDeck.OTO_VIEW[shape]})
 			return
 		if ChartDeck.FLATS.has(shape):
 			# PEAK: a peak; the rest: the volume gauge with this chute's part lit
@@ -845,6 +866,8 @@ func _ramp_tips(card: Dictionary) -> void:
 			tip = "Blue X is the left ear. Its bone marks face the other way."
 		elif belt == &"flats":
 			tip = "Blue is the left ear. Same gauge!"
+		elif belt == &"otos":
+			tip = "Blue is the left ear: the view flips over."
 		elif card.has("tymp"):
 			tip = "Blue is the left ear. Same five types!"
 		elif belt == &"degrees":
@@ -1130,6 +1153,10 @@ func _draw_preview() -> void:
 	if _next.has("tymp"):
 		ArcadeArt.tymp_chart(_preview, plot, _next["tymp"], Palette.ear_color(sort_ear), false)
 		return
+	if _next.has("oto"):
+		var side := plot.size.y
+		ArcadeArt.oto_view(_preview, Rect2(plot.get_center() - Vector2(side, side) * 0.5, Vector2(side, side)), _next["oto"], sort_ear)
+		return
 	_preview.draw_rect(plot, Color("#ffffff"))
 	for ear: String in (_next["ac"] as Dictionary):
 		var t: Dictionary = _next["ac"][ear]
@@ -1247,6 +1274,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"otos":
+		return "Look before you test: what you see in the ear decides the next step."
 	if belt == &"flats":
 		return "A flat tymp means look again: the canal volume says fluid, wax or a hole."
 	if belt == &"degrees":

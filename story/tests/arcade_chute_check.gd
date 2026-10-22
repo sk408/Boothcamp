@@ -17,7 +17,7 @@ extends Node
 ## player would.
 ## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; --belt=tymps
 ## plays TYMP TOSS (tymp_toss.tscn, the fourth), --belt=degrees DEGREE DROP (the fifth), --belt=flats
-## FLAT OUT (the sixth). None has two-ear cards, so the slip bot slips
+## FLAT OUT (the sixth), --belt=otos OTO SPOT (the seventh). None has two-ear cards, so the slip bot slips
 ## each left-ear card once (first a wrong open chute) and no story chart ever rides them.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
@@ -36,6 +36,7 @@ const BELT_RUNS: Dictionary = {
 	"tymps": {"scene": TYMPS_SCENE, "mode": "chart_chute_tymps", "key": KEY_4},
 	"degrees": {"scene": "res://story/arcade/degree_drop.tscn", "mode": "chart_chute_degrees", "key": KEY_5},
 	"flats": {"scene": "res://story/arcade/flat_out.tscn", "mode": "chart_chute_flats", "key": KEY_6},
+	"otos": {"scene": "res://story/arcade/oto_spot.tscn", "mode": "chart_chute_otos", "key": KEY_7},
 }
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
@@ -215,7 +216,7 @@ class Driver extends Node:
 			"guess":
 				var words: Array = info["options"]
 				var w: String = words[_rng.randi() % words.size()]
-				await _key(KEY_1 + ids.find(ChartDeck.CHUTE_WORDS.find_key(w)))
+				await _key(KEY_1 + ids.find(_id_of(w, ids)))
 			"help":
 				await _key(KEY_H)
 			"slip":
@@ -224,7 +225,7 @@ class Driver extends Node:
 				var serial := int(card.get("serial", -1))
 				if belt != &"shapes" and String(card.get("ear", "")) == "left":
 					var wrong: Array = (info["options"] as Array).filter(func(w: String) -> bool: return w != ChartDeck.CHUTE_WORDS[shape])
-					other = ChartDeck.CHUTE_WORDS.find_key(wrong[0]) if not wrong.is_empty() else &""
+					other = _id_of(wrong[0], ids) if not wrong.is_empty() else &""
 					if other != &"" and not _slipped.has(serial):
 						var was := int(chute.get("_oops"))
 						await _key(KEY_1 + ids.find(other))
@@ -403,9 +404,18 @@ class Driver extends Node:
 		await _click(c.get_global_rect().get_center())
 
 
+	## The chute on this belt with word w (two belts may share a word: FLAT OUT's and OTO SPOT's WAX).
+	static func _id_of(w: String, ids: Array) -> StringName:
+		for id: StringName in ids:
+			if ChartDeck.CHUTE_WORDS[id] == w:
+				return id
+		return &""
+
+
 ## The high-score table, read the way the results card reads it.
 class ArcadeScoresRef:
 	const ArcadeScores := preload("res://story/arcade/arcade_scores.gd")
 
 	static func table(mode: String) -> Array[Dictionary]:
 		return ArcadeScores.table(mode)
+

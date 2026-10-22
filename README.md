@@ -113,7 +113,8 @@ rising or reverse bite), **Ears, Please!** (stamp each patient file at the clini
 REFER or DOCTOR TODAY, and point at the red flag behind every referral), **Air & Bone** (each
 chart shows air and bone: call the loss sensorineural, conductive or mixed), **Tymp Toss** (sort
 tympanograms into types A, B, As, C and Ad), **Degree Drop** (sort charts mild to profound by
-the 500-2k average) and **Flat Out** (read a flat tympanogram's canal volume: fluid, wax or a hole).
+the 500-2k average), **Flat Out** (read a flat tympanogram's canal volume: fluid, wax or a hole)
+and **Oto Spot** (look in the ear: clear, wax, fluid, a hole or something that doesn't belong).
 None ever tests your own hearing.
 
 > **This is a game, not a hearing test.** Every "dB" in it is simulated. The beeps are kept quiet

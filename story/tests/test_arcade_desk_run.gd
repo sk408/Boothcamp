@@ -290,7 +290,7 @@ func test_the_hall_has_a_cabinet_for_each_game_and_the_title_opens_it() -> void:
 	assert_eq(TitleScreen.ARCADE_SCENE, "res://story/arcade/arcade_hall.tscn")
 	assert_true(ResourceLoader.exists(TitleScreen.ARCADE_SCENE))
 	var ids: Array = ArcadeHall.CABINETS.map(func(c: Dictionary) -> String: return c["id"])
-	assert_eq(ids, [ChartChute.MODE, EarsPlease.MODE, ChartChute.MODE_TYPES, ChartChute.MODE_TYMPS, ChartChute.MODE_DEGREES, ChartChute.MODE_FLATS], "cabinet ids are the games' save keys, in key order")
+	assert_eq(ids, [ChartChute.MODE, EarsPlease.MODE, ChartChute.MODE_TYPES, ChartChute.MODE_TYMPS, ChartChute.MODE_DEGREES, ChartChute.MODE_FLATS, ChartChute.MODE_OTOS], "cabinet ids are the games' save keys, in key order")
 	for c: Dictionary in ArcadeHall.CABINETS:
 		assert_true(ResourceLoader.exists(String(c["scene"])), "%s opens %s" % [c["name"], c["scene"]])
 	assert_eq(EarsPlease.HALL_SCENE, TitleScreen.ARCADE_SCENE, "Ears, Please! comes back to the hall")

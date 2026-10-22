@@ -70,6 +70,16 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_donut(ci, c, s, 0.0)
 		&"flat_peak":
 			_mountain(ci, c, s, 0.0, 1.0)
+		&"oto_clear":
+			_pearl(ci, c, s, 0.0)
+		&"oto_wax":
+			_plug(ci, c, s, 0.0)
+		&"oto_fluid":
+			_drop(ci, c, s, 0.0)
+		&"oto_hole":
+			_donut(ci, c, s, 0.0)
+		&"oto_object":
+			_ladybird(ci, c, s, 0.0)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
@@ -78,7 +88,8 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 ## mountain slides, the skyscraper's windows light up; for the degrees the clock's hand sweeps,
 ## the speech bubble swells, the megaphone and the drum send out rings, the jet zooms on; for the
 ## flat tymps the drop splashes, the plug is yanked out on its chain, the doughnut spins and sheds
-## sprinkles, and the PEAK mountain glints.
+## sprinkles, and the PEAK mountain glints; for the looks in the ear the pearl gleams and the
+## ladybird flies off (the plug, drop and doughnut as above).
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -138,6 +149,16 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_donut(ci, c, s, t)
 		&"flat_peak":
 			_mountain(ci, c, s, t, 1.0)
+		&"oto_clear":
+			_pearl(ci, c, s, t)
+		&"oto_wax":
+			_plug(ci, c, s, t)
+		&"oto_fluid":
+			_drop(ci, c, s, t)
+		&"oto_hole":
+			_donut(ci, c, s, t)
+		&"oto_object":
+			_ladybird(ci, c, s, t)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -557,3 +578,157 @@ static func _donut(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 			var a := i * TAU / 6.0 + 0.5
 			var o := c + Vector2(cos(a), sin(a)) * s * (0.6 + 0.4 * t) + Vector2(0, s * 0.3 * t * t)
 			ci.draw_line(o, o + Vector2(s * 0.06, s * 0.03), Color(cols[i % cols.size()], 1.0 - t), 3.0)
+
+
+# ---------------------------------------------------------------- the look in the ear (OTO SPOT)
+
+const CANAL := Color("#e6a596")
+const CANAL_DEEP := Color("#c27d70")
+const DRUM := Color("#c9c6cf")
+const DRUM_RIM := Color("#a39eab")
+const EAR_WAX := Color("#b5762b")
+const EAR_WAX_DARK := Color("#3f2716")
+const FLUID_AMBER := Color("#e0a64a")
+const DRUM_TILT := -0.25
+
+
+## One ear down the otoscope in `r`: the dark round of the speculum, the pink canal, the grey drum
+## with its malleus handle and cone of light, then the look on top. oto: {"view": &"clear" | &"wax" |
+## &"fluid" | &"hole" | &"object", "lookalike": bool, "variant": int}. A left ear is the right one
+## mirrored (its cone of light at 7 o'clock). still: no bobbing bubbles (the chutes, the NEXT card).
+static func oto_view(ci: CanvasItem, r: Rect2, oto: Dictionary, ear := "right", t := 0.0) -> void:
+	var c := r.get_center()
+	var R := minf(r.size.x, r.size.y) * 0.5
+	var flip := -1.0 if ear == "left" else 1.0
+	var view := StringName(oto.get("view", &"clear"))
+	var trap := bool(oto.get("lookalike", false))
+	var v := int(oto.get("variant", 0))
+	ci.draw_circle(c, R, Color("#1d1414"))
+	ci.draw_circle(c, R * 0.93, CANAL_DEEP)
+	ci.draw_circle(c + Vector2(-R * 0.06 * flip, -R * 0.06), R * 0.8, CANAL)
+	# the drum: a tilted oval, a little down and toward the front
+	var dc := c + Vector2(-R * 0.05 * flip, R * 0.05)
+	var drx := R * 0.55
+	var dry := R * 0.48
+	var drum := _tilted_oval(dc, drx, dry, DRUM_TILT * flip, 36)
+	ci.draw_colored_polygon(drum, DRUM)
+	var ring := drum.duplicate()
+	ring.append(drum[0])
+	ci.draw_polyline(ring, DRUM_RIM, maxf(2.0, R * 0.03), true)
+	# the malleus handle, top down to the umbo, and the cone of light from the umbo outward
+	var umbo := dc + Vector2(R * 0.04 * flip, R * 0.06)
+	var cone := PackedVector2Array([umbo + Vector2(R * 0.03 * flip, R * 0.03), umbo + Vector2(R * 0.3 * flip, R * 0.34), umbo + Vector2(R * 0.13 * flip, R * 0.4)])
+	if view == &"clear" or view == &"object":
+		ci.draw_colored_polygon(cone, Color(SNOW, 0.9))
+	ci.draw_line(dc + Vector2(-R * 0.12 * flip, -R * 0.36), umbo, Color("#f3efe6"), maxf(3.0, R * 0.07), true)
+	match view:
+		&"clear":
+			if trap:
+				# dry flakes on the canal wall, nowhere near the drum
+				for f: Vector3 in [Vector3(0.7, -0.45, 0.07), Vector3(-0.72, 0.3, 0.06), Vector3(0.35, 0.78, 0.08)]:
+					var fc := c + Vector2(f.x * flip, f.y) * R
+					ci.draw_colored_polygon(_tilted_oval(fc, R * f.z, R * f.z * 0.6, 0.6 + f.x, 8), Color("#d39a4c"))
+		&"wax":
+			var col := EAR_WAX_DARK if trap else EAR_WAX
+			var plug := PackedVector2Array()
+			for i in 40:
+				var a := TAU * i / 40.0
+				var k := 1.0 + 0.06 * sin(5.0 * a + v) + 0.04 * sin(9.0 * a + 2.0 * v)
+				plug.append(dc + Vector2(cos(a), sin(a)) * Vector2(drx, dry) * 1.18 * k)
+			ci.draw_colored_polygon(plug, col)
+			var edge := plug.duplicate()
+			edge.append(plug[0])
+			ci.draw_polyline(edge, col.darkened(0.3), maxf(2.0, R * 0.04), true)
+			for lump: Vector3 in [Vector3(-0.3, -0.25, 0.2), Vector3(0.25, -0.2, 0.18), Vector3(0.05, 0.25, 0.22)]:
+				ci.draw_circle(dc + Vector2(lump.x * flip, lump.y) * R, lump.z * R, col.lightened(0.08))
+			ci.draw_arc(dc + Vector2(-R * 0.1 * flip, -R * 0.12), R * 0.3, PI * 1.1, PI * 1.45, 10, Color(Color("#f0c27a") if not trap else Color("#8a6a50"), 0.85), maxf(2.0, R * 0.05))
+		&"fluid":
+			ci.draw_colored_polygon(drum, Color(FLUID_AMBER, 0.6))
+			var line := PackedVector2Array()
+			for i in 13:
+				var x := -0.9 + i * 0.15
+				var p := dc + Vector2(x * drx, -dry * 0.3 + R * 0.04 * (1.0 - x * x))
+				line.append(p)
+			ci.draw_polyline(line, Color("#c98a2e"), maxf(2.0, R * 0.04), true)
+			if not trap:
+				for b: Vector3 in [Vector3(-0.35, 0.05, 0.07), Vector3(0.3, 0.2, 0.06), Vector3(-0.1, 0.4, 0.08), Vector3(0.4, -0.05, 0.05)]:
+					var bp := dc + Vector2(b.x * flip, b.y) * R + Vector2(0, sin(t * 2.0 + b.x * 9.0) * R * 0.015)
+					ci.draw_arc(bp, b.z * R, 0.0, TAU, 14, Color(SNOW, 0.9), maxf(1.5, R * 0.02), true)
+		&"hole":
+			var hr := R * (0.1 if trap else 0.2)
+			var hc := dc + Vector2((0.18 if v % 2 == 0 else -0.2) * flip, 0.2) * R
+			var hole := _tilted_oval(hc, hr * 1.2, hr, DRUM_TILT * flip, 20)
+			ci.draw_colored_polygon(hole, Color("#4a1a1a"))
+			var hring := hole.duplicate()
+			hring.append(hole[0])
+			ci.draw_polyline(hring, Color("#e7e2ea"), maxf(2.0, R * 0.03), true)
+		&"object":
+			var oc := c + Vector2(R * 0.32 * flip, R * 0.38)
+			var kind := 2 if trap else v % 2
+			match kind:
+				0:   # a bead
+					var bead: Color = [Color("#e5383b"), Color("#2d6cdf"), Color("#5bc8a3")][v % 3]
+					ci.draw_circle(oc, R * 0.2 + 2.0, INK)
+					ci.draw_circle(oc, R * 0.2, bead)
+					ci.draw_circle(oc, R * 0.05, bead.darkened(0.5))
+					ci.draw_circle(oc + Vector2(-R * 0.07, -R * 0.07), R * 0.05, Color(SNOW, 0.8))
+				1:   # a beetle
+					for i in 3:
+						for side: float in [-1.0, 1.0]:
+							var leg := oc + Vector2(side * R * 0.1, (i - 1) * R * 0.08)
+							ci.draw_line(leg, leg + Vector2(side * R * 0.12, (i - 1) * R * 0.05), INK, maxf(1.5, R * 0.025))
+					ci.draw_set_transform(oc, 0.0, Vector2(0.8, 1.0))
+					ci.draw_circle(Vector2.ZERO, R * 0.17, Color("#2a3b2a"))
+					ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+					ci.draw_circle(oc + Vector2(0, -R * 0.17), R * 0.07, INK)
+					ci.draw_line(oc + Vector2(0, -R * 0.12), oc + Vector2(0, R * 0.16), Color(SNOW, 0.35), 1.5)
+				_:   # a cotton-bud tip, fluffy and white
+					for p: Vector3 in [Vector3(0, 0, 0.13), Vector3(-0.09, 0.05, 0.09), Vector3(0.09, 0.04, 0.1), Vector3(0.02, -0.09, 0.09)]:
+						ci.draw_circle(oc + Vector2(p.x, p.y) * R, p.z * R, Color("#f4f1ea"))
+					ci.draw_arc(oc, R * 0.16, 0.0, TAU, 16, Color(INK, 0.35), 1.5)
+	# the speculum's rim shadow over everything
+	ci.draw_arc(c, R * 0.93, 0.0, TAU, 48, Color("#1d1414"), maxf(3.0, R * 0.08), true)
+
+
+static func _tilted_oval(c: Vector2, rx: float, ry: float, tilt: float, n: int) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n:
+		var a := TAU * i / n
+		pts.append(c + Vector2(cos(a) * rx, sin(a) * ry).rotated(tilt))
+	return pts
+
+
+## A pearl (a clear, pearly grey drum). t > 0: it gleams.
+static func _pearl(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	ci.draw_set_transform(c + Vector2(0, s * 0.3), 0.0, Vector2(1.0, 0.4))
+	ci.draw_circle(Vector2.ZERO, s * 0.55, Color("#e85d75"))
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ci.draw_circle(c, s * 0.36 + 3.0, INK)
+	ci.draw_circle(c, s * 0.36, Color("#e9e6ef"))
+	ci.draw_circle(c + Vector2(s * 0.06, s * 0.08), s * 0.24, Color("#d4d0dc"))
+	ci.draw_circle(c + Vector2(-s * 0.12, -s * 0.12), s * 0.08, SNOW)
+	if t > 0.0:
+		var g := c + Vector2(-s * 0.12, -s * 0.12)
+		var k := s * 0.3 * sin(t * PI)
+		ci.draw_line(g - Vector2(k, 0), g + Vector2(k, 0), BRASS, 3.0)
+		ci.draw_line(g - Vector2(0, k), g + Vector2(0, k), BRASS, 3.0)
+
+
+## A ladybird (something that doesn't belong in an ear). t > 0: it opens its wings and flies off.
+static func _ladybird(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var at := c + Vector2(s * 0.5, -s * 0.5) * t * t
+	var open := 0.5 * sin(t * PI) if t > 0.0 else 0.0
+	ci.draw_circle(at + Vector2(0, -s * 0.3), s * 0.16 + 2.0, INK)
+	for side: float in [-1.0, 1.0]:
+		var wing := PackedVector2Array()
+		for i in 13:
+			var a := -PI * 0.5 + side * (i / 12.0) * PI
+			wing.append(at + Vector2(cos(a), sin(a)).rotated(side * open) * s * 0.36)
+		wing.append(at)
+		ci.draw_colored_polygon(wing, SKIER)
+		var edge := wing.duplicate()
+		edge.append(wing[0])
+		ci.draw_polyline(edge, INK, 3.0, true)
+		for d: Vector2 in [Vector2(0.17, -0.1), Vector2(0.2, 0.14)]:
+			ci.draw_circle(at + Vector2(side * d.x, d.y).rotated(side * open) * s, s * 0.06, INK)
+	ci.draw_line(at + Vector2(0, -s * 0.36), at + Vector2(0, s * 0.36), INK, 3.0)
