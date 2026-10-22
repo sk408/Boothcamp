@@ -30,6 +30,8 @@ extends Control
 ## bone with one frequency lit, sorted into NO MASK, MASK BONE or MASK BOTH (ChartDeck.mask_call); MODE_MASKS.
 ## belt = &"noise" makes it GOLDILOCKS (goldilocks.tscn, section 31): a masked bone test's numbers and
 ## its noise dial, sorted into TOO LITTLE, JUST RIGHT, TOO MUCH or DILEMMA (ChartDeck.noise_call); MODE_NOISE.
+## belt = &"speech" makes it CROSS CHECK (cross_check.tscn, section 33): one ear's chart with its SRT as a
+## dashed line, sorted into AGREES, TOO GOOD, TOO POOR or FAIR (ChartDeck.srt_call); MODE_SPEECH.
 
 signal _sorted(pick: StringName)
 
@@ -50,11 +52,12 @@ const MODE_FLATS := "chart_chute_flats"
 const MODE_OTOS := "chart_chute_otos"
 const MODE_MASKS := "chart_chute_masks"
 const MODE_NOISE := "chart_chute_noise"
+const MODE_SPEECH := "chart_chute_speech"
 ## Each belt's save key and title.
 const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS, &"otos": MODE_OTOS,
-	&"masks": MODE_MASKS, &"noise": MODE_NOISE}
+	&"masks": MODE_MASKS, &"noise": MODE_NOISE, &"speech": MODE_SPEECH}
 const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT", &"otos": "OTO SPOT",
-	&"masks": "MASQUERADE", &"noise": "GOLDILOCKS"}
+	&"masks": "MASQUERADE", &"noise": "GOLDILOCKS", &"speech": "CROSS CHECK"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -99,6 +102,8 @@ const WARMUP_HINTS: Dictionary = {
 	&"mask_bone": "Air is well below bone here. A gap of 10 or more: MASK BONE!",
 	&"noise_under": "Start the noise at the other ear's air plus 10. This is under: TOO LITTLE!",
 	&"noise_ok": "Over the start, under the tone plus 40: JUST RIGHT!",
+	&"srt_agree": "Average 500, 1k and 2k. The SRT line sits right on it: AGREES!",
+	&"srt_good": "The words came far better than the tones. Odd! TOO GOOD: recheck!",
 }
 
 var seed_value := -1
@@ -306,6 +311,8 @@ class CardView extends Control:
 			sub = "Shine the light: what's in there?"
 		elif card.has("mask"):
 			sub = "Testing %s: mask or not?" % _hz(int(card["mask"]["freq"]))
+		elif card.has("srt"):
+			sub = "SRT %d dB: do words and tones agree?" % int(card["srt"]["db"])
 		elif card.has("noise"):
 			sub = "Masked bone at %s: is the noise right?" % _hz(int(card["noise"]["freq"]))
 		draw_string(UiKit.font(500), Vector2(86, 58), sub, HORIZONTAL_ALIGNMENT_LEFT, 260, 14 if not card.has("tymp") else 16, Palette.INK_SOFT)
@@ -328,6 +335,22 @@ class CardView extends Control:
 		var col := Rect2(inv * gr.position, inv.basis_xform(gr.size)).abs()
 		_over.draw_rect(col, Color(Palette.SUNNY, 0.22))
 		_over.draw_rect(col, Color(Palette.SELECT_ORANGE, 0.55), false, 2.0)
+
+	## A CROSS CHECK card's SRT: a dashed line across 500 to 2k at its level, with a chip naming it.
+	func _draw_srt() -> void:
+		var xf := _over.get_global_transform_with_canvas().affine_inverse() * ag.get_global_transform_with_canvas()
+		var db := float(card["srt"]["db"])
+		var a := xf * Vector2(ag.freq_to_x(500) - 18.0, ag.db_to_y(db))
+		var b := xf * Vector2(ag.freq_to_x(2000) + 18.0, ag.db_to_y(db))
+		var col := Palette.ear_color(String(card.get("sort_ear", "right")))
+		var x := a.x
+		while x < b.x:
+			_over.draw_line(Vector2(x, a.y), Vector2(minf(x + 10.0, b.x), a.y), col, 3.0)
+			x += 16.0
+		var lab := "SRT %d" % int(db)
+		var lw := _font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 14
+		UiDraw.rounded_rect(_over, Rect2(b.x + 4, a.y - 12, lw, 24), col, 10)
+		_over.draw_string(_font, Vector2(b.x + 11, a.y + 6), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.PAPER)
 
 	## The noise card's safe window on its dial: green from the start level up to the tone + 40; for a
 	## dilemma, the start and the ceiling marked in coral, crossed.
@@ -352,6 +375,8 @@ class CardView extends Control:
 			return
 		if card.has("mask") and tell == &"":
 			_draw_ask()
+		if card.has("srt"):
+			_draw_srt()
 		if tell == &"":
 			return
 		var steady := bool(Game.settings.get("reduced_motion", false))
@@ -487,6 +512,17 @@ class ChuteView extends Control:
 			else:
 				UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
 				ArcadeArt.volume_gauge(self, box.grow(-6.0), float(MINI_ECV[shape]), false)
+			return
+		if ChartDeck.SRTS.has(shape):
+			# the average as a solid bar, the SRT as a dash: on it, a little off, far above, far below
+			UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
+			var ym := box.get_center().y
+			draw_line(Vector2(box.position.x + 14, ym), Vector2(box.end.x - 14, ym), Palette.INK, 3.0)
+			var dy := {&"srt_agree": 0.0, &"srt_fair": 6.0, &"srt_good": -13.0, &"srt_poor": 13.0}[shape] as float
+			var xs := box.position.x + 24
+			while xs < box.end.x - 24:
+				draw_line(Vector2(xs, ym + dy - (1.5 if dy == 0.0 else 0.0)), Vector2(xs + 6, ym + dy - (1.5 if dy == 0.0 else 0.0)), Palette.SELECT_ORANGE, 3.0)
+				xs += 11
 			return
 		if ChartDeck.NOISES.has(shape):
 			# a little dial: the green window, and the needle under, in, or over it (a dilemma: no window)
@@ -961,6 +997,8 @@ func _ramp_tips(card: Dictionary) -> void:
 		var tip := "Blue X is the left ear. Same shapes!"
 		if belt == &"masks" or belt == &"noise":
 			tip = "Now the left ear is tested. Same rules!"
+		elif belt == &"speech":
+			tip = "Blue X is the left ear. Same check!"
 		elif card.has("bc"):
 			tip = "Blue X is the left ear. Its bone marks face the other way."
 		elif belt == &"flats":
@@ -1277,6 +1315,14 @@ func _draw_preview() -> void:
 			pts.append(Vector2(x, y))
 		if pts.size() > 1:
 			_preview.draw_polyline(pts, Color(Palette.ear_color(ear), 0.85 if ear == sort_ear else 0.25), 3.0, true)
+	if _next.has("srt"):
+		var sy := plot.position.y + plot.size.y * (float(_next["srt"]["db"]) + 10.0) / 130.0
+		var sx0 := plot.position.x + plot.size.x * 2.0 / 6.0
+		var sx1 := plot.position.x + plot.size.x * 4.0 / 6.0
+		var sx := sx0
+		while sx < sx1:
+			_preview.draw_line(Vector2(sx, sy), Vector2(minf(sx + 6, sx1), sy), Palette.ear_color(sort_ear), 2.5)
+			sx += 10
 	for ear: String in (_next.get("bc", {}) as Dictionary):
 		var b: Dictionary = _next["bc"][ear]
 		for fr: int in b:
@@ -1382,6 +1428,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"speech":
+		return "The SRT should land within 6 dB of the 500-2k average. A big miss means look again."
 	if belt == &"noise":
 		return "Masking noise starts at the other ear's air + 10, and stays under the tone + 40."
 	if belt == &"masks":

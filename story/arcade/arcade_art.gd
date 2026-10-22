@@ -88,6 +88,14 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 			_eye_mask(ci, c, s, 0.0, true)
 		&"noise_under", &"noise_ok", &"noise_over", &"noise_dilemma":
 			_bowl(ci, c, s, 0.0, shape)
+		&"srt_agree":
+			_scales(ci, c, s, 0.0, 0.0)
+		&"srt_fair":
+			_scales(ci, c, s, 0.0, 0.22)
+		&"srt_good":
+			_rocket(ci, c, s, 0.0)
+		&"srt_poor":
+			_anchor(ci, c, s, 0.0)
 
 
 ## The payoff: the skier zips down the hill, the cymbal crashes, the cookie gets chomped, the wave
@@ -99,7 +107,8 @@ static func picture(ci: CanvasItem, shape: StringName, c: Vector2, s: float) -> 
 ## sprinkles, and the PEAK mountain glints; for the looks in the ear the pearl gleams and the
 ## ladybird flies off (the plug, drop and doughnut as above); for the masks the bare face winks,
 ## the eye mask twirls on its ribbon and the masquerade mask's feathers wave and sparkle; the porridge
-## bowls get a spoon (the small one a single lonely bean, the big one slops over, the split one wobbles).
+## bowls get a spoon (the big one slops over, the split one wobbles); for the SRT checks the scales
+## rock and settle, the rocket blasts off and the anchor drops with a splash.
 static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: float) -> void:
 	t = clampf(t, 0.0, 1.0)
 	match shape:
@@ -177,6 +186,14 @@ static func gag(ci: CanvasItem, shape: StringName, c: Vector2, s: float, t: floa
 			_eye_mask(ci, c, s, t, true)
 		&"noise_under", &"noise_ok", &"noise_over", &"noise_dilemma":
 			_bowl(ci, c, s, t, shape)
+		&"srt_agree":
+			_scales(ci, c, s, t, 0.0)
+		&"srt_fair":
+			_scales(ci, c, s, t, 0.22)
+		&"srt_good":
+			_rocket(ci, c, s, t)
+		&"srt_poor":
+			_anchor(ci, c, s, t)
 
 
 static func _slope(ci: CanvasItem, c: Vector2, s: float) -> void:
@@ -921,3 +938,64 @@ static func noise_panel(ci: CanvasItem, r: Rect2, n: Dictionary, ear: String) ->
 	var lx := clampf(nx - lw * 0.5, dial.position.x, dial.end.x - lw)
 	UiDraw.rounded_rect(ci, Rect2(lx, tip.y - 42, lw, 26), INK, 9)
 	ci.draw_string(f, Vector2(lx, tip.y - 22), lab, HORIZONTAL_ALIGNMENT_CENTER, lw, 18, SNOW)
+
+
+# ---------------------------------------------------------------- the cross-check (CROSS CHECK)
+
+const ROCKET := Color("#f4f1ea")
+const FLAME := Color("#ff9f1c")
+const ANCHOR := Color("#5a6b80")
+
+
+## A balance: level for AGREES, tipped by `tilt` (radians) for FAIR. t > 0: it rocks and settles.
+static func _scales(ci: CanvasItem, c: Vector2, s: float, t: float, tilt: float) -> void:
+	var rock := tilt + (sin(t * TAU * 2.0) * 0.25 * (1.0 - t) if t > 0.0 else 0.0)
+	var pivot := c + Vector2(0, -s * 0.25)
+	ci.draw_line(pivot, c + Vector2(0, s * 0.45), INK, 5.0)
+	ci.draw_line(c + Vector2(-s * 0.25, s * 0.45), c + Vector2(s * 0.25, s * 0.45), INK, 5.0)
+	var arm := Vector2(cos(rock), sin(rock)) * s * 0.55
+	ci.draw_line(pivot - arm, pivot + arm, BRASS, 5.0)
+	for end: Vector2 in [pivot - arm, pivot + arm]:
+		ci.draw_line(end, end + Vector2(-s * 0.16, s * 0.3), Color(INK, 0.7), 2.0)
+		ci.draw_line(end, end + Vector2(s * 0.16, s * 0.3), Color(INK, 0.7), 2.0)
+		ci.draw_set_transform(end + Vector2(0, s * 0.3), 0.0, Vector2(1.0, 0.35))
+		ci.draw_circle(Vector2.ZERO, s * 0.2, BRASS)
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ci.draw_circle(pivot, s * 0.06, INK)
+
+
+## A little rocket, nose up (words better than tones). t > 0: it blasts off.
+static func _rocket(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var at := c + Vector2(0, -s * 0.5 * t * t)
+	if t > 0.0:
+		for i in 3:
+			ci.draw_circle(at + Vector2((i - 1) * s * 0.08, s * (0.5 + 0.12 * i)), s * (0.1 - 0.02 * i), Color(FLAME, 1.0 - 0.25 * i))
+	var body := PackedVector2Array([at + Vector2(0, -s * 0.5), at + Vector2(s * 0.18, -s * 0.2), at + Vector2(s * 0.18, s * 0.32),
+		at + Vector2(-s * 0.18, s * 0.32), at + Vector2(-s * 0.18, -s * 0.2)])
+	for side in [-1.0, 1.0]:
+		var fin := PackedVector2Array([at + Vector2(side * s * 0.18, s * 0.08), at + Vector2(side * s * 0.36, s * 0.4), at + Vector2(side * s * 0.18, s * 0.32)])
+		ci.draw_colored_polygon(fin, SKIER)
+		ci.draw_polyline(PackedVector2Array([fin[0], fin[1], fin[2]]), INK, 2.5, true)
+	ci.draw_colored_polygon(body, ROCKET)
+	var ring := body.duplicate()
+	ring.append(body[0])
+	ci.draw_polyline(ring, INK, 3.0, true)
+	ci.draw_circle(at + Vector2(0, -s * 0.06), s * 0.09, WAVE)
+	ci.draw_arc(at + Vector2(0, -s * 0.06), s * 0.09, 0.0, TAU, 14, INK, 2.0)
+
+
+## An anchor (words worse than tones). t > 0: it drops, with a splash.
+static func _anchor(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	var at := c + Vector2(0, s * 0.2 * sin(t * PI * 0.5) if t > 0.0 else 0.0)
+	ci.draw_arc(at + Vector2(0, -s * 0.42), s * 0.1, 0.0, TAU, 14, ANCHOR, 5.0)
+	ci.draw_line(at + Vector2(0, -s * 0.32), at + Vector2(0, s * 0.38), ANCHOR, 6.0)
+	ci.draw_line(at + Vector2(-s * 0.2, -s * 0.18), at + Vector2(s * 0.2, -s * 0.18), ANCHOR, 6.0)
+	ci.draw_arc(at + Vector2(0, s * 0.05), s * 0.36, 0.35, PI - 0.35, 16, ANCHOR, 6.0)
+	for side in [-1.0, 1.0]:
+		var tip := at + Vector2(side * s * 0.34, s * 0.17)
+		ci.draw_colored_polygon(PackedVector2Array([tip + Vector2(side * s * 0.08, -s * 0.06), tip + Vector2(-side * s * 0.05, -s * 0.1), tip + Vector2(0, s * 0.06)]), ANCHOR)
+	if t > 0.5:
+		var k := (t - 0.5) * 2.0
+		for i in 4:
+			var a := PI + 0.4 + i * 0.75
+			ci.draw_circle(c + Vector2(0, s * 0.55) + Vector2(cos(a), sin(a)) * s * (0.3 + 0.3 * k), s * 0.05 * (1.0 - k), WAVE)

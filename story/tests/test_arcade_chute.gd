@@ -649,3 +649,58 @@ func test_noise_belt_ramp() -> void:
 	assert_eq(ChartDeck.noise_call(30, 20, 40, 2000), &"noise_ok", "the start itself is fine")
 	assert_eq(ChartDeck.noise_call(30, 20, 60, 2000), &"noise_over", "the ceiling itself overmasks")
 	assert_eq(ChartDeck.noise_call(50, 20, 40, 2000), &"noise_dilemma", "start 60 reaches the ceiling 60: no window")
+
+
+# ================================================================ CROSS CHECK (the SRT-PTA belt)
+
+## Every SRT card's call is its chute's by the story's speech rules (SpeechRules.agreement, split by
+## srt_pta_diff when poor), and still is with any one of 500, 1k and 2k 5 dB off.
+func test_every_srt_card_holds_its_call_with_a_margin() -> void:
+	for id: StringName in ChartDeck.SRTS:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 29 + 13), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var ear := String(c["sort_ear"])
+				var t: Dictionary = c["ac"][ear]
+				assert_false(t.is_empty(), "%s: a chart (seed %d, lookalike %s)" % [id, s, lookalike])
+				var srt := int(c["srt"]["db"])
+				var pta := SpeechRules.pta_for_speech(t)
+				assert_eq(SpeechRules.pta_method(t), "three", "%s: the three-tone average applies" % id)
+				assert_eq(ChartDeck.srt_call(srt, pta), id, "%s: SRT %d against %.1f (seed %d)" % [id, srt, pta, s])
+				var want := {&"srt_agree": &"good", &"srt_fair": &"fair", &"srt_good": &"poor", &"srt_poor": &"poor"}[id] as StringName
+				assert_eq(SpeechRules.agreement(srt, pta), want, "%s: the story's agreement" % id)
+				if id == &"srt_good":
+					assert_true(SpeechRules.srt_pta_diff(srt, pta) < 0, "TOO GOOD: words better than tones")
+				if id == &"srt_poor":
+					assert_true(SpeechRules.srt_pta_diff(srt, pta) > 0, "TOO POOR: words worse than tones")
+				for f: int in [500, 1000, 2000]:
+					for d: int in [-5, 5]:
+						var p := t.duplicate()
+						p[f] = int(t[f]) + d
+						assert_eq(ChartDeck.srt_call(srt, SpeechRules.pta_for_speech(p)), id, "%s holds with %d Hz 5 dB off" % [id, f])
+				assert_true(srt >= 0 and srt % 5 == 0, "%s: a real SRT level" % id)
+				for f: int in t:
+					assert_eq(int(t[f]), ClinicRules.clamp_db(int(t[f]), f), "%s: inside the audiometer's range at %d" % [id, f])
+				if lookalike:
+					assert_true(int(t[4000]) - pta >= 20, "%s: a lookalike's 4k sits far below the average" % id)
+
+
+func test_srt_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"speech"), [&"srt_agree", &"srt_good"], "warm-up: agrees and too good")
+	assert_false(ChuteRules.unlocked(9.9, &"speech").has(&"srt_poor"), "too poor waits for 10 s")
+	assert_false(ChuteRules.unlocked(19.9, &"speech").has(&"srt_fair"), "fair waits for 20 s")
+	assert_eq(ChuteRules.unlocked(20.0, &"speech"), ChartDeck.SRTS, "all four at 20 s")
+	var r := _rng(16)
+	for i in 300:
+		var spec := ChuteRules.next_spec(r, r.randf_range(0.0, ChuteRules.RUN_S), [], [], &"speech")
+		assert_has(ChartDeck.SRTS, spec["shape"], "only SRT checks on the speech belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear sorting")
+		assert_false(bool(spec["golden"]), "no story charts")
+	for id: StringName in ChartDeck.SRTS:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+		assert_true(String(ChartDeck.TELLS[id]["text"]).split(" ").size() <= 12, "%s's tell is short" % id)
+	# the lines themselves: good within 6, fair within 12, poor beyond, by direction
+	assert_eq(ChartDeck.srt_call(30, 30.0), &"srt_agree", "on the average")
+	assert_eq(ChartDeck.srt_call(35, 28.3), &"srt_fair", "6.7 off is fair")
+	assert_eq(ChartDeck.srt_call(10, 30.0), &"srt_good", "20 better is too good")
+	assert_eq(ChartDeck.srt_call(50, 30.0), &"srt_poor", "20 worse is too poor")

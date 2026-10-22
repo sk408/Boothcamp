@@ -2,7 +2,7 @@ extends Control
 ## ArcadeHall (arcade, story-internal): the arcade's front room (docs/ARCADE.md). The title's Arcade
 ## button opens it; each cabinet opens its game, and every game's results come back here.
 ## One cabinet per game (CABINETS): each shows its name, a little picture, its pitch and the top score.
-## Controls: keys 1-9 open a cabinet; Left/Right and Enter (or Space); the mouse hovers and clicks;
+## Controls: keys 1-9 (and 0 for the tenth) open a cabinet; Left/Right and Enter (or Space); the mouse hovers and clicks;
 ## T or "Back to the title" goes home; Esc pauses, like everywhere.
 ## More than PAGE_SIZE cabinets: the hall has pages. Left/Right walk across them (the page turns with
 ## the selection), Page Up/Page Down and the round arrows at the sides turn the page, and the number
@@ -51,6 +51,8 @@ const CABINETS: Array[Dictionary] = [
 		"pitch": "Mask or not? Read the gap and the 40.", "body": Color("#1f3a5f")},
 	{"id": "chart_chute_noise", "name": "GOLDILOCKS", "scene": "res://story/arcade/goldilocks.tscn",
 		"pitch": "Masking noise: too little, too much, or just right?", "body": Color("#d99a2b")},
+	{"id": "chart_chute_speech", "name": "CROSS CHECK", "scene": "res://story/arcade/cross_check.tscn",
+		"pitch": "Do the words agree with the tones?", "body": Color("#5bc8a3")},
 ]
 
 ## The cabinet last opened this session: the hall comes back with it selected.
@@ -172,6 +174,8 @@ class Cabinet extends Control:
 			_draw_masks_screen(screen)
 		elif String(info["id"]) == "chart_chute_noise":
 			_draw_noise_screen(screen)
+		elif String(info["id"]) == "chart_chute_speech":
+			_draw_speech_screen(screen)
 		else:
 			_draw_desk_screen(screen)
 		# the pitch, the top score, the play sign
@@ -302,6 +306,24 @@ class Cabinet extends Control:
 		for i in bowls.size():
 			ArcadeArt.picture(self, bowls[i], r.position + Vector2(40 + i * (r.size.x - 80) / (bowls.size() - 1.0), 152), 30.0)
 
+	## A gentle slope with the SRT dashed across 500 to 2k, right on it, over the four pictures.
+	func _draw_speech_screen(r: Rect2) -> void:
+		var card := Rect2(r.position + Vector2(r.size.x * 0.5 - 90, 12), Vector2(180, 96))
+		UiDraw.rounded_rect(self, card, Color("#ffffff"), 10, 3, Palette.INK)
+		var pts := PackedVector2Array()
+		for i in 5:
+			pts.append(card.position + Vector2(22 + i * 34, 30 + i * 9))
+		draw_polyline(pts, Palette.RIGHT_RED, 3.0, true)
+		for p: Vector2 in pts:
+			UiDraw.ear_symbol(self, p, "right", 8.0, 2.5)
+		var x := pts[1].x - 10
+		while x < pts[3].x + 10:
+			draw_line(Vector2(x, pts[2].y), Vector2(x + 8, pts[2].y), Palette.SELECT_ORANGE, 3.0)
+			x += 13
+		var picks := [&"srt_agree", &"srt_good", &"srt_poor", &"srt_fair"]
+		for i in picks.size():
+			ArcadeArt.picture(self, picks[i], r.position + Vector2(40 + i * (r.size.x - 80) / (picks.size() - 1.0), 152), 30.0)
+
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:
 		# (on a narrow screen the file narrows so it clears the intake box)
@@ -382,6 +404,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			open_cabinet(digit - KEY_1)
 		elif digit >= KEY_KP_1 and digit < KEY_KP_1 + CABINETS.size():
 			open_cabinet(digit - KEY_KP_1)
+		elif (code == KEY_0 or code == KEY_KP_0) and CABINETS.size() >= 10:
+			open_cabinet(9)   # 0 is the tenth, as on a phone
 		elif code == KEY_T:
 			go_back()
 		else:

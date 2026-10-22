@@ -20,7 +20,8 @@ const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notc
 	&"flat_fluid": "FLUID", &"flat_wax": "WAX", &"flat_hole": "HOLE", &"flat_peak": "PEAK",
 	&"oto_clear": "CLEAR", &"oto_wax": "WAX", &"oto_fluid": "FLUID", &"oto_hole": "HOLE", &"oto_object": "OBJECT",
 	&"mask_none": "NO MASK", &"mask_bone": "MASK BONE", &"mask_both": "MASK BOTH",
-	&"noise_under": "TOO LITTLE", &"noise_ok": "JUST RIGHT", &"noise_over": "TOO MUCH", &"noise_dilemma": "DILEMMA"}
+	&"noise_under": "TOO LITTLE", &"noise_ok": "JUST RIGHT", &"noise_over": "TOO MUCH", &"noise_dilemma": "DILEMMA",
+	&"srt_agree": "AGREES", &"srt_good": "TOO GOOD", &"srt_poor": "TOO POOR", &"srt_fair": "FAIR"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
 ## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
@@ -87,10 +88,22 @@ const NOISE_STATUS: Dictionary[StringName, StringName] = {&"noise_under": &"unde
 	&"noise_dilemma": &"impossible"}
 ## The bone frequencies a GOLDILOCKS card tests: no occlusion allowance there.
 const NOISE_FREQS: Array[int] = [2000, 4000]
+## CROSS CHECK's chutes, in key order (1-4): how the SRT agrees with the 500/1k/2k average
+## (SpeechRules.agreement, split by direction when poor; srt_call).
+const SRTS: Array[StringName] = [&"srt_agree", &"srt_good", &"srt_poor", &"srt_fair"]
+## How far the SRT sits from the average per chute (SRT minus average, dB; inclusive; either sign for
+## AGREES and FAIR): clear of the 6 and 12 dB lines with any one tone 5 dB off (the average moves 1.7).
+const SRT_OFF: Dictionary[StringName, Vector2] = {&"srt_agree": Vector2(0.0, 4.0), &"srt_fair": Vector2(8.0, 10.0),
+	&"srt_good": Vector2(15.0, 35.0), &"srt_poor": Vector2(15.0, 35.0)}
+## Air shapes over FREQS with a 500-2k spread of 10 or less (so the three-tone average applies);
+## lookalikes fall far below the average from 4k up.
+const SRT_ARCH: Dictionary = {"plain": [[20, 25, 25, 30, 35, 40, 45, 50], [30, 30, 30, 35, 35, 40, 40, 45], [35, 35, 40, 40, 45, 50, 50, 55],
+		[20, 20, 25, 25, 25, 30, 30, 35]],
+	"lookalike": [[15, 20, 20, 25, 50, 65, 75, 80], [20, 25, 25, 30, 60, 70, 70, 75]]}
 ## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS), degrees (DEGREE DROP),
-## flats (FLAT OUT), otos (OTO SPOT), masks (MASQUERADE) and noise (GOLDILOCKS).
+## flats (FLAT OUT), otos (OTO SPOT), masks (MASQUERADE), noise (GOLDILOCKS) and speech (CROSS CHECK).
 const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES, &"flats": FLATS,
-	&"otos": OTOS, &"masks": MASKS, &"noise": NOISES}
+	&"otos": OTOS, &"masks": MASKS, &"noise": NOISES, &"speech": SRTS}
 ## A tymp card's peak keeps its type this far either way (daPa, mL).
 const TYMP_MARGIN_DAPA := 40
 const TYMP_MARGIN_ML := 0.04
@@ -230,6 +243,10 @@ const LINES: Dictionary = {
 	&"noise_ok": ["Hiss on one side, beep on the other.", "I can hear both, I think."],
 	&"noise_over": ["The hiss is drowning everything!", "Now I hear nothing at all."],
 	&"noise_dilemma": ["Both my ears are bunged up.", "They said I'm a tricky one."],
+	&"srt_agree": ["Words and beeps, about the same.", "Easy words, those."],
+	&"srt_good": ["I heard every word!", "Beeps? Never heard a thing."],
+	&"srt_poor": ["Sorry, what was I meant to say?", "English is my third language."],
+	&"srt_fair": ["Some words were tricky.", "I guessed a couple."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -273,6 +290,10 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"noise_ok": {"text": "Over the start, under tone + 40", "dial": true},
 	&"noise_over": {"text": "Tone + 40 or more: it crosses back", "dial": true},
 	&"noise_dilemma": {"text": "Start + 10 is past tone + 40: no window", "dial": true},
+	&"srt_agree": {"text": "SRT within 6 of the 500-2k average", "freq_lo": 500, "freq_hi": 2000},
+	&"srt_good": {"text": "Words far better than tones: recheck", "freq_lo": 500, "freq_hi": 2000},
+	&"srt_poor": {"text": "Words far worse: check instructions, language", "freq_lo": 500, "freq_hi": 2000},
+	&"srt_fair": {"text": "SRT 7 to 12 off the average", "freq_lo": 500, "freq_hi": 2000},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -300,6 +321,8 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		return make_mask_card(rng, shape, opts, serial)
 	if NOISES.has(shape):
 		return make_noise_card(rng, shape, opts, serial)
+	if SRTS.has(shape):
+		return make_srt_card(rng, shape, opts, serial)
 	if DEGREES.has(shape):
 		var dear := "left" if String(opts.get("ear", "right")) == "left" else "right"
 		var dlines: Array = LINES[shape]
@@ -704,6 +727,80 @@ static func stable_noise(n: Dictionary, f: int, id: StringName) -> bool:
 	for d: int in [-5, 0, 5]:
 		if noise_call(x + d, y, m, f) != id or noise_call(x, y + d, m, f) != id or noise_call(x, y, m + d, f) != id:
 			return false
+	return true
+
+
+## (seeded) One CROSS CHECK card: one ear's air chart and an SRT. Adds "srt" {"db"} to the usual card
+## keys. Clear of every line (stable_srt).
+static func make_srt_card(rng: RandomNumberGenerator, id: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+	var pool: Array = SRT_ARCH["lookalike" if bool(opts.get("lookalike", false)) else "plain"]
+	var t := {}
+	var srt := 0
+	for attempt in MAX_TRIES:
+		var base: Array = pool[rng.randi() % pool.size()]
+		var shift := 5 * rng.randi_range(-3, 4)
+		t = {}
+		for i in FREQS.size():
+			var wobble := 5 * rng.randi_range(-1, 1) if rng.randf() < 0.3 else 0
+			t[FREQS[i]] = int(base[i]) + shift + wobble
+		var pta := SpeechRules.pta3(t)
+		var picks: Array[int] = []
+		for db in range(snappedi(int(pta) - 40, 5), int(pta) + 45, 5):
+			if db >= 0 and stable_srt(t, db, id):
+				picks.append(db)
+		if not picks.is_empty():
+			srt = picks[rng.randi() % picks.size()]
+			_add_interoctaves(t)
+			break
+		t = {}
+	if t.is_empty():
+		push_error("ChartDeck: no stable %s card" % id)
+	var lines: Array = LINES[id]
+	var first := FIRST[rng.randi() % FIRST.size()]
+	return {
+		"serial": serial, "shape": id, "ear": ear, "sort_ear": ear, "ac": {ear: t}, "srt": {"db": srt},
+		"golden": false, "other_shape": &"", "name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]],
+		"who": "chute_%d" % (serial % PORTRAIT_IDS), "look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"),
+		"line": lines[rng.randi() % lines.size()],
+	}
+
+
+## The cross-check call for an SRT against the PTA the speech tests use (SpeechRules.agreement; a poor
+## match goes by direction, srt_pta_diff).
+static func srt_call(srt: int, pta: float) -> StringName:
+	match SpeechRules.agreement(srt, pta):
+		&"good":
+			return &"srt_agree"
+		&"fair":
+			return &"srt_fair"
+		&"poor":
+			return &"srt_good" if SpeechRules.srt_pta_diff(srt, pta) < 0 else &"srt_poor"
+	return &""
+
+
+## The CROSS CHECK margin check: the 500-2k spread is 10 or less (the three-tone average applies, also
+## with a tone 5 dB off), the SRT sits inside its chute's SRT_OFF and the call holds with any one of the
+## three tones 5 dB off; every level is real.
+static func stable_srt(t: Dictionary, srt: int, id: StringName) -> bool:
+	var vals: Array = [int(t[500]), int(t[1000]), int(t[2000])]
+	if vals.max() - vals.min() > 10 or srt < SpeechRules.MIN_DB or srt % 5 != 0:
+		return false
+	for f: int in FREQS:
+		var v := int(t.get(f, -999))
+		if v < -10 or ClinicRules.clamp_db(v, f) != v:
+			return false
+	var off := float(srt) - SpeechRules.pta3(t)
+	var r: Vector2 = SRT_OFF[id]
+	var mag := absf(off) if id == &"srt_agree" or id == &"srt_fair" else (-off if id == &"srt_good" else off)
+	if mag < r.x or mag > r.y:
+		return false
+	for f: int in [500, 1000, 2000]:
+		for d: int in [-5, 0, 5]:
+			var p := t.duplicate()
+			p[f] = int(t[f]) + d
+			if SpeechRules.pta_for_speech(p) != SpeechRules.pta3(p) or srt_call(srt, SpeechRules.pta_for_speech(p)) != id:
+				return false
 	return true
 
 
