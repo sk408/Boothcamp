@@ -452,7 +452,7 @@ func _tones() -> void:
 	await clinic.call("focus_camera", &"face", 0.8)
 	await _say("Hoot", LevelMike.ROUTINE_LINE)
 	await _say("Hoot", "Earphones on! I'll run the beeps at top speed. Better ear first: right.")
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _wait(0.6)
 	var cam := _open_audiometer()
 	# the right ear is the visit's first air ear, so its montage owes the 1 kHz retest (E2)
@@ -472,7 +472,7 @@ func _tones() -> void:
 	_hide_audiometer(cam)
 	clinic.call("focus_camera", &"face", 0.5)
 	clinic.call("put_on_bone_oscillator", "left")
-	clinic.call("put_on_masking_phone", "right")
+	clinic.call("put_on_masking_phone", "right", _air_transducer() == &"inserts")
 	await _wait(0.5)
 	await _recap()
 	if not Game.is_chapter_done("bonnie"):
@@ -549,7 +549,7 @@ func list_plan(kind: StringName, list_id: String, quick: bool, n: int = 0) -> Di
 
 
 func _speech() -> void:
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	clinic.call("hold_response_button", false)
 	clinic.call("focus_camera", &"face", 0.6)
 	await _say("Hoot", "Now the words. First her SRT in both ears: the softest level for words.")

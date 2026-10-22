@@ -541,7 +541,7 @@ func _montage() -> void:
 	await _say("Marco", "Cosy. Like a pantry. Four stars.")
 	await _hoot("routine")
 	await _hoot("tones")
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _wait(0.6)
 	var cam := _open_audiometer()
 	# the right ear is the visit's first air ear, so its montage owes the 1 kHz retest (E2)
@@ -566,7 +566,7 @@ func _montage() -> void:
 		if on_mastoid != ear:
 			clinic.call("put_on_bone_oscillator", ear)
 			on_mastoid = ear
-		clinic.call("put_on_masking_phone", other)
+		clinic.call("put_on_masking_phone", other, _air_transducer() == &"inserts")
 		await _wait(0.5)
 		await _recap()
 		cam = _open_audiometer()
@@ -590,7 +590,7 @@ func _montage() -> void:
 ## Hoot's SRTs and words in quiet, off-screen and right first (run_hidden: whatever quick visit
 ## says). The SPEECH screen is made here and kept for every party list (one session, D21).
 func _hidden_speech() -> void:
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	clinic.call("hold_response_button", false)
 	var cam: Camera3D = clinic.call("get_main_camera")
 	var packed: PackedScene = load(SPEECH_SCENE) as PackedScene if ResourceLoader.exists(SPEECH_SCENE) else null

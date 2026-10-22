@@ -310,7 +310,7 @@ func _earphones() -> void:
 	Hoot.dismiss_current()
 	var mistakes := g.mistakes
 	Game.record_medal("earphones", "gold" if mistakes == 0 else ("silver" if mistakes == 1 else "bronze"))
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _wait(0.5)
 	g.queue_free()
 	_react(&"cheer")
@@ -564,7 +564,7 @@ func _masking() -> void:
 			await _say("Hoot", "Then nobody hears the beep! Noise goes in the non-test ear only.")
 		opts.remove_at(c)
 	Game.record_medal("masking", medal)
-	clinic.call("put_on_masking_phone", "left")
+	clinic.call("put_on_masking_phone", "left", _air_transducer() == &"inserts")
 	_react(&"nod")
 	await _say("Hoot", "Her right ear stays open. A cup on the test ear makes low bone tones seem louder.")
 	# (polish) one hook, no rule dump: the coach teaches the numbers step by step on the AudiOtron
@@ -605,7 +605,7 @@ func _masked_air() -> void:
 	await _say("Hoot", "Air leaks too! %d minus %d: up to %d dB crosses. Her left BONE hears %d." % [a0, ia, a0 - ia, lbone])
 	await _say("Hoot", "It could reach her left cochlea. Clinics often mask air first; today the Ghost couldn't wait!")
 	clinic.call("take_off_bone_oscillator")
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _test("right", not _quick(), {"test": "ac_masked", "masking_controls": true, "hoot_turn_after": 0, "done_title": "MASKED AIR DONE!",
 		"intro": "Masked air, Hoot speed. Same plateau dance, noise in the left ear.",
 		"intro_full": "Masked air is yours: the same plateau dance, through the earphones."})

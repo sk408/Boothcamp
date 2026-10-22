@@ -365,7 +365,7 @@ func _tones() -> void:
 	await clinic.call("focus_camera", &"face", 0.8)
 	await _say("Hoot", ROUTINE_LINE)
 	await _say("Hoot", "Earphones on! I'll run the beeps myself today, at top speed.")
-	clinic.call("put_on_earphones", true)
+	clinic.call("put_on_earphones", true, _air_transducer() == &"inserts")
 	await _wait(0.6)
 	screen = (load(AUDIOMETER_SCENE) as PackedScene).instantiate() as CanvasLayer
 	add_child(screen)
