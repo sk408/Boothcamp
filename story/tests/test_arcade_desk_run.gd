@@ -308,3 +308,42 @@ func test_the_hall_shows_the_top_score_and_your_best() -> void:
 	assert_eq(ArcadeHall._extra_line(EarsPlease.MODE), "Your best lately: 12,500  ·  Shift 3 open")
 	ArcadeScores.data(EarsPlease.MODE)["unlocked"] = 9
 	assert_eq(ArcadeHall._extra_line(EarsPlease.MODE), "Your best lately: 12,500  ·  Shift 3 open", "a hand-edited save never names a shift that isn't there")
+
+
+## More cabinets than fit: pages of ArcadeHall.PAGE_SIZE. The selection turns the page, the page
+## arrows and Page Up/Down turn it, and the number keys open a cabinet on any page.
+func test_the_hall_turns_its_pages() -> void:
+	ArcadeHall.last = 0
+	var hall: Control = (load(TitleScreen.ARCADE_SCENE) as PackedScene).instantiate()
+	add_node(hall)
+	await wait_frames(2)
+	var pages := ceili(ArcadeHall.CABINETS.size() / float(ArcadeHall.PAGE_SIZE))
+	assert_eq(hall.call("page_count"), pages, "one page per %d cabinets" % ArcadeHall.PAGE_SIZE)
+	assert_eq(hall.call("page"), 0, "the hall opens on the first page")
+	if pages < 2:
+		return
+	hall.call("_select", ArcadeHall.PAGE_SIZE)
+	assert_eq(hall.call("page"), 1, "selecting a cabinet on the next page turns to it")
+	hall.call("_turn", -1)
+	assert_eq(hall.call("page"), 0, "the previous arrow turns back")
+	assert_eq(hall.call("selected"), 0, "the selection follows to the page's first cabinet")
+	hall.call("_turn", -1)
+	assert_eq(hall.call("page"), 0, "no page before the first")
+	hall.call("_turn", 1)
+	assert_eq(hall.call("selected"), ArcadeHall.PAGE_SIZE, "turning the page selects its first cabinet")
+	for k in pages + 1:
+		hall.call("_turn", 1)
+	assert_eq(hall.call("page"), pages - 1, "no page after the last")
+	var arrows: Array = hall.get("_arrows")
+	assert_eq(arrows.size(), 2, "two page arrows")
+	assert_false(bool(arrows[1].get("enabled")), "the next arrow is off on the last page")
+	assert_true(bool(arrows[0].get("enabled")), "the previous arrow is on")
+	# coming back to the hall from a cabinet on page 2 shows page 2
+	hall.queue_free()
+	await wait_frames(1)
+	ArcadeHall.last = ArcadeHall.CABINETS.size() - 1
+	var again: Control = (load(TitleScreen.ARCADE_SCENE) as PackedScene).instantiate()
+	add_node(again)
+	await wait_frames(2)
+	assert_eq(again.call("page"), pages - 1, "the hall comes back on the last cabinet's page")
+	ArcadeHall.last = 0

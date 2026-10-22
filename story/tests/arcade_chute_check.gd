@@ -13,8 +13,8 @@ extends Node
 ##   slip     real keys; on each two-ear card, first the OTHER ear's shape (a JAM with the
 ##            "Other ear!" cue, shot chute_jam_tell), then the right one when it comes back
 ## --via-title: start on the title, open the arcade from its Arcade button and pick the Chart Chute
-## cabinet in the hall (a click with --policy=mouse, Down arrows, Enter and key 1 otherwise), as a
-## player would.
+## cabinet in the hall (a click with --policy=mouse, turning the page with its round arrow first for a
+## cabinet on a later page; Down arrows, Enter and the cabinet's number key otherwise), as a player would.
 ## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; --belt=tymps
 ## plays TYMP TOSS (tymp_toss.tscn, the fourth), --belt=degrees DEGREE DROP (the fifth), --belt=flats
 ## FLAT OUT (the sixth), --belt=otos OTO SPOT (the seventh). None has two-ear cards, so the slip bot slips
@@ -160,6 +160,14 @@ class Driver extends Node:
 				Events.screenshot_requested.emit("arcade_hall")
 				await _wait(0.2)
 				if policy == "mouse":
+					# a cabinet on a later page: turn to it with the round arrow first (the hall
+					# opens on the first page in a fresh run)
+					var at := int(BELT_RUNS[String(belt)]["key"]) - KEY_1
+					for i in at / ArcadeHallRef.PAGE_SIZE:
+						await _click(_anchor("arcade_page_next"))
+						await _wait(0.4)
+					Events.screenshot_requested.emit("arcade_hall_page")
+					await _wait(0.2)
 					await _click(_anchor("arcade_cabinet_" + mode))
 				else:
 					await _key(BELT_RUNS[String(belt)]["key"])
@@ -410,6 +418,11 @@ class Driver extends Node:
 			if ChartDeck.CHUTE_WORDS[id] == w:
 				return id
 		return &""
+
+
+## The hall's page size (how many arrow clicks reach a cabinet).
+class ArcadeHallRef:
+	const PAGE_SIZE := preload("res://story/arcade/arcade_hall.gd").PAGE_SIZE
 
 
 ## The high-score table, read the way the results card reads it.

@@ -1,10 +1,12 @@
 extends Control
 ## ArcadeHall (arcade, story-internal): the arcade's front room (docs/ARCADE.md). The title's Arcade
 ## button opens it; each cabinet opens its game, and every game's results come back here.
-## Two cabinets: Chart Chute (sort audiograms by shape) and Ears, Please! (the front desk: catch the
-## red flags before you fit). Each shows its name, a little picture, its pitch and the top score.
-## Controls: keys 1-2 open a cabinet; Left/Right and Enter (or Space); the mouse hovers and clicks;
+## One cabinet per game (CABINETS): each shows its name, a little picture, its pitch and the top score.
+## Controls: keys 1-9 open a cabinet; Left/Right and Enter (or Space); the mouse hovers and clicks;
 ## T or "Back to the title" goes home; Esc pauses, like everywhere.
+## More than PAGE_SIZE cabinets: the hall has pages. Left/Right walk across them (the page turns with
+## the selection), Page Up/Page Down and the round arrows at the sides turn the page, and the number
+## keys open any cabinet on any page. The page dots under the row say where you are.
 ## The playfield is 1280x720, centred in wider or taller windows; the floor fills the rest.
 ## Beat (CONTRACTS.md §3.2): "arcade_hall" (solver: open Ears, Please!; mouse: click
 ## "arcade_cabinet_<id>"). Never a visit.
@@ -21,9 +23,11 @@ const CAB_SIZE := Vector2(420, 480)
 const CAB_Y := 134.0
 const CAB_GAP := 40.0
 const CAB_MARGIN := 24.0   ## the least room left and right of the cabinet row
-## Narrower than this, a cabinet is drawn at this width and scaled down whole (four and up).
+## Narrower than this, a cabinet is drawn at this width and scaled down whole (a full page of four).
 const CAB_MIN_W := 340.0
-const CAB_MIN_W_SIX := 300.0   ## six or more share the row: each is drawn a little narrower inside
+## Cabinets per page; with more, the hall has pages and round arrows either side.
+const PAGE_SIZE := 4
+const PAGE_MARGIN := 78.0       ## room left and right of a paged row, for the arrows
 const FLOOR := Color("#2e2442")
 const CARPET := Color("#3b3550")
 const GOLD := Color("#f2b632")
@@ -55,6 +59,38 @@ var _cabs: Array[Cabinet] = []
 var _sel := 0
 var _leaving := false
 var _back_btn: Button
+var _pages: Array[Control] = []   # one row of cabinets each (just one when they all fit)
+var _page := 0
+var _arrows: Array[PageArrow] = []   # previous, next (none without pages)
+var _dots: Control
+
+
+## A round arrow at the side of a paged hall: turns the page.
+class PageArrow extends Control:
+	signal pressed
+	var dir := 1
+	var enabled := true
+
+	func _init(d: int) -> void:
+		dir = d
+		size = Vector2(60, 60)
+		pivot_offset = size * 0.5
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+	func _gui_input(event: InputEvent) -> void:
+		var mb := event as InputEventMouseButton
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			accept_event()
+			if enabled:
+				pressed.emit()
+
+	func _draw() -> void:
+		var c := size * 0.5
+		draw_circle(c + Vector2(0, 4), 28.0, Color(0, 0, 0, 0.35))
+		draw_circle(c, 28.0, Palette.SUNNY if enabled else Color(Palette.PAPER, 0.15))
+		draw_arc(c, 28.0, 0.0, TAU, 32, Palette.INK if enabled else Color(Palette.PAPER, 0.25), 3.0, true)
+		UiDraw.arrow(self, c, 30.0, Vector2(dir, 0), Palette.INK if enabled else Color(Palette.PAPER, 0.3))
 
 
 ## One cabinet: the marquee, the screen with its picture, the pitch, the top score and its key.
@@ -325,6 +361,8 @@ func _nav(event: InputEvent) -> void:
 		_select(mini(_sel + 1, CABINETS.size() - 1))
 	elif event.is_action_pressed(&"ui_accept"):
 		open_cabinet(_sel)
+	elif event is InputEventKey and (event as InputEventKey).keycode in [KEY_PAGEUP, KEY_PAGEDOWN] and _pages.size() > 1:
+		_turn(-1 if (event as InputEventKey).keycode == KEY_PAGEUP else 1)
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -337,6 +375,53 @@ func _select(i: int) -> void:
 	for c: Cabinet in _cabs:
 		c.selected = c.index == i
 		c.queue_redraw()
+	if _pages.size() > 1 and _page_of(i) != _page:
+		show_page(_page_of(i))
+
+
+## The page a cabinet is on.
+static func _page_of(i: int) -> int:
+	return i / PAGE_SIZE if CABINETS.size() > PAGE_SIZE else 0
+
+
+func page() -> int:
+	return _page
+
+
+func page_count() -> int:
+	return _pages.size()
+
+
+## Show page p (the selection stays put unless it was on another page: then it moves to p's first
+## cabinet). A short slide in from the side it came from, unless motion is reduced.
+func show_page(p: int) -> void:
+	p = clampi(p, 0, _pages.size() - 1)
+	var from := _page
+	_page = p
+	for k in _pages.size():
+		_pages[k].visible = k == p
+	if _page_of(_sel) != p:
+		_select(p * PAGE_SIZE)
+	if p != from and not bool(Game.settings.get("reduced_motion", false)):
+		var pg := _pages[p]
+		pg.position.x = 60.0 * signf(p - from)
+		pg.modulate.a = 0.0
+		var tw := pg.create_tween().set_parallel()
+		tw.tween_property(pg, "position:x", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(pg, "modulate:a", 1.0, 0.18)
+	for a: PageArrow in _arrows:
+		a.enabled = (p > 0) if a.dir < 0 else (p < _pages.size() - 1)
+		a.queue_redraw()
+	if _dots != null:
+		_dots.queue_redraw()
+
+
+func _turn(d: int) -> void:
+	var p := clampi(_page + d, 0, _pages.size() - 1)
+	if p == _page:
+		return
+	Sfx.play(&"blip", 0.9, -10.0)
+	show_page(p)
 
 
 func _build() -> void:
@@ -351,24 +436,34 @@ func _build() -> void:
 	var sign := UiKit.full_rect()
 	sign.draw.connect(_draw_sign.bind(sign))
 	_field.add_child(sign)
-	# the cabinets share the width: two at full size, three a little narrower and closer
-	var n := CABINETS.size()
-	var gap := CAB_GAP if n <= 2 else (CAB_GAP * 0.7 if n <= 4 else CAB_GAP * 0.5)
-	var margin := CAB_MARGIN if n <= 4 else CAB_MARGIN * 0.67
+	# the cabinets share the width: two at full size, three a little narrower and closer; more than
+	# PAGE_SIZE go onto pages of PAGE_SIZE, every page laid out as a full one
+	var paged := CABINETS.size() > PAGE_SIZE
+	var n := mini(CABINETS.size(), PAGE_SIZE)
+	var gap := CAB_GAP if n <= 2 else CAB_GAP * 0.7
+	var margin := PAGE_MARGIN if paged else CAB_MARGIN
 	var w := minf(CAB_SIZE.x, (FIELD.x - 2.0 * margin - gap * (n - 1)) / n)
-	var x0 := (FIELD.x - w * n - gap * (n - 1)) * 0.5
 	# each cabinet stands in a holder, which scales it down whole when the row is too narrow
-	var k := minf(1.0, w / (CAB_MIN_W if n <= 5 else CAB_MIN_W_SIX))
-	for i in n:
+	var k := minf(1.0, w / CAB_MIN_W)
+	for p in (ceili(CABINETS.size() / float(PAGE_SIZE)) if paged else 1):
+		var pg := Control.new()
+		pg.size = FIELD
+		pg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pg.visible = p == 0
+		_field.add_child(pg)
+		_pages.append(pg)
+	for i in CABINETS.size():
 		var d: Dictionary = CABINETS[i]
+		var on_page := mini(n, CABINETS.size() - _page_of(i) * PAGE_SIZE)
+		var x0 := (FIELD.x - w * on_page - gap * (on_page - 1)) * 0.5
 		var c := Cabinet.new(i, d)
 		c.size = Vector2(w / k, CAB_SIZE.y)
 		c.pivot_offset = c.size * 0.5
 		var holder := Control.new()
 		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		holder.position = Vector2(x0 + i * (w + gap), CAB_Y + CAB_SIZE.y * (1.0 - k) * 0.5)
+		holder.position = Vector2(x0 + (i % n) * (w + gap), CAB_Y + CAB_SIZE.y * (1.0 - k) * 0.5)
 		holder.scale = Vector2(k, k)
-		_field.add_child(holder)
+		_pages[_page_of(i)].add_child(holder)
 		c.top_line = _top_line(String(d["id"]))
 		c.extra = _extra_line(String(d["id"]))
 		c.fresh = ArcadeScores.runs(String(d["id"])).is_empty()
@@ -377,6 +472,19 @@ func _build() -> void:
 		holder.add_child(c)
 		_cabs.append(c)
 		Hoot.register_anchor("arcade_cabinet_" + String(d["id"]), c)
+	if paged:
+		var mid := CAB_Y + CAB_SIZE.y * 0.5 - 30.0
+		for dir: int in [-1, 1]:
+			var a := PageArrow.new(dir)
+			a.position = Vector2(10.0 if dir < 0 else FIELD.x - 70.0, mid)
+			a.pressed.connect(_turn.bind(dir))
+			_field.add_child(a)
+			_arrows.append(a)
+			Hoot.register_anchor("arcade_page_" + ("prev" if dir < 0 else "next"), a)
+		_dots = UiKit.full_rect()
+		_dots.draw.connect(_draw_dots)
+		_field.add_child(_dots)
+		show_page(0)   # the arrows' on/off; _ready's _select turns to the last cabinet's page
 	var hints := UiKit.show_key_hints()
 	_back_btn = UiKit.button("Back to the title  [T]" if hints else "Back to the title", &"", Vector2(300, 54))
 	_back_btn.position = Vector2((FIELD.x - 300) * 0.5, 648)
@@ -421,6 +529,17 @@ func _layout() -> void:
 	for f: Control in _fields:
 		f.position = off
 	_bg.queue_redraw()
+
+
+## The page dots under the row (paged halls only), and the page keys when hints are on.
+func _draw_dots() -> void:
+	var n := _pages.size()
+	var y := 612.0
+	for k in n:
+		var at := Vector2(FIELD.x * 0.5 + (k - (n - 1) * 0.5) * 28.0, y)
+		_dots.draw_circle(at, 8.0 if k == _page else 6.0, Palette.SUNNY if k == _page else Color(Palette.PAPER, 0.3))
+	if UiKit.show_key_hints():
+		_dots.draw_string(UiKit.font(600), Vector2(FIELD.x * 0.5 + n * 14.0 + 18.0, y + 6.0), "Page Up / Page Down", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(Palette.PAPER, 0.6))
 
 
 ## The dark hall and its carpet, across the whole window.
