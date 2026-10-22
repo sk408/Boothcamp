@@ -18,7 +18,7 @@ extends Node
 ## --belt=types: play AIR & BONE (air_bone.tscn, the hall's third cabinet) instead; --belt=tymps
 ## plays TYMP TOSS (tymp_toss.tscn, the fourth), --belt=degrees DEGREE DROP (the fifth), --belt=flats
 ## FLAT OUT (the sixth), --belt=otos OTO SPOT (the seventh), --belt=masks MASQUERADE (the eighth),
-## --belt=noise GOLDILOCKS (the ninth). None has two-ear cards, so the slip bot slips
+## --belt=noise GOLDILOCKS (the ninth), --belt=speech CROSS CHECK (the tenth, key 0). None has two-ear cards, so the slip bot slips
 ## each left-ear card once (first a wrong open chute) and no story chart ever rides them.
 ## --days-done: mark every Day finished first, so story charts can ride the belt (a careful run
 ## then has to sort one); without it no story chart may appear.
@@ -40,6 +40,7 @@ const BELT_RUNS: Dictionary = {
 	"otos": {"scene": "res://story/arcade/oto_spot.tscn", "mode": "chart_chute_otos", "key": KEY_7},
 	"masks": {"scene": "res://story/arcade/masquerade.tscn", "mode": "chart_chute_masks", "key": KEY_8},
 	"noise": {"scene": "res://story/arcade/goldilocks.tscn", "mode": "chart_chute_noise", "key": KEY_9},
+	"speech": {"scene": "res://story/arcade/cross_check.tscn", "mode": "chart_chute_speech", "key": KEY_0},
 }
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const HALL_SCENE := "res://story/arcade/arcade_hall.tscn"
@@ -165,7 +166,8 @@ class Driver extends Node:
 				if policy == "mouse":
 					# a cabinet on a later page: turn to it with the round arrow first (the hall
 					# opens on the first page in a fresh run)
-					var at := int(BELT_RUNS[String(belt)]["key"]) - KEY_1
+					var key := int(BELT_RUNS[String(belt)]["key"])
+					var at := 9 if key == KEY_0 else key - KEY_1   # 0 opens the tenth
 					for i in at / ArcadeHallRef.PAGE_SIZE:
 						await _click(_anchor("arcade_page_next"))
 						await _wait(0.4)
