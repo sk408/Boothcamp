@@ -21,6 +21,8 @@ const CAB_SIZE := Vector2(420, 480)
 const CAB_Y := 134.0
 const CAB_GAP := 40.0
 const CAB_MARGIN := 24.0   ## the least room left and right of the cabinet row
+## Narrower than this, a cabinet is drawn at this width and scaled down whole (four and up).
+const CAB_MIN_W := 395.0
 const FLOOR := Color("#2e2442")
 const CARPET := Color("#3b3550")
 const GOLD := Color("#f2b632")
@@ -32,6 +34,8 @@ const CABINETS: Array[Dictionary] = [
 		"pitch": "Catch the red flags before you fit.", "body": Color("#e5383b")},
 	{"id": "chart_chute_types", "name": "AIR & BONE", "scene": "res://story/arcade/air_bone.tscn",
 		"pitch": "Air or bone? Find where the loss lives.", "body": Color("#3a9d96")},
+	{"id": "chart_chute_tymps", "name": "TYMP TOSS", "scene": "res://story/arcade/tymp_toss.tscn",
+		"pitch": "Read the eardrum's peak. Which type?", "body": Color("#7b2cbf")},
 ]
 
 ## The cabinet last opened this session: the hall comes back with it selected.
@@ -105,6 +109,8 @@ class Cabinet extends Control:
 			_draw_chute_screen(screen)
 		elif String(info["id"]) == "chart_chute_types":
 			_draw_types_screen(screen)
+		elif String(info["id"]) == "chart_chute_tymps":
+			_draw_tymps_screen(screen)
 		else:
 			_draw_desk_screen(screen)
 		# the pitch, the top score, the play sign
@@ -158,6 +164,15 @@ class Cabinet extends Control:
 		var types := [&"sensorineural", &"conductive", &"mixed"]
 		for i in types.size():
 			ArcadeArt.picture(self, types[i], r.position + Vector2(64 + i * (r.size.x - 128) / 2.0, 152), 34.0)
+
+	## A tympanogram card with its peak in the normal box, over the five type pictures.
+	func _draw_tymps_screen(r: Rect2) -> void:
+		var card := Rect2(r.position + Vector2(r.size.x * 0.5 - 90, 12), Vector2(180, 96))
+		UiDraw.rounded_rect(self, card, Color("#ffffff"), 10, 3, Palette.INK)
+		ArcadeArt.tymp_chart(self, card.grow(-10.0), {"type": "A", "peak_daPa": -10, "peak_ml": 0.9}, Palette.RIGHT_RED, false)
+		var tymps := [&"tymp_a", &"tymp_b", &"tymp_as", &"tymp_c", &"tymp_ad"]
+		for i in tymps.size():
+			ArcadeArt.picture(self, tymps[i], r.position + Vector2(44 + i * (r.size.x - 88) / (tymps.size() - 1.0), 152), 30.0)
 
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:
@@ -287,18 +302,24 @@ func _build() -> void:
 	var gap := CAB_GAP if n <= 2 else CAB_GAP * 0.7
 	var w := minf(CAB_SIZE.x, (FIELD.x - 2.0 * CAB_MARGIN - gap * (n - 1)) / n)
 	var x0 := (FIELD.x - w * n - gap * (n - 1)) * 0.5
+	# each cabinet stands in a holder, which scales it down whole when the row is too narrow
+	var k := minf(1.0, w / CAB_MIN_W)
 	for i in n:
 		var d: Dictionary = CABINETS[i]
 		var c := Cabinet.new(i, d)
-		c.size = Vector2(w, CAB_SIZE.y)
+		c.size = Vector2(w / k, CAB_SIZE.y)
 		c.pivot_offset = c.size * 0.5
-		c.position = Vector2(x0 + i * (w + gap), CAB_Y)
+		var holder := Control.new()
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.position = Vector2(x0 + i * (w + gap), CAB_Y + CAB_SIZE.y * (1.0 - k) * 0.5)
+		holder.scale = Vector2(k, k)
+		_field.add_child(holder)
 		c.top_line = _top_line(String(d["id"]))
 		c.extra = _extra_line(String(d["id"]))
 		c.fresh = ArcadeScores.runs(String(d["id"])).is_empty()
 		c.picked.connect(open_cabinet)
 		c.hovered.connect(_select)
-		_field.add_child(c)
+		holder.add_child(c)
 		_cabs.append(c)
 		Hoot.register_anchor("arcade_cabinet_" + String(d["id"]), c)
 	var hints := UiKit.show_key_hints()

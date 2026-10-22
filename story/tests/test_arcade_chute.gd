@@ -368,3 +368,45 @@ func test_type_belt_reads_and_lines() -> void:
 				assert_true(ChartDeck.stable_type(ac, bc, type), "%s %s archetype %s is itself a clean chart" % [type, pool, str(arch)])
 	var gap_free := {250: 20, 500: 25, 1000: 30, 2000: 40, 3000: 50, 4000: 55, 6000: 60, 8000: 65}
 	assert_eq(ClinicRules.hearing_type(gap_free, {500: 25, 1000: 30, 2000: 35, 4000: 55}), &"sensorineural", "bone on air: SN")
+
+
+# ================================================================ TYMP TOSS (the tymp belt)
+
+## Every tymp card is the Jerger type its chute claims (CaseRules.tymp_type, the tympanometer's own
+## rule), with the peak 40 daPa and 0.04 mL clear of every line; canal volume normal except on a
+## lookalike B, whose line then hints at wax or a hole.
+func test_every_tymp_card_has_its_type_with_a_margin() -> void:
+	for id: StringName in ChartDeck.TYMPS:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 13 + 5), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var t: Dictionary = c["tymp"]
+				assert_false(t.is_empty(), "%s: a tymp (seed %d)" % [id, s])
+				assert_eq(CaseRules.tymp_type_of(t), ChartDeck.TYMP_TYPE[id], "%s is type %s (seed %d, lookalike %s)" % [id, ChartDeck.TYMP_TYPE[id], s, lookalike])
+				assert_true(ChartDeck.stable_tymp(t, id), "%s keeps its type with the peak nudged (seed %d)" % [id, s])
+				assert_eq(int(t["peak_daPa"]) % 5, 0, "5 daPa steps")
+				var ecv := float(t["ecv_ml"])
+				if id == &"tymp_b" and lookalike:
+					assert_true(ecv < CaseRules.TYMP_BLOCKED_ECV or ecv > CaseRules.TYMP_ADULT_ECV.y, "a lookalike B has a tiny or large canal (%.1f)" % ecv)
+					assert_has(ChartDeck.TYMP_B_LINES.values(), c["line"], "and its line hints at why")
+				else:
+					assert_true(ecv >= CaseRules.TYMP_ADULT_ECV.x and ecv <= CaseRules.TYMP_ADULT_ECV.y, "%s: canal volume inside the adult band" % id)
+				assert_eq(String(c["ear"]), String(c["sort_ear"]), "a tymp card is one ear")
+
+
+func test_tymp_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"tymps"), [&"tymp_a", &"tymp_b"], "warm-up: A and B")
+	assert_false(ChuteRules.unlocked(9.9, &"tymps").has(&"tymp_as"), "As waits for 10 s")
+	assert_false(ChuteRules.unlocked(19.9, &"tymps").has(&"tymp_c"), "C waits for 20 s")
+	assert_false(ChuteRules.unlocked(29.9, &"tymps").has(&"tymp_ad"), "Ad waits for 30 s")
+	assert_eq(ChuteRules.unlocked(30.0, &"tymps"), ChartDeck.TYMPS, "all five at 30 s")
+	var r := _rng(11)
+	for i in 300:
+		var spec := ChuteRules.next_spec(r, r.randf_range(0.0, ChuteRules.RUN_S), [], [], &"tymps")
+		assert_has(ChartDeck.TYMPS, spec["shape"], "only tymps on the tymp belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear cards")
+		assert_false(bool(spec["golden"]), "no story charts")
+	for id: StringName in ChartDeck.TYMPS:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+		var tell: Dictionary = ChartDeck.TELLS[id]
+		assert_true(tell.has("p_lo") and tell.has("ml_hi"), "%s's tell is a patch of the tympanogram" % id)
