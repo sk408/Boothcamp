@@ -19,7 +19,8 @@ const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notc
 	&"deg_mild": "MILD", &"deg_moderate": "MODERATE", &"deg_modsevere": "MOD-SEVERE", &"deg_severe": "SEVERE", &"deg_profound": "PROFOUND",
 	&"flat_fluid": "FLUID", &"flat_wax": "WAX", &"flat_hole": "HOLE", &"flat_peak": "PEAK",
 	&"oto_clear": "CLEAR", &"oto_wax": "WAX", &"oto_fluid": "FLUID", &"oto_hole": "HOLE", &"oto_object": "OBJECT",
-	&"mask_none": "NO MASK", &"mask_bone": "MASK BONE", &"mask_both": "MASK BOTH"}
+	&"mask_none": "NO MASK", &"mask_bone": "MASK BONE", &"mask_both": "MASK BOTH",
+	&"noise_under": "TOO LITTLE", &"noise_ok": "JUST RIGHT", &"noise_over": "TOO MUCH", &"noise_dilemma": "DILEMMA"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
 ## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
@@ -78,10 +79,18 @@ const MASK_GAP: Dictionary[StringName, Vector2i] = {&"mask_none": Vector2i(-5, 0
 ## is the worse one by air (its own call would be MASK BOTH).
 const MASK_BONE_AT: Dictionary[StringName, Dictionary] = {&"mask_none": {"plain": Vector2i(0, 30), "lookalike": Vector2i(45, 50)},
 	&"mask_bone": {"plain": Vector2i(0, 15), "lookalike": Vector2i(0, 15)}, &"mask_both": {"plain": Vector2i(0, 20), "lookalike": Vector2i(0, 20)}}
+## GOLDILOCKS's chutes, in key order (1-4): is the noise in the other ear at a safe level for a masked
+## bone test? (ClinicRules.mask_status; noise_call).
+const NOISES: Array[StringName] = [&"noise_under", &"noise_ok", &"noise_over", &"noise_dilemma"]
+## Each noise chute's ClinicRules.mask_status.
+const NOISE_STATUS: Dictionary[StringName, StringName] = {&"noise_under": &"under", &"noise_ok": &"ok", &"noise_over": &"over",
+	&"noise_dilemma": &"impossible"}
+## The bone frequencies a GOLDILOCKS card tests: no occlusion allowance there.
+const NOISE_FREQS: Array[int] = [2000, 4000]
 ## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS), degrees (DEGREE DROP),
-## flats (FLAT OUT), otos (OTO SPOT) and masks (MASQUERADE).
+## flats (FLAT OUT), otos (OTO SPOT), masks (MASQUERADE) and noise (GOLDILOCKS).
 const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES, &"flats": FLATS,
-	&"otos": OTOS, &"masks": MASKS}
+	&"otos": OTOS, &"masks": MASKS, &"noise": NOISES}
 ## A tymp card's peak keeps its type this far either way (daPa, mL).
 const TYMP_MARGIN_DAPA := 40
 const TYMP_MARGIN_ML := 0.04
@@ -217,6 +226,10 @@ const LINES: Dictionary = {
 	&"mask_none": ["My ears match, I think.", "Same both sides."],
 	&"mask_bone": ["My left's the better one.", "Water in that ear, they said."],
 	&"mask_both": ["This ear's been dead for years.", "I can't hear a thing on this side."],
+	&"noise_under": ["Still hear it in the other ear!", "That hiss is very polite."],
+	&"noise_ok": ["Hiss on one side, beep on the other.", "I can hear both, I think."],
+	&"noise_over": ["The hiss is drowning everything!", "Now I hear nothing at all."],
+	&"noise_dilemma": ["Both my ears are bunged up.", "They said I'm a tricky one."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -255,6 +268,11 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"mask_none": {"text": "Air sits on bone: no gap to check", "ask": true},
 	&"mask_bone": {"text": "A gap of 10 or more, but under 40", "ask": true},
 	&"mask_both": {"text": "Air 40 over bone: it can cross over", "ask": true},
+	# noise tells glow over the card's dial ("dial") and draw the safe window on it
+	&"noise_under": {"text": "Start at the other ear's air + 10", "dial": true},
+	&"noise_ok": {"text": "Over the start, under tone + 40", "dial": true},
+	&"noise_over": {"text": "Tone + 40 or more: it crosses back", "dial": true},
+	&"noise_dilemma": {"text": "Start + 10 is past tone + 40: no window", "dial": true},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -280,6 +298,8 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		return make_oto_card(rng, shape, opts, serial)
 	if MASKS.has(shape):
 		return make_mask_card(rng, shape, opts, serial)
+	if NOISES.has(shape):
+		return make_noise_card(rng, shape, opts, serial)
 	if DEGREES.has(shape):
 		var dear := "left" if String(opts.get("ear", "right")) == "left" else "right"
 		var dlines: Array = LINES[shape]
@@ -618,6 +638,71 @@ static func stable_mask(test_ac: int, bone: int, id: StringName) -> bool:
 		return false
 	for d: int in [-5, 0, 5]:
 		if mask_call(test_ac + d, bone) != id or mask_call(test_ac, bone + d) != id:
+			return false
+	return true
+
+
+## (seeded) One GOLDILOCKS card: a masked bone test at 2k or 4k. Adds "noise" {"freq", "other_air" (the
+## other ear's air threshold), "tone" (the bone tone, dB HL), "mask" (the noise in the other ear, dB),
+## "other_ear"} to the usual card keys; no chart ("ac" is empty). Clear of every line (stable_noise).
+static func make_noise_card(rng: RandomNumberGenerator, id: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+	var f: int = NOISE_FREQS[rng.randi() % NOISE_FREQS.size()]
+	var n := make_noise(rng, id, f, bool(opts.get("lookalike", false)))
+	n["freq"] = f
+	n["other_ear"] = "left" if ear == "right" else "right"
+	var lines: Array = LINES[id]
+	var first := FIRST[rng.randi() % FIRST.size()]
+	return {
+		"serial": serial, "shape": id, "ear": ear, "sort_ear": ear, "ac": {}, "noise": n,
+		"golden": false, "other_shape": &"", "name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]],
+		"who": "chute_%d" % (serial % PORTRAIT_IDS), "look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"),
+		"line": lines[rng.randi() % lines.size()],
+	}
+
+
+## (seeded) {"other_air", "tone", "mask"} for a noise chute at bone frequency f. A lookalike's needle
+## sits 5 dB inside its window's edge (the least stable_noise allows).
+static func make_noise(rng: RandomNumberGenerator, id: StringName, f: int, lookalike: bool) -> Dictionary:
+	for attempt in MAX_TRIES:
+		var x := 5 * rng.randi_range(9, 13) if id == &"noise_dilemma" else 5 * rng.randi_range(0, 7)
+		var y := 5 * rng.randi_range(0, (x - 35) / 5) if id == &"noise_dilemma" else 5 * rng.randi_range(maxi(x - 15, 0) / 5, 10)
+		var start := ClinicRules.initial_masking(x, f, ClinicRules.test_id(true, true))
+		var limit := ClinicRules.overmask_limit(y, ClinicRules.test_id(true, true))
+		var m := 0
+		match id:
+			&"noise_under":
+				m = start - 10 if lookalike else start - 5 * rng.randi_range(2, 6)
+			&"noise_ok":
+				m = (start + 5 if rng.randf() < 0.5 else limit - 10) if lookalike else 5 * rng.randi_range((start + 5) / 5, (limit - 10) / 5)
+			&"noise_over":
+				m = limit + 5 if lookalike else limit + 5 * rng.randi_range(1, 5)
+			_:
+				m = start + 5 * rng.randi_range(-2, 4)
+		var n := {"other_air": x, "tone": y, "mask": m}
+		if stable_noise(n, f, id):
+			return n
+	push_error("ChartDeck: no stable %s card" % id)
+	return {"other_air": 0, "tone": 0, "mask": 0}
+
+
+## The noise call at bone frequency f, by the story's masking help (ClinicRules.mask_status).
+static func noise_call(other_air: int, tone: int, mask: int, f: int) -> StringName:
+	var test := ClinicRules.test_id(true, true)
+	var st := ClinicRules.mask_status(true, true, mask, ClinicRules.initial_masking(other_air, f, test), ClinicRules.overmask_limit(tone, test))
+	return NOISE_STATUS.find_key(st) if NOISE_STATUS.values().has(st) else &""
+
+
+## The GOLDILOCKS margin check: the call is the chute's, and still is with any one number 5 dB off;
+## every number is a real 5 dB step (the noise 0-100, the tone inside the bone range).
+static func stable_noise(n: Dictionary, f: int, id: StringName) -> bool:
+	var x := int(n["other_air"])
+	var y := int(n["tone"])
+	var m := int(n["mask"])
+	if m < ClinicRules.MASK_MIN_DB or m > ClinicRules.MASK_MAX_DB or not _real_bone(y, f) or ClinicRules.clamp_db(x, f) != x:
+		return false
+	for d: int in [-5, 0, 5]:
+		if noise_call(x + d, y, m, f) != id or noise_call(x, y + d, m, f) != id or noise_call(x, y, m + d, f) != id:
 			return false
 	return true
 

@@ -28,6 +28,8 @@ extends Control
 ## (ArcadeArt.oto_view), sorted into CLEAR, WAX, FLUID, HOLE or OBJECT; MODE_OTOS.
 ## belt = &"masks" makes it MASQUERADE (masquerade.tscn, section 29): both ears' air and the unmasked
 ## bone with one frequency lit, sorted into NO MASK, MASK BONE or MASK BOTH (ChartDeck.mask_call); MODE_MASKS.
+## belt = &"noise" makes it GOLDILOCKS (goldilocks.tscn, section 31): a masked bone test's numbers and
+## its noise dial, sorted into TOO LITTLE, JUST RIGHT, TOO MUCH or DILEMMA (ChartDeck.noise_call); MODE_NOISE.
 
 signal _sorted(pick: StringName)
 
@@ -47,11 +49,12 @@ const MODE_DEGREES := "chart_chute_degrees"
 const MODE_FLATS := "chart_chute_flats"
 const MODE_OTOS := "chart_chute_otos"
 const MODE_MASKS := "chart_chute_masks"
+const MODE_NOISE := "chart_chute_noise"
 ## Each belt's save key and title.
 const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS, &"otos": MODE_OTOS,
-	&"masks": MODE_MASKS}
+	&"masks": MODE_MASKS, &"noise": MODE_NOISE}
 const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT", &"otos": "OTO SPOT",
-	&"masks": "MASQUERADE"}
+	&"masks": "MASQUERADE", &"noise": "GOLDILOCKS"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -94,6 +97,8 @@ const WARMUP_HINTS: Dictionary = {
 	&"oto_wax": "A brown plug hides the drum: WAX!",
 	&"mask_none": "Each card lights one pitch. Air sits right on bone there: NO MASK!",
 	&"mask_bone": "Air is well below bone here. A gap of 10 or more: MASK BONE!",
+	&"noise_under": "Start the noise at the other ear's air plus 10. This is under: TOO LITTLE!",
+	&"noise_ok": "Over the start, under the tone plus 40: JUST RIGHT!",
 }
 
 var seed_value := -1
@@ -190,7 +195,9 @@ class CardView extends Control:
 				if ChartDeck.FLATS.has(StringName(card["shape"])):
 					ArcadeArt.volume_gauge(_tymp, gauge_rect(), float(card["tymp"].get("ecv_ml", 1.0)), true)
 			elif card.has("oto"):
-				ArcadeArt.oto_view(_tymp, oto_rect(), card["oto"], String(card["sort_ear"])))
+				ArcadeArt.oto_view(_tymp, oto_rect(), card["oto"], String(card["sort_ear"]))
+			elif card.has("noise"):
+				ArcadeArt.noise_panel(_tymp, noise_rect(), card["noise"], String(card["sort_ear"])))
 		add_child(_tymp)
 		_over = UiKit.full_rect()
 		_over.draw.connect(_draw_tell)
@@ -211,6 +218,10 @@ class CardView extends Control:
 	func oto_rect() -> Rect2:
 		return Rect2(size.x * 0.5 - 122, 68, 244, 244)
 
+	## Where a GOLDILOCKS card's numbers and noise dial sit: under the name, over the tell.
+	func noise_rect() -> Rect2:
+		return Rect2(24, 80, size.x - 48, 220)
+
 	## Where a FLAT OUT card's canal volume gauge sits: across the top of the tympanogram, above
 	## any peak the belt deals.
 	func gauge_rect() -> Rect2:
@@ -221,7 +232,7 @@ class CardView extends Control:
 		card = c
 		tell = &""
 		ear_cue = false
-		ag.visible = not c.has("tymp") and not c.has("oto")
+		ag.visible = not c.has("tymp") and not c.has("oto") and not c.has("noise")
 		_tymp.queue_redraw()
 		ag.ear = String(c["ear"]) if String(c["ear"]) != "" and not c.has("mask") else "both"
 		ag.clear_points()
@@ -261,7 +272,7 @@ class CardView extends Control:
 	func _tag_text() -> String:
 		var ear := String(card.get("ear", "right"))
 		var sort_ear := String(card.get("sort_ear", "right"))
-		if card.has("mask"):
+		if card.has("mask") or card.has("noise"):
 			return "TEST RIGHT  O" if ear == "right" else "TEST LEFT  X"
 		if ear == "right":
 			return "RIGHT EAR  O"
@@ -295,6 +306,8 @@ class CardView extends Control:
 			sub = "Shine the light: what's in there?"
 		elif card.has("mask"):
 			sub = "Testing %s: mask or not?" % _hz(int(card["mask"]["freq"]))
+		elif card.has("noise"):
+			sub = "Masked bone at %s: is the noise right?" % _hz(int(card["noise"]["freq"]))
 		draw_string(UiKit.font(500), Vector2(86, 58), sub, HORIZONTAL_ALIGNMENT_LEFT, 260, 14 if not card.has("tymp") else 16, Palette.INK_SOFT)
 		var tag := _tag_rect()
 		UiDraw.rounded_rect(self, tag, Palette.ear_color(String(card.get("sort_ear", "right"))), 19)
@@ -316,6 +329,24 @@ class CardView extends Control:
 		_over.draw_rect(col, Color(Palette.SUNNY, 0.22))
 		_over.draw_rect(col, Color(Palette.SELECT_ORANGE, 0.55), false, 2.0)
 
+	## The noise card's safe window on its dial: green from the start level up to the tone + 40; for a
+	## dilemma, the start and the ceiling marked in coral, crossed.
+	func _draw_window(dial: Rect2) -> void:
+		var n: Dictionary = card.get("noise", {})
+		var test := ClinicRules.test_id(true, true)
+		var start := ClinicRules.initial_masking(int(n.get("other_air", 0)), int(n.get("freq", 2000)), test)
+		var limit := ClinicRules.overmask_limit(int(n.get("tone", 0)), test)
+		var x0 := ArcadeArt.dial_x(dial, start)
+		var x1 := ArcadeArt.dial_x(dial, limit)
+		var band := Rect2(dial.position.x, dial.position.y + 4, 0, dial.size.y - 8)
+		if start < limit:
+			_over.draw_rect(Rect2(x0, band.position.y, x1 - x0, band.size.y), Color(ArcadeArt.WINDOW_OK, 0.55))
+		for x: float in [x0, x1]:
+			_over.draw_line(Vector2(x, dial.position.y - 2), Vector2(x, dial.end.y + 2), Palette.CORAL if start >= limit else Palette.INK, 3.0)
+		var lf := UiKit.font(700)
+		_over.draw_string(lf, Vector2(x0 - 60, dial.end.y + 38), "start %d" % start, HORIZONTAL_ALIGNMENT_CENTER, 120, 15, Palette.INK)
+		_over.draw_string(lf, Vector2(x1 - 60, dial.end.y + 38 + (16 if absf(x1 - x0) < 110 else 0)), "tone+40 = %d" % limit, HORIZONTAL_ALIGNMENT_CENTER, 120, 15, Palette.CORAL if start >= limit else Palette.INK)
+
 	func _draw_tell() -> void:
 		if ag == null:
 			return
@@ -332,6 +363,10 @@ class CardView extends Control:
 		elif info.has("view"):
 			var o := oto_rect()
 			rr = Rect2(o.get_center() - o.size * 0.3, o.size * 0.6)
+		elif info.has("dial"):
+			var dial := ArcadeArt.dial_rect(noise_rect())
+			_draw_window(dial)
+			rr = dial.grow(6.0)
 		elif info.has("ask"):
 			var f := int((card.get("mask", {}) as Dictionary).get("freq", 1000))
 			var gr := ag.get_region_global_rect(f, f)
@@ -452,6 +487,21 @@ class ChuteView extends Control:
 			else:
 				UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
 				ArcadeArt.volume_gauge(self, box.grow(-6.0), float(MINI_ECV[shape]), false)
+			return
+		if ChartDeck.NOISES.has(shape):
+			# a little dial: the green window, and the needle under, in, or over it (a dilemma: no window)
+			UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
+			var bar := Rect2(box.position.x + 10, box.position.y + box.size.y * 0.5 - 5, box.size.x - 20, 10)
+			draw_rect(bar, Color(Palette.INK, 0.12))
+			if shape == &"noise_dilemma":
+				var xm := bar.get_center().x
+				draw_line(Vector2(xm - 8, bar.position.y - 6), Vector2(xm + 8, bar.end.y + 6), Palette.CORAL, 3.0)
+				draw_line(Vector2(xm + 8, bar.position.y - 6), Vector2(xm - 8, bar.end.y + 6), Palette.CORAL, 3.0)
+				return
+			draw_rect(Rect2(bar.position.x + bar.size.x * 0.35, bar.position.y, bar.size.x * 0.3, bar.size.y), ArcadeArt.WINDOW_OK)
+			var at := {&"noise_under": 0.15, &"noise_ok": 0.5, &"noise_over": 0.85}[shape] as float
+			var tip := Vector2(bar.position.x + bar.size.x * at, bar.position.y)
+			draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-6, -9), tip + Vector2(6, -9)]), Palette.INK)
 			return
 		if ChartDeck.MASKS.has(shape):
 			# one pitch: the bone caret, the air ring below it by this chute's gap, and the 40 line
@@ -909,7 +959,7 @@ func _ramp_tips(card: Dictionary) -> void:
 		return
 	if String(card["ear"]) == "left":
 		var tip := "Blue X is the left ear. Same shapes!"
-		if belt == &"masks":
+		if belt == &"masks" or belt == &"noise":
 			tip = "Now the left ear is tested. Same rules!"
 		elif card.has("bc"):
 			tip = "Blue X is the left ear. Its bone marks face the other way."
@@ -1202,6 +1252,12 @@ func _draw_preview() -> void:
 	if _next.has("tymp"):
 		ArcadeArt.tymp_chart(_preview, plot, _next["tymp"], Palette.ear_color(sort_ear), false)
 		return
+	if _next.has("noise"):
+		var k := minf(plot.size.x / 512.0, plot.size.y / 210.0)
+		_preview.draw_set_transform(plot.position, 0.0, Vector2(k, k))
+		ArcadeArt.noise_panel(_preview, Rect2(Vector2.ZERO, plot.size / k), _next["noise"], sort_ear)
+		_preview.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
 	if _next.has("oto"):
 		var side := plot.size.y
 		ArcadeArt.oto_view(_preview, Rect2(plot.get_center() - Vector2(side, side) * 0.5, Vector2(side, side)), _next["oto"], sort_ear)
@@ -1326,6 +1382,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"noise":
+		return "Masking noise starts at the other ear's air + 10, and stays under the tone + 40."
 	if belt == &"masks":
 		return "Mask bone for a gap of 10 or more. Mask air when it sits 40 over the bone."
 	if belt == &"otos":

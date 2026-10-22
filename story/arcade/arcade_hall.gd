@@ -49,6 +49,8 @@ const CABINETS: Array[Dictionary] = [
 		"pitch": "Shine the light. What's in the ear?", "body": Color("#2d6cdf")},
 	{"id": "chart_chute_masks", "name": "MASQUERADE", "scene": "res://story/arcade/masquerade.tscn",
 		"pitch": "Mask or not? Read the gap and the 40.", "body": Color("#1f3a5f")},
+	{"id": "chart_chute_noise", "name": "GOLDILOCKS", "scene": "res://story/arcade/goldilocks.tscn",
+		"pitch": "Masking noise: too little, too much, or just right?", "body": Color("#d99a2b")},
 ]
 
 ## The cabinet last opened this session: the hall comes back with it selected.
@@ -168,6 +170,8 @@ class Cabinet extends Control:
 			_draw_otos_screen(screen)
 		elif String(info["id"]) == "chart_chute_masks":
 			_draw_masks_screen(screen)
+		elif String(info["id"]) == "chart_chute_noise":
+			_draw_noise_screen(screen)
 		else:
 			_draw_desk_screen(screen)
 		# the pitch, the top score, the play sign
@@ -284,6 +288,19 @@ class Cabinet extends Control:
 		var masks := [&"mask_none", &"mask_bone", &"mask_both"]
 		for i in masks.size():
 			ArcadeArt.picture(self, masks[i], r.position + Vector2(60 + i * (r.size.x - 120) / (masks.size() - 1.0), 152), 30.0)
+
+	## A noise dial with its needle in the green window, over the four bowls.
+	func _draw_noise_screen(r: Rect2) -> void:
+		var card := Rect2(r.position + Vector2(r.size.x * 0.5 - 90, 12), Vector2(180, 96))
+		UiDraw.rounded_rect(self, card, Color("#ffffff"), 10, 3, Palette.INK)
+		var bar := Rect2(card.position + Vector2(14, 50), Vector2(card.size.x - 28, 18))
+		draw_rect(bar, Color(Palette.INK, 0.12))
+		draw_rect(Rect2(bar.position.x + bar.size.x * 0.35, bar.position.y, bar.size.x * 0.3, bar.size.y), ArcadeArt.WINDOW_OK)
+		var tip := Vector2(bar.get_center().x, bar.position.y)
+		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-8, -14), tip + Vector2(8, -14)]), Palette.INK)
+		var bowls := [&"noise_under", &"noise_ok", &"noise_over", &"noise_dilemma"]
+		for i in bowls.size():
+			ArcadeArt.picture(self, bowls[i], r.position + Vector2(40 + i * (r.size.x - 80) / (bowls.size() - 1.0), 152), 30.0)
 
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:
