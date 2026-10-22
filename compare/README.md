@@ -12,7 +12,7 @@ centres, for new users (Plain words) and engineers (Full specs). Design and Stev
 | A spec, its sources or its status | `data/aids.json` (`v`, `src`, `status`, `note`); then `meta.specs_as_of` |
 | A source | `data/sources.json` (`read` = the date it was read) |
 | A row, its plain words, a topic's colour, a need, Hoot's questions | `data/rows.json` |
-| The style drawings | `tools/make_art.py`, then run it (`python3 tools/make_art.py`) to rewrite `data/art.json` |
+| The drawings | `tools/make_art.py`, then run it (`python3 tools/make_art.py`) to rewrite `data/art.json`. A product drawing's outline comes from `tools/outlines.json`; re-trace one from a photo with `python3 tools/trace_photo.py <photo> <name>` (needs `opencv-python-headless`) and paste the result in. Photos are never committed. |
 
 Statuses: `verified` = a maker's or Costco's own page says so (the tests insist on one such source);
 `reported` = third-party sources only; `unverified` = nothing found (value left empty, shown as "Not verified").

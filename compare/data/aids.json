@@ -70,12 +70,12 @@
           ]
         },
         "receivers": {
-          "v": "Four receiver powers",
-          "status": "reported",
+          "v": "S, M, P and UP; max output 112 / 114 / 122 / 132 dB SPL",
+          "status": "verified",
           "src": [
-            "hb_sonite"
+            "sn_sheet"
           ],
-          "note": "Receiver names and maximum output not found for the Rise."
+          "note": "2 cc coupler. Peak full-on gain 47 / 51 / 59 / 71 dB."
         },
         "fitting_range": {
           "v": "Mild to severe; strongest receiver toward moderately profound",
@@ -109,13 +109,14 @@
           ]
         },
         "battery_hours": {
-          "v": "Up to 31 h advertised; 20 h in the maker's technical figure",
-          "status": "reported",
+          "v": "20 h expected on a full charge",
+          "status": "verified",
           "src": [
+            "sn_sheet",
             "hb_sonite",
             "ht_costco"
           ],
-          "note": "Hours while streaming not found."
+          "note": "The maker's data sheet says 20 h; reviews quote up to 31 h. Streaming and features use more."
         },
         "charge_time": {
           "v": "About 3 h full; 15 min quick charge",
@@ -580,17 +581,19 @@
           "v": "miniFit Detect 60, 85, 100; MicroShell 60 to 105. Peak 109 / 116 / 123 / 126 dB SPL",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ],
           "note": "Peak full-on gain 34 / 55 / 59 / 63 dB for speakers 60 / 85 / 100 / 105."
         },
         "fitting_range": {
-          "v": "Set by speaker: peak gain 34 to 63 dB",
+          "v": "Slight to profound (four speaker powers)",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ],
-          "note": "No mild-to-profound range is stated."
+          "note": "Peak full-on gain 34 to 63 dB (2 cc coupler)."
         },
         "ip68": {
           "v": "yes",
@@ -618,6 +621,7 @@
           "v": "Up to 24 h",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ],
           "note": "The maker's overview table gives 20 h on a full charge."
@@ -675,6 +679,7 @@
           "v": "yes",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ]
         },
@@ -682,14 +687,16 @@
           "v": "yes",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips",
             "ph_pdf"
           ]
         },
         "tap": {
           "v": "yes",
-          "status": "reported",
+          "status": "verified",
           "src": [
+            "ph_sheet",
             "ht_philips",
             "wr_philips"
           ],
@@ -699,6 +706,7 @@
           "v": "24 fitting bands; 13 automatic + 4 manual programs",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ],
           "note": "Third-party sites say 64 channels; Costco's page lists 24 fitting bands."
@@ -707,6 +715,7 @@
           "v": "SoundMap 3, AI noise reduction (5 steps), SoundProtect, directionality",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ]
         },
@@ -731,6 +740,7 @@
           "v": "yes",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ],
           "note": "Tinnitus SoundSupport is listed on Costco's own page."
@@ -739,6 +749,7 @@
           "v": "yes",
           "status": "verified",
           "src": [
+            "ph_sheet",
             "cs_philips"
           ]
         },
@@ -818,12 +829,13 @@
           ]
         },
         "receivers": {
-          "v": "S, M, P and HP receivers",
-          "status": "reported",
+          "v": "S, M, P and HP; max output 110 / 119 / 122 / 131 dB SPL",
+          "status": "verified",
           "src": [
+            "rx_sheet",
             "ht_rexton"
           ],
-          "note": "Output levels not found."
+          "note": "2 cc coupler. Max full-on gain 46 / 60 / 65 / 75 dB."
         },
         "fitting_range": {
           "v": "",
@@ -859,6 +871,7 @@
           "v": "Up to 54 h; 36 h with 5 h of streaming",
           "status": "verified",
           "src": [
+            "rx_sheet",
             "rx_rplus",
             "rx_rplus2",
             "ht_rexton"
@@ -925,6 +938,7 @@
           "v": "yes",
           "status": "verified",
           "src": [
+            "rx_sheet",
             "rx_rplus",
             "rx_rplus2"
           ]
@@ -970,8 +984,9 @@
         },
         "tinnitus": {
           "v": "yes",
-          "status": "reported",
+          "status": "verified",
           "src": [
+            "rx_sheet",
             "ht_rexton"
           ],
           "note": "Sound therapy and notch. Costco's fitting software may not turn tinnitus programs on even where the platform has them (HearingTracker)."
@@ -1026,11 +1041,12 @@
       "specs": {
         "maker": {
           "v": "SoundGear (made by Starkey)",
-          "status": "reported",
+          "status": "verified",
           "src": [
+            "sg_sheet",
             "ht_soundgear"
           ],
-          "note": "The maker's site, soundgearamp.com, shows the AMP 2. Reviews from late 2025 call it the SoundGear AMP; the specs below come from those reviews until the AMP 2 sheet is read."
+          "note": "Starkey's April 2026 data sheet names it SoundGear Amp 2. Values not on that sheet still come from late-2025 reviews of the first AMP."
         },
         "based_on": {
           "v": "Starkey Edge AI",
@@ -1064,11 +1080,12 @@
           ]
         },
         "receivers": {
-          "v": "Four fitting ranges L, M, P, UP; peak gain 42 to 66 dB",
-          "status": "reported",
+          "v": "mRIC R: L, M, P and UP; max output 107 / 117 / 119 / 125 dB SPL",
+          "status": "verified",
           "src": [
-            "wr_sg_mric"
-          ]
+            "sg_sheet"
+          ],
+          "note": "2 cc coupler. Peak gain 42 / 50 / 60 / 66 dB. L and UP are custom cased receivers."
         },
         "fitting_range": {
           "v": "",
@@ -1078,8 +1095,9 @@
         },
         "ip68": {
           "v": "yes",
-          "status": "reported",
+          "status": "verified",
           "src": [
+            "sg_sheet",
             "wr_sg_mric",
             "ht_costco"
           ],
@@ -1087,8 +1105,9 @@
         },
         "colors": {
           "v": "Graphite Gray, Tech Black, Chestnut, Beige",
-          "status": "reported",
+          "status": "verified",
           "src": [
+            "sg_sheet",
             "wr_sg_mric"
           ]
         },
@@ -1103,8 +1122,9 @@
         },
         "battery_hours": {
           "v": "mRIC R up to 41 h; 33 h with streaming",
-          "status": "reported",
+          "status": "verified",
           "src": [
+            "sg_sheet",
             "wr_sg_mric",
             "ht_costco"
           ]
