@@ -1,0 +1,61 @@
+{
+  "_comment": "The rows of the side-by-side table, in order. 'plain' is the label in Plain mode, 'help' its one-line meaning; 'detail_only' rows show only in Detail mode. 'flag' rows hold yes / no / some / later.",
+  "groups": [
+    {"id": "price", "label": "Price and care"},
+    {"id": "about", "label": "Who makes it"},
+    {"id": "fit", "label": "Fit and build"},
+    {"id": "battery", "label": "Battery"},
+    {"id": "phone", "label": "Phone, TV and streaming"},
+    {"id": "sound", "label": "Sound processing"},
+    {"id": "app", "label": "Apps and remote care"}
+  ],
+  "rows": [
+    {"id": "price_pair", "group": "price", "kind": "price", "label": "Member price, pair", "plain": "Price for two", "help": "Costco member price for a pair with the charger. Prices vary by state and change often."},
+    {"id": "price_single", "group": "price", "kind": "price", "label": "Member price, single", "plain": "Price for one", "help": "For one ear only.", "detail_only": true},
+
+    {"id": "maker", "group": "about", "kind": "text", "label": "Brand (parent group)", "plain": "Made by", "help": "The brand on the box and the hearing aid company behind it."},
+    {"id": "based_on", "group": "about", "kind": "text", "label": "Closest clinic model", "plain": "Related clinic model", "help": "The more expensive model sold in private clinics that shares its technology. Features and software can differ."},
+    {"id": "platform", "group": "about", "kind": "text", "label": "Platform / chip", "plain": "Platform", "help": "The chip and processing platform.", "detail_only": true},
+    {"id": "launched", "group": "about", "kind": "text", "label": "At Costco since", "plain": "At Costco since", "help": "When it first appeared in Costco hearing aid centres."},
+
+    {"id": "styles", "group": "fit", "kind": "text", "label": "Styles", "plain": "Styles", "help": "RIC: a small case behind the ear with a thin wire to a speaker in the canal. In-the-canal: a custom shell that sits in the ear."},
+    {"id": "receivers", "group": "fit", "kind": "text", "label": "Receivers (max output)", "plain": "Speaker sizes", "help": "Stronger speakers (receivers) fit greater hearing loss.", "detail_only": true},
+    {"id": "fitting_range", "group": "fit", "kind": "text", "label": "Fitting range", "plain": "Hearing loss it fits", "help": "The degrees of hearing loss the aid can be set up for. Your hearing test decides."},
+    {"id": "ip68", "group": "fit", "kind": "flag", "label": "IP68 dust and water", "plain": "Sweat and rain resistant", "help": "IP68 means sealed against dust and resistant to water. Still take them off to shower or swim."},
+    {"id": "colors", "group": "fit", "kind": "text", "label": "Colours", "plain": "Colours", "help": "Shell colours offered.", "detail_only": true},
+
+    {"id": "rechargeable", "group": "battery", "kind": "flag", "label": "Rechargeable", "plain": "Rechargeable", "help": "Charges overnight in a case, like a phone. No tiny batteries to change."},
+    {"id": "battery_hours", "group": "battery", "kind": "text", "label": "Hours per charge", "plain": "How long a charge lasts", "help": "Maker's figures. Streaming and noise programs use more power."},
+    {"id": "charge_time", "group": "battery", "kind": "text", "label": "Charge time", "plain": "Charging time", "help": "Time to a full charge, and what a quick top-up gives you."},
+    {"id": "disposable", "group": "battery", "kind": "text", "label": "Disposable battery option", "plain": "Battery option", "help": "Some styles use small zinc-air batteries you replace every few days.", "detail_only": true},
+
+    {"id": "iphone", "group": "phone", "kind": "flag", "label": "iPhone streaming (MFi / LE Audio)", "plain": "Streams from iPhone", "help": "Phone calls, music and videos from an iPhone play straight into the aids."},
+    {"id": "android", "group": "phone", "kind": "flag", "label": "Android streaming (ASHA / LE Audio / Classic)", "plain": "Streams from Android", "help": "Calls and audio from Android phones play straight into the aids. Depends on the phone model."},
+    {"id": "bt_stack", "group": "phone", "kind": "text", "label": "Bluetooth stack", "plain": "Bluetooth type", "help": "The wireless standards it speaks.", "detail_only": true},
+    {"id": "auracast", "group": "phone", "kind": "flag", "label": "Auracast broadcast audio", "plain": "Auracast ready", "help": "A new kind of public broadcast (airports, gyms, TVs) the aids can tune into, like a radio station."},
+    {"id": "hands_free", "group": "phone", "kind": "flag", "label": "Hands-free calls", "plain": "Hands-free calls", "help": "Talk on the phone with the phone in your pocket: the aids' microphones pick up your voice."},
+    {"id": "telecoil", "group": "phone", "kind": "flag", "label": "Telecoil", "plain": "Hearing loop (telecoil)", "help": "Picks up hearing loops in theatres, churches and ticket windows."},
+    {"id": "tap", "group": "phone", "kind": "flag", "label": "Tap control", "plain": "Tap to answer", "help": "Double-tap your ear to answer a call or pause music."},
+
+    {"id": "channels", "group": "sound", "kind": "text", "label": "Channels / bands", "plain": "Tuning detail", "help": "How finely the sound is split up for tuning. More is not always better.", "detail_only": true},
+    {"id": "noise", "group": "sound", "kind": "text", "label": "Noise and speech features", "plain": "Help in noise", "help": "How it helps you follow speech in restaurants and crowds."},
+    {"id": "ai", "group": "sound", "kind": "text", "label": "AI / DNN processing", "plain": "AI sound", "help": "Uses a trained neural network to separate speech from noise or pick settings.", "detail_only": true},
+    {"id": "motion", "group": "sound", "kind": "flag", "label": "Motion sensor", "plain": "Knows when you walk", "help": "Senses movement to change how it focuses: ahead when still, around you when walking.", "detail_only": true},
+    {"id": "tinnitus", "group": "sound", "kind": "flag", "label": "Tinnitus sound program", "plain": "Tinnitus sounds", "help": "Plays soft sounds to ease ringing in the ears. Costco's fitting software may not turn this on."},
+    {"id": "cros", "group": "sound", "kind": "flag", "label": "CROS / BiCROS option", "plain": "One-sided hearing option", "help": "For one ear that an aid cannot help: a mic on that side sends sound to the better ear."},
+
+    {"id": "app", "group": "app", "kind": "text", "label": "User app", "plain": "Phone app", "help": "The app for volume, programs and battery."},
+    {"id": "remote", "group": "app", "kind": "text", "label": "Remote care", "plain": "Adjustments from home", "help": "Your hearing aid specialist can fine-tune the aids over the internet.", "detail_only": true}
+  ],
+  "needs": [
+    {"id": "rechargeable", "label": "Rechargeable"},
+    {"id": "iphone", "label": "Streams from iPhone"},
+    {"id": "android", "label": "Streams from Android"},
+    {"id": "hands_free", "label": "Hands-free calls"},
+    {"id": "auracast", "label": "Auracast ready"},
+    {"id": "telecoil", "label": "Hearing loop (telecoil)"},
+    {"id": "ip68", "label": "Sweat and rain (IP68)"},
+    {"id": "in_canal", "label": "In-the-canal style"},
+    {"id": "cros", "label": "One-sided hearing (CROS)"}
+  ]
+}

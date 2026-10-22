@@ -63,19 +63,22 @@ Changing a price or a spec needs no code. The page reads the JSON at start.
 
 | Aid | Maker (parent) | Based on | Notes |
 |---|---|---|---|
-| Sennheiser Sonite R | Sennheiser (Sonova) | Phonak Lumity | Costco's own support page; a newer **Sonite Rise** (Phonak Infinio) appears at Costco in 2026 |
+| Sennheiser Sonite Rise | Sennheiser (Sonova) | Phonak Audéo Infinio R (non-Sphere) | In warehouses since March 2026, replacing the Sonite R; Bluetooth Classic, no telecoil, no Auracast |
 | Jabra Enhance Pro 30 | Jabra (GN) | GN 360 chip + DNN chip | LE Audio, Auracast out of the box; RIE 60s rechargeable, RIE 62 size 13 with telecoil |
-| Philips HearLink 9050 | Philips (Demant) | Oticon platform | MFi, ASHA, LE Audio; Auracast from firmware 1.3.0 |
+| Philips HearLink 9050 | Philips (Demant) | Oticon Intent | MFi, ASHA, LE Audio; Auracast from firmware 1.3.0; Costco's own page lists 24 fitting bands where reviews say 64 channels |
 | Rexton Reach R Plus | Rexton (WS Audiology) | Signia Pure C&G BCT IX 7 class | Bluetooth Classic, telecoil, 54 h battery; Auracast "through a future firmware update" |
 | SoundGear AMP | SoundGear (Starkey) | Starkey Edge AI | LE Audio; pilot in about 100 warehouses since late 2025; no public "Amp 2" found |
+
+Primary sources were thin: Costco's support pages exist for the Philips (read) and the old Sonite R; Rexton's own
+R Plus pages were read. Jabra's consumer site lists only its Enhance Select line, and soundgear.com lists only hearing
+protection, so every Jabra and SoundGear value is marked **reported**. A manufacturer spec sheet or Costco's in-store
+sheet for either would let them turn green.
 
 ## 6. Questions for Steve (answer by number; the defaults stand otherwise)
 
 1. **Same repo or its own?** Default: this repo, folder `compare/`, served at `<Pages address>/compare/`. A
    separate repo would get its own Pages address.
-2. **Sonite R or Sonite Rise?** Costco's support page and the R pair item (#1891070) are Sonite R; HearingTracker
-   and Hearing Buddy say Sonite Rise (Infinio, items #2027784 / #2027785) replaced it in 2026. Default: show
-   **Sonite R** as you named it, with a note that Rise is the newer model. Which is on your shelves?
+2. ~~Sonite R or Sonite Rise?~~ Answered 2026-10-22: **Sonite Rise** (items #2027784 pair, #2027785 single).
 3. **SoundGear Amp 2?** Every public source and Costco item found says **SoundGear AMP** (Edge AI). Default: show
    "SoundGear AMP" and flag that an "Amp 2" could not be confirmed. If you have the Amp 2 spec sheet, a photo of
    the specs page or the item number is enough.
