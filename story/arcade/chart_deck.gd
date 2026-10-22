@@ -16,7 +16,8 @@ const SHAPES: Array[StringName] = [&"sloping", &"notch", &"cookie_bite", &"risin
 const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notch": "NOTCH", &"cookie_bite": "COOKIE BITE", &"rising": "RISING",
 	&"reverse_bite": "REVERSE BITE", &"sensorineural": "SENSORINEURAL", &"conductive": "CONDUCTIVE", &"mixed": "MIXED",
 	&"tymp_a": "TYPE A", &"tymp_b": "TYPE B", &"tymp_as": "TYPE As", &"tymp_c": "TYPE C", &"tymp_ad": "TYPE Ad",
-	&"deg_mild": "MILD", &"deg_moderate": "MODERATE", &"deg_modsevere": "MOD-SEVERE", &"deg_severe": "SEVERE", &"deg_profound": "PROFOUND"}
+	&"deg_mild": "MILD", &"deg_moderate": "MODERATE", &"deg_modsevere": "MOD-SEVERE", &"deg_severe": "SEVERE", &"deg_profound": "PROFOUND",
+	&"flat_fluid": "FLUID", &"flat_wax": "WAX", &"flat_hole": "HOLE", &"flat_peak": "PEAK"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
 ## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
@@ -46,8 +47,21 @@ const DEGREE_ARCH: Dictionary[StringName, Dictionary] = {
 	&"deg_profound": {"plain": [[75, 95, 100, 105, 110, 115, 105, 95], [85, 100, 100, 100, 105, 110, 105, 100]],
 		"lookalike": [[60, 90, 100, 110, 115, 115, 110, 100]]},
 }
-## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS) and degrees (DEGREE DROP).
-const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES}
+## FLAT OUT's chutes, in key order (1-4): a flat tymp read by its canal volume
+## (CaseRules.tymp_b_reading), or not flat at all.
+const FLATS: Array[StringName] = [&"flat_fluid", &"flat_wax", &"flat_hole", &"flat_peak"]
+## Each flat chute's reading in CaseRules.tymp_b_reading.
+const FLAT_READING: Dictionary[StringName, StringName] = {&"flat_fluid": &"fluid", &"flat_wax": &"blocked", &"flat_hole": &"hole"}
+## A flat card's canal volume keeps its reading this far either way (mL).
+const FLAT_MARGIN_ECV := 0.1
+## The peaks a PEAK card may have (no Ad: its peak would climb under the volume gauge).
+const FLAT_PEAKS: Array[StringName] = [&"tymp_a", &"tymp_as", &"tymp_c"]
+## A lookalike's line: one that fits another chute (docs/ARCADE.md section 23). The numbers win.
+const FLAT_TRAP_LINES: Dictionary = {&"flat_fluid": "Never cleaned my ears. Ever.", &"flat_wax": "Had a stinking cold for weeks.",
+	&"flat_hole": "Never cleaned my ears. Ever.", &"flat_peak": "My ear feels full of water."}
+## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS), degrees (DEGREE DROP)
+## and flats (FLAT OUT).
+const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES, &"flats": FLATS}
 ## A tymp card's peak keeps its type this far either way (daPa, mL).
 const TYMP_MARGIN_DAPA := 40
 const TYMP_MARGIN_ML := 0.04
@@ -171,6 +185,10 @@ const LINES: Dictionary = {
 	&"deg_modsevere": ["I only catch people who face me.", "Phone calls are hopeless."],
 	&"deg_severe": ["I hear voices, not words.", "Shouting is all I get."],
 	&"deg_profound": ["I feel the bass more than hear it.", "I lip-read everything."],
+	&"flat_fluid": ["My ear feels full of water.", "Had a stinking cold for weeks.", "Everything's muffled on this side."],
+	&"flat_wax": ["Never cleaned my ears. Ever.", "I use cotton buds every day.", "It went dull after a swim."],
+	&"flat_hole": ["I had grommets as a kid.", "It popped on a dive.", "My ear runs now and then."],
+	&"flat_peak": ["Just here for a check-up.", "My ears feel fine, honest!", "Ears pop on planes, that's all."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -194,6 +212,11 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"deg_modsevere": {"text": "500-2k average 56 to 70: moderately severe", "freq_lo": 500, "freq_hi": 2000},
 	&"deg_severe": {"text": "500-2k average 71 to 90", "freq_lo": 500, "freq_hi": 2000},
 	&"deg_profound": {"text": "500-2k average over 90", "freq_lo": 500, "freq_hi": 2000},
+	# flat tells glow over the card's volume gauge ("gauge"); PEAK's over the curve
+	&"flat_fluid": {"text": "Canal 0.6 to 2 mL, still flat: fluid", "gauge": true},
+	&"flat_wax": {"text": "Canal under 0.6 mL: wax, or the probe on the wall", "gauge": true},
+	&"flat_hole": {"text": "Canal over 2 mL: a hole, or an open grommet", "gauge": true},
+	&"flat_peak": {"text": "A peak, so it isn't flat", "p_lo": -400, "p_hi": 200, "ml_lo": 0.1, "ml_hi": 1.7},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -213,7 +236,7 @@ const BGS: PackedStringArray = ["#ffe6a8", "#d9e6ff", "#d6f5e3", "#ffd9e8", "#ff
 static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dictionary, serial: int) -> Dictionary:
 	if TYPES.has(shape):
 		return make_type_card(rng, shape, opts, serial)
-	if TYMPS.has(shape):
+	if TYMPS.has(shape) or FLATS.has(shape):
 		return make_tymp_card(rng, shape, opts, serial)
 	if DEGREES.has(shape):
 		var dear := "left" if String(opts.get("ear", "right")) == "left" else "right"
@@ -335,9 +358,11 @@ static func stable_type(ac: Dictionary, bc: Dictionary, type: StringName) -> boo
 static func make_tymp_card(rng: RandomNumberGenerator, id: StringName, opts: Dictionary, serial: int) -> Dictionary:
 	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
 	var lookalike := bool(opts.get("lookalike", false))
-	var tymp := make_tymp(rng, id, lookalike)
+	var tymp := make_flat_tymp(rng, id, lookalike) if FLATS.has(id) else make_tymp(rng, id, lookalike)
 	var lines: Array = LINES[id]
 	var line: String = lines[rng.randi() % lines.size()]
+	if FLATS.has(id) and lookalike:
+		line = String(FLAT_TRAP_LINES[id])
 	if id == &"tymp_b" and lookalike:
 		var big := rng.randf() < 0.5
 		var r: Vector2 = TYMP_ECV_LARGE if big else TYMP_ECV_TINY
@@ -384,6 +409,42 @@ static func stable_tymp(t: Dictionary, id: StringName) -> bool:
 		for dm: float in [-TYMP_MARGIN_ML, 0.0, TYMP_MARGIN_ML]:
 			if CaseRules.tymp_type(p + dp, ml + dm) != want:
 				return false
+	return true
+
+
+## (seeded) A FLAT OUT tympanogram: a flat one with the chute's canal volume, or (PEAK) a TYMP TOSS
+## A, As or C peak with a normal volume; a lookalike PEAK is a shallow As. Clear of every line
+## (stable_flat).
+static func make_flat_tymp(rng: RandomNumberGenerator, id: StringName, lookalike: bool) -> Dictionary:
+	if id == &"flat_peak":
+		var kind: StringName = &"tymp_as" if lookalike else FLAT_PEAKS[rng.randi() % FLAT_PEAKS.size()]
+		return make_tymp(rng, kind, false)
+	var r: Vector2 = {&"flat_fluid": TYMP_ECV_NORMAL, &"flat_wax": TYMP_ECV_TINY, &"flat_hole": TYMP_ECV_LARGE}[id]
+	for attempt in MAX_TRIES:
+		var t := make_tymp(rng, &"tymp_b", false)
+		t["ecv_ml"] = snappedf(rng.randf_range(r.x, r.y), 0.1)
+		if stable_flat(t, id):
+			return t
+	push_error("ChartDeck: no stable %s tymp" % id)
+	return {}
+
+
+## The FLAT OUT margin check. PEAK: a TYMP TOSS-stable A, As or C. The rest: a stable B whose
+## canal volume reads the chute's (CaseRules.tymp_b_reading), and still does FLAT_MARGIN_ECV either way.
+static func stable_flat(t: Dictionary, id: StringName) -> bool:
+	if t.is_empty():
+		return false
+	if id == &"flat_peak":
+		for kind: StringName in FLAT_PEAKS:
+			if CaseRules.tymp_type_of(t) == TYMP_TYPE[kind]:
+				return stable_tymp(t, kind)
+		return false
+	if not stable_tymp(t, &"tymp_b"):
+		return false
+	var ecv := float(t["ecv_ml"])
+	for d: float in [-FLAT_MARGIN_ECV, 0.0, FLAT_MARGIN_ECV]:
+		if CaseRules.tymp_b_reading(ecv + d) != FLAT_READING[id]:
+			return false
 	return true
 
 

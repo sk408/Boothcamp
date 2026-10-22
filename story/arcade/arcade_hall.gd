@@ -23,6 +23,7 @@ const CAB_GAP := 40.0
 const CAB_MARGIN := 24.0   ## the least room left and right of the cabinet row
 ## Narrower than this, a cabinet is drawn at this width and scaled down whole (four and up).
 const CAB_MIN_W := 340.0
+const CAB_MIN_W_SIX := 300.0   ## six or more share the row: each is drawn a little narrower inside
 const FLOOR := Color("#2e2442")
 const CARPET := Color("#3b3550")
 const GOLD := Color("#f2b632")
@@ -38,6 +39,8 @@ const CABINETS: Array[Dictionary] = [
 		"pitch": "Read the eardrum's peak. Which type?", "body": Color("#7b2cbf")},
 	{"id": "chart_chute_degrees", "name": "DEGREE DROP", "scene": "res://story/arcade/degree_drop.tscn",
 		"pitch": "How much loss? Drop it by degree.", "body": Color("#ff9f1c")},
+	{"id": "chart_chute_flats", "name": "FLAT OUT", "scene": "res://story/arcade/flat_out.tscn",
+		"pitch": "Flat tymp? Read the canal volume.", "body": Color("#c0479c")},
 ]
 
 ## The cabinet last opened this session: the hall comes back with it selected.
@@ -101,8 +104,12 @@ class Cabinet extends Control:
 		# the marquee
 		var marquee := Rect2(16, 14, size.x - 32, 62)
 		UiDraw.rounded_rect(self, marquee, Palette.INK, 16)
-		draw_string_outline(f, marquee.position + Vector2(0, 45), String(info["name"]), HORIZONTAL_ALIGNMENT_CENTER, marquee.size.x, 36, 8, Color("#1d1830"))
-		draw_string(f, marquee.position + Vector2(0, 45), String(info["name"]), HORIZONTAL_ALIGNMENT_CENTER, marquee.size.x, 36, Palette.SUNNY)
+		# the name, a size smaller until it fits the marquee
+		var name_fs := 36
+		while name_fs > 24 and f.get_string_size(String(info["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, name_fs).x > marquee.size.x - 20:
+			name_fs -= 1
+		draw_string_outline(f, marquee.position + Vector2(0, 32 + name_fs * 0.37), String(info["name"]), HORIZONTAL_ALIGNMENT_CENTER, marquee.size.x, name_fs, 8, Color("#1d1830"))
+		draw_string(f, marquee.position + Vector2(0, 32 + name_fs * 0.37), String(info["name"]), HORIZONTAL_ALIGNMENT_CENTER, marquee.size.x, name_fs, Palette.SUNNY)
 		# the screen and its picture
 		var screen := Rect2(30, 90, size.x - 60, 200)
 		UiDraw.rounded_rect(self, screen.grow(6), Color("#1d1830"), 18, 3, Palette.INK)
@@ -115,6 +122,8 @@ class Cabinet extends Control:
 			_draw_tymps_screen(screen)
 		elif String(info["id"]) == "chart_chute_degrees":
 			_draw_degrees_screen(screen)
+		elif String(info["id"]) == "chart_chute_flats":
+			_draw_flats_screen(screen)
 		else:
 			_draw_desk_screen(screen)
 		# the pitch, the top score, the play sign
@@ -194,6 +203,17 @@ class Cabinet extends Control:
 		var degs := [&"deg_mild", &"deg_moderate", &"deg_modsevere", &"deg_severe", &"deg_profound"]
 		for i in degs.size():
 			ArcadeArt.picture(self, degs[i], r.position + Vector2(36 + i * (r.size.x - 72) / (degs.size() - 1.0), 152), 30.0)
+
+	## A flat tympanogram under a canal volume gauge pointing at TINY, over the four flat pictures.
+	func _draw_flats_screen(r: Rect2) -> void:
+		var card := Rect2(r.position + Vector2(r.size.x * 0.5 - 90, 12), Vector2(180, 96))
+		UiDraw.rounded_rect(self, card, Color("#ffffff"), 10, 3, Palette.INK)
+		var plot := card.grow(-10.0)
+		ArcadeArt.tymp_chart(self, plot, {"type": "B", "peak_ml": 0.04}, Palette.RIGHT_RED, false)
+		ArcadeArt.volume_gauge(self, Rect2(plot.position + Vector2(10, 6), Vector2(plot.size.x - 20, 34)), 0.4, false)
+		var flats := [&"flat_fluid", &"flat_wax", &"flat_hole", &"flat_peak"]
+		for i in flats.size():
+			ArcadeArt.picture(self, flats[i], r.position + Vector2(40 + i * (r.size.x - 80) / (flats.size() - 1.0), 152), 30.0)
 
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:
@@ -327,7 +347,7 @@ func _build() -> void:
 	var w := minf(CAB_SIZE.x, (FIELD.x - 2.0 * margin - gap * (n - 1)) / n)
 	var x0 := (FIELD.x - w * n - gap * (n - 1)) * 0.5
 	# each cabinet stands in a holder, which scales it down whole when the row is too narrow
-	var k := minf(1.0, w / CAB_MIN_W)
+	var k := minf(1.0, w / (CAB_MIN_W if n <= 5 else CAB_MIN_W_SIX))
 	for i in n:
 		var d: Dictionary = CABINETS[i]
 		var c := Cabinet.new(i, d)

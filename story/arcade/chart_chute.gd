@@ -22,6 +22,8 @@ extends Control
 ## tympanogram, sorted into the five Jerger types (CaseRules.tymp_type); MODE_TYMPS, no story charts.
 ## belt = &"degrees" makes it DEGREE DROP (degree_drop.tscn, section 21): one ear's audiogram,
 ## sorted by degree of loss (ClinicRules.degree_name of the 500/1k/2k average); MODE_DEGREES.
+## belt = &"flats" makes it FLAT OUT (flat_out.tscn, section 23): one ear's tympanogram with a canal
+## volume gauge, sorted into FLUID, WAX or HOLE (CaseRules.tymp_b_reading) or PEAK; MODE_FLATS.
 
 signal _sorted(pick: StringName)
 
@@ -38,9 +40,10 @@ const MODE := "chart_chute"
 const MODE_TYPES := "chart_chute_types"
 const MODE_TYMPS := "chart_chute_tymps"
 const MODE_DEGREES := "chart_chute_degrees"
+const MODE_FLATS := "chart_chute_flats"
 ## Each belt's save key and title.
-const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES}
-const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP"}
+const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS}
+const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -77,11 +80,13 @@ const WARMUP_HINTS: Dictionary = {
 	&"tymp_b": "No peak at all, flat as a pancake: TYPE B!",
 	&"deg_mild": "Average 500, 1k and 2k. Between 26 and 40: MILD!",
 	&"deg_moderate": "Same three pitches. This average is 41 to 55: MODERATE!",
+	&"flat_fluid": "Flat tymp, normal canal volume on the gauge: FLUID!",
+	&"flat_wax": "Flat again, but the canal is tiny. Blocked: WAX!",
 }
 
 var seed_value := -1
 var autostart := true
-## &"shapes" (Chart Chute) or &"types" (AIR & BONE): a key of ChartDeck.BELTS.
+## Which belt this scene plays: a key of ChartDeck.BELTS (&"shapes" is Chart Chute).
 @export var belt: StringName = &"shapes"
 
 var _ids: Array = ChartDeck.SHAPES   # the chutes, in key order
@@ -169,7 +174,9 @@ class CardView extends Control:
 		_tymp = UiKit.full_rect()
 		_tymp.draw.connect(func() -> void:
 			if card.has("tymp"):
-				ArcadeArt.tymp_chart(_tymp, tymp_plot(), card["tymp"], Palette.ear_color(String(card["sort_ear"])), true, String(card["sort_ear"])))
+				ArcadeArt.tymp_chart(_tymp, tymp_plot(), card["tymp"], Palette.ear_color(String(card["sort_ear"])), true, String(card["sort_ear"]))
+				if ChartDeck.FLATS.has(StringName(card["shape"])):
+					ArcadeArt.volume_gauge(_tymp, gauge_rect(), float(card["tymp"].get("ecv_ml", 1.0)), true))
 		add_child(_tymp)
 		_over = UiKit.full_rect()
 		_over.draw.connect(_draw_tell)
@@ -185,6 +192,12 @@ class CardView extends Control:
 	## Where a tympanogram card's chart sits on the card.
 	func tymp_plot() -> Rect2:
 		return Rect2(70, 92, size.x - 100, size.y - 164)
+
+	## Where a FLAT OUT card's canal volume gauge sits: across the top of the tympanogram, above
+	## any peak the belt deals.
+	func gauge_rect() -> Rect2:
+		var plot := tymp_plot()
+		return Rect2(plot.position + Vector2(24, 10), Vector2(plot.size.x - 48, 64))
 
 	func show_card(c: Dictionary) -> void:
 		card = c
@@ -273,7 +286,9 @@ class CardView extends Control:
 		var info: Dictionary = ChartDeck.TELLS[tell]
 		var inv := _over.get_global_transform_with_canvas().affine_inverse()
 		var rr: Rect2
-		if info.has("p_lo"):
+		if info.has("gauge"):
+			rr = gauge_rect().grow(4.0)
+		elif info.has("p_lo"):
 			# a tympanogram's patch: pressure by admittance, in the card's own coordinates
 			var plot := tymp_plot()
 			var a := ArcadeArt.tymp_xy(plot, float(info["p_lo"]), float(info["ml_hi"]))
@@ -318,6 +333,8 @@ class ChuteView extends Control:
 	const MINI_TYMPS: Dictionary = {&"tymp_a": {"type": "A", "peak_daPa": 0, "peak_ml": 0.9}, &"tymp_b": {"type": "B", "peak_ml": 0.05},
 		&"tymp_as": {"type": "As", "peak_daPa": 0, "peak_ml": 0.2}, &"tymp_c": {"type": "C", "peak_daPa": -220, "peak_ml": 0.8},
 		&"tymp_ad": {"type": "Ad", "peak_daPa": 0, "peak_ml": 2.5}}
+	## The canal volume each flat chute's gauge points at.
+	const MINI_ECV: Dictionary = {&"flat_fluid": 1.2, &"flat_wax": 0.3, &"flat_hole": 2.9}
 	signal picked(shape: StringName)
 	var shape: StringName
 	var key := 1
@@ -374,6 +391,14 @@ class ChuteView extends Control:
 	func _draw_mini_chart(box: Rect2) -> void:
 		if ChartDeck.TYMPS.has(shape):
 			ArcadeArt.tymp_chart(self, box.grow(-2.0), MINI_TYMPS[shape], Palette.INK, false)
+			return
+		if ChartDeck.FLATS.has(shape):
+			# PEAK: a peak; the rest: the volume gauge with this chute's part lit
+			if shape == &"flat_peak":
+				ArcadeArt.tymp_chart(self, box.grow(-2.0), MINI_TYMPS[&"tymp_a"], Palette.INK, false)
+			else:
+				UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
+				ArcadeArt.volume_gauge(self, box.grow(-6.0), float(MINI_ECV[shape]), false)
 			return
 		if ChartDeck.DEGREES.has(shape):
 			# the five bands as stripes, top (mild) to bottom (profound): this chute's lit, a line in it
@@ -818,6 +843,8 @@ func _ramp_tips(card: Dictionary) -> void:
 		var tip := "Blue X is the left ear. Same shapes!"
 		if card.has("bc"):
 			tip = "Blue X is the left ear. Its bone marks face the other way."
+		elif belt == &"flats":
+			tip = "Blue is the left ear. Same gauge!"
 		elif card.has("tymp"):
 			tip = "Blue is the left ear. Same five types!"
 		elif belt == &"degrees":
@@ -1220,6 +1247,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"flats":
+		return "A flat tymp means look again: the canal volume says fluid, wax or a hole."
 	if belt == &"degrees":
 		return "The degree is the average of 500, 1k and 2k, not the worst point on the chart."
 	if belt == &"tymps":
