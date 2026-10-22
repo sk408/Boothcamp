@@ -134,9 +134,11 @@ class Cabinet extends Control:
 			UiDraw.rounded_rect(self, Rect2(-10, -10, 40, 40), Palette.SUNNY, 10, 3, Palette.INK)
 			draw_string(f, Vector2(-10, 20), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, 40, 24, Palette.INK)
 		if fresh:
-			draw_set_transform(Vector2(size.x - 34, 26), 0.25, Vector2.ONE)
-			UiDraw.star(self, Vector2.ZERO, 40.0, Palette.CORAL, 10)
-			draw_string(f, Vector2(-30, 7), "NEW!", HORIZONTAL_ALIGNMENT_CENTER, 60, 18, Palette.PAPER)
+			# perched on the top edge, inside the cabinet's own width: clear of the marquee's name
+			# and of the next cabinet, however many share the row
+			draw_set_transform(Vector2(size.x - 46, -6), 0.25, Vector2.ONE)
+			UiDraw.star(self, Vector2.ZERO, 32.0, Palette.CORAL, 10)
+			draw_string(f, Vector2(-26, 6), "NEW!", HORIZONTAL_ALIGNMENT_CENTER, 52, 15, Palette.PAPER)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	## A chart card with a sloping line over the five chute pictures.
