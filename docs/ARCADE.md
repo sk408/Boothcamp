@@ -736,3 +736,41 @@ Reply with a number only where you disagree. Each item says what the game will d
 4. DILEMMA when the start level reaches the ceiling, the story's `masking_dilemma`.
 5. The dial reads in dB, as the story's audiometer shows it, without "EM".
 6. The name, the bowls and the lines in section 31.
+
+## 33. CROSS CHECK: a tenth cabinet (part 10)
+
+The hall's third page gets a tenth cabinet, **CROSS CHECK** ("Do the words agree with the tones?"). Day 3's
+habit, drilled: the speech reception threshold should land near the 500-1k-2k average, and when it doesn't,
+which way it misses says what to do next. The rules are the story's (`SpeechRules.agreement`, `srt_pta_diff`).
+Each card is one ear's air chart with the SRT drawn as a dashed line across 500 to 2k and named in the sub line.
+
+| Key | Chute (picture) | The rule (SRT minus the 500-2k average) |
+|---|---|---|
+| 1 | **AGREES** (a level scale) | within 6 dB either way: good agreement |
+| 2 | **TOO GOOD** (a rocket) | words more than 12 dB better than the tones: a non-organic loss is possible, so recheck (Mike, Day 3) |
+| 3 | **TOO POOR** (an anchor) | words more than 12 dB worse: check the instructions, the language and word recognition |
+| 4 | **FAIR** (a scale tipped a little) | 7 to 12 dB off, either way: fair agreement |
+
+- **The tell** glows over 500 to 2k: "AGREES: SRT within 6 of the 500-2k average", "TOO GOOD: Words far better than
+  tones: recheck", "TOO POOR: Words far worse: check instructions, language", "FAIR: SRT 7 to 12 off the average".
+- **The ramp:** warm-up with AGREES and TOO GOOD; TOO POOR opens at 10 s, FAIR at 20 s (the closest reading);
+  left ears at 30 s; lookalikes at 40 s, where 4k and up fall far below the average (only 500, 1k and 2k count).
+- **Honest cards:** the 500-2k spread stays 10 dB or less, so the plain three-tone average applies (never the
+  best-two average a steep loss uses), and the call holds with any one of the three tones 5 dB off: AGREES within
+  4 dB of the average, FAIR 8 to 10 off, TOO GOOD and TOO POOR 15 or more off. Every level is a real 5 dB step.
+- **Lines:** agrees "Words and beeps, about the same.", "Easy words, those."; too good "I heard every word!", "Beeps?
+  Never heard a thing."; too poor "Sorry, what was I meant to say?", "English is my third language."; fair "Some
+  words were tricky.", "I guessed a couple."
+- No story charts and no two-ear sorting; its own board (save key `chart_chute_speech`).
+
+## 34. For Steve: clinical check (CROSS CHECK)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. Agreement bands: good within 6 dB, fair within 12, poor beyond (the story's SpeechRules).
+2. A poor match is split by direction: words better (recheck for a non-organic loss) or words worse (instructions,
+   language, word recognition).
+3. The three-tone average only; steep losses (where the best two are averaged) stay off this belt.
+4. The SRT as a dashed line across 500 to 2k on the chart, with its number in the sub line.
+5. TOO GOOD's line "Beeps? Never heard a thing." hints at the non-organic pattern without saying anyone is faking.
+6. The pictures (level scale, rocket, anchor, tipped scale) and the lines in section 33.
