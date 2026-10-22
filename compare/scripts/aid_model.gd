@@ -5,7 +5,7 @@ extends RefCounted
 const SHELLS := {
 	"silver": Color(0.76, 0.77, 0.79),
 	"graphite": Color(0.36, 0.37, 0.40),
-	"graphite_dark": Color(0.22, 0.23, 0.25),
+	"graphite_dark": Color(0.3, 0.31, 0.34),
 	"beige": Color(0.85, 0.75, 0.63),
 	"rose": Color(0.86, 0.67, 0.62),
 }
@@ -49,61 +49,87 @@ static func build(style: String, shell: String) -> Dictionary:
 
 
 static func _build_behind(root: Node3D, parts: Dictionary, col: Color, bte: bool) -> void:
-	var R := 1.9 if bte else 1.7
-	var thick := 0.46 if bte else 0.36
-	# The case: a crescent over the top of the ear, thick in the middle, rounded at both ends.
+	# The case: a short kidney lying along the top of the ear, about three times as long as it is tall, with blunt
+	# ends and a flatter inner face. A 60 degree arc of a wide circle, swept with a superellipse thickness.
+	var R := 3.4 if bte else 3.0
+	var thick := 0.62 if bte else 0.52
+	var span := 70.0 if bte else 60.0
 	var body := PackedVector3Array()
 	var radii := PackedFloat32Array()
-	var n := 28
+	var n := 40
 	for i in n + 1:
 		var t := float(i) / n
-		var a := deg_to_rad(lerp(25.0, 160.0, t))
-		body.append(Vector3(cos(a) * R, sin(a) * R - R * 0.55, 0))
-		var end_round := sqrt(max(0.0, sin(PI * t)))
-		radii.append(thick * lerp(0.55, 1.0, end_round) * (0.2 + 0.8 * end_round) + 0.02)
-	root.add_child(_sweep(body, radii, 0.78, 20, _mat(col, 0.38)))
-	parts["Case"] = body[n / 2] + Vector3(0, 0, thick * 0.8)
-	# Two microphone ports and a button along the top.
-	var dark := _mat(Color(0.08, 0.08, 0.09), 0.6)
-	for k in [0.38, 0.55]:
-		var p := body[int(n * k)]
-		var out := p.normalized() if p.length() > 0.01 else Vector3.UP
-		var port := _ball(0.07, dark)
-		port.position = p + Vector3(0, thick * 0.9, 0) + out * 0.02
-		root.add_child(port)
-	parts["Microphones"] = body[int(n * 0.47)] + Vector3(0, thick + 0.1, 0)
-	var btn := _ball(0.15, _mat(col.darkened(0.25), 0.3))
-	btn.scale = Vector3(1.3, 0.6, 1.0)
-	btn.position = body[int(n * 0.78)] + Vector3(-0.05, thick * 0.85, 0.0)
+		var a := deg_to_rad(90.0 - span * 0.5 + span * t)
+		body.append(Vector3(cos(a) * R, sin(a) * R - R, 0))
+		# Superellipse ends: full thickness almost to the tips, then a quick round-off.
+		radii.append(max(thick * pow(max(0.0, 1.0 - pow(absf(2.0 * t - 1.0), 6.0)), 1.0 / 6.0), 0.02))
+	var shell := _mat(col, 0.55)
+	root.add_child(_sweep(body, radii, 0.72, 28, shell))
+	var top := func(t: float, lift: float) -> Vector3:
+		# A point on the case's top ridge at t (0 = front end, 1 = back end).
+		var a := deg_to_rad(90.0 - span * 0.5 + span * t)
+		var p := Vector3(cos(a) * R, sin(a) * R - R, 0)
+		return p + Vector3(cos(a), sin(a), 0) * (thick * lift)
+	parts["Case"] = body[n / 2] + Vector3(0, -thick * 0.2, thick * 0.9)
+	# Two microphone slots and a raised button on the top ridge; two gold charging contacts underneath.
+	var dark := _mat(Color(0.07, 0.07, 0.08), 0.6)
+	for k: float in [0.36, 0.5]:
+		var slot := _capsule(0.045, 0.22, dark)
+		slot.position = top.call(k, 0.97)
+		slot.rotation = Vector3(PI / 2, 0, 0)
+		root.add_child(slot)
+	parts["Microphones"] = top.call(0.43, 1.4)
+	var btn := _capsule(0.09, 0.42, _mat(col.darkened(0.22), 0.4))
+	btn.position = top.call(0.74, 0.93)
+	btn.rotation = Vector3(0, 0, deg_to_rad(90.0 - span * 0.5 + span * 0.74) + PI / 2)
 	root.add_child(btn)
-	parts["Button"] = btn.position + Vector3(0, 0.15, 0)
-	# From the front end, the wire (RIC) or the tube (BTE) curves down into the canal.
-	var start := body[0] + Vector3(0.0, -0.05, 0)
-	var tip := Vector3(start.x + 0.3, start.y - 2.4, 0.9)
-	var c1 := start + Vector3(0.9, -0.2, 0.1)
-	var c2 := tip + Vector3(0.6, 0.9, 0.0)
+	parts["Button"] = top.call(0.8, 1.5)
+	var gold := _mat(Color(0.85, 0.68, 0.3), 0.3)
+	gold.metallic = 0.8
+	for k: float in [0.44, 0.56]:
+		var c := _ball(0.07, gold)
+		c.scale = Vector3(1, 0.5, 1)
+		c.position = top.call(k, -0.95)
+		root.add_child(c)
+	# From the top front end, the hair-thin wire (RIC) or the clear tube (BTE) arcs forward over the ear, then
+	# down and inward into the canal.
+	var start: Vector3 = top.call(0.02, 0.35)
+	var tip := start + Vector3(0.9, -2.9, 0.9)
+	var c1 := start + Vector3(1.0, 0.35, 0.1)
+	var c2 := tip + Vector3(0.35, 1.5, -0.2)
 	var path := PackedVector3Array()
 	var wr := PackedFloat32Array()
-	for i in 25:
-		var t := float(i) / 24.0
+	for i in 41:
+		var t := float(i) / 40.0
 		path.append(_bez(start, c1, c2, tip, t))
-		wr.append(0.1 if bte else 0.045)
-	var tube_col := Color(0.92, 0.94, 0.96, 0.55) if bte else Color(0.55, 0.57, 0.6)
-	root.add_child(_sweep(path, wr, 1.0, 10, _mat(tube_col, 0.2, bte)))
-	parts["Sound tube" if bte else "Receiver wire"] = path[8] + Vector3(0.12, 0, 0)
-	var dir := (path[24] - path[22]).normalized()
+		wr.append(0.09 if bte else 0.03)
+	var wire_col := Color(0.86, 0.9, 0.94, 0.5) if bte else Color(0.62, 0.65, 0.7, 0.85)
+	root.add_child(_sweep(path, wr, 1.0, 10, _mat(wire_col, 0.25, true)))
+	parts["Sound tube" if bte else "Receiver wire"] = path[10] + Vector3(0.15, 0.05, 0)
+	var dir := (path[40] - path[37]).normalized()
+	var end := tip
 	if not bte:
-		var rec := _capsule(0.13, 0.5, _mat(Color(0.18, 0.19, 0.21), 0.4))
-		rec.position = tip + dir * 0.2
-		rec.look_at_from_position(rec.position, rec.position + dir, Vector3.BACK)
-		rec.rotate_object_local(Vector3.RIGHT, PI / 2)
+		var rec := _capsule(0.12, 0.46, _mat(col.darkened(0.08), 0.5))
+		rec.transform = Transform3D(_along(dir), tip + dir * 0.2)
 		root.add_child(rec)
-		parts["Receiver"] = rec.position + Vector3(0.2, 0, 0)
-	var dome := _ball(0.36, _mat(Color(0.97, 0.97, 0.98, 0.6), 0.25, true))
-	dome.scale = Vector3(1.0, 0.75, 1.0)
-	dome.position = tip + dir * (0.5 if not bte else 0.25)
-	root.add_child(dome)
-	parts["Dome"] = dome.position + Vector3(0, -0.35, 0)
+		parts["Receiver"] = tip + dir * 0.2 + Vector3(0.25, 0, 0)
+		end = tip + dir * 0.4
+	# A soft mushroom dome: a flattened cap over a short stem.
+	var dome_mat := _mat(Color(0.97, 0.97, 0.98, 0.55), 0.3, true)
+	var cap := _ball(0.32, dome_mat)
+	cap.transform = Transform3D(_along(dir).scaled(Vector3(1.0, 0.55, 1.0)), end + dir * 0.12)
+	root.add_child(cap)
+	parts["Dome"] = end + dir * 0.2 + Vector3(-0.35, -0.1, 0)
+
+
+## A basis whose Y axis points along dir (capsules and spheres are built along Y).
+static func _along(dir: Vector3) -> Basis:
+	var y := dir.normalized()
+	var x := y.cross(Vector3.BACK)
+	if x.length() < 0.1:
+		x = y.cross(Vector3.RIGHT)
+	x = x.normalized()
+	return Basis(x, y, x.cross(y).normalized())
 
 
 static func _build_canal(root: Node3D, parts: Dictionary, col: Color, cic: bool) -> void:
@@ -115,7 +141,7 @@ static func _build_canal(root: Node3D, parts: Dictionary, col: Color, cic: bool)
 	for i in n + 1:
 		var t := float(i) / n
 		# The canal bends a little: the shell follows it.
-		path.append(Vector3(sin(t * 1.1) * 0.35, -t * length, t * t * 0.25))
+		path.append(Vector3(t * t * 0.45, -t * length, t * t * 0.3))
 		var taper: float = lerp(r0, r0 * 0.6, t)
 		# Round the deep end off smoothly over the last 30 %.
 		var cap := sqrt(max(0.0, 1.0 - pow((t - 0.7) / 0.3, 2.0))) if t > 0.7 else 1.0
@@ -243,6 +269,7 @@ static func _mat(c: Color, rough: float, see_through: bool = false) -> StandardM
 	m.albedo_color = c
 	m.roughness = rough
 	m.metallic = 0.05
+	m.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if see_through:
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

@@ -8,6 +8,7 @@ var meta: Dictionary = {}     # aids.json "meta" (specs_as_of, notes)
 var rows: Array = []          # rows.json "rows"
 var groups: Array = []        # rows.json "groups"
 var needs: Array = []         # rows.json "needs"
+var quiz: Array = []          # rows.json "quiz": Hoot's questions
 var prices: Dictionary = {}   # prices.json "prices" by aid id
 var prices_meta: Dictionary = {}
 var sources: Dictionary = {}  # sources.json by source id
@@ -27,6 +28,7 @@ func load_all(dir: String = "res://data") -> bool:
 	rows = r.get("rows", [])
 	groups = r.get("groups", [])
 	needs = r.get("needs", [])
+	quiz = r.get("quiz", [])
 	prices = p.get("prices", {})
 	prices_meta = p.get("meta", {})
 	for src in s.get("sources", []):
