@@ -501,3 +501,46 @@ Reply with a number only where you disagree. Each item says what the game will d
 4. No story charts on this belt (Skye's and Barnaby's flat tymps could come later as gold cards).
 5. Type C here is any peak below -100 daPa (no C1/C2 split).
 6. The lines in section 19.
+
+## 21. DEGREE DROP: a fifth cabinet (part 5)
+
+The hall gets a fifth cabinet, **DEGREE DROP** ("How much loss? Drop it by degree."). The belt game again, on a
+fourth belt: each card is one ear's audiogram, and the five chutes are the degree of loss by the **pure-tone
+average of 500, 1k and 2k** (`ClinicRules.pta`), named with the scale the game's audiogram already prints
+(`ClinicRules.degree_name`, Goodman 1965):
+
+| Key | Chute (picture: the quietest everyday sound still heard) | Average of 500, 1k, 2k |
+|---|---|---|
+| 1 | **MILD** (a ticking clock) | 26 to 40 dB HL |
+| 2 | **MODERATE** (talking) | 41 to 55 |
+| 3 | **MOD-SEVERE** (a shout) | 56 to 70 |
+| 4 | **SEVERE** (a drum) | 71 to 90 |
+| 5 | **PROFOUND** (a jet) | over 90 |
+
+- **The tell** glows over 500 to 2k and gives the band, e.g. "MODERATE: 500-2k average 41 to 55".
+- **The ramp:** warm-up with MILD and MODERATE; MOD-SEVERE opens at 10 s, SEVERE at 20 s, PROFOUND at 30 s; left
+  ears at 30 s; lookalikes at 40 s (a steep slope whose 4k and 8k are far worse than its average, or a rising chart
+  whose 250 is: the average is what counts).
+- **Honest charts:** shapes from Chart Chute's slopes, flats and rising charts, lifted to a band. The average sits
+  at least 5 dB inside its band and stays in it with any one point 5 dB off; every point stays inside the
+  audiometer's range (no "no response" marks).
+- **Lines:** mild "I miss the odd word.", "Fine one-to-one, not in a crowd."; moderate "I live on 'pardon?'.", "The TV
+  is too loud, says my wife."; mod-severe "I only catch people who face me.", "Phone calls are hopeless."; severe "I
+  hear voices, not words.", "Shouting is all I get."; profound "I feel the bass more than hear it.", "I lip-read
+  everything."
+- No story charts, no two-ear cards; its own board (save key `chart_chute_degrees`). With five cabinets the hall
+  draws each one a little smaller still.
+
+## 22. For Steve: clinical check (DEGREE DROP)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. Degree is the **three-frequency average (500, 1k, 2k)**, the one the game's speech days use, not a four-frequency
+   average with 4k.
+2. The bands are the ones the audiogram already prints (Goodman): mild 26-40, moderate 41-55, moderately severe
+   56-70, severe 71-90, profound over 90.
+3. The chute says **MOD-SEVERE** to fit; the tell and the NEW CHUTE line say "moderately severe".
+4. The pictures are the quietest everyday sound still heard (clock, talking, a shout, a drum, a jet), a loose
+   "familiar sounds" idea, not exact levels.
+5. No "normal" chute (every chart has a loss) and no profound charts with "no response" arrows.
+6. The lines in section 21.
