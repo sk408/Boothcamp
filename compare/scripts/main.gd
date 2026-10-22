@@ -322,24 +322,26 @@ func _aid_card(a: Dictionary) -> Control:
 	band.add_child(bv)
 	bv.add_child(Ui.wrap(a.name, Ui.H3, Ui.SUNNY, 700))
 	bv.add_child(Ui.wrap(str(data.cell(a, "maker").get("v", "")), Ui.SMALL, Color("#cfc6e0"), 500))
-	# The picture on a paper inset.
+	# What it looks like (drawn from the maker's photo), then how it is worn.
 	var inset := Ui.card(Ui.PAPER, Ui.INK, 18, 8, 0)
 	v.add_child(inset)
-	var iv := Ui.vbox(4)
+	var iv := Ui.vbox(6)
 	inset.add_child(iv)
 	var styles: Array = a.model_styles
-	var pics := Ui.hbox(4)
-	pics.alignment = BoxContainer.ALIGNMENT_CENTER
-	iv.add_child(pics)
-	var main_h := 190.0 if narrow() else 200.0
-	pics.add_child(_picture(styles[0], a.shell, main_h))
-	if styles.size() > 1:
-		var also := Ui.vbox(2)
-		also.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		for s in styles.slice(1):
-			also.add_child(_picture(s, a.shell, main_h * 0.42))
-		pics.add_child(also)
-	iv.add_child(_center(Ui.wrap(STYLE_CAPTIONS.get(styles[0], ""), Ui.SMALL, Ui.INK_SOFT, 500)))
+	var look := Ui.hbox(0)
+	look.alignment = BoxContainer.ALIGNMENT_CENTER
+	iv.add_child(look)
+	var keys := _product_keys(a)
+	# Big, but never wider than the card (the second drawing is half size).
+	var main_h: float = minf(210.0 if narrow() else 200.0, (W - 110.0) / (1.5 if keys.size() > 1 else 1.0))
+	for i in keys.size():
+		look.add_child(_art(keys[i], main_h if i == 0 else main_h * 0.5, 1.0))
+	var worn := Ui.hbox(8)
+	iv.add_child(worn)
+	worn.add_child(_picture(styles[0], a.shell, 74.0))
+	var cap := Ui.wrap(STYLE_CAPTIONS.get(styles[0], ""), Ui.SMALL, Ui.INK_SOFT, 500)
+	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	worn.add_child(cap)
 	if styles.size() > 1:
 		var names := []
 		for s in styles.slice(1):
@@ -432,6 +434,29 @@ func _picture(style: String, shell: String, h: float) -> Control:
 	return tr
 
 
+## The product drawings of an aid: product-<id> first, then product-<id>-<style> for other styles drawn.
+func _product_keys(a: Dictionary) -> Array:
+	var keys := []
+	if Sketch.has("product-" + a.id):
+		keys.append("product-" + a.id)
+	for s in a.model_styles:
+		if Sketch.has("product-%s-%s" % [a.id, s]):
+			keys.append("product-%s-%s" % [a.id, s])
+	return keys
+
+
+## Any drawing from data/art.json at height h; aspect = width / height.
+func _art(key: String, h: float, aspect: float) -> Control:
+	var tr := TextureRect.new()
+	var factor: float = get_window().size.x / maxf(W, 1.0)
+	tr.texture = Sketch.texture(key, h * factor)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tr.custom_minimum_size = Vector2(h * aspect, h)
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return tr
+
+
 func _center(c: Control) -> Control:
 	var cc := CenterContainer.new()
 	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -487,13 +512,20 @@ func _aid_details(a: Dictionary) -> Control:
 	v.add_child(pic_card)
 	var pv := Ui.vbox(10)
 	pic_card.add_child(pv)
+	pv.add_child(Ui.wrap("What it looks like", Ui.H3, Ui.INK, 700))
+	var looks := Ui.flow(16)
+	looks.alignment = FlowContainer.ALIGNMENT_CENTER
+	pv.add_child(looks)
+	for k in _product_keys(a):
+		looks.add_child(_art(k, 240.0 if k == "product-" + a.id else 150.0, 1.0))
+	pv.add_child(Ui.wrap("How it's worn", Ui.H3, Ui.INK, 700))
 	var pics := Ui.flow(16)
 	pics.alignment = FlowContainer.ALIGNMENT_CENTER
 	pv.add_child(pics)
 	for s in a.model_styles:
 		var one := Ui.vbox(4)
 		one.custom_minimum_size.x = 200
-		one.add_child(_center(_picture(s, a.shell, 230.0)))
+		one.add_child(_center(_picture(s, a.shell, 190.0)))
 		one.add_child(Ui.wrap(AidModel.STYLE_NAMES.get(s, s), Ui.BODY, Ui.INK, 700))
 		one.add_child(Ui.wrap(STYLE_CAPTIONS.get(s, ""), Ui.SMALL, Ui.INK_SOFT))
 		pics.add_child(one)
@@ -527,7 +559,7 @@ func _aid_details(a: Dictionary) -> Control:
 	return outer
 
 
-const STYLE_LINE := "These are simple drawings of each style, not photos of the product."
+const STYLE_LINE := "Drawn from the makers' product photos. The ear pictures show how each style is worn."
 
 
 func _short(s: String) -> String:
@@ -1016,7 +1048,11 @@ func _result_card(a: Dictionary, miss: Array, big: bool) -> Control:
 	if big:
 		var inset := Ui.card(Ui.PAPER, Ui.INK, 16, 4, 0)
 		inset.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		inset.add_child(_picture(a.model_styles[0], a.shell, 96.0 if narrow() else 130.0))
+		var keys := _product_keys(a)
+		if keys.is_empty():
+			inset.add_child(_picture(a.model_styles[0], a.shell, 96.0 if narrow() else 130.0))
+		else:
+			inset.add_child(_art(keys[0], 96.0 if narrow() else 130.0, 1.0))
 		h.add_child(inset)
 	var head := Ui.vbox(4)
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -84,10 +84,11 @@ Changing a price or a spec needs no code. The page reads the JSON at start.
 | Rexton Reach R Plus | Rexton (WS Audiology) | Signia Pure C&G BCT IX 7 class | Bluetooth Classic, telecoil, 54 h battery; Auracast "through a future firmware update" |
 | SoundGear AMP 2 | SoundGear (Starkey) | Starkey Edge AI | LE Audio; pilot in about 100 warehouses since late 2025; soundgearamp.com shows the AMP 2 (Steve), reviews say AMP |
 
-Primary sources were thin: Costco's support pages exist for the Philips (read) and the old Sonite R; Rexton's own
-R Plus pages were read. Jabra's consumer site lists only its Enhance Select line, and soundgear.com lists only hearing
-protection, so every Jabra and SoundGear value is marked **reported**. A manufacturer spec sheet or Costco's in-store
-sheet for either would let them turn green.
+Primary sources were thin at first. On 2026-10-22 Steve supplied the makers' product photos and four data sheets
+(Sonite Rise, HearLink 9050 miniRITE for Costco, Reach R-Li T BC, SoundGear Amp 2 mRIC R). The sheets made the
+receivers and their output, battery hours, and several features **verified** (sources `sn_sheet`, `ph_sheet`,
+`rx_sheet`, `sg_sheet`). No public Jabra Enhance Pro 30 data sheet exists (GN publishes it behind its professional
+portal), so Jabra stays **reported**.
 
 ## 6. Questions for Steve (answer by number; the defaults stand otherwise)
 
@@ -109,7 +110,7 @@ sheet for either would let them turn green.
    Default stands unless you want another name.
 9. ~~A "help me choose" quiz?~~ Built as Hoot's five questions (section 2.3); it never names a winner.
 10. **Card colours:** each aid has its own bright colour, chosen to be distinct and not a brand colour. Default stands.
-11. **Pictures from real photos.** The drawings should follow the real products, but the makers' and Costco's
-    sites cannot be read from the build machine. Default: keep the hand-made drawings of each style. If you send
-    photos (yours from the warehouse, or saved from the makers' pages), the drawings get redrawn from them; product
-    photos themselves are not shown on the page unless they are your own.
+11. ~~Pictures from real photos?~~ Done 2026-10-22 from Steve's photos: `compare/tools/trace_photo.py` traces each
+    aid's outline (case, wire, receiver) into `compare/tools/outlines.json`, and `make_art.py` draws the aid over it
+    in the page's style, with buttons, lights and microphones placed by eye. No photo, logo or lettering ships;
+    the photos are makers' product shots, so they are used only as tracing references.
