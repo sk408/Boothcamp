@@ -47,6 +47,8 @@ const CABINETS: Array[Dictionary] = [
 		"pitch": "Flat tymp? Read the canal volume.", "body": Color("#c0479c")},
 	{"id": "chart_chute_otos", "name": "OTO SPOT", "scene": "res://story/arcade/oto_spot.tscn",
 		"pitch": "Shine the light. What's in the ear?", "body": Color("#2d6cdf")},
+	{"id": "chart_chute_masks", "name": "MASQUERADE", "scene": "res://story/arcade/masquerade.tscn",
+		"pitch": "Mask or not? Read the gap and the 40.", "body": Color("#1f3a5f")},
 ]
 
 ## The cabinet last opened this session: the hall comes back with it selected.
@@ -164,6 +166,8 @@ class Cabinet extends Control:
 			_draw_flats_screen(screen)
 		elif String(info["id"]) == "chart_chute_otos":
 			_draw_otos_screen(screen)
+		elif String(info["id"]) == "chart_chute_masks":
+			_draw_masks_screen(screen)
 		else:
 			_draw_desk_screen(screen)
 		# the pitch, the top score, the play sign
@@ -261,6 +265,25 @@ class Cabinet extends Control:
 		var otos := [&"oto_clear", &"oto_wax", &"oto_fluid", &"oto_hole", &"oto_object"]
 		for i in otos.size():
 			ArcadeArt.picture(self, otos[i], r.position + Vector2(36 + i * (r.size.x - 72) / (otos.size() - 1.0), 152), 30.0)
+
+	## A small chart with one pitch lit: bone up top, air far below it (mask both), over the three masks.
+	func _draw_masks_screen(r: Rect2) -> void:
+		var card := Rect2(r.position + Vector2(r.size.x * 0.5 - 90, 12), Vector2(180, 96))
+		UiDraw.rounded_rect(self, card, Color("#ffffff"), 10, 3, Palette.INK)
+		var xs := [card.position.x + 30, card.position.x + 70, card.position.x + 110, card.position.x + 150]
+		draw_rect(Rect2(xs[2] - 11, card.position.y + 6, 22, card.size.y - 12), Color(Palette.SUNNY, 0.45))
+		var pts := PackedVector2Array()
+		for i in xs.size():
+			var y := card.position.y + 18 + 12 * i
+			var tip := Vector2(xs[i] - 10, card.position.y + 18)
+			draw_polyline(PackedVector2Array([tip + Vector2(5, -4), tip, tip + Vector2(5, 4)]), Palette.RIGHT_RED, 2.5, true)
+			pts.append(Vector2(xs[i], y + 34))
+		draw_polyline(pts, Palette.RIGHT_RED, 3.0, true)
+		for p: Vector2 in pts:
+			UiDraw.ear_symbol(self, p, "right", 8.0, 2.5)
+		var masks := [&"mask_none", &"mask_bone", &"mask_both"]
+		for i in masks.size():
+			ArcadeArt.picture(self, masks[i], r.position + Vector2(60 + i * (r.size.x - 120) / (masks.size() - 1.0), 152), 30.0)
 
 	## A manila file with a REFER print, a ticked intake box with the pin in it, and the two stamps.
 	func _draw_desk_screen(r: Rect2) -> void:

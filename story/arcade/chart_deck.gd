@@ -18,7 +18,8 @@ const CHUTE_WORDS: Dictionary[StringName, String] = {&"sloping": "SLOPE", &"notc
 	&"tymp_a": "TYPE A", &"tymp_b": "TYPE B", &"tymp_as": "TYPE As", &"tymp_c": "TYPE C", &"tymp_ad": "TYPE Ad",
 	&"deg_mild": "MILD", &"deg_moderate": "MODERATE", &"deg_modsevere": "MOD-SEVERE", &"deg_severe": "SEVERE", &"deg_profound": "PROFOUND",
 	&"flat_fluid": "FLUID", &"flat_wax": "WAX", &"flat_hole": "HOLE", &"flat_peak": "PEAK",
-	&"oto_clear": "CLEAR", &"oto_wax": "WAX", &"oto_fluid": "FLUID", &"oto_hole": "HOLE", &"oto_object": "OBJECT"}
+	&"oto_clear": "CLEAR", &"oto_wax": "WAX", &"oto_fluid": "FLUID", &"oto_hole": "HOLE", &"oto_object": "OBJECT",
+	&"mask_none": "NO MASK", &"mask_bone": "MASK BONE", &"mask_both": "MASK BOTH"}
 ## AIR & BONE's chutes, in key order (1-3): where the loss lives (ClinicRules.hearing_type).
 const TYPES: Array[StringName] = [&"sensorineural", &"conductive", &"mixed"]
 ## TYMP TOSS's chutes, in key order (1-5): the Jerger tympanogram types (CaseRules.tymp_type).
@@ -65,10 +66,22 @@ const OTOS: Array[StringName] = [&"oto_clear", &"oto_wax", &"oto_fluid", &"oto_h
 ## Each oto chute's view in ArcadeArt.oto_view.
 const OTO_VIEW: Dictionary[StringName, StringName] = {&"oto_clear": &"clear", &"oto_wax": &"wax", &"oto_fluid": &"fluid",
 	&"oto_hole": &"hole", &"oto_object": &"object"}
+## MASQUERADE's chutes, in key order (1-3): what the test ear needs at the lit frequency, by the
+## story audiometer's rules (ClinicRules.bc_masking_needed, then ac_masking_needed with headphones),
+## the other ear's bone read as the unmasked bone (mask_call).
+const MASKS: Array[StringName] = [&"mask_none", &"mask_bone", &"mask_both"]
+## The test ear's air minus the unmasked bone, per chute (dB, inclusive): never near a rule's line.
+const MASK_GAP: Dictionary[StringName, Vector2i] = {&"mask_none": Vector2i(-5, 0), &"mask_bone": Vector2i(20, 30),
+	&"mask_both": Vector2i(50, 75)}
+## The unmasked bone's starting level per chute (dB HL, inclusive): {"plain" | "lookalike": lo, hi}.
+## A NO MASK lookalike has both ears far down (air still on bone); a MASK BONE lookalike's other ear
+## is the worse one by air (its own call would be MASK BOTH).
+const MASK_BONE_AT: Dictionary[StringName, Dictionary] = {&"mask_none": {"plain": Vector2i(0, 30), "lookalike": Vector2i(45, 50)},
+	&"mask_bone": {"plain": Vector2i(0, 15), "lookalike": Vector2i(0, 15)}, &"mask_both": {"plain": Vector2i(0, 20), "lookalike": Vector2i(0, 20)}}
 ## The belts: shapes (Chart Chute), types (AIR & BONE), tymps (TYMP TOSS), degrees (DEGREE DROP),
-## flats (FLAT OUT) and otos (OTO SPOT).
+## flats (FLAT OUT), otos (OTO SPOT) and masks (MASQUERADE).
 const BELTS: Dictionary[StringName, Array] = {&"shapes": SHAPES, &"types": TYPES, &"tymps": TYMPS, &"degrees": DEGREES, &"flats": FLATS,
-	&"otos": OTOS}
+	&"otos": OTOS, &"masks": MASKS}
 ## A tymp card's peak keeps its type this far either way (daPa, mL).
 const TYMP_MARGIN_DAPA := 40
 const TYMP_MARGIN_ML := 0.04
@@ -201,6 +214,9 @@ const LINES: Dictionary = {
 	&"oto_fluid": ["Had a stinking cold for weeks.", "My ear feels full of water."],
 	&"oto_hole": ["It popped on a dive.", "My ear runs now and then."],
 	&"oto_object": ["My grandson put something in there.", "I felt something crawl in!"],
+	&"mask_none": ["My ears match, I think.", "Same both sides."],
+	&"mask_bone": ["My left's the better one.", "Water in that ear, they said."],
+	&"mask_both": ["This ear's been dead for years.", "I can't hear a thing on this side."],
 }
 ## The tell, drawn on the chart after a wrong drop or a HOOT HELP: where to look, in a few words.
 ## {freq_lo, freq_hi}: the part of the chart that glows.
@@ -235,6 +251,10 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"oto_fluid": {"text": "Amber drum, a fluid line. Refer to a doctor", "view": true},
 	&"oto_hole": {"text": "A hole in the drum. Refer; no water, no impressions", "view": true},
 	&"oto_object": {"text": "It doesn't belong. A doctor takes it out", "view": true},
+	# mask tells glow over the card's lit frequency ("ask")
+	&"mask_none": {"text": "Air sits on bone: no gap to check", "ask": true},
+	&"mask_bone": {"text": "A gap of 10 or more, but under 40", "ask": true},
+	&"mask_both": {"text": "Air 40 over bone: it can cross over", "ask": true},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",
@@ -258,6 +278,8 @@ static func make_card(rng: RandomNumberGenerator, shape: StringName, opts: Dicti
 		return make_tymp_card(rng, shape, opts, serial)
 	if OTOS.has(shape):
 		return make_oto_card(rng, shape, opts, serial)
+	if MASKS.has(shape):
+		return make_mask_card(rng, shape, opts, serial)
 	if DEGREES.has(shape):
 		var dear := "left" if String(opts.get("ear", "right")) == "left" else "right"
 		var dlines: Array = LINES[shape]
@@ -520,6 +542,89 @@ static func stable_degree(t: Dictionary, id: StringName) -> bool:
 		if v < -10 or v % 5 != 0 or ClinicRules.clamp_db(v, f) != v:
 			return false
 	return true
+
+
+## (seeded) One MASQUERADE card: both ears' air, the unmasked bone (drawn as the test ear's) and one
+## lit frequency where the test ear needs `id`. Adds "bc" {ear: {freq: dB}}, "bc_masked" {} and
+## "mask" {"freq": the lit frequency, "other_ear"} to the usual card keys; "ear" is the test ear.
+static func make_mask_card(rng: RandomNumberGenerator, id: StringName, opts: Dictionary, serial: int) -> Dictionary:
+	var ear := "left" if String(opts.get("ear", "right")) == "left" else "right"
+	var other := "left" if ear == "right" else "right"
+	var chart := make_mask_chart(rng, id, bool(opts.get("lookalike", false)))
+	var lines: Array = LINES[id]
+	var first := FIRST[rng.randi() % FIRST.size()]
+	return {
+		"serial": serial, "shape": id, "ear": ear, "sort_ear": ear, "ac": {ear: chart.get("test", {}), other: chart.get("other", {})},
+		"bc": {ear: chart.get("bone", {})}, "bc_masked": {}, "mask": {"freq": BONE_FREQS[rng.randi() % BONE_FREQS.size()], "other_ear": other},
+		"golden": false, "other_shape": &"", "name": "%s %s" % [first, LAST[rng.randi() % LAST.size()]],
+		"who": "chute_%d" % (serial % PORTRAIT_IDS), "look": _look(rng, "doris" if FIRST.find(first) >= 12 else "gus"),
+		"line": lines[rng.randi() % lines.size()],
+	}
+
+
+## (seeded) {"test": {freq: dB}, "other": {freq: dB}, "bone": {freq: dB}} for a mask chute: the
+## same call at every bone frequency, so any of them can be lit (stable_mask).
+static func make_mask_chart(rng: RandomNumberGenerator, id: StringName, lookalike: bool) -> Dictionary:
+	var at: Vector2i = MASK_BONE_AT[id]["lookalike" if lookalike else "plain"]
+	var gap: Vector2i = MASK_GAP[id]
+	for attempt in MAX_TRIES:
+		var base := 5 * rng.randi_range(at.x / 5, at.y / 5)
+		var tilt := 5 * rng.randi_range(0, 2)   # bone a little worse toward the highs
+		var bone := {}
+		var test := {}
+		var other := {}
+		for i in BONE_FREQS.size():
+			var f: int = BONE_FREQS[i]
+			var b := base + (tilt if i >= 2 else 0) + (5 * rng.randi_range(-1, 1) if rng.randf() < 0.3 else 0)
+			bone[f] = b
+			test[f] = b + 5 * rng.randi_range(gap.x / 5, gap.y / 5)
+			# the other ear: the better cochlea, air on its bone; a MASK BONE lookalike's is the worse by air
+			other[f] = b + (5 * rng.randi_range(8, 11) if lookalike and id == &"mask_bone" else 5 * rng.randi_range(0, 1))
+		var ok := true
+		for f: int in BONE_FREQS:
+			if not stable_mask(int(test[f]), int(bone[f]), id) or not _real_bone(int(bone[f]), f):
+				ok = false
+		if not ok:
+			continue
+		for t: Dictionary in [test, other]:
+			t[250] = int(t[500]) + 5 * rng.randi_range(-1, 1)
+			t[8000] = int(t[4000]) + 5 * rng.randi_range(0, 2)
+			_add_interoctaves(t)
+			for f: int in t:
+				if int(t[f]) < -10 or ClinicRules.clamp_db(int(t[f]), f) != int(t[f]):
+					ok = false
+		if ok:
+			return {"test": test, "other": other, "bone": bone}
+	push_error("ChartDeck: no stable %s chart" % id)
+	return {}
+
+
+## The masking call for a test ear's air over the unmasked bone (headphones): MASK BOTH when air can
+## cross to the other ear (ClinicRules.ac_masking_needed, which always brings a bone gap with it),
+## MASK BONE for an air-bone gap (bc_masking_needed), else NO MASK.
+static func mask_call(test_ac: int, bone: int) -> StringName:
+	if ClinicRules.ac_masking_needed(test_ac, bone, &"phones"):
+		return &"mask_both"
+	if ClinicRules.bc_masking_needed(test_ac, bone):
+		return &"mask_bone"
+	return &"mask_none"
+
+
+## The mask card's margin check at one frequency: the gap is inside the chute's MASK_GAP, and the call
+## holds with the air or the bone 5 dB either way.
+static func stable_mask(test_ac: int, bone: int, id: StringName) -> bool:
+	var gap: Vector2i = MASK_GAP[id]
+	if test_ac - bone < gap.x or test_ac - bone > gap.y:
+		return false
+	for d: int in [-5, 0, 5]:
+		if mask_call(test_ac + d, bone) != id or mask_call(test_ac, bone + d) != id:
+			return false
+	return true
+
+
+## A bone level the audiometer can present at `freq` (a 5 dB step inside the bone range).
+static func _real_bone(db: int, freq: int) -> bool:
+	return db >= -10 and db % 5 == 0 and db <= ClinicRules.max_db_for(freq, &"bone")
 
 
 ## A story patient's own chart, as a golden card ({} if the patient file is missing).

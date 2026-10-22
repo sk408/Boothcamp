@@ -652,3 +652,46 @@ Reply with a number only where you disagree. Each item says what the game will d
    DEGREE DROP, FLAT OUT, OTO SPOT.
 2. No page names or groups (such as "charts" and "ears"), just numbers and dots.
 3. New cabinets join the last page; a fresh one keeps its NEW! starburst until it is played.
+
+## 29. MASQUERADE: an eighth cabinet (part 8)
+
+The hall's second page gets an eighth cabinet, **MASQUERADE** ("Mask or not? Read the gap and the 40."). The
+masking rules the story's audiometer uses (`ClinicRules.bc_masking_needed` and `ac_masking_needed`, with
+headphones), drilled one call at a time. Each card is a two-ear audiogram with both ears' air and the
+unmasked bone (the better cochlea's, as the game draws it), one frequency lit as a column, and the tag naming
+the test ear. The question: what does this ear need at this frequency?
+
+| Key | Chute (picture) | The rule at the lit frequency |
+|---|---|---|
+| 1 | **NO MASK** (a bare, smiling face) | the test ear's air is within 5 dB of the unmasked bone: no gap, and far from the 40 |
+| 2 | **MASK BONE** (an eye mask) | an air-bone gap of 10 or more (here 20 to 30), but air is under bone + 40 |
+| 3 | **MASK BOTH** (a full masquerade mask) | air is 40 or more over the bone (here 50 or more): it can cross to the other ear, and the gap is huge too |
+
+- With headphones, air needing masking always means bone needs it too (a 40 dB lead is a gap of 40), so there
+  is no "air only" chute; the tell for MASK BOTH says so.
+- **The tell** lights the column and states the rule: "NO MASK: Air sits on bone: no gap to check", "MASK BONE: A
+  gap of 10 or more, but under 40", "MASK BOTH: Air 40 over bone: it can cross over". The chart's gap brackets
+  show too, as on AIR & BONE.
+- **The ramp:** warm-up with NO MASK and MASK BONE; MASK BOTH opens at 15 s; left ears at 30 s; lookalikes at
+  40 s: both ears down a long way (the chart looks awful, but air sits on bone: NO MASK), or the lit ear is the
+  BETTER ear with a gap (bone still needs masking).
+- **Honest cards:** each call holds with either number (air or bone) 5 dB off, every level is a real 5 dB step
+  inside the audiometer's range, and the lit frequency is one of 500, 1k, 2k or 4k (where bone is tested).
+- **Lines:** no mask "My ears match, I think.", "Same both sides."; mask bone "My left's the better one.", "Water in
+  that ear, they said."; mask both "This ear's been dead for years.", "I can't hear a thing on this side."
+- No story charts, no two-ear sorting by colour (the tag names the ear); its own board (save key
+  `chart_chute_masks`).
+
+## 30. For Steve: clinical check (MASQUERADE)
+
+Reply with a number only where you disagree. Each item says what the game will do.
+
+1. Headphones only (interaural attenuation 40 dB); no inserts (55) on this belt.
+2. The non-test ear's bone is read as the unmasked bone (the better cochlea), the same estimate the audiometer's
+   masking help uses.
+3. Three chutes: no "MASK AIR" alone, because with an unmasked-bone estimate a 40 dB air lead always brings a
+   10 dB gap with it.
+4. Bone masking from a 10 dB gap (ASHA, as in the story), air masking from 40 over the bone.
+5. The cards never sit on a line: no gap or air 5 better than bone (never a 5 to 15 gap), 20 to 30 for MASK BONE, 50 or more for MASK
+   BOTH.
+6. The pictures (bare face, eye mask, full masquerade mask) and the lines in section 29.

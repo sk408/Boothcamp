@@ -534,3 +534,67 @@ func test_oto_belt_ramp() -> void:
 		assert_true(ChartDeck.TELLS[id].has("view"), "%s's tell glows over the drum" % id)
 		# the tell is said by Hoot on the NEW CHUTE line: keep it short
 		assert_true(String(ChartDeck.TELLS[id]["text"]).split(" ").size() <= 12, "%s's tell is short" % id)
+
+
+# ================================================================ MASQUERADE (the masking belt)
+
+## Every mask card's call at its lit frequency is its chute's by the story audiometer's own rules
+## (ClinicRules.bc_masking_needed, ac_masking_needed with headphones), and still is with the air or
+## the bone 5 dB either way; both ears' air and the bone are real levels.
+func test_every_mask_card_holds_its_call_with_a_margin() -> void:
+	for id: StringName in ChartDeck.MASKS:
+		for lookalike: bool in [false, true]:
+			for s in SEEDS:
+				var c := ChartDeck.make_card(_rng(s * 19 + 9), id, {"ear": "left" if s % 3 == 0 else "right", "lookalike": lookalike}, s)
+				var ear := String(c["sort_ear"])
+				var other := "left" if ear == "right" else "right"
+				assert_eq(c["shape"], id, "%s: the card names its chute" % id)
+				assert_eq(String(c["mask"]["other_ear"]), other, "%s: the other ear is the other one" % id)
+				var f := int(c["mask"]["freq"])
+				assert_has(ChartDeck.BONE_FREQS, f, "%s: the lit frequency is one where bone is tested" % id)
+				var ac: Dictionary = c["ac"][ear]
+				var bone: Dictionary = c["bc"][ear]
+				assert_false(ac.is_empty() or bone.is_empty() or (c["ac"][other] as Dictionary).is_empty(), "%s: two ears and a bone line (seed %d)" % [id, s])
+				var a := int(ac[f])
+				var b := int(bone[f])
+				var want_bone := id != &"mask_none"
+				var want_air := id == &"mask_both"
+				assert_eq(ClinicRules.bc_masking_needed(a, b), want_bone, "%s: bone masking at %d (air %d, bone %d)" % [id, f, a, b])
+				assert_eq(ClinicRules.ac_masking_needed(a, b, &"phones", f), want_air, "%s: air masking at %d (air %d, bone %d)" % [id, f, a, b])
+				for d: int in [-5, 5]:
+					assert_eq(ChartDeck.mask_call(a + d, b), id, "%s holds with air 5 dB off" % id)
+					assert_eq(ChartDeck.mask_call(a, b + d), id, "%s holds with bone 5 dB off" % id)
+				for e: String in [ear, other]:
+					for fr: int in c["ac"][e]:
+						var v := int(c["ac"][e][fr])
+						assert_eq(v, ClinicRules.clamp_db(v, fr), "%s: air inside the audiometer's range at %d" % [id, fr])
+				for fr: int in bone:
+					assert_true(int(bone[fr]) <= ClinicRules.max_db_for(fr, &"bone") and int(bone[fr]) % 5 == 0, "%s: a real bone level at %d" % [id, fr])
+				# the bone line is the better cochlea: never poorer than either ear's air
+				for fr: int in bone:
+					assert_true(int(bone[fr]) <= int(ac[fr]) + 5 and int(bone[fr]) <= int(c["ac"][other][fr]), "%s: bone on or above air at %d" % [id, fr])
+				if lookalike and id == &"mask_none":
+					assert_true(a >= 35, "NO MASK's lookalike is far down (air %d)" % a)
+				if lookalike and id == &"mask_bone":
+					assert_true(int(c["ac"][other][f]) > a, "MASK BONE's lookalike: the test ear is the better one by air")
+
+
+func test_mask_belt_ramp() -> void:
+	assert_eq(ChuteRules.unlocked(-1.0, &"masks"), [&"mask_none", &"mask_bone"], "warm-up: no mask and mask bone")
+	assert_false(ChuteRules.unlocked(14.9, &"masks").has(&"mask_both"), "mask both waits for 15 s")
+	assert_eq(ChuteRules.unlocked(15.0, &"masks"), ChartDeck.MASKS, "all three at 15 s")
+	var r := _rng(14)
+	for i in 300:
+		var spec := ChuteRules.next_spec(r, r.randf_range(0.0, ChuteRules.RUN_S), [], [], &"masks")
+		assert_has(ChartDeck.MASKS, spec["shape"], "only masking calls on the mask belt")
+		assert_ne(String(spec["ear"]), "both", "no two-ear sorting: the tag names the test ear")
+		assert_false(bool(spec["golden"]), "no story charts")
+	for id: StringName in ChartDeck.MASKS:
+		assert_true(ChartDeck.CHUTE_WORDS.has(id) and ChartDeck.TELLS.has(id) and ChartDeck.LINES.has(id), "%s has a word, a tell and lines" % id)
+		assert_true(ChartDeck.TELLS[id].has("ask"), "%s's tell glows over the lit frequency" % id)
+		assert_true(String(ChartDeck.TELLS[id]["text"]).split(" ").size() <= 12, "%s's tell is short" % id)
+	# the rule's own lines: a 10 dB gap masks bone, 40 over bone masks air (headphones)
+	assert_eq(ChartDeck.mask_call(20, 10), &"mask_bone", "a 10 dB gap masks bone")
+	assert_eq(ChartDeck.mask_call(15, 10), &"mask_none", "a 5 dB gap does not")
+	assert_eq(ChartDeck.mask_call(50, 10), &"mask_both", "40 over bone masks air too")
+	assert_eq(ChartDeck.mask_call(45, 10), &"mask_bone", "35 over bone masks bone only")

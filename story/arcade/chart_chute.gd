@@ -26,6 +26,8 @@ extends Control
 ## volume gauge, sorted into FLUID, WAX or HOLE (CaseRules.tymp_b_reading) or PEAK; MODE_FLATS.
 ## belt = &"otos" makes it OTO SPOT (oto_spot.tscn, section 25): one ear down the otoscope
 ## (ArcadeArt.oto_view), sorted into CLEAR, WAX, FLUID, HOLE or OBJECT; MODE_OTOS.
+## belt = &"masks" makes it MASQUERADE (masquerade.tscn, section 29): both ears' air and the unmasked
+## bone with one frequency lit, sorted into NO MASK, MASK BONE or MASK BOTH (ChartDeck.mask_call); MODE_MASKS.
 
 signal _sorted(pick: StringName)
 
@@ -44,9 +46,12 @@ const MODE_TYMPS := "chart_chute_tymps"
 const MODE_DEGREES := "chart_chute_degrees"
 const MODE_FLATS := "chart_chute_flats"
 const MODE_OTOS := "chart_chute_otos"
+const MODE_MASKS := "chart_chute_masks"
 ## Each belt's save key and title.
-const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS, &"otos": MODE_OTOS}
-const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT", &"otos": "OTO SPOT"}
+const BELT_MODES: Dictionary[StringName, String] = {&"shapes": MODE, &"types": MODE_TYPES, &"tymps": MODE_TYMPS, &"degrees": MODE_DEGREES, &"flats": MODE_FLATS, &"otos": MODE_OTOS,
+	&"masks": MODE_MASKS}
+const BELT_TITLES: Dictionary[StringName, String] = {&"shapes": "CHART CHUTE", &"types": "AIR & BONE", &"tymps": "TYMP TOSS", &"degrees": "DEGREE DROP", &"flats": "FLAT OUT", &"otos": "OTO SPOT",
+	&"masks": "MASQUERADE"}
 
 const FIELD := Vector2(1280, 720)
 const TOP_H := 82.0
@@ -87,6 +92,8 @@ const WARMUP_HINTS: Dictionary = {
 	&"flat_wax": "Flat again, but the canal is tiny. Blocked: WAX!",
 	&"oto_clear": "Each card is a look in the ear. Grey drum, cone of light: CLEAR!",
 	&"oto_wax": "A brown plug hides the drum: WAX!",
+	&"mask_none": "Each card lights one pitch. Air sits right on bone there: NO MASK!",
+	&"mask_bone": "Air is well below bone here. A gap of 10 or more: MASK BONE!",
 }
 
 var seed_value := -1
@@ -216,7 +223,7 @@ class CardView extends Control:
 		ear_cue = false
 		ag.visible = not c.has("tymp") and not c.has("oto")
 		_tymp.queue_redraw()
-		ag.ear = String(c["ear"]) if String(c["ear"]) != "" else "both"
+		ag.ear = String(c["ear"]) if String(c["ear"]) != "" and not c.has("mask") else "both"
 		ag.clear_points()
 		for ear: String in (c["ac"] as Dictionary):
 			var t: Dictionary = c["ac"][ear]
@@ -246,12 +253,16 @@ class CardView extends Control:
 		if tell != &"":
 			tell_t += delta
 			_over.queue_redraw()
+		elif card.has("mask"):
+			_over.queue_redraw()   # the lit column follows the chart as the card slides
 		if bool(card.get("golden", false)) and not bool(Game.settings.get("reduced_motion", false)):
 			queue_redraw()
 
 	func _tag_text() -> String:
 		var ear := String(card.get("ear", "right"))
 		var sort_ear := String(card.get("sort_ear", "right"))
+		if card.has("mask"):
+			return "TEST RIGHT  O" if ear == "right" else "TEST LEFT  X"
 		if ear == "right":
 			return "RIGHT EAR  O"
 		if ear == "left":
@@ -282,6 +293,8 @@ class CardView extends Control:
 			sub = "Canal volume: %.1f mL" % float(card["tymp"].get("ecv_ml", 1.0))
 		elif card.has("oto"):
 			sub = "Shine the light: what's in there?"
+		elif card.has("mask"):
+			sub = "Testing %s: mask or not?" % _hz(int(card["mask"]["freq"]))
 		draw_string(UiKit.font(500), Vector2(86, 58), sub, HORIZONTAL_ALIGNMENT_LEFT, 260, 14 if not card.has("tymp") else 16, Palette.INK_SOFT)
 		var tag := _tag_rect()
 		UiDraw.rounded_rect(self, tag, Palette.ear_color(String(card.get("sort_ear", "right"))), 19)
@@ -292,8 +305,23 @@ class CardView extends Control:
 			UiDraw.rounded_rect(self, Rect2(size.x * 0.5 - gw * 0.5, -16, gw, 32), GOLD, 16, 3, Palette.INK)
 			draw_string(_font, Vector2(size.x * 0.5 - gw * 0.5 + 12, 6), g, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
 
+	static func _hz(f: int) -> String:
+		return "%dk" % (f / 1000) if f >= 1000 else str(f)
+
+	## A MASQUERADE card's lit frequency: a soft column over the chart, its pitch on a chip above.
+	func _draw_ask() -> void:
+		var inv := _over.get_global_transform_with_canvas().affine_inverse()
+		var gr := ag.get_region_global_rect(int(card["mask"]["freq"]), int(card["mask"]["freq"]))
+		var col := Rect2(inv * gr.position, inv.basis_xform(gr.size)).abs()
+		_over.draw_rect(col, Color(Palette.SUNNY, 0.22))
+		_over.draw_rect(col, Color(Palette.SELECT_ORANGE, 0.55), false, 2.0)
+
 	func _draw_tell() -> void:
-		if tell == &"" or ag == null:
+		if ag == null:
+			return
+		if card.has("mask") and tell == &"":
+			_draw_ask()
+		if tell == &"":
 			return
 		var steady := bool(Game.settings.get("reduced_motion", false))
 		var info: Dictionary = ChartDeck.TELLS[tell]
@@ -304,6 +332,10 @@ class CardView extends Control:
 		elif info.has("view"):
 			var o := oto_rect()
 			rr = Rect2(o.get_center() - o.size * 0.3, o.size * 0.6)
+		elif info.has("ask"):
+			var f := int((card.get("mask", {}) as Dictionary).get("freq", 1000))
+			var gr := ag.get_region_global_rect(f, f)
+			rr = Rect2(inv * gr.position, inv.basis_xform(gr.size)).abs()
 		elif info.has("p_lo"):
 			# a tympanogram's patch: pressure by admittance, in the card's own coordinates
 			var plot := tymp_plot()
@@ -420,6 +452,21 @@ class ChuteView extends Control:
 			else:
 				UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
 				ArcadeArt.volume_gauge(self, box.grow(-6.0), float(MINI_ECV[shape]), false)
+			return
+		if ChartDeck.MASKS.has(shape):
+			# one pitch: the bone caret, the air ring below it by this chute's gap, and the 40 line
+			UiDraw.rounded_rect(self, box, Palette.PAPER, 8)
+			var gap := {&"mask_none": 0.0, &"mask_bone": 25.0, &"mask_both": 60.0}[shape] as float
+			var yb := box.position.y + 6
+			var k := (box.size.y - 12) / 60.0
+			var y40 := yb + 40.0 * k
+			var x := box.get_center().x
+			for xs in range(int(box.position.x) + 8, int(box.end.x) - 8, 10):
+				draw_line(Vector2(xs, y40), Vector2(xs + 5, y40), Palette.CORAL, 2.0)
+			var tip := Vector2(x - 12, yb)
+			draw_polyline(PackedVector2Array([tip + Vector2(5, -4), tip, tip + Vector2(5, 4)]), Palette.SELECT_ORANGE, 2.5, true)
+			draw_line(Vector2(x, yb), Vector2(x, yb + gap * k), Color(Palette.INK, 0.35), 2.0)
+			draw_arc(Vector2(x, yb + gap * k), 4.0, 0.0, TAU, 12, Palette.INK, 2.5)
 			return
 		if ChartDeck.DEGREES.has(shape):
 			# the five bands as stripes, top (mild) to bottom (profound): this chute's lit, a line in it
@@ -862,7 +909,9 @@ func _ramp_tips(card: Dictionary) -> void:
 		return
 	if String(card["ear"]) == "left":
 		var tip := "Blue X is the left ear. Same shapes!"
-		if card.has("bc"):
+		if belt == &"masks":
+			tip = "Now the left ear is tested. Same rules!"
+		elif card.has("bc"):
 			tip = "Blue X is the left ear. Its bone marks face the other way."
 		elif belt == &"flats":
 			tip = "Blue is the left ear. Same gauge!"
@@ -1158,6 +1207,9 @@ func _draw_preview() -> void:
 		ArcadeArt.oto_view(_preview, Rect2(plot.get_center() - Vector2(side, side) * 0.5, Vector2(side, side)), _next["oto"], sort_ear)
 		return
 	_preview.draw_rect(plot, Color("#ffffff"))
+	if _next.has("mask"):
+		var fx := plot.position.x + plot.size.x * (log(float(_next["mask"]["freq"]) / 125.0) / log(2.0)) / 6.0
+		_preview.draw_rect(Rect2(fx - 8, plot.position.y, 16, plot.size.y), Color(Palette.SUNNY, 0.35))
 	for ear: String in (_next["ac"] as Dictionary):
 		var t: Dictionary = _next["ac"][ear]
 		var keys: Array = t.keys()
@@ -1274,6 +1326,8 @@ func _show_results() -> void:
 
 ## Story charts found, and how the rest join the belt (each once its patient's Day is finished).
 func _story_line() -> String:
+	if belt == &"masks":
+		return "Mask bone for a gap of 10 or more. Mask air when it sits 40 over the bone."
 	if belt == &"otos":
 		return "Look before you test: what you see in the ear decides the next step."
 	if belt == &"flats":
