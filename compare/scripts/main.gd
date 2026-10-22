@@ -1008,19 +1008,24 @@ func _open_results() -> void:
 func _result_card(a: Dictionary, miss: Array, big: bool) -> Control:
 	var col := _aid_color(a)
 	var card := Ui.card(col if big else Ui.PAPER, Ui.INK, 22, 14, 4 if big else 0)
+	var outer := Ui.vbox(8)
+	card.add_child(outer)
+	# The picture beside the name and price; the reasons get the card's full width below.
 	var h := Ui.hbox(12)
-	card.add_child(h)
+	outer.add_child(h)
 	if big:
 		var inset := Ui.card(Ui.PAPER, Ui.INK, 16, 4, 0)
 		inset.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		inset.add_child(_picture(a.model_styles[0], a.shell, 120.0 if narrow() else 150.0))
+		inset.add_child(_picture(a.model_styles[0], a.shell, 96.0 if narrow() else 130.0))
 		h.add_child(inset)
-	var v := Ui.vbox(6)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(v)
+	var head := Ui.vbox(4)
+	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(head)
+	var v := outer
 	var fg := Ui.PAPER if big else Ui.INK
-	v.add_child(Ui.wrap(a.name, Ui.H3, fg, 700))
-	v.add_child(Ui.wrap("%s for two" % data.cell(a, "price_pair").v, Ui.BODY, fg, 600))
+	head.add_child(Ui.wrap(a.name, Ui.H3, fg, 700))
+	head.add_child(Ui.wrap("%s for two" % data.cell(a, "price_pair").v, Ui.BODY, fg, 600))
 	if big and not wanted.is_empty():
 		for n in wanted:
 			if data.meets(a, n):
@@ -1039,7 +1044,7 @@ func _result_card(a: Dictionary, miss: Array, big: bool) -> Control:
 		_close_sheet()
 		expanded = a.id
 		_rebuild()
-		_scroll_to("aid_" + a.id))
+		_scroll_to("details" if narrow() else "aid_" + a.id))
 	v.add_child(more)
 	return card
 
