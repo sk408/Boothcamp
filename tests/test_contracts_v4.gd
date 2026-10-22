@@ -66,7 +66,7 @@ func test_movies_registry() -> void:
 	assert_false(Movies.has("nope"))
 	assert_eq(Movies.movie("nope"), {})
 	assert_eq(Movies.for_chapter("bonnie"), ["masking"] as Array[String], "Day 2 plays the masking movie")
-	assert_true(Movies.for_chapter("gus").is_empty(), "Day 1 has no movie (Day 1 must not change)")
+	assert_eq(Movies.for_chapter("gus"), ["first_beep"] as Array[String], "Day 1 plays its own movie (clinical review D1-8)")
 	assert_eq(Movies.title("masking"), "Hoot's masking movie")
 
 
@@ -306,7 +306,9 @@ func test_pause_menu_movie_button() -> void:
 	Game.current_chapter_id = "gus"
 	menu.call("open")
 	await wait_frames(1)
-	assert_true(menu.call("movie_button") == null, "Day 1's pause menu does not change")
+	var gb: Button = menu.call("movie_button")
+	assert_true(gb != null and gb.visible, "Day 1's pause menu offers its movie (D1-8)")
+	assert_has(menu.call("movie_ids_here"), "first_beep")
 	menu.call("close")
 	# (E19) a level that can mask (a case, Freestyle) offers the masking movie too
 	var lvl := Node.new()

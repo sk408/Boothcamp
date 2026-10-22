@@ -10,6 +10,8 @@ extends RefCounted
 ##   Movies.replay_ids() -> every movie the replay lists show (not the "short" recaps)
 
 const MOVIES: Dictionary = {
+	## (clinical review D1-8) Day 1's movie: a beep's path, the chart, look first, down 10 up 5
+	"first_beep": "res://story/explainers/movies/first_beep.gd",
 	"masking": "res://story/explainers/movies/masking.gd",
 	"masking_recap": "res://story/explainers/movies/masking_recap.gd",
 	## (clinical review D2-7) Day 2's two-card short on air, bone and the gap, after the air results

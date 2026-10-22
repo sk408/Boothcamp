@@ -80,7 +80,7 @@ The masking lamp shows "good" as soon as the noise is in the safe window, while 
 **E11. The straining face gives the threshold away.** [Misleading] **Done** (about a third of the tones from 5 dB below to 10 dB above threshold)
 The "straining" face shows only when the dial is exactly at the true threshold, so a player can read thresholds off the face. Make it probabilistic across a few dB around threshold, or tie it to a slow press (ASHA 2005 asks testers not to give cues).
 
-**E12. Audiogram proportions.** [Misleading]
+**E12. Audiogram proportions.** [Misleading] **Done** (PR #37: the result charts keep one octave as wide as 20 dB, letterboxed in their card)
 The chart stretches to fill its card (`ui/audiogram/audiogram.gd:258`, `plot_rect`), so one octave is about 1.7 times as wide as 20 dB. ASHA (1990) symbols guideline: one octave should span the same distance as 20 dB. Letterbox the plot to that ratio on the audiometer screen and the end screens.
 
 **E13. Masked air never differs from unmasked air.** [Missing: see C10] **Done** with C10 (PR #18: Day 12's dead ear, where masked air changes the chart)
@@ -95,10 +95,10 @@ The scale is normal up to 25 dB HL on the 500/1k/2k average, without ASHA's "sli
 **E16. Vibrotactile levels.** [Kept] **Done** (250: 25, 500: 55, 1000: 70; no chart note yet)
 Set 250 Hz to 25 and add 1000 Hz at 70 in `VIBROTACTILE_DB` (`autoload/clinic_rules.gd:248`) when convenient, and optionally mark a felt tone with a small note on the chart.
 
-**E17. Insert earphones are scored but never shown.** [Missing]
+**E17. Insert earphones are scored but never shown.** [Missing] **Done** (PR #38: the clinic shows foam inserts going in, with a one-time "squeeze, slide in, hold" caption)
 Once the player owns inserts, masking is scored with insert numbers (IA 55, no occlusion allowance), but the clinic still draws headphone cups (`world/clinic.gd:352`, `put_on_earphones`; `:665`, `put_on_masking_phone`) and never shows how a foam insert goes in, which those numbers depend on. Draw foam tips when inserts are in use, and give the earphone game a short insert version: squeeze the foam, slide it in until its outer edge is flush with or just inside the canal entrance, hold while it seals (BSA 2018, 6.3; manufacturers' instructions say 2 to 3 mm inside). Red right, blue left stays.
 
-**E18. Chart notes on the finished audiogram.** [Missing]
+**E18. Chart notes on the finished audiogram.** [Missing] **Done** (PR #36: the end charts carry a notes line saying which earphones tested air)
 The results already keep the transducer and the masker level for every stamp, but the end screens (`story/games/reveal.gd`, `story/games/day2_board.gd`, `story/games/case_board.gd`, `story/freestyle/fs_chart.gd`) show only symbols. Add a small strip under the chart: which earphones were used, which mastoid the bone sat on, and a reliability note ("good, fair or poor", from the 1 kHz retest, false alarms and, on Day 3, the SRT and PTA agreement). Masking levels beside masked marks are optional (ASHA 2005 record keeping; BSA 2018, 10.4 and 10.5).
 
 **E19. The masking movie from any level that masks.** [Missing] **Done** (eeda6b7)
@@ -120,7 +120,7 @@ Inside a level the pause menu lists only that day's movies (`story/pause_menu.gd
 
 **D1-7. Short case history, safety picks ungraded.** [Kept; question 7] **Done** for the safety pick: the paperclip or ignoring the seed keeps the visit off an S (`Game.NO_S_FLAG`); the history list stays Two history picks keep the pace; a greyed "a full history also covers" list on the case note would tell newcomers it is a shortcut. Freestyle now asks "Where do you have trouble hearing?" on every visit (Steve); Day 1 could borrow the question.
 
-**D1-8. A Day 1 explainer.** [Missing] Day 1 has no movie. The movie system is on `main` now, so a 60 to 100 second movie fits: the air path through the ear, the audiogram axes (pitch left to right, louder is lower), look before you beep, and down 10, up 5, two answers going up.
+**D1-8. A Day 1 explainer.** [Missing] **Done** (Hoot's "The First Beep", about 63 s, offered before Gus) Day 1 has no movie. The movie system is on `main` now, so a 60 to 100 second movie fits: the air path through the ear, the audiogram axes (pitch left to right, louder is lower), look before you beep, and down 10, up 5, two answers going up.
 
 ### Day 2, Bonnie (Day 2)
 
@@ -213,7 +213,7 @@ These were checked against the freestyle code as merged (it has not changed on `
 
 - **A1. The routine around the test.** [Missing] **Done** for the cases (PR #9) and Freestyle (PR #11). No day mentions the daily listening check of the audiometer and the button, a fresh speculum or cleaned cushions between patients, or keeping the dials out of the patient's view (BSA 2018, 4.1, 4.2 and 11.1; ASHA 2005). Short, ungraded Hoot lines where the action already happens, in every day that does it.
 - **A2. Explainers when a day is played first.** [Missing] **Done** for Freestyle (PR #11) and the cases (PR #16). Every day is open, so a player who starts on a case day meets masked bone and "the Ghost" without the masking movie. Before the first masked bone of a visit, if the masking movie is unseen, play the 12-second recap card and have Hoot point at the full movie in the pause menu (needs E19). Masking is the concept students find hardest (Skinner, Billingsly and Conley 2023).
-- **A3. Explainers in general.** The cases' movies are **Done** (PR #15); Days 1 and 3 have none yet (D1-8, S7).
+- **A3. Explainers in general.** The cases' movies are **Done** (PR #15); Day 1 has "The First Beep" (D1-8) and Day 3 "The Spondee Ladder" (S7).
 - **A4. Speech in noise.** Freestyle's FIT line is **Done** (PR #11). Steve runs it on every test. When Day 5 lands, the FIT calls in the cases and freestyle should include it (C13, FS-13).
 
 ## Kept as simplifications

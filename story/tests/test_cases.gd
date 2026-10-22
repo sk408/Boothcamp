@@ -944,7 +944,7 @@ func test_case_movies_registered_everywhere() -> void:
 		for id: String in LevelCase.CASE_MOVIES:
 			assert_has(here, id, "%s's pause menu lists %s" % [c["id"], id])
 	assert_eq(Movies.for_chapter("bonnie"), ["masking"] as Array[String], "Day 2's list is unchanged")
-	assert_true(Movies.for_chapter("gus").is_empty(), "Day 1 has no movie")
+	assert_eq(Movies.for_chapter("gus"), ["first_beep"] as Array[String], "Day 1 has only its own movie (D1-8)")
 
 
 ## Every scene of every case movie draws at its start, middle and end without a script error.
