@@ -750,7 +750,7 @@ static func _ladybird(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 # ---------------------------------------------------------------- the masks (MASQUERADE)
 
 const MASK_SKIN := Color("#ffcf9e")
-const MASK_BLACK := Color("#2b2440")
+const MASK_RED := Color("#e5383b")   ## the plain eye mask: red, so it shows in the dark chute
 const MASK_PURPLE := Color("#7b2cbf")
 const FEATHERS: Array[Color] = [Color("#e5383b"), Color("#f2b632"), Color("#5bc8a3")]
 
@@ -792,8 +792,8 @@ static func _eye_mask(ci: CanvasItem, c: Vector2, s: float, t: float, fancy: boo
 	ci.draw_set_transform(c, tilt, Vector2.ONE)
 	if not fancy:
 		# the ribbon tails behind
-		ci.draw_line(Vector2(-s * 0.48, 0), Vector2(-s * 0.68, s * 0.22), MASK_BLACK, 4.0)
-		ci.draw_line(Vector2(s * 0.48, 0), Vector2(s * 0.68, s * 0.22), MASK_BLACK, 4.0)
+		ci.draw_line(Vector2(-s * 0.48, 0), Vector2(-s * 0.68, s * 0.22), MASK_RED, 4.0)
+		ci.draw_line(Vector2(s * 0.48, 0), Vector2(s * 0.68, s * 0.22), MASK_RED, 4.0)
 	var body := PackedVector2Array()
 	for i in 25:
 		var a := i * TAU / 24.0
@@ -804,7 +804,7 @@ static func _eye_mask(ci: CanvasItem, c: Vector2, s: float, t: float, fancy: boo
 		body.append(r)
 	var ring := body.duplicate()
 	ring.append(body[0])
-	ci.draw_colored_polygon(body, MASK_PURPLE if fancy else MASK_BLACK)
+	ci.draw_colored_polygon(body, MASK_PURPLE if fancy else MASK_RED)
 	ci.draw_polyline(ring, BRASS if fancy else INK, 3.0, true)
 	for side in [-1.0, 1.0]:
 		ci.draw_set_transform(c + Vector2(side * s * 0.22, -s * 0.02).rotated(tilt), tilt, Vector2(1.0, 0.6))

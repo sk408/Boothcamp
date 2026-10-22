@@ -252,9 +252,9 @@ const TELLS: Dictionary[StringName, Dictionary] = {
 	&"oto_hole": {"text": "A hole in the drum. Refer; no water, no impressions", "view": true},
 	&"oto_object": {"text": "It doesn't belong. A doctor takes it out", "view": true},
 	# mask tells glow over the card's lit frequency ("ask")
-	&"mask_none": {"text": "Air sits on bone: no gap", "ask": true},
-	&"mask_bone": {"text": "A gap of 10 or more: mask bone", "ask": true},
-	&"mask_both": {"text": "Air 40 over bone: mask air and bone", "ask": true},
+	&"mask_none": {"text": "Air sits on bone: no gap to check", "ask": true},
+	&"mask_bone": {"text": "A gap of 10 or more, but under 40", "ask": true},
+	&"mask_both": {"text": "Air 40 over bone: it can cross over", "ask": true},
 }
 
 const FIRST: PackedStringArray = ["Barry", "Dennis", "Frank", "Hank", "Lou", "Norm", "Percy", "Ray", "Sal", "Vince", "Walt", "Otis",

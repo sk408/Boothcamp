@@ -669,8 +669,9 @@ the test ear. The question: what does this ear need at this frequency?
 
 - With headphones, air needing masking always means bone needs it too (a 40 dB lead is a gap of 40), so there
   is no "air only" chute; the tell for MASK BOTH says so.
-- **The tell** lights the column and states the rule: "NO MASK: Air sits on bone: no gap", "MASK BONE: A gap of
-  10 or more: mask bone", "MASK BOTH: Air 40 over bone: mask air and bone".
+- **The tell** lights the column and states the rule: "NO MASK: Air sits on bone: no gap to check", "MASK BONE: A
+  gap of 10 or more, but under 40", "MASK BOTH: Air 40 over bone: it can cross over". The chart's gap brackets
+  show too, as on AIR & BONE.
 - **The ramp:** warm-up with NO MASK and MASK BONE; MASK BOTH opens at 15 s; left ears at 30 s; lookalikes at
   40 s: both ears down a long way (the chart looks awful, but air sits on bone: NO MASK), or the lit ear is the
   BETTER ear with a gap (bone still needs masking).
