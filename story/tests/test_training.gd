@@ -122,6 +122,12 @@ func test_hoot_lines_are_short() -> void:
 		lines.append(String(MaskDeck.WHO_VERDICTS[a]))
 	for tr: String in ["phones", "inserts", "bone"]:
 		lines.append(MaskDeck.hint_line({"transducer": tr}))
+	for t: Dictionary in MaskDeck.WHEN_TRIES + MaskDeck.START_TRIES:
+		lines.append(String(t["line"]))
+	for a: StringName in MaskDeck.CALLS:
+		lines.append(String(MaskDeck.CALL_VERDICTS[a]))
+	lines.append(MaskDeck.when_hint({"transducer": "inserts"}))
+	lines.append(MaskDeck.start_hint({}))
 	for l: String in lines:
 		assert_true(Movies.word_count(l) <= Hoot.MAX_WORDS, "too long for Hoot: " + l)
 
@@ -188,7 +194,7 @@ func test_room_opens_built_stations_only() -> void:
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
 	MaskingSchool.next_station = ""
-	room.call("open_station", 1)   # When to mask? (not built yet)
+	room.call("open_station", 3)   # The plateau walk (not built yet)
 	assert_eq(went, [], "a SOON station does not open")
 	solvers[0].call()
 	Events.goto_scene.disconnect(gcb)
@@ -196,11 +202,23 @@ func test_room_opens_built_stations_only() -> void:
 	assert_eq(MaskingSchool.next_station, "why")
 
 
-## A station plays through by its solvers: the movie on a fresh save, three tries, six holes at par,
-## the scorecard saves the star and the card, and the solver leaves for the room.
+## A station plays through by its solvers: the movie on a fresh save (station 1 only), three tries,
+## six holes at par, the scorecard saves the star and the card, and the solver leaves for the room.
 func test_station_plays_by_solvers() -> void:
+	await _play_by_solvers("why", 1)
+
+
+func test_station_2_plays_by_solvers() -> void:
+	await _play_by_solvers("when", 0)
+
+
+func test_station_3_plays_by_solvers() -> void:
+	await _play_by_solvers("start", 0)
+
+
+func _play_by_solvers(id: String, movies: int) -> void:
 	Game.cli = {"seed": 5}
-	MaskingSchool.next_station = "why"
+	MaskingSchool.next_station = id
 	MaskingSchool.last_result = {}
 	var beats := {}
 	var acb := func(beat: StringName, _info: Dictionary, solver: Callable) -> void:
@@ -219,9 +237,126 @@ func test_station_plays_by_solvers() -> void:
 	Events.awaiting_input.disconnect(acb)
 	Events.goto_scene.disconnect(gcb)
 	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
-	assert_eq(int(beats.get(&"explainer", 0)), 1, "the masking movie plays on a fresh save")
-	assert_eq(int(beats.get(&"training_try", 0)), MaskDeck.WHY_TRIES.size())
+	assert_eq(int(beats.get(&"explainer", 0)), movies, "%s: the masking movie plays on a fresh save only before station 1" % id)
+	assert_eq(int(beats.get(&"training_try", 0)), 3)
 	assert_eq(int(beats.get(&"training_card", 0)), MaskDeck.ROUND_HOLES)
+	assert_eq(MaskingSchool.last_result.get("station"), id)
 	assert_eq(MaskingSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1])
-	assert_true(bool(TrainingProgress.station("masking", "why")["star"]))
-	assert_true(TrainingProgress.has_card("masking", "skull_wall"))
+	assert_true(bool(TrainingProgress.station("masking", id)["star"]))
+	assert_true(TrainingProgress.has_card("masking", String(MaskDeck.station(id)["card"])))
+
+
+# ---------------------------------------------------------------- station 2: mask it?
+
+func _chart(tr: String, air: int, bone: int, f := 1000) -> Dictionary:
+	return {"transducer": tr, "freq": f, "air": air, "bone": bone, "other_air": bone}
+
+
+## Bone: a gap of 10 or more. Air: air minus the wall reaches the bone. Both from ClinicRules.
+func test_mask_call_follows_the_rules() -> void:
+	assert_eq(MaskDeck.mask_call(_chart("phones", 30, 30)), &"none")
+	assert_eq(MaskDeck.mask_call(_chart("phones", 40, 30)), &"bone", "a gap of exactly 10 is masked")
+	assert_eq(MaskDeck.mask_call(_chart("phones", 35, 30)), &"none", "a gap of 5 is not")
+	assert_eq(MaskDeck.mask_call(_chart("phones", 70, 30)), &"both", "70 - 40 = 30 reaches 30")
+	assert_eq(MaskDeck.mask_call(_chart("phones", 65, 30)), &"bone", "65 - 40 = 25 is under 30")
+	assert_eq(MaskDeck.mask_call(_chart("inserts", 70, 30)), &"bone", "inserts: 70 - 55 = 15 is under 30")
+	assert_eq(MaskDeck.mask_call(_chart("inserts", 85, 30)), &"both", "inserts: 85 - 55 = 30 reaches 30")
+	for c: Dictionary in [_chart("phones", 70, 30), _chart("inserts", 70, 30), _chart("phones", 45, 40)]:
+		assert_eq(MaskDeck.mask_bone(c), ClinicRules.bc_masking_needed(int(c["air"]), int(c["bone"])))
+		assert_eq(MaskDeck.mask_air(c), ClinicRules.ac_masking_needed(int(c["air"]), int(c["bone"]), StringName(String(c["transducer"]))))
+
+
+## With the unmasked bone as the other ear's bone, air never needs masking alone: a crossing tone
+## means a gap of at least the wall (why station 2 has three answers, not four).
+func test_air_alone_never_happens() -> void:
+	for tr: String in ["phones", "inserts"]:
+		for bone in range(-10, 75, 5):
+			for air in range(bone, 125, 5):
+				assert_true(MaskDeck.mask_call(_chart(tr, air, bone)) != &"air", "%s air %d bone %d" % [tr, air, bone])
+
+
+## Rounds deal six honest charts with every call at least once, inside the audiometer's range.
+func test_when_rounds_are_honest() -> void:
+	var rng := RandomNumberGenerator.new()
+	var seen_tr := {}
+	for seed_i in 60:
+		rng.seed = seed_i + 1
+		var cards := MaskDeck.when_round(rng)
+		assert_eq(cards.size(), MaskDeck.ROUND_HOLES)
+		var calls := {}
+		for c: Dictionary in cards:
+			calls[MaskDeck.mask_call(c)] = true
+			seen_tr[String(c["transducer"])] = true
+			assert_true(MaskDeck.when_honest(c), "seed %d: chart %s hangs on a 5 dB wobble" % [seed_i, str(c)])
+			assert_true(MaskDeck.WHEN_FREQS.has(int(c["freq"])))
+			assert_true(int(c["air"]) >= int(c["bone"]), "air is never better than bone")
+			assert_true(int(c["air"]) <= mini(MaskDeck.TONE_TOP_DB, ClinicRules.max_db(int(c["freq"]))), "air in range")
+			assert_true(int(c["bone"]) < ClinicRules.BC_MAX_DB[int(c["freq"])], "bone under the buzzer's limit")
+			assert_true(int(c["other_air"]) >= int(c["bone"]), "Lefty's air is no better than the best bone")
+		for a: StringName in MaskDeck.CALLS:
+			assert_true(calls.has(a), "seed %d: no %s chart" % [seed_i, a])
+	assert_eq(seen_tr.keys().size(), 2, "headphones and inserts are both dealt")
+	for tr: String in MaskDeck.WHEN_WEIGHTS:
+		for a: StringName in MaskDeck.CALLS:
+			assert_eq(String(MaskDeck.when_card(rng, a, tr)["transducer"]), tr, "%s / %s fell back" % [tr, a])
+
+
+## Try it walks mask both, then the same ear with inserts (bone only), then no gap.
+func test_when_tries() -> void:
+	var calls: Array[StringName] = []
+	for t: Dictionary in MaskDeck.WHEN_TRIES:
+		calls.append(MaskDeck.mask_call(t))
+	assert_eq(calls, [&"both", &"bone", &"none"])
+	assert_eq(String(MaskDeck.WHEN_TRIES[1]["transducer"]), "inserts", "inserts save the air test")
+
+
+# ---------------------------------------------------------------- station 3: set the dial
+
+func _dial_card(test: String, f: int, other_air: int, gap: int, masker := "phones") -> Dictionary:
+	return {"test": test, "freq": f, "other_air": other_air, "other_gap": gap, "masker": masker}
+
+
+## The start level is ClinicRules.initial_masking: other air + 10, + occlusion for low bone on a
+## normal ear under a headphone.
+func test_start_level_follows_the_rules() -> void:
+	assert_eq(MaskDeck.start_level(_dial_card("ac", 2000, 15, 0)), 25)
+	assert_eq(MaskDeck.start_level(_dial_card("ac", 500, 15, 0)), 25, "air tests never add occlusion")
+	assert_eq(MaskDeck.start_level(_dial_card("bc", 500, 15, 0)), 40, "15 + 10 + 15")
+	assert_eq(MaskDeck.start_level(_dial_card("bc", 1000, 15, 5)), 35, "15 + 10 + 10")
+	assert_eq(MaskDeck.start_level(_dial_card("bc", 4000, 15, 0)), 25, "no occlusion at 2k and up")
+	assert_eq(MaskDeck.start_level(_dial_card("bc", 500, 15, 0, "inserts")), 25, "inserts: no occlusion")
+	assert_eq(MaskDeck.start_level(_dial_card("bc", 500, 40, 30)), 50, "a blocked ear: no occlusion")
+	assert_eq(MaskDeck.boom(_dial_card("bc", 250, 15, 10)), 15, "a gap of 10 is still a normal ear")
+	assert_eq(MaskDeck.boom(_dial_card("bc", 250, 15, 15)), 0)
+	assert_eq(MaskDeck.dial_strokes(40, _dial_card("bc", 500, 15, 0)), 1)
+	assert_eq(MaskDeck.dial_strokes(35, _dial_card("bc", 500, 15, 0)), 2, "one step off: a bogey")
+	assert_eq(MaskDeck.dial_strokes(25, _dial_card("bc", 500, 15, 0)), 3, "forgot the boom")
+
+
+## Rounds deal one card of each kind (the boom twice), each honest about its kind.
+func test_start_rounds() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed_i in 60:
+		rng.seed = seed_i + 1
+		var cards := MaskDeck.start_round(rng)
+		assert_eq(cards.size(), MaskDeck.ROUND_HOLES)
+		var booms := 0
+		for c: Dictionary in cards:
+			var lvl := MaskDeck.start_level(c)
+			assert_eq(lvl, ClinicRules.initial_masking(int(c["other_air"]), int(c["freq"]), &"bc" if c["test"] == "bc" else &"ac",
+				int(c["other_gap"]), StringName(String(c["masker"]))))
+			assert_between(lvl, ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB - 20, "the level fits the dial")
+			assert_true(int(c["other_air"]) >= int(c["other_gap"]), "air is the bone plus the gap")
+			assert_eq(MaskDeck.boom(c) > 0, String(c["kind"]) == "boom", "%s: the boom only on boom cards" % c["kind"])
+			if MaskDeck.boom(c) > 0:
+				booms += 1
+			assert_false(MaskDeck.boom_line(c).is_empty())
+		assert_eq(booms, 2)
+
+
+func test_start_tries() -> void:
+	var targets: Array[int] = []
+	for t: Dictionary in MaskDeck.START_TRIES:
+		targets.append(MaskDeck.start_level(t))
+		assert_true(MaskDeck.start_level(t) > int(t["other_air"]), "the dial starts below Hoot's level")
+	assert_eq(targets, [25, 40, 25], "air + 10; bone at 500 + 15 boom; inserts no boom")

@@ -12,17 +12,23 @@ const LESSON := "masking"
 ## show a "SOON" chip in the Training room until their PR lands. card: the cheat-sheet card it earns.
 const STATIONS: Array = [
 	{"id": "why", "num": 1, "name": "Why mask?", "pitch": "Ears cheat. Catch the Ghost!", "color": Color("#1f3a5f"),
-		"card": "skull_wall", "built": true},
+		"card": "skull_wall", "built": true, "movie": "masking",
+		"intro": "Ears cheat. A loud beep in one ear can sneak across the skull to the other.\n"
+			+ "Learn the skull wall, then catch the Cross-Hearing Ghost: six beeps, who heard each one?"},
 	{"id": "when", "num": 2, "name": "When to mask?", "pitch": "Spot the cross-hearing risk.", "color": Color("#d99a2b"),
-		"card": "when_to_mask", "built": false},
+		"card": "when_to_mask", "built": true, "movie": "",
+		"intro": "Before every test, ask: could the other ear be answering?\n"
+			+ "Two quick checks. Bone: a gap of 10 or more. Air: air minus the wall reaches the bone. Six charts: mask or not?"},
 	{"id": "start", "num": 3, "name": "How much to start?", "pitch": "Set the noise dial.", "color": Color("#7d8398"),
-		"card": "start_level", "built": false},
+		"card": "start_level", "built": true, "movie": "",
+		"intro": "Masking on: how loud should the shhh start?\n"
+			+ "The other ear's AIR plus 10. Bone at low pitches with a normal ear covered? Add the occlusion boom. Six dials to set."},
 	{"id": "plateau", "num": 4, "name": "The plateau walk", "pitch": "Shhh up, or beep up?", "color": Color("#3a9d76"),
-		"card": "plateau", "built": false},
+		"card": "plateau", "built": false, "movie": "", "intro": ""},
 	{"id": "occlusion", "num": 5, "name": "The occlusion effect", "pitch": "Why a covered ear booms.", "color": Color("#ff9f1c"),
-		"card": "occlusion", "built": false},
+		"card": "occlusion", "built": false, "movie": "", "intro": ""},
 	{"id": "exam", "num": 6, "name": "The masking exam", "pitch": "Nine holes, the whole job.", "color": Color("#8e5cc4"),
-		"card": "", "built": false},
+		"card": "", "built": false, "movie": "", "intro": ""},
 ]
 
 ## Answers of "Who heard it?" (station 1), in key order 1-3.
@@ -207,12 +213,16 @@ static func who_heard_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
 
 
 static func _pick_transducer(rng: RandomNumberGenerator) -> String:
+	return _pick_weighted(rng, TRANSDUCER_WEIGHTS)
+
+
+static func _pick_weighted(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 	var total := 0
-	for k: String in TRANSDUCER_WEIGHTS:
-		total += int(TRANSDUCER_WEIGHTS[k])
+	for k: String in weights:
+		total += int(weights[k])
 	var r := rng.randi_range(1, total)
-	for k: String in TRANSDUCER_WEIGHTS:
-		r -= int(TRANSDUCER_WEIGHTS[k])
+	for k: String in weights:
+		r -= int(weights[k])
 		if r <= 0:
 			return k
 	return "phones"
@@ -224,6 +234,223 @@ static func _shuffle(a: Array, rng: RandomNumberGenerator) -> void:
 		var tmp: Variant = a[i]
 		a[i] = a[j]
 		a[j] = tmp
+
+
+# ---------------------------------------------------------------- station 2: mask it?
+
+## Answers of "Mask it?" (station 2), in key order 1-3. Air alone never needs it here: the non-test
+## ear's bone is the unmasked bone (the better cochlea), so a crossing air tone already means a gap
+## of at least the wall, and bone needs masking too (&"air" is never dealt).
+const CALLS: Array[StringName] = [&"none", &"bone", &"both"]
+const CALL_WORDS: Dictionary = {&"none": "NO MASKING", &"bone": "MASK BONE ONLY", &"both": "MASK BONE AND AIR"}
+const CALL_VERDICTS: Dictionary = {
+	&"none": "No masking: no gap, and air can't reach.",
+	&"bone": "Mask the bone test. Air is safe.",
+	&"both": "Mask both: bone AND air!",
+}
+const WHEN_FREQS: Array[int] = [500, 1000, 2000, 4000]
+## Station 2's earphones: headphones on two cards in three, inserts on the third.
+const WHEN_WEIGHTS: Dictionary = {"phones": 2, "inserts": 1}
+## "Try it" (station 2): Hoot walks three charts, one check at a time. The middle one is the first
+## one with inserts on: the thicker wall saves the air test.
+const WHEN_TRIES: Array = [
+	{"transducer": "phones", "freq": 1000, "air": 75, "bone": 20, "other_air": 25,
+		"line": "Bone first. Righty's air minus the bone: a gap of 10 or more?"},
+	{"transducer": "inserts", "freq": 1000, "air": 65, "bone": 20, "other_air": 25,
+		"line": "Same ear, inserts on. Gap check, then air minus a thicker wall."},
+	{"transducer": "phones", "freq": 2000, "air": 40, "bone": 40, "other_air": 45,
+		"line": "One more. Is there any gap at all?"},
+]
+
+
+## The test ear's air-bone gap (air minus the unmasked bone).
+static func gap(card: Dictionary) -> int:
+	return int(card["air"]) - int(card["bone"])
+
+
+## Masked bone needed: ClinicRules.bc_masking_needed (a gap of 10 or more).
+static func mask_bone(card: Dictionary) -> bool:
+	return ClinicRules.bc_masking_needed(int(card["air"]), int(card["bone"]))
+
+
+## Masked air needed: ClinicRules.ac_masking_needed (air minus the wall reaches the other ear's bone,
+## here the unmasked bone: the best the other cochlea can be).
+static func mask_air(card: Dictionary) -> bool:
+	return ClinicRules.ac_masking_needed(int(card["air"]), int(card["bone"]), StringName(String(card["transducer"])), int(card["freq"]))
+
+
+## &"none", &"bone", &"both" (or &"air", never dealt).
+static func mask_call(card: Dictionary) -> StringName:
+	var b := mask_bone(card)
+	var a := mask_air(card)
+	if a and b:
+		return &"both"
+	if b:
+		return &"bone"
+	if a:
+		return &"air"
+	return &"none"
+
+
+## The call holds with either reading 5 dB off.
+static func when_honest(card: Dictionary) -> bool:
+	var want := mask_call(card)
+	for key: String in ["air", "bone"]:
+		for d: int in [-5, 5]:
+			var c := card.duplicate()
+			c[key] = int(c[key]) + d
+			if mask_call(c) != want:
+				return false
+	return true
+
+
+## One honest "Mask it?" chart with this call (Righty is the test ear).
+static func when_card(rng: RandomNumberGenerator, answer: StringName, transducer: String) -> Dictionary:
+	for i in 400:
+		var f: int = WHEN_FREQS[rng.randi_range(0, WHEN_FREQS.size() - 1)]
+		var bone := 5 * rng.randi_range(0, mini(8, (ClinicRules.BC_MAX_DB[f] - 10) / 5))
+		var air := bone + 5 * rng.randi_range(0, 15)
+		if air > mini(TONE_TOP_DB, ClinicRules.max_db(f)) or air < 0:
+			continue
+		var c := {"transducer": transducer, "freq": f, "air": air, "bone": bone, "other_air": bone + 5 * rng.randi_range(0, 3), "ear": "right"}
+		if mask_call(c) == answer and when_honest(c):
+			return c
+	var fb := {&"none": [30, 30], &"bone": [50, 20], &"both": [80, 20]}
+	var v: Array = fb[answer]
+	return {"transducer": "phones", "freq": 1000, "air": v[0], "bone": v[1], "other_air": v[1] + 5, "ear": "right"}
+
+
+## A round: ROUND_HOLES charts, every call at least once.
+static func when_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var answers: Array[StringName] = CALLS.duplicate()
+	while answers.size() < ROUND_HOLES:
+		answers.append(CALLS[rng.randi_range(0, CALLS.size() - 1)])
+	_shuffle(answers, rng)
+	var out: Array[Dictionary] = []
+	for a: StringName in answers:
+		out.append(when_card(rng, a, _pick_weighted(rng, WHEN_WEIGHTS)))
+	return out
+
+
+## The two checks under a revealed chart: bone, then air.
+static func when_lines(card: Dictionary) -> Array[String]:
+	var g := gap(card)
+	var w := wall(String(card["transducer"]))
+	var a := "BONE: %d - %d = a gap of %d. %s" % [int(card["air"]), int(card["bone"]), g,
+		"10 or more: mask bone." if mask_bone(card) else "Under 10: no bone masking."]
+	var b := "AIR: %d - %d wall = %d. Bone is %d. %s" % [int(card["air"]), w, int(card["air"]) - w, int(card["bone"]),
+		"It reaches: mask air too!" if mask_air(card) else "Can't reach it: air is safe."]
+	return [a, b]
+
+
+static func when_hint(card: Dictionary) -> String:
+	return "Gap first: air minus bone. Then air minus the %d wall: does it reach the bone?" % wall(String(card["transducer"]))
+
+
+# ---------------------------------------------------------------- station 3: set the dial
+
+## The dial's step and range (the audiometer's masker).
+const DIAL_STEP_DB := ClinicRules.MASK_STEP_DB
+const START_KINDS: Array[String] = ["air", "boom", "boom", "high", "blocked", "inserts"]
+const MASKER_WORDS: Dictionary = {"phones": "headphone", "inserts": "insert"}
+## "Try it" (station 3): Hoot names the sum, the player turns the dial to it.
+const START_TRIES: Array = [
+	{"test": "ac", "freq": 2000, "other_air": 15, "other_gap": 0, "masker": "phones",
+		"line": "Air test. Lefty's air is 15. Add 10: turn the shhh to 25."},
+	{"test": "bc", "freq": 500, "other_air": 15, "other_gap": 0, "masker": "phones",
+		"line": "Bone at 500, Lefty normal and covered: it booms. 15 + 10 + 15 = 40."},
+	{"test": "bc", "freq": 500, "other_air": 15, "other_gap": 0, "masker": "inserts",
+		"line": "Same, but an insert masker. Deep foam: no boom. 15 + 10 = 25."},
+]
+
+
+static func is_bone_test(card: Dictionary) -> bool:
+	return String(card["test"]) == "bc"
+
+
+## The occlusion add-on in this start level (0 for air, high pitches, a blocked ear or inserts).
+static func boom(card: Dictionary) -> int:
+	if not is_bone_test(card) or int(card["other_gap"]) > ClinicRules.OCCLUSION_MAX_GAP_DB:
+		return 0
+	return ClinicRules.occlusion_effect(int(card["freq"]), StringName(String(card["masker"])))
+
+
+## The right start level: ClinicRules.initial_masking.
+static func start_level(card: Dictionary) -> int:
+	return ClinicRules.initial_masking(int(card["other_air"]), int(card["freq"]), &"bc" if is_bone_test(card) else &"ac",
+		int(card["other_gap"]), StringName(String(card["masker"])))
+
+
+## Strokes for a dial setting: on the dot is par, one step off a bogey, more a double bogey.
+static func dial_strokes(dial_db: int, card: Dictionary) -> int:
+	var off := absi(dial_db - start_level(card))
+	if off == 0:
+		return 1
+	return 2 if off <= DIAL_STEP_DB else 3
+
+
+## One "Set the dial" card of a kind: air, boom (low bone, normal covered ear, headphones), high
+## (bone at 2k and up), blocked (low bone, the covered ear has its own gap), inserts (low bone).
+static func start_card(rng: RandomNumberGenerator, kind: String) -> Dictionary:
+	var low: Array[int] = [250, 500, 750, 1000]
+	var c := {"test": "bc", "masker": "phones", "other_gap": 5 * rng.randi_range(0, 1), "ear": "right"}
+	var other_bone := 5 * rng.randi_range(0, 6)
+	match kind:
+		"air":
+			c["test"] = "ac"
+			c["freq"] = [250, 500, 1000, 2000, 4000, 8000][rng.randi_range(0, 5)]
+			c["masker"] = "inserts" if rng.randi_range(0, 2) == 0 else "phones"
+		"high":
+			c["freq"] = [2000, 3000, 4000][rng.randi_range(0, 2)]
+		"blocked":
+			c["freq"] = low[rng.randi_range(0, 3)]
+			c["other_gap"] = 5 * rng.randi_range(4, 7)
+			other_bone = 5 * rng.randi_range(0, 3)
+		"inserts":
+			c["freq"] = low[rng.randi_range(0, 3)]
+			c["masker"] = "inserts"
+		_:
+			c["freq"] = low[rng.randi_range(0, 3)]
+	c["other_air"] = other_bone + int(c["other_gap"])
+	c["kind"] = kind
+	return c
+
+
+## A round: one card of each START_KINDS (the boom twice), shuffled.
+static func start_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var kinds: Array[String] = START_KINDS.duplicate()
+	_shuffle(kinds, rng)
+	var out: Array[Dictionary] = []
+	for k: String in kinds:
+		out.append(start_card(rng, k))
+	return out
+
+
+## Why there is (or isn't) an occlusion add-on, in one line.
+static func boom_line(card: Dictionary) -> String:
+	var b := boom(card)
+	if b > 0:
+		return "+ %d occlusion: low bone tone, normal ear covered by a headphone." % b
+	if not is_bone_test(card):
+		return "No occlusion add-on: this is an air test."
+	if int(card["other_gap"]) > ClinicRules.OCCLUSION_MAX_GAP_DB:
+		return "No occlusion: Lefty's middle ear is blocked already (gap %d)." % int(card["other_gap"])
+	if String(card["masker"]) == "inserts":
+		return "No occlusion: the insert sits deep in the canal."
+	return "No occlusion at %d Hz: 2k and up has none." % int(card["freq"])
+
+
+## The sum under a revealed dial.
+static func start_lines(card: Dictionary) -> Array[String]:
+	var b := boom(card)
+	var sum := "Lefty's air %d + %d = %d" % [int(card["other_air"]), ClinicRules.MASK_SAFETY_DB, start_level(card)]
+	if b > 0:
+		sum = "Lefty's air %d + %d + %d = %d" % [int(card["other_air"]), ClinicRules.MASK_SAFETY_DB, b, start_level(card)]
+	return ["%s. Start the shhh at %d." % [sum, start_level(card)], boom_line(card)]
+
+
+static func start_hint(card: Dictionary) -> String:
+	return "Lefty's air plus 10. Then: bone, low pitch, normal ear under a headphone? Add the boom."
 
 
 # ---------------------------------------------------------------- golf

@@ -143,7 +143,7 @@ func open_station(i: int) -> void:
 	if not bool(st["built"]):
 		Sfx.play(&"boing", 0.9, -10.0)
 		Juice.shake(_chips[i], 5.0, 0.25)
-		_hoot_line.text = "\"%s\" opens soon. Station 1 is ready now!" % String(st["name"])
+		_hoot_line.text = "\"%s\" opens soon. Pick a station without SOON!" % String(st["name"])
 		return
 	_leaving = true
 	last = i

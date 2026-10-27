@@ -2,22 +2,24 @@ extends Control
 ## MaskingSchool (training, story-internal): one Masking School station, played on Hoot's movie stage
 ## (docs/training/MASKING_TRAINER.md). The Training room sets `next_station` and opens this scene;
 ## the station runs its loop and comes back to the room:
-##   1. Hoot's card (what the station is for; the first time, Hoot's masking movie plays after Start)
+##   1. Hoot's card (what the station is for; station 1's first time, Hoot's masking movie plays after Start)
 ##   2. Try it (guided cards: nothing can go wrong)
 ##   3. Your round (MaskDeck.ROUND_HOLES holes, instant feedback, golf strokes)
 ##   4. The scorecard (holes, the round, the star, a new cheat-sheet card)
-## Stations built so far: 1 "Why mask?" (who heard the beep?).
+## Stations built so far: 1 "Why mask?" (who heard the beep?), 2 "When to mask?" (mask bone, air,
+## both or neither?), 3 "How much to start?" (set the noise dial).
 ## Controls: keys 1-3 answer, H hint (a stroke), Enter / Space go on, Up / Down (the louder / softer
-## keys, either key style) move the beep in Try it, R plays again on the scorecard, T leaves for the
-## room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off: every answer
-## is drawn.
+## keys, either key style) move the beep or the dial, Enter sets the dial, R plays again on the
+## scorecard, T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with
+## sound off: every answer is drawn.
 ## Beats (CONTRACTS.md §3.2; solvers go through the same code as a click):
 ##   training_intro {station}                       solver: Start
-##   training_try {station, step, target, mouse}    solver: raise the beep to the target, then Next
-##   training_card {station, hole, options, best, mouse}  solver: the right answer
+##   training_try {station, step, target, mouse}    solver: step up to the target, then Next
+##   training_card {station, hole, options, best, mouse}  solver: the right answer (station 3: best is
+##     the start level in dB EM, start the dial's first level, options empty; turn the dial, Set it)
 ##   training_next {station, hole}                  solver: Next
 ##   training_scorecard {station, over_par, star}   solver: back to the room
-## The movie's own beat (explainer) plays in between on a first visit.
+## The movie's own beat (explainer) plays in between on station 1's first visit.
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
@@ -28,7 +30,6 @@ const Stage2D := preload("res://story/explainers/explainer_stage.gd")
 const PLAYER_SCENE := "res://story/explainers/explainer_player.tscn"
 const ROOM_SCENE := "res://story/training/training_room.tscn"
 const SETS_PATH := "res://story/training/masking/school_sets.gd"
-const MOVIE_ID := "masking"
 
 const FIELD := Vector2(1280, 720)
 const STAGE_AT := Vector2(24, 84)
@@ -108,7 +109,7 @@ func _run() -> void:
 	Events.phase_changed.emit(&"training", {"lesson": MaskDeck.LESSON, "station": station_id})
 	if not await _intro():
 		return
-	if not Game.is_movie_seen(MOVIE_ID):
+	if _movie() != "" and not Game.is_movie_seen(_movie()):
 		await _play_movie()
 	if _leaving:
 		return
@@ -150,38 +151,130 @@ func rewatch() -> void:
 		_go.emit(&"movie")
 
 
+## The station's lead-in movie ("" for none).
+func _movie() -> String:
+	return String(info.get("movie", ""))
+
+
 func _play_movie() -> void:
 	_say("A quick cartoon first: Hoot's masking movie!")
 	var player: Node = (load(PLAYER_SCENE) as PackedScene).instantiate()
 	add_child(player)
-	await player.call("play", MOVIE_ID, "training")
+	await player.call("play", _movie(), "training")
 	player.queue_free()
+
+
+# ---------------------------------------------------------------- station helpers
+
+func _is_dial() -> bool:
+	return station_id == "start"
+
+
+## The answers of a pick-one station, in key order.
+func _options() -> Array[StringName]:
+	return MaskDeck.CALLS if station_id == "when" else MaskDeck.WHO
+
+
+func _word(a: StringName) -> String:
+	return String((MaskDeck.CALL_WORDS if station_id == "when" else MaskDeck.WHO_WORDS)[a])
+
+
+func _verdict(a: StringName) -> String:
+	return String((MaskDeck.CALL_VERDICTS if station_id == "when" else MaskDeck.WHO_VERDICTS)[a])
+
+
+func _tries() -> Array:
+	match station_id:
+		"when":
+			return MaskDeck.WHEN_TRIES
+		"start":
+			return MaskDeck.START_TRIES
+	return MaskDeck.WHY_TRIES
+
+
+func _deal() -> Array[Dictionary]:
+	match station_id:
+		"when":
+			return MaskDeck.when_round(rng)
+		"start":
+			return MaskDeck.start_round(rng)
+	return MaskDeck.who_heard_round(rng)
+
+
+func _right_answer(card: Dictionary) -> StringName:
+	return MaskDeck.mask_call(card) if station_id == "when" else MaskDeck.who_heard(card)
 
 
 # ---------------------------------------------------------------- try it
 
 func _try_it() -> void:
 	_set_top("Try it")
-	for i in MaskDeck.WHY_TRIES.size():
-		var tr: Dictionary = (MaskDeck.WHY_TRIES[i] as Dictionary).duplicate()
+	var tries := _tries()
+	for i in tries.size():
+		var tr: Dictionary = (tries[i] as Dictionary).duplicate()
+		match station_id:
+			"when":
+				tr["step"] = 0
+			"start":
+				tr["dial"] = int(tr["other_air"])
+				tr["target"] = MaskDeck.start_level(tr)
 		_card = tr
 		_show_card(tr, false, true)
 		_say(String(tr["line"]))
 		_try_buttons()
 		_feedback_text(_try_status())
 		_state = &"try"
-		Events.awaiting_input.emit(&"training_try", {"station": station_id, "step": i, "target": MaskDeck.try_target(tr),
-			"mouse": {"click": "Louder +5"}}, _solve_try)
+		Events.awaiting_input.emit(&"training_try", {"station": station_id, "step": i, "target": _try_target(),
+			"mouse": {"click": _try_click()}}, _solve_try)
 		await _go
 		Events.input_resolved.emit(&"training_try")
 		if _leaving:
 			return
 
 
-## The beep up (+1 step) or down (-1) in Try it.
+## What Try it is waiting for: the beep that reaches Lefty, both checks done, or Hoot's dial level.
+func _try_target() -> int:
+	match station_id:
+		"when":
+			return 2
+		"start":
+			return MaskDeck.start_level(_card)
+	return MaskDeck.try_target(_card)
+
+
+## The live Try it value the target is matched against (the tests and the bot read it).
+func try_value() -> int:
+	match station_id:
+		"when":
+			return int(_card.get("step", 0))
+		"start":
+			return int(_card.get("dial", 0))
+	return int(_card.get("tone", 0))
+
+
+func _try_click() -> String:
+	match station_id:
+		"when":
+			return "Check it"
+		"start":
+			return "Shhh up +5"
+	return "Louder +5"
+
+
+## One Try it step: the beep up (+1) or down (-1), the next check (station 2), or the dial (station 3).
 func try_step(dir: int) -> void:
 	if _state != &"try":
 		return
+	match station_id:
+		"when":
+			_try_check(dir)
+		"start":
+			_try_dial(dir)
+		_:
+			_try_beep(dir)
+
+
+func _try_beep(dir: int) -> void:
 	var tone := clampi(int(_card["tone"]) + dir * MaskDeck.TRY_STEP_DB, 0, MaskDeck.try_max(_card))
 	if tone == int(_card["tone"]):
 		return
@@ -190,18 +283,67 @@ func try_step(dir: int) -> void:
 	_stage.params["tone"] = tone
 	_feedback_text(_try_status())
 	if MaskDeck.other_hears(_card):
-		_state = &"try_done"
 		_stage.params["boo_at"] = _stage_t
 		Sfx.play(&"boing", 1.1, -8.0)
-		_say(_try_payoff())
-		for b in _answers.get_children():
-			(b as Button).disabled = true
-		_show_next("Next")
+		_try_done()
 	else:
 		_say(String(_card["line"]))
 
 
+func _try_check(dir: int) -> void:
+	if dir <= 0:
+		return
+	_card["step"] = int(_card["step"]) + 1
+	Sfx.play(&"pop", 1.0 + 0.1 * int(_card["step"]), -8.0)
+	_stage.params["show_bone"] = true
+	_feedback_text(_try_status())
+	if int(_card["step"]) == 1:
+		var g := MaskDeck.gap(_card)
+		_say("Gap %d. %s Now the air check." % [g, "10 or more: mask bone!" if MaskDeck.mask_bone(_card) else "Under 10: bone is fine."])
+		return
+	_stage.params["show_air"] = true
+	_stage.params["verdict"] = _verdict(MaskDeck.mask_call(_card))
+	_stage.params["verdict_at"] = _stage_t
+	Sfx.play(&"ding", 1.1, -8.0)
+	_try_done()
+
+
+func _try_dial(dir: int) -> void:
+	var dial := clampi(int(_card["dial"]) + dir * MaskDeck.DIAL_STEP_DB, ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+	if dial == int(_card["dial"]):
+		return
+	_card["dial"] = dial
+	Sfx.play(&"blip", 0.8 + dial / 250.0, -12.0)
+	_stage.params["dial"] = dial
+	_feedback_text(_try_status())
+	if dial == int(_card["target"]):
+		_stage.params["reveal"] = true
+		_stage.params["verdict_at"] = _stage_t
+		Sfx.play(&"ding", 1.1, -8.0)
+		_try_done()
+
+
+func _try_done() -> void:
+	_state = &"try_done"
+	_say(_try_payoff())
+	for b in _answers.get_children():
+		(b as Button).disabled = true
+	_show_next("Next")
+
+
 func _try_status() -> String:
+	match station_id:
+		"when":
+			var lines := MaskDeck.when_lines(_card)
+			match int(_card["step"]):
+				0:
+					return "Righty's air %d, bone %d. %s: the wall is %d." % [int(_card["air"]), int(_card["bone"]),
+						MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])], MaskDeck.wall(String(_card["transducer"]))]
+				1:
+					return lines[0]
+			return "%s\n%s" % [lines[0], lines[1]]
+		"start":
+			return "Shhh at %d dB. Hoot's level: %d. Up or down 5 at a time." % [int(_card["dial"]), int(_card["target"])]
 	var w := MaskDeck.wall(String(_card["transducer"]))
 	var tone := int(_card["tone"])
 	if w == 0:
@@ -210,6 +352,22 @@ func _try_status() -> String:
 
 
 func _try_payoff() -> String:
+	match station_id:
+		"when":
+			match MaskDeck.mask_call(_card):
+				&"both":
+					return "Air crosses too. Big gap, thin wall: mask both!"
+				&"bone":
+					if String(_card["transducer"]) == "inserts":
+						return "The thicker insert wall saved the air test. Mask bone only."
+					return "Mask bone only. Air can't reach."
+			return "No gap, no crossing. No masking. Easy!"
+		"start":
+			if MaskDeck.boom(_card) > 0:
+				return "Spot on! The orange slice is the occlusion boom."
+			if MaskDeck.is_bone_test(_card):
+				return "Spot on! Inserts sit deep: no boom, no orange slice."
+			return "Spot on! Air test: Lefty's air plus 10, nothing more."
 	var tone := int(_card["tone"])
 	var w := MaskDeck.wall(String(_card["transducer"]))
 	match String(_card["transducer"]):
@@ -232,23 +390,38 @@ func _solve_try() -> void:
 
 func _round() -> void:
 	strokes.clear()
-	var cards := MaskDeck.who_heard_round(rng)
+	var cards := _deal()
 	for h in cards.size():
 		_card = cards[h]
-		_answer = MaskDeck.who_heard(_card)
 		_hole_strokes = 1
 		_hinted = false
 		_picked.clear()
 		_set_top("Hole %d of %d" % [h + 1, cards.size()])
 		_show_card(_card, false, false)
-		_say("Who could answer this beep? Pick one.")
-		_feedback_text("%s on the right ear. Read the numbers, then pick." % MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])])
-		_answer_buttons()
-		_state = &"card"
-		var best := MaskDeck.WHO.find(_answer)
-		Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": best,
-			"options": MaskDeck.WHO.map(func(a: StringName) -> String: return String(MaskDeck.WHO_WORDS[a])),
-			"mouse": {"click": String(MaskDeck.WHO_WORDS[_answer])}}, func() -> void: pick(_answer))
+		if _is_dial():
+			_card["dial"] = int(_card["other_air"])
+			_stage.params["dial"] = int(_card["dial"])
+			_say("Masking on Lefty. Turn the shhh to the start level, then Set it.")
+			_feedback_text(_dial_status())
+			_dial_buttons()
+			_state = &"dial"
+			var best := MaskDeck.start_level(_card)
+			Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": best, "start": int(_card["dial"]),
+				"options": [], "mouse": {"click": "Set it"}}, _solve_dial.bind(best))
+		else:
+			_answer = _right_answer(_card)
+			if station_id == "when":
+				_say("Righty is tested. Which tests need masking? Pick one.")
+				_feedback_text("%s at %d Hz. Gap check first, then the air check." % [MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])], int(_card["freq"])])
+			else:
+				_say("Who could answer this beep? Pick one.")
+				_feedback_text("%s on the right ear. Read the numbers, then pick." % MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])])
+			_answer_buttons()
+			_state = &"card"
+			var opts := _options()
+			Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": opts.find(_answer),
+				"options": opts.map(func(a: StringName) -> String: return _word(a)),
+				"mouse": {"click": _word(_answer)}}, func() -> void: pick(_answer))
 		await _go
 		Events.input_resolved.emit(&"training_card")
 		if _leaving:
@@ -272,12 +445,18 @@ func pick(a: StringName) -> void:
 	if a == _answer:
 		_state = &"busy"
 		Sfx.play(&"ding", 1.1, -6.0)
-		_stage.params["reveal"] = true
-		_stage.params["verdict"] = String(MaskDeck.WHO_VERDICTS[_answer])
+		var lines: Array[String] = []
+		if station_id == "when":
+			_stage.params["show_bone"] = true
+			_stage.params["show_air"] = true
+			lines = MaskDeck.when_lines(_card)
+		else:
+			_stage.params["reveal"] = true
+			if _answer == &"ghost":
+				_stage.params["boo_at"] = _stage_t
+			lines = MaskDeck.why_lines(_card)
+		_stage.params["verdict"] = _verdict(_answer)
 		_stage.params["verdict_at"] = _stage_t
-		if _answer == &"ghost":
-			_stage.params["boo_at"] = _stage_t
-		var lines := MaskDeck.why_lines(_card)
 		_feedback_text("%s\n%s" % [lines[0], lines[1]])
 		_say(_hole_line())
 		for b: Button in _answer_list():
@@ -285,12 +464,15 @@ func pick(a: StringName) -> void:
 			if StringName(String(b.get_meta("answer", ""))) == a:
 				b.disabled = false
 				b.modulate = Color(1, 1, 1)
-				b.text = "  " + String(MaskDeck.WHO_WORDS[a]) + "  "
+				b.text = "  " + _word(a) + "  "
 		_go.emit(&"right")
 		return
 	_hole_strokes += 1
 	Sfx.play(&"error", 1.0, -10.0)
-	_say("Not quite. Check both numbers: the test ear's, and what crosses the wall.")
+	if station_id == "when":
+		_say("Not quite. Gap check first, then air minus the wall.")
+	else:
+		_say("Not quite. Check both numbers: the test ear's, and what crosses the wall.")
 	for b: Button in _answer_list():
 		if StringName(String(b.get_meta("answer", ""))) == a:
 			b.disabled = true
@@ -298,13 +480,67 @@ func pick(a: StringName) -> void:
 			Juice.shake(b, 5.0, 0.25)
 
 
+## Turn the noise dial one step (station 3's round).
+func nudge(dir: int) -> void:
+	if _state != &"dial":
+		return
+	var dial := clampi(int(_card["dial"]) + dir * MaskDeck.DIAL_STEP_DB, ClinicRules.MASK_MIN_DB, ClinicRules.MASK_MAX_DB)
+	if dial == int(_card["dial"]):
+		return
+	_card["dial"] = dial
+	Sfx.play(&"blip", 0.8 + dial / 250.0, -12.0)
+	_stage.params["dial"] = dial
+	_feedback_text(_dial_status())
+
+
+## Lock the dial in: on the dot is par, one step off a bogey, more a double bogey.
+func set_dial() -> void:
+	if _state != &"dial":
+		return
+	_state = &"busy"
+	var want := MaskDeck.start_level(_card)
+	var dial := int(_card["dial"])
+	_hole_strokes += MaskDeck.dial_strokes(dial, _card) - 1
+	Sfx.play(&"ding" if dial == want else &"error", 1.1, -6.0 if dial == want else -10.0)
+	_stage.params["reveal"] = true
+	_stage.params["verdict"] = ("Spot on: %d!" % want) if dial == want else ("You set %d. Start at %d." % [dial, want])
+	_stage.params["verdict_at"] = _stage_t
+	var lines := MaskDeck.start_lines(_card)
+	_feedback_text("%s\n%s" % [lines[0], lines[1]])
+	_say(_hole_line() if dial == want else ("Close: one step off. A bogey." if absi(dial - want) <= MaskDeck.DIAL_STEP_DB
+		else "Read the sum on the dial: air, plus 10, plus any boom."))
+	for b: Button in _answer_list():
+		b.disabled = true
+	if _hint_btn != null:
+		_hint_btn.disabled = true
+	_go.emit(&"right")
+
+
+func _solve_dial(best: int) -> void:
+	for i in 40:
+		if _state != &"dial" or int(_card["dial"]) == best:
+			break
+		nudge(1 if best > int(_card["dial"]) else -1)
+	set_dial()
+
+
+func _dial_status() -> String:
+	return "Shhh at %d dB. Test: Righty's %s at %d Hz." % [int(_card["dial"]), "bone" if MaskDeck.is_bone_test(_card) else "air", int(_card["freq"])]
+
+
 func hint() -> void:
-	if _state != &"card" or _hinted:
+	if _state not in [&"card", &"dial"] or _hinted:
 		return
 	_hinted = true
 	_hole_strokes += 1
 	Sfx.play(&"pop", 1.0, -8.0)
-	_say(MaskDeck.hint_line(_card))
+	match station_id:
+		"when":
+			_say(MaskDeck.when_hint(_card))
+		"start":
+			_say(MaskDeck.start_hint(_card))
+		_:
+			_say(MaskDeck.hint_line(_card))
 	_hint_btn.disabled = true
 
 
@@ -339,7 +575,7 @@ func _scorecard() -> void:
 	_show_overlay(_score_panel(over, rec))
 	if over == 0:
 		Sfx.play(&"fanfare", 1.0, -8.0)
-		_say("Even par! You caught every Ghost. That's a star.")
+		_say(_star_line())
 	else:
 		_say("%s. Play again for the star, or head back to the room." % MaskDeck.round_name(over))
 	Events.awaiting_input.emit(&"training_scorecard", {"station": station_id, "over_par": over, "star": over == 0,
@@ -351,6 +587,15 @@ func _scorecard() -> void:
 		await _round()
 		if not _leaving:
 			await _scorecard()
+
+
+func _star_line() -> String:
+	match station_id:
+		"when":
+			return "Even par! You spotted every risk. That's a star."
+		"start":
+			return "Even par! Every dial spot on. That's a star."
+	return "Even par! You caught every Ghost. That's a star."
 
 
 func play_again() -> void:
@@ -383,22 +628,33 @@ func _unhandled_input(event: InputEvent) -> void:
 	var handled := true
 	if code == KEY_T:
 		leave()
-	elif _state == &"card" and code >= KEY_1 and code < KEY_1 + MaskDeck.WHO.size():
-		pick(MaskDeck.WHO[code - KEY_1])
-	elif _state == &"card" and code >= KEY_KP_1 and code < KEY_KP_1 + MaskDeck.WHO.size():
-		pick(MaskDeck.WHO[code - KEY_KP_1])
-	elif _state == &"card" and code == KEY_H:
+	elif _state == &"card" and code >= KEY_1 and code < KEY_1 + _options().size():
+		pick(_options()[code - KEY_1])
+	elif _state == &"card" and code >= KEY_KP_1 and code < KEY_KP_1 + _options().size():
+		pick(_options()[code - KEY_KP_1])
+	elif _state in [&"card", &"dial"] and code == KEY_H:
 		hint()
 	elif _state == &"try" and event.is_action_pressed(&"louder"):
 		try_step(1)
 	elif _state == &"try" and event.is_action_pressed(&"softer"):
 		try_step(-1)
+	elif _state == &"dial" and event.is_action_pressed(&"louder"):
+		nudge(1)
+	elif _state == &"dial" and event.is_action_pressed(&"softer"):
+		nudge(-1)
 	elif _state == &"score" and code == KEY_R:
 		play_again()
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
 		match _state:
 			&"intro":
 				start()
+			&"try":
+				if station_id == "when":
+					try_step(1)
+				else:
+					handled = false
+			&"dial":
+				set_dial()
 			&"next", &"try_done":
 				press_next()
 			&"score":
@@ -428,10 +684,10 @@ func _build() -> void:
 	chip.add_child(chip_l)
 	_field.add_child(chip)
 	_top_label = UiKit.label("", 22, Palette.INK, 700)
-	_top_label.position = Vector2(470, 26)
+	_top_label.position = Vector2(496, 26)
 	_field.add_child(_top_label)
 	_score_label = UiKit.label("", 20, Palette.INK_SOFT, 600)
-	_score_label.position = Vector2(640, 28)
+	_score_label.position = Vector2(660, 28)
 	_field.add_child(_score_label)
 	_leave_btn = UiKit.button("Back to the room", &"", Vector2(232, 48))
 	_leave_btn.position = Vector2(FIELD.x - 88 - 232, 14)   # clear of the pause button in the corner
@@ -481,7 +737,10 @@ func _build() -> void:
 	_feedback_panel.add_child(_feedback)
 	_field.add_child(_feedback_panel)
 	if UiKit.show_key_hints():
-		var hr := UiKit.hint_row([["1", "2", "3"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"], 16)
+		var keys: Array = [["1", "2", "3"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"]
+		if _is_dial():
+			keys = [[Game.key_label(&"louder"), Game.key_label(&"softer")], "dial", ["Enter"], "set it / next", ["H"], "hint", ["T"], "room", ["Esc"], "pause"]
+		var hr := UiKit.hint_row(keys, 16)
 		hr.position = Vector2(24, 676)
 		_field.add_child(hr)
 	_overlay = UiKit.full_rect(Control.MOUSE_FILTER_STOP)
@@ -527,7 +786,11 @@ func _show_card(card: Dictionary, reveal: bool, live: bool) -> void:
 	p["live"] = live
 	p["boo_at"] = -1.0
 	p["verdict"] = ""
-	_stage.show_scene({"id": "who", "set": "who_heard", "duration": 9999.0, "params": p})
+	p["show_bone"] = false
+	p["show_air"] = false
+	p["target"] = int(card.get("target", -1))
+	var set_id := {"when": "when_card", "start": "start_dial"}.get(station_id, "who_heard") as String
+	_stage.show_scene({"id": station_id, "set": set_id, "duration": 9999.0, "params": p})
 
 
 func _clear_answers() -> void:
@@ -548,9 +811,10 @@ func _answer_list() -> Array[Button]:
 
 func _answer_buttons() -> void:
 	_clear_answers()
-	for i in MaskDeck.WHO.size():
-		var a: StringName = MaskDeck.WHO[i]
-		var b := _side_button(String(MaskDeck.WHO_WORDS[a]), str(i + 1))
+	var opts := _options()
+	for i in opts.size():
+		var a: StringName = opts[i]
+		var b := _side_button(_word(a), str(i + 1))
 		b.set_meta("answer", String(a))
 		b.pressed.connect(pick.bind(a))
 		_answers.add_child(b)
@@ -561,12 +825,36 @@ func _answer_buttons() -> void:
 
 func _try_buttons() -> void:
 	_clear_answers()
-	var up := _side_button("Louder +5", Game.key_label(&"louder"))
+	if station_id == "when":
+		var check := _side_button("Check it", "Enter")
+		check.pressed.connect(try_step.bind(1))
+		_answers.add_child(check)
+		return
+	var up := _side_button(_try_click(), Game.key_label(&"louder"))
 	up.pressed.connect(try_step.bind(1))
 	_answers.add_child(up)
-	var down := _side_button("Softer -5", Game.key_label(&"softer"), Vector2(SIDE_W, 54))
+	var down := _side_button("Shhh down -5" if _is_dial() else "Softer -5", Game.key_label(&"softer"), Vector2(SIDE_W, 54))
 	down.pressed.connect(try_step.bind(-1))
 	_answers.add_child(down)
+
+
+func _dial_buttons() -> void:
+	_clear_answers()
+	var up := _side_button("Shhh up +5", Game.key_label(&"louder"))
+	up.set_meta("answer", "up")
+	up.pressed.connect(nudge.bind(1))
+	_answers.add_child(up)
+	var down := _side_button("Shhh down -5", Game.key_label(&"softer"), Vector2(SIDE_W, 54))
+	down.set_meta("answer", "down")
+	down.pressed.connect(nudge.bind(-1))
+	_answers.add_child(down)
+	var set_btn := _side_button("Set it", "Enter")
+	set_btn.set_meta("answer", "set")
+	set_btn.pressed.connect(set_dial)
+	_answers.add_child(set_btn)
+	_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
+	_hint_btn.pressed.connect(hint)
+	_answers.add_child(_hint_btn)
 
 
 func _show_next(text: String) -> void:
@@ -617,8 +905,10 @@ func _intro_panel() -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	p.add_child(v)
-	var ink: Color = Palette.PAPER
-	var num := UiKit.label("STATION %d" % int(info["num"]), 20, Palette.SUNNY, 700)
+	var light := (info["color"] as Color).get_luminance() > 0.55
+	var ink: Color = Palette.INK if light else Palette.PAPER
+	var accent: Color = Palette.INK if light else Palette.SUNNY
+	var num := UiKit.label("STATION %d" % int(info["num"]), 20, accent, 700)
 	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(num)
 	var title := UiKit.label(String(info["name"]), 44, ink, 700)
@@ -632,15 +922,14 @@ func _intro_panel() -> Control:
 	face.custom_minimum_size = Vector2(96, 96)
 	face.draw.connect(func() -> void: Portraits.draw(face, "Hoot", Vector2(48, 48), 42.0))
 	bh.add_child(face)
-	var lines := UiKit.label("Ears cheat. A loud beep in one ear can sneak across the skull to the other.\n"
-		+ "Learn the skull wall, then catch the Cross-Hearing Ghost: six beeps, who heard each one?", 20, Palette.INK, 600)
+	var lines := UiKit.label(String(info["intro"]), 20, Palette.INK, 600)
 	lines.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lines.custom_minimum_size = Vector2(540, 0)
 	bh.add_child(lines)
 	v.add_child(body)
 	var card := MaskDeck.cheat_card(String(info["card"]))
 	if not card.is_empty():
-		var earn := UiKit.label("You'll earn: the %s card" % String(card["title"]), 20, Palette.SUNNY, 700)
+		var earn := UiKit.label("You'll earn: the %s card" % String(card["title"]), 20, accent, 700)
 		earn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(earn)
 	var row := HBoxContainer.new()
@@ -651,7 +940,7 @@ func _intro_panel() -> Control:
 	go.add_theme_font_size_override("font_size", 26)
 	go.pressed.connect(start)
 	row.add_child(go)
-	if Game.is_movie_seen(MOVIE_ID):
+	if _movie() != "" and Game.is_movie_seen(_movie()):
 		var mv := UiKit.button("Rewatch the movie", &"", Vector2(240, 60))
 		mv.add_theme_font_size_override("font_size", 20)
 		mv.pressed.connect(rewatch)
@@ -660,8 +949,8 @@ func _intro_panel() -> Control:
 	back.add_theme_font_size_override("font_size", 20)
 	back.pressed.connect(leave)
 	row.add_child(back)
-	if not Game.is_movie_seen(MOVIE_ID):
-		var note := UiKit.label("First time here: Hoot's masking movie plays after Start (Esc skips it).", 17, Color(Palette.PAPER, 0.85), 600)
+	if _movie() != "" and not Game.is_movie_seen(_movie()):
+		var note := UiKit.label("First time here: Hoot's masking movie plays after Start (Esc skips it).", 17, Color(ink, 0.85), 600)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(note)
 	return p
