@@ -358,6 +358,8 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `loud_check` **(Day 14)** | level_fitting (loud-sound check, §13) | {}; solver turns the loud limit straight to the right notch and drops the pan once |
 | `tune_desk` **(Day 15)** | level_tuneup (tune-up desk, §15) | {ticket: ticket id}; solver uses the ticket's right tool |
 | `wax_guard` **(Day 15)** | level_tuneup (listening check, §15) | {step: "find" or "swap"}; solver picks the wax guard, then clicks in the new one |
+| `training_room` **(training)** | Training room (`story/training/training_room.gd`) | {stations, built, mouse}; solver opens the first built station without a star (else station 1) |
+| `training_intro`, `training_try`, `training_card`, `training_next`, `training_scorecard` **(training)** | Masking School (`story/training/masking/masking_school.gd`) | {station, ...}: Start; raise the beep to the Ghost, then Next; the right answer; Next; back to the room (`docs/training/MASKING_TRAINER.md`) |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 

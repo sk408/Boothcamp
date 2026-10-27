@@ -5,7 +5,8 @@ extends Control
 ## save, then the suggested day). Days -> the day picker (phase / beat &"chapter_select"): a
 ## scrolling grid with one card per chapter, any number of them. Every day is open (polish: no
 ## locks, any order); the suggested day wears an "UP NEXT" badge. Options opens the pause menu.
-## Freestyle -> the walk-in clinic; Arcade -> the arcade hall (docs/ARCADE.md).
+## Freestyle -> the walk-in clinic; Arcade -> the arcade hall (docs/ARCADE.md); Training -> Hoot's Training room
+## (docs/training/MASKING_TRAINER.md).
 ## Quit quits. Keyboard: Up/Down + Enter/Space (Days: arrows move in the grid, Esc = Back).
 ## Mouse: click, wheel scrolls the grid. The notice shows once per session; the footer
 ## "This is a game, not a hearing test." is always on screen.
@@ -22,6 +23,7 @@ const Movies := preload("res://story/explainers/movies.gd")
 const FREESTYLE_SCENE := "res://story/freestyle/waiting_room.tscn"
 ## (arcade, docs/ARCADE.md) The arcade hall: a cabinet per game (Chart Chute, Ears, Please!).
 const ARCADE_SCENE := "res://story/arcade/arcade_hall.tscn"
+const TRAINING_SCENE := "res://story/training/training_room.tscn"
 ## (demo) The career-fair demo's level, and the line under its Play button.
 const DEMO_SCENE := "res://story/level_demo.tscn"
 const DEMO_TAGLINE := "Find out what Gus can't hear, then help him hear it. About 7 minutes."
@@ -472,6 +474,16 @@ func _on_arcade() -> void:
 	Events.goto_scene.emit(ARCADE_SCENE)
 
 
+## (training, docs/training/MASKING_TRAINER.md) Hoot's Training room: short lessons (Masking School).
+func _on_training() -> void:
+	if _state != &"menu" or _starting:
+		return
+	_starting = true
+	_state = &"busy"
+	Sfx.play(&"click")
+	Events.goto_scene.emit(TRAINING_SCENE)
+
+
 func _on_options() -> void:
 	var pm := get_tree().get_first_node_in_group("pause_menu")
 	if pm:
@@ -585,7 +597,7 @@ func _build() -> void:
 	var play_txt := "Play"
 	if _has_progress():
 		play_txt = "Play: %s" % String(Game.chapter(Game.next_chapter_id()).get("title", "Day 1")).get_slice(":", 0).strip_edges()
-	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Freestyle", _on_freestyle], ["Arcade", _on_arcade]]
+	var specs: Array = [[play_txt, _on_start], ["Days", _on_days], ["Training", _on_training], ["Freestyle", _on_freestyle], ["Arcade", _on_arcade]]
 	if _has_progress():
 		specs.append(["New player", _on_new_player])
 	specs.append(["Options", _on_options])
@@ -599,9 +611,13 @@ func _build() -> void:
 	# (arcade) Freestyle and Arcade share a row the same way
 	var modes := HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 6)
+	# (training) Days and Training share a row too
+	var learn := HBoxContainer.new()
+	learn.add_theme_constant_override("separation", 6)
 	for spec: Array in specs:
 		var paired := String(spec[0]) in ["Options", "Quit"]
-		var mode_pair := String(spec[0]) in ["Freestyle", "Arcade"]
+		var learn_pair := String(spec[0]) in ["Days", "Training"]
+		var mode_pair := String(spec[0]) in ["Freestyle", "Arcade"] or learn_pair
 		var b := UiKit.button(spec[0], &"", Vector2(167 if paired or mode_pair else 340, 48))
 		b.set_meta("label", spec[0])
 		b.add_theme_font_size_override("font_size", 22 if paired or mode_pair else 24)
@@ -613,6 +629,11 @@ func _build() -> void:
 		if paired:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			pair.add_child(b)
+		elif learn_pair:
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if learn.get_parent() == null:
+				v.add_child(learn)
+			learn.add_child(b)
 		elif mode_pair:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			if modes.get_parent() == null:
@@ -929,7 +950,7 @@ func _on_new_player() -> void:
 		Sfx.play(&"error", 1.0, -8.0)
 		return
 	_reset_armed = false
-	for k: String in ["coins", "upgrades", "patients", "plays", "hoot_mastery", "chapters_done", "last_chapter"]:
+	for k: String in ["coins", "upgrades", "patients", "plays", "hoot_mastery", "chapters_done", "last_chapter", "training"]:
 		var d: Variant = Game.DEFAULT_PROGRESS[k]
 		Game.progress[k] = d.duplicate(true) if (d is Dictionary or d is Array) else d
 	Game.save_game()

@@ -131,6 +131,7 @@ const DEFAULT_PROGRESS: Dictionary = {
 	"last_chapter": "",          ## (v3) the chapter started most recently
 	"movies_seen": [],           ## (v4) Hoot's movies (story/explainers/movies.gd ids) shown at least once
 	"arcade": {},                ## (arcade) mode -> {table, runs, found, initials} (story/arcade/arcade_scores.gd)
+	"training": {},              ## (training) lesson -> {stations, cards} (story/training/training_progress.gd)
 }
 
 var save_path: String = DEFAULT_SAVE_PATH

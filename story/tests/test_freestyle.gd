@@ -512,7 +512,7 @@ func test_title_menu_clears_the_footer() -> void:
 	title.call("_on_notice_ok")
 	await wait_seconds(0.6)
 	var buttons: Array = title.get("_menu_buttons")
-	assert_eq(buttons.size(), 7, "Play, Days, Freestyle, Arcade, New player, Options, Quit")
+	assert_eq(buttons.size(), 8, "Play, Days, Training, Freestyle, Arcade, New player, Options, Quit")
 	var card := title.get("_menu_card") as Control
 	var foot := title.get_viewport_rect().size.y - float(title.get("FOOTER_H"))
 	assert_true(card.get_global_rect().end.y <= foot, "the card ends at %d, the footer starts at %d" % [int(card.get_global_rect().end.y), int(foot)])

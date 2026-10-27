@@ -4,7 +4,8 @@ Steve asked (2026-10-27) for "a masking trainer which helps new players understa
 use it, helps them understand and memorize the occlusion effect, and is approachable for someone with little
 previous knowledge. Either a separate day or maybe time to introduce an extra training tab."
 
-This page is the design. It is built in small PRs after this one (section 9). **Steve: section 10 is your question
+This page is the design. It is built in small PRs after this one (section 9). **Built so far:** the Training
+button, the Training room and Station 1 (PR 2). **Steve: section 10 is your question
 list. Reply by number only where you disagree; every default stands otherwise.**
 
 | | |
@@ -68,12 +69,15 @@ Six stations, in the suggested order (all open). Each reuses what the game alrea
 
 - **Lead-in:** the first time, Hoot's masking movie ("The Cross-Hearing Ghost", 92 s, already on main) plays; after
   that it is offered as a replay chip, never forced (the movie rule).
-- **Try it:** a cartoon head with Righty and Lefty (the movie's cochleas). The player slides a beep up in the
-  right earphone; at 40 dB over Lefty's hearing, the Ghost floats through the navy wall. Then the same with inserts
-  (the wall grows to 55), then the bone buzzer (no wall at all: 0).
-- **Your round, "Who heard it?":** each card shows one beep (earphone type, level) and both cochleas' hearing.
-  The player taps who could have answered: **THE TEST EAR**, **THE OTHER EAR (GHOST!)** or **COULD BE EITHER**.
-  The answer is drawn as a beep crossing (or bouncing off) the wall.
+- **Try it:** the movie's cartoon head, with Righty (the test ear, red) and Lefty (blue) and each one's hearing on a
+  chip ("Lefty hears from 10 dB"). The player raises the beep in the right earphone 5 dB at a time (the louder key,
+  or the button); the board does the sum through the navy wall ("50 - 40 = 10") and at the first level Lefty can
+  hear, the Ghost floats out: BOO! Then the same with inserts (the wall is 55: BOO at 65), then the bone buzzer (no
+  wall at all: BOO at just 10).
+- **Your round, "Who heard it?":** six cards. Each shows one beep (earphone, level) on Righty and both cochleas'
+  hearing. The player picks **THE TEST EAR**, **THE OTHER EAR (GHOST!)** or **COULD BE EITHER** (keys 1-3). The
+  answer is drawn: who wakes up, the sum through the wall, the Ghost when only Lefty heard it, and two "why" lines
+  under the stage. Every answer comes up at least once a round; headphones, inserts and bone are mixed 3:2:1.
 - **Earns:** the **Skull Wall card**: "Headphones 40. Inserts 55. Bone 0."
 - **Rules used:** `ClinicRules.IA_RULE_DB`.
 
