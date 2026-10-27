@@ -128,6 +128,12 @@ func test_hoot_lines_are_short() -> void:
 		lines.append(String(MaskDeck.CALL_VERDICTS[a]))
 	lines.append(MaskDeck.when_hint({"transducer": "inserts"}))
 	lines.append(MaskDeck.start_hint({}))
+	for t: Dictionary in MaskDeck.PLUG_TRIES:
+		lines.append(String(t["line"]))
+	lines.append(MaskDeck.count_hint({}))
+	for row: String in MaskDeck.OE_ROWS:
+		for f: int in MaskDeck.OE_FREQS:
+			lines.append(MaskDeck.oe_reason(row, f))
 	for t: Dictionary in MaskDeck.WALK_TRIES:
 		lines.append(String(t["line"]))
 	for m: StringName in MaskDeck.MOVES:
@@ -201,7 +207,7 @@ func test_room_opens_built_stations_only() -> void:
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
 	MaskingSchool.next_station = ""
-	room.call("open_station", 4)   # The occlusion effect (not built yet)
+	room.call("open_station", 5)   # The masking exam (not built yet)
 	assert_eq(went, [], "a SOON station does not open")
 	solvers[0].call()
 	Events.goto_scene.disconnect(gcb)
@@ -227,7 +233,19 @@ func test_station_4_plays_by_solvers() -> void:
 	await _play_by_solvers("plateau", 0)
 
 
-func _play_by_solvers(id: String, movies: int) -> void:
+func test_station_5_plays_by_solvers() -> void:
+	await _play_by_solvers("occlusion", 1, false)
+
+
+## Station 5's star needs the pocket card filled from blank: the third visit starts blank.
+func test_station_5_star_needs_a_blank_card() -> void:
+	Game.progress["training"] = {"masking": {"stations": {"occlusion": {"best": 0, "star": false, "plays": 2}}, "cards": []}}
+	Game.mark_movie_seen("plugged_ear")
+	await _play_by_solvers("occlusion", 0, true)
+	assert_true(bool(MaskingSchool.last_result.get("star_ok")), "a blank card on the third visit")
+
+
+func _play_by_solvers(id: String, movies: int, star := true) -> void:
 	Game.cli = {"seed": 5}
 	MaskingSchool.next_station = id
 	MaskingSchool.last_result = {}
@@ -250,13 +268,14 @@ func _play_by_solvers(id: String, movies: int) -> void:
 	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
 	assert_eq(int(beats.get(&"explainer", 0)), movies, "%s: the masking movie plays on a fresh save only before station 1" % id)
 	assert_eq(int(beats.get(&"training_try", 0)), 1 if id == "plateau" else 3)
+	assert_eq(int(beats.get(&"training_scorecard", 0)), 1)
 	assert_eq(int(beats.get(&"training_next", 0)), MaskDeck.holes(id))
 	assert_eq(MaskingSchool.last_result.get("station"), id)
 	var par: Array = []
 	par.resize(MaskDeck.holes(id))
 	par.fill(1)
 	assert_eq(MaskingSchool.last_result.get("strokes"), par)
-	assert_true(bool(TrainingProgress.station("masking", id)["star"]))
+	assert_eq(bool(TrainingProgress.station("masking", id)["star"]), star, "%s: the star" % id)
 	assert_true(TrainingProgress.has_card("masking", String(MaskDeck.station(id)["card"])))
 
 
@@ -435,3 +454,79 @@ func test_walk_try() -> void:
 	for t: Dictionary in MaskDeck.WALK_TRIES:
 		assert_true(MaskDeck.walk_honest(t))
 		assert_true(int(t["t_test"]) > MaskDeck.walk_start_tone(t), "Try it shows the beep chasing the shhh")
+
+
+# ---------------------------------------------------------------- station 5: the occlusion effect
+
+const Movies5 := preload("res://story/explainers/movies.gd")
+const Stage2D := preload("res://story/explainers/explainer_stage.gd")
+
+
+## The pocket card is ClinicRules.OCCLUSION_DB: headphones 15, 15, 10, 10, 0, 0; inserts all 0.
+func test_pocket_card_follows_the_rules() -> void:
+	var row: Array[int] = []
+	for f: int in MaskDeck.OE_FREQS:
+		row.append(MaskDeck.oe_cell("phones", f))
+		assert_eq(MaskDeck.oe_cell("phones", f), ClinicRules.occlusion_effect(f, &"phones"))
+		assert_eq(MaskDeck.oe_cell("inserts", f), 0)
+		assert_has(MaskDeck.OE_TILES, MaskDeck.oe_cell("phones", f), "a tile exists for %d" % f)
+	assert_eq(row, [15, 15, 10, 10, 0, 0])
+	assert_eq(MaskDeck.oe_boost("open", 250), 0)
+	assert_eq(MaskDeck.oe_boost("blocked", 250), 0)
+	# the plug lab's steps land on +15, 0 and 0
+	var got: Array[int] = []
+	for t: Dictionary in MaskDeck.PLUG_TRIES:
+		got.append(MaskDeck.oe_boost(String(t["cover"]), int(t["freq"])))
+		assert_false(String(t["start_cover"]) == String(t["cover"]) and int(t["start_freq"]) == int(t["freq"]), "each step has something to set")
+	assert_eq(got, [15, 0, 0])
+	# spaced repetition: fewer helpers each visit, blank from the third
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4
+	var sizes: Array[int] = []
+	for plays in 4:
+		sizes.append(MaskDeck.oe_blanks(rng, MaskDeck.oe_prefilled(plays)).size())
+	assert_eq(sizes, [4, 8, 12, 12])
+
+
+## "Does it count?": only bone, a low pitch, a normal covered ear under a headphone. Two of six.
+func test_does_it_count() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed_i in 30:
+		rng.seed = seed_i + 1
+		var adds := 0
+		for c: Dictionary in MaskDeck.count_round(rng):
+			var want: bool = c["test"] == "bc" and int(c["freq"]) < 2000 and int(c["other_gap"]) <= ClinicRules.OCCLUSION_MAX_GAP_DB and c["masker"] == "phones"
+			assert_eq(MaskDeck.count_answer(c) == &"add", want, str(c))
+			if want:
+				adds += 1
+		assert_eq(adds, 2)
+
+
+func test_plugged_ear_movie() -> void:
+	var bad := Movies5.validate("plugged_ear", Stage2D.SETS)
+	assert_true(bad.is_empty(), ", ".join(bad))
+	assert_has(Movies5.replay_ids(), "plugged_ear", "on the title's movie list")
+	assert_true(Movies5.is_training("plugged_ear"), "a training movie")
+	assert_false(Movies5.for_chapter("bonnie").has("plugged_ear"), "never Day 2's own movie")
+	assert_eq(Movies5.day_label("plugged_ear"), "Training")
+	assert_eq(String(MaskDeck.station("occlusion")["movie"]), "plugged_ear")
+	var player_script: GDScript = load("res://story/explainers/explainer_player.gd")
+	var cue_max := float(player_script.get_script_constant_map()["CUE_MAX_DB"])
+	var m := Movies5.movie("plugged_ear")
+	for sc: Dictionary in m["scenes"]:
+		for cue: Dictionary in sc.get("cues", []):
+			assert_has(Sfx.SOUNDS, StringName(String(cue["sfx"])), "%s: a known Sfx" % sc["id"])
+			assert_true(float(cue.get("vol_db", 0.0)) <= cue_max, "%s: quiet" % sc["id"])
+	# the lows scene sweeps the pocket card's pitches
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	st.call("use_movie", m)
+	for sc: Dictionary in m["scenes"]:
+		st.call("show_scene", sc)
+		var d := float(sc["duration"])
+		for tt: float in [0.0, d * 0.3, d * 0.6, d]:
+			st.set("t", tt)
+			st.queue_redraw()
+			await wait_frames(1)
+	st.queue_free()

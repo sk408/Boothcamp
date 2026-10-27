@@ -5,7 +5,7 @@ use it, helps them understand and memorize the occlusion effect, and is approach
 previous knowledge. Either a separate day or maybe time to introduce an extra training tab."
 
 This page is the design. It is built in small PRs after this one (section 9). **Built so far:** the Training
-button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3); Station 4 (PR 4). **Steve: section 10 is your question
+button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3); Station 4 (PR 4); Station 5 and Hoot's movie "The Plugged Ear" (PR 5). **Steve: section 10 is your question
 list. Reply by number only where you disagree; every default stands otherwise.**
 
 | | |
@@ -164,6 +164,12 @@ The station Steve asked for by name: understand it, then memorize it.
   places each one. A right tile clicks in gold; a wrong one bounces back with the reason. Spaced repetition: each
   later visit shows fewer filled cells to start with, and the station's star needs the card filled from blank with
   no slips.
+- **As built (PR 5):** the movie runs 83 s in eight scenes (listed as "Training" in the title's Hoot's Movies and in the masking levels' menus, never as Day 2's own movie: `"training": true`);
+  it plays on the first visit and is offered as a replay after. The plug lab is three moves (headphone at 500,
+  headphone at 2k, deep insert at 500); keys 1-3 pick the cover and Left/Right the pitch. Part A is six "Does it
+  count?" cards (one per Station 3 card kind, so the add-on is judged on the same patients); part B is hole 7, one
+  beat per blank cell. The card starts with 8 cells filled on the first play, 4 on the second, none after; the star
+  needs par on a blank card (12 cells), so a first-visit par shows "A blank card earns the star".
 - **Earns:** the **Occlusion Pocket Card** (headphones 250 +15, 500 +15, 750 +10, 1k +10, 2k+ 0; inserts 0; "only
   bone, only a covered NORMAL ear"). It is pinned in the Training room, and once earned it appears as a small
   orange chip on the AudiOtron's masking deck on the story days ("OE +15") that opens the card (question 7).

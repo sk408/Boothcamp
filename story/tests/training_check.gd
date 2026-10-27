@@ -4,7 +4,8 @@ extends Node
 ## The main autoplay bot ends every run on a visit's results, so the Training room gets this harness.
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/training_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=why|when|start|plateau picks the station (default why, Station 1). On the plateau walk
+## --station=why|when|start|plateau|occlusion picks the station (default why, Station 1). Station 5's
+## star needs a blank pocket card, so a fresh save's round ends at par without it. On the plateau walk
 ## every move is a card; guess and hint act on each walk's first move only.
 ## Policies (--policy=):
 ##   careful  every beat's solver: the movie skipped, each Try it stepped to its target, every hole at par
@@ -19,7 +20,7 @@ extends Node
 ## there (a click with --policy=mouse; the station's number key otherwise), as a player would.
 ## Every run ends back in the Training room, whose station must then show its record and card.
 ## --shots=/abs/dir under xvfb: training_room, training_intro, training_try, training_try_boo,
-## training_card, training_card_right, training_scorecard.
+## training_card, training_card_right, training_scorecard (station 5 also training_drill: the pocket card).
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
 
@@ -170,6 +171,8 @@ class Driver extends Node:
 			&"training_card":
 				await _wait(READ_S)
 				await _shoot("training_card")
+				if station == "occlusion" and data.has("step"):
+					await _shoot("training_drill")
 				await _card(data, solver)
 			&"training_next":
 				await _wait(0.4)
@@ -201,11 +204,19 @@ class Driver extends Node:
 		if policy == "careful":
 			solver.call()
 			return
+		var m: Dictionary = beat["mouse"]
+		if policy == "mouse" and m.has("then"):
+			# the plug lab: the cover, then the pitch
+			await _click_text(String(m["click"]))
+			await _wait(0.1)
+			if _school_state() == &"try":
+				await _click_text(String(m["then"]))
+			await _wait(0.1)
 		for i in 30:
 			if _school_state() != &"try":
 				break
 			if policy == "mouse":
-				await _click_text(String((beat["mouse"] as Dictionary)["click"]))
+				await _click_text(String(m["click"]))
 			else:
 				await _action(&"louder")
 			await _wait(0.1)
@@ -275,13 +286,14 @@ class Driver extends Node:
 		var want := 0 if policy in ["careful", "keys", "mouse"] else holes
 		if over != want:
 			problems.append("%s run finished %d over par, expected %d (strokes %s)" % [policy, over, want, str(strokes)])
-		if bool(score.get("star", false)) != (want == 0):
+		var star_ok := bool(result.get("star_ok", true))
+		if bool(score.get("star", false)) != (want == 0 and star_ok):
 			problems.append("the scorecard's star is %s" % str(score.get("star")))
 		var movies := 1 if String(info["movie"]) != "" else 0
 		if int(beats.get("explainer", 0)) != movies:
 			problems.append("Hoot's movie started %d times on a fresh save (expected %d)" % [int(beats.get("explainer", 0)), movies])
 		var tries: int = {"why": MaskDeck.WHY_TRIES.size(), "when": MaskDeck.WHEN_TRIES.size(), "start": MaskDeck.START_TRIES.size(),
-			"plateau": MaskDeck.WALK_TRIES.size()}[station]
+			"plateau": MaskDeck.WALK_TRIES.size(), "occlusion": MaskDeck.PLUG_TRIES.size()}[station]
 		if int(beats.get("training_try", 0)) != tries:
 			problems.append("%d Try it steps, expected %d" % [int(beats.get("training_try", 0)), tries])
 
@@ -289,7 +301,7 @@ class Driver extends Node:
 		var rec: Dictionary = Progress.station(MaskDeck.LESSON, station)
 		if int(rec["plays"]) != 1:
 			problems.append("station %s saved %d plays" % [station, int(rec["plays"])])
-		if bool(rec["star"]) != (int(result.get("over_par", -1)) == 0):
+		if bool(rec["star"]) != bool(result.get("star", false)):
 			problems.append("station %s's saved star is %s" % [station, str(rec["star"])])
 		var card_id := String(info["card"])
 		if not Progress.has_card(MaskDeck.LESSON, card_id):

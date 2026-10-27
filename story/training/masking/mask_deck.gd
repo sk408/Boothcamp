@@ -28,14 +28,21 @@ const STATIONS: Array = [
 		"intro": "Masking on, now walk it. Heard? Shhh up 5. Missed? Beep up 5.\n"
 			+ "When the beep stays put through three shhh raises, that's the plateau: Righty's real bone. Three patients."},
 	{"id": "occlusion", "num": 5, "name": "The occlusion effect", "pitch": "Why a covered ear booms.", "color": Color("#ff9f1c"),
-		"card": "occlusion", "built": false, "movie": "", "intro": ""},
+		"card": "occlusion", "built": true, "movie": "plugged_ear",
+		"intro": "Cover a normal ear and low bone tones get LOUDER in it. That's the occlusion effect.\n"
+			+ "Play in the plug lab, call six cards (add it or not?), then fill the pocket card from memory."},
 	{"id": "exam", "num": 6, "name": "The masking exam", "pitch": "Nine holes, the whole job.", "color": Color("#8e5cc4"),
 		"card": "", "built": false, "movie": "", "intro": ""},
 ]
 
 ## Holes in a station's round (the plateau walk deals three longer walks).
 static func holes(station_id: String) -> int:
-	return WALK_KINDS.size() if station_id == "plateau" else ROUND_HOLES
+	match station_id:
+		"plateau":
+			return WALK_KINDS.size()
+		"occlusion":
+			return ROUND_HOLES + 1   # six "Does it count?" cards, then the pocket card
+	return ROUND_HOLES
 
 
 ## Answers of "Who heard it?" (station 1), in key order 1-3.
@@ -632,6 +639,94 @@ static func walk_lines(p: Dictionary) -> Array[String]:
 	if t == walk_start_tone(p):
 		return [a, "It was Righty all along: the first answer was the truth."]
 	return [a, "Righty's real bone is %d, not %d. Lefty was answering before." % [t, walk_start_tone(p)]]
+
+
+# ---------------------------------------------------------------- station 5: the occlusion effect
+
+## The plug lab's covers, in key order 1-3 (a blocked ear is the movie's and the cards' fourth case).
+const COVERS: Array[String] = ["open", "phones", "insert"]
+const COVER_WORDS: Dictionary = {"open": "OPEN", "phones": "HEADPHONE", "insert": "DEEP INSERT", "blocked": "BLOCKED EAR"}
+## The pocket card's columns, and its rows (the masker on the covered ear).
+const OE_FREQS: Array[int] = [250, 500, 750, 1000, 2000, 4000]
+const OE_ROWS: Array[String] = ["phones", "inserts"]
+## The tiles the player places, in key order 1-3.
+const OE_TILES: Array[int] = [0, 10, 15]
+## Answers of "Does it count?", in key order 1-2.
+const COUNTS: Array[StringName] = [&"add", &"skip"]
+const COUNT_WORDS: Dictionary = {&"add": "ADD IT", &"skip": "NOT THIS TIME"}
+## "Try it" (station 5): the plug lab, three things to set.
+const PLUG_TRIES: Array = [
+	{"cover": "phones", "freq": 500, "start_cover": "open", "start_freq": 250,
+		"line": "Put the HEADPHONE on, then pick 500. Watch the meter."},
+	{"cover": "phones", "freq": 2000, "start_cover": "phones", "start_freq": 500,
+		"line": "Same headphone. Now pick 2k. Does it still boom?"},
+	{"cover": "insert", "freq": 500, "start_cover": "phones", "start_freq": 2000,
+		"line": "Swap to a DEEP INSERT, back at 500."},
+]
+## The pocket card's helper cells (already filled in) by visit: fewer each time, none from the third.
+const OE_PREFILLED: Array[int] = [8, 4, 0]
+
+
+## How much louder a bone tone gets in the ear under this cover (dB): ClinicRules.occlusion_effect
+## for a headphone or insert on a normal ear; open, or a blocked ear (its own gap), adds nothing.
+static func oe_boost(cover: String, freq: int) -> int:
+	match cover:
+		"phones":
+			return ClinicRules.occlusion_effect(freq, &"phones")
+		"insert", "inserts":
+			return ClinicRules.occlusion_effect(freq, &"inserts")
+	return 0
+
+
+## A pocket-card cell's right tile.
+static func oe_cell(row: String, freq: int) -> int:
+	return oe_boost(row, freq)
+
+
+static func oe_freq_word(freq: int) -> String:
+	return "%dk" % (freq / 1000) if freq >= 1000 else str(freq)
+
+
+## Why a pocket-card cell holds what it holds (shown when a tile bounces back).
+static func oe_reason(row: String, freq: int) -> String:
+	if row == "inserts":
+		return "Inserts sit deep: almost no air to boom. +0 at every pitch."
+	var b := oe_cell(row, freq)
+	if b == 0:
+		return "%s is high: quick waves don't boom. +0." % oe_freq_word(freq)
+	if b == 15:
+		return "%s is the lowest: big slow waves. +15." % oe_freq_word(freq)
+	return "%s: still low, a bit less boom. +10." % oe_freq_word(freq)
+
+
+## How many cells start filled on this visit (plays so far).
+static func oe_prefilled(plays: int) -> int:
+	return OE_PREFILLED[clampi(plays, 0, OE_PREFILLED.size() - 1)]
+
+
+## The cells to fill, [{row, freq}], in a shuffled order, leaving `prefilled` of the 12 filled.
+static func oe_blanks(rng: RandomNumberGenerator, prefilled: int) -> Array[Dictionary]:
+	var cells: Array[Dictionary] = []
+	for row: String in OE_ROWS:
+		for f: int in OE_FREQS:
+			cells.append({"row": row, "freq": f})
+	_shuffle(cells, rng)
+	return cells.slice(prefilled)
+
+
+## "Does it count?": the answer for a card (start_card's shape): the boom is added only for bone, at
+## a low pitch, with a headphone on a normal covered ear.
+static func count_answer(card: Dictionary) -> StringName:
+	return &"add" if boom(card) > 0 else &"skip"
+
+
+## Six "Does it count?" cards: one of each START_KINDS (two that count), shuffled.
+static func count_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	return start_round(rng)
+
+
+static func count_hint(card: Dictionary) -> String:
+	return "Four checks: bone? Low pitch? Normal ear? Covered by a headphone? All four: add it."
 
 
 # ---------------------------------------------------------------- golf

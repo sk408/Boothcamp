@@ -28,6 +28,8 @@ const MOVIES: Dictionary = {
 	"dilemma": "res://story/explainers/movies/dilemma.gd",
 	## (Day 15, docs/TUNEUP.md) Hoot's tune-up movie, before Gus arrives for his follow-up
 	"tuneup": "res://story/explainers/movies/tuneup.gd",
+	## (training, docs/training/MASKING_TRAINER.md) Masking School's occlusion movie, Station 5's lead-in
+	"plugged_ear": "res://story/explainers/movies/plugged_ear.gd",
 }
 ## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
 ## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.
@@ -93,6 +95,12 @@ static func movie(id: String) -> Dictionary:
 	return (m as Dictionary).duplicate(true) if m is Dictionary else {}
 
 
+## (training) A Training-room lesson's movie ("training": true): on the title's Hoot's Movies
+## (labelled "Training") and in the masking levels' menus (E19), but never a day's own movie.
+static func is_training(id: String) -> bool:
+	return bool(movie(id).get("training", false))
+
+
 ## A recap ("short": true): played by its level, never listed for replay.
 static func is_short(id: String) -> bool:
 	return bool(movie(id).get("short", false))
@@ -104,7 +112,7 @@ static func for_chapter(chapter_id: String, include_short: bool = false) -> Arra
 	var out: Array[String] = []
 	for id: String in ids():
 		var m := movie(id)
-		if chapters_of(m).has(chapter_id) and (include_short or not bool(m.get("short", false))):
+		if chapters_of(m).has(chapter_id) and (include_short or not bool(m.get("short", false))) and not bool(m.get("training", false)):
 			out.append(id)
 	return out
 
@@ -148,6 +156,8 @@ static func replay_ids() -> Array[String]:
 ## The chapter's day label for the replay list ("Day 2"; "Days 6-13" with "also_chapters"), ""
 ## when unknown.
 static func day_label(id: String) -> String:
+	if is_training(id):
+		return "Training"
 	var days: Array[int] = []
 	for cid: String in chapters_of(movie(id)):
 		var c: Dictionary = Game.chapter(cid)
