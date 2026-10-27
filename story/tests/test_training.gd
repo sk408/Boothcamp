@@ -128,6 +128,13 @@ func test_hoot_lines_are_short() -> void:
 		lines.append(String(MaskDeck.CALL_VERDICTS[a]))
 	lines.append(MaskDeck.when_hint({"transducer": "inserts"}))
 	lines.append(MaskDeck.start_hint({}))
+	for t: Dictionary in MaskDeck.WALK_TRIES:
+		lines.append(String(t["line"]))
+	for m: StringName in MaskDeck.MOVES:
+		lines.append(MaskDeck.walk_nudge(m))
+	var rng := RandomNumberGenerator.new()
+	for k: String in MaskDeck.WALK_KINDS:
+		lines.append(MaskDeck.walk_hint(MaskDeck.walk_patient(rng, k)))
 	for l: String in lines:
 		assert_true(Movies.word_count(l) <= Hoot.MAX_WORDS, "too long for Hoot: " + l)
 
@@ -194,7 +201,7 @@ func test_room_opens_built_stations_only() -> void:
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
 	MaskingSchool.next_station = ""
-	room.call("open_station", 3)   # The plateau walk (not built yet)
+	room.call("open_station", 4)   # The occlusion effect (not built yet)
 	assert_eq(went, [], "a SOON station does not open")
 	solvers[0].call()
 	Events.goto_scene.disconnect(gcb)
@@ -214,6 +221,10 @@ func test_station_2_plays_by_solvers() -> void:
 
 func test_station_3_plays_by_solvers() -> void:
 	await _play_by_solvers("start", 0)
+
+
+func test_station_4_plays_by_solvers() -> void:
+	await _play_by_solvers("plateau", 0)
 
 
 func _play_by_solvers(id: String, movies: int) -> void:
@@ -238,10 +249,13 @@ func _play_by_solvers(id: String, movies: int) -> void:
 	Events.goto_scene.disconnect(gcb)
 	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
 	assert_eq(int(beats.get(&"explainer", 0)), movies, "%s: the masking movie plays on a fresh save only before station 1" % id)
-	assert_eq(int(beats.get(&"training_try", 0)), 3)
-	assert_eq(int(beats.get(&"training_card", 0)), MaskDeck.ROUND_HOLES)
+	assert_eq(int(beats.get(&"training_try", 0)), 1 if id == "plateau" else 3)
+	assert_eq(int(beats.get(&"training_next", 0)), MaskDeck.holes(id))
 	assert_eq(MaskingSchool.last_result.get("station"), id)
-	assert_eq(MaskingSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1])
+	var par: Array = []
+	par.resize(MaskDeck.holes(id))
+	par.fill(1)
+	assert_eq(MaskingSchool.last_result.get("strokes"), par)
 	assert_true(bool(TrainingProgress.station("masking", id)["star"]))
 	assert_true(TrainingProgress.has_card("masking", String(MaskDeck.station(id)["card"])))
 
@@ -360,3 +374,64 @@ func test_start_tries() -> void:
 		targets.append(MaskDeck.start_level(t))
 		assert_true(MaskDeck.start_level(t) > int(t["other_air"]), "the dial starts below Hoot's level")
 	assert_eq(targets, [25, 40, 25], "air + 10; bone at 500 + 15 boom; inserts no boom")
+
+
+# ---------------------------------------------------------------- station 4: the plateau walk
+
+func _walker(t_test: int, t_other: int, gap: int, f := 1000) -> Dictionary:
+	return {"kind": "shift", "freq": f, "t_test": t_test, "t_other": t_other, "gap_other": gap, "masker": "phones"}
+
+
+## The walk is ClinicRules' plateau dance: heard means shhh up, missed means beep up, three raises
+## held at one beep = store; the practice patient's own numbers come out.
+func test_walk_follows_the_rules() -> void:
+	var p := _walker(30, 10, 0)
+	assert_eq(MaskDeck.walk_initial(p), ClinicRules.initial_masking(10, 1000, &"bc", 0, &"phones"), "10 + 10 + 10 boom")
+	assert_eq(MaskDeck.walk_start_tone(p), 10, "the unmasked bone: the better cochlea")
+	var w := MaskDeck.walk_textbook(p)
+	assert_eq(int(w["stored"]), 30, "the plateau is Righty's own bone")
+	var recs: Array = w["records"]
+	assert_eq(int(ClinicRules.plateau_run(recs)["steps"]), ClinicRules.PLATEAU_STEPS)
+	for i in range(1, recs.size()):
+		var a: Dictionary = recs[i - 1]
+		var b: Dictionary = recs[i]
+		var nx := ClinicRules.next_mask_step(int(a["db"]), int(a["mask_db"]), bool(a["responded"]))
+		assert_eq(Vector2i(int(b["db"]), int(b["mask_db"])), nx, "step %d is the textbook move" % i)
+	assert_false(bool((recs[0] as Dictionary)["responded"]), "the start masking covers Lefty at the start tone")
+	# overmasking: enough noise crosses back onto Righty
+	assert_false(MaskDeck.walk_hears(p, 30, ClinicRules.overmask_limit(30, &"bc") + 15), "too much shhh hushes Righty too")
+	# a dilemma: both ears conductive, the start shhh already crosses back
+	var d := _walker(5, 5, 45)
+	assert_true(MaskDeck.walk_dilemma(d))
+	assert_eq(MaskDeck.walk_move(d, MaskDeck.walk_first(d)), &"nosafe")
+	assert_eq(int(MaskDeck.walk_textbook(d)["stored"]), -1)
+
+
+## Rounds deal one patient of each kind, each walk honest: inside the green window and short.
+func test_walk_rounds_are_honest() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed_i in 40:
+		rng.seed = seed_i + 1
+		var ps := MaskDeck.walk_round(rng)
+		assert_eq(ps.size(), MaskDeck.holes("plateau"))
+		var kinds := {}
+		for p: Dictionary in ps:
+			kinds[String(p["kind"])] = true
+			assert_true(MaskDeck.walk_honest(p), "seed %d: %s" % [seed_i, str(p)])
+			var w := MaskDeck.walk_textbook(p)
+			match String(p["kind"]):
+				"shift":
+					assert_true(int(p["t_test"]) > MaskDeck.walk_start_tone(p), "the beep shifts up")
+				"true":
+					assert_eq(int(w["stored"]), MaskDeck.walk_start_tone(p), "flat from the start")
+					assert_eq(int(w["moves"]), ClinicRules.PLATEAU_STEPS + 1)
+		assert_eq(kinds.size(), MaskDeck.WALK_KINDS.size())
+	for k: String in MaskDeck.WALK_KINDS:
+		rng.seed = 99
+		assert_true(MaskDeck.walk_honest(MaskDeck.walk_patient(rng, k)), "%s never falls back to a dishonest patient" % k)
+
+
+func test_walk_try() -> void:
+	for t: Dictionary in MaskDeck.WALK_TRIES:
+		assert_true(MaskDeck.walk_honest(t))
+		assert_true(int(t["t_test"]) > MaskDeck.walk_start_tone(t), "Try it shows the beep chasing the shhh")
