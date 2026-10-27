@@ -418,7 +418,7 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   round, the scorecard). The room sets `MaskingSchool.next_station`; `--scene=...masking_school.tscn --station=why`
   boots one station directly. The station draws on Hoot's movie stage through the sets hook
   (`story/training/masking/school_sets.gd`, sets `who_heard`, `when_card`, `start_dial`, `plateau_walk`, `pe_open`, `pe_ear`, `pe_masker`, `oe_count`, `pocket_card`), so no
-  shared stage edit. Built: 1 why (who heard it?), 2 when (mask it?), 3 start (set the dial), 4 plateau (walk it), 5 occlusion (plug lab, does it count?, the pocket card); a new station is a `MaskDeck.STATIONS`
+  shared stage edit. Built: 1 why (who heard it?), 2 when (mask it?), 3 start (set the dial), 4 plateau (walk it), 5 occlusion (plug lab, does it count?, the pocket card), 6 exam (nine mixed holes, each card's `rules` key picks the station whose rules it plays by; no Try it; hint locked on a first try; grade `MaskDeck.exam_grade`); a new station is a `MaskDeck.STATIONS`
   entry with `built: true` plus its branches in `masking_school.gd` (`_tries`, `_deal`, `try_step`).
 - **Rules** live in `story/training/masking/mask_deck.gd` and read `ClinicRules` only (`ia_rule`,
   `ac_masking_needed`, `bc_masking_needed`, `initial_masking`, `occlusion_effect`, `OCCLUSION_DB`, `next_mask_step`, `plateau_run`, `overmask_limit`,
@@ -429,4 +429,14 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **movies.gd** (additive): registry line `"plugged_ear"` (`story/explainers/movies/plugged_ear.gd`, chapter `bonnie`,
   stage `school_sets.gd`, `"training": true`), the lead-in of Station 5. `Movies.is_training`: a training movie is never a chapter's own (`for_chapter`), so Day 2 keeps its one movie; it shows on the title's list labelled "Training". `TrainingProgress.record_round(..., star_ok)`: a par round
   earns the star only when `star_ok` (Station 5: a blank pocket card).
-- **Bot**: `story/tests/training_check.tscn` (tools/README.md). **No new data files**, so the Web preset needs nothing.
+- **New files (PR 6)**: `story/training/diploma.gd` (the diploma stamp, drawn on the exam's scorecard, the lesson
+  card and the print view), `story/training/print_view.gd` (the room's print view; P or the PRINT VIEW tile once all
+  five cards are earned; "Save picture" = a PNG in Documents/BoothCamp, user:// as a fallback, a download on the web),
+  `story/training/oe_chip.gd` (the AudiOtron's OE chip). `cheat_card.gd` shrinks a long line to fit.
+- **ui/audiometer/audiometer_screen.gd** (additive): `OeChip` preload and `_oe_chip`, built with the deck, shown with
+  the MASKING group (`_mask_deck`) once `OeChip.earned()` (the save's `training.masking.cards` has `occlusion`, read
+  without writing), placed at the right end of the MASKING label in `_layout_deck`. It takes no keys.
+- **title_screen.gd** (additive): the stats line adds "Masking diploma: <grade>" once the exam is finished (read
+  straight from the save, no writes).
+- **Bot**: `story/tests/training_check.tscn` (tools/README.md); `story/tests/training_shots.tscn` shoots the room
+  with the diploma, the print view and its saved PNG, and the AudiOtron's chip. **No new data files**, so the Web preset needs nothing.

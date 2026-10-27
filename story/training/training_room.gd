@@ -2,9 +2,11 @@ extends Control
 ## TrainingRoom (training, story-internal): Hoot's Training room, opened by the title's Training button
 ## (docs/training/MASKING_TRAINER.md §1). A cork board with one big lesson card per trainer (today:
 ## MASKING SCHOOL, its six stations as coloured chips with a star each), the cheat-sheet cards the
-## player has earned pinned beside it, and a dimmed "More lessons soon" card.
+## player has earned pinned beside it, and a dimmed "More lessons soon" card. With all five cards
+## earned that slot becomes the "Print view" tile (P): every card on one page (print_view.gd). The
+## exam's diploma (diploma.gd) is stamped on the lesson card once Station 6 is finished.
 ## Controls: keys 1-6 open a station; Left / Right / Up / Down and Enter (or Space); the mouse hovers
-## and clicks; T or "Back to the title" goes home; Esc pauses, like everywhere. A station that is not
+## and clicks; P opens the print view (all cards earned); T or "Back to the title" goes home; Esc pauses, like everywhere. A station that is not
 ## built yet shows SOON and only says so.
 ## Beat (CONTRACTS.md §3.2): "training_room" {stations, built, mouse}; solver: open the first built
 ## station without a star (else station 1).
@@ -15,6 +17,8 @@ const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
 const TrainingProgress := preload("res://story/training/training_progress.gd")
 const CheatCard := preload("res://story/training/cheat_card.gd")
 const MaskingSchool := preload("res://story/training/masking/masking_school.gd")
+const Diploma := preload("res://story/training/diploma.gd")
+const PrintView := preload("res://story/training/print_view.gd")
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const SCHOOL_SCENE := "res://story/training/masking/masking_school.tscn"
 
@@ -36,6 +40,8 @@ var _sel := 0
 var _leaving := false
 var _hoot_line: Label
 var _back_btn: Button
+var _print_btn: Button
+var _print: Control
 
 
 ## One station chip on the lesson card: its number, name, pitch, star, or SOON.
@@ -167,11 +173,37 @@ func selected() -> int:
 	return _sel
 
 
+## The print view opens once every cheat-sheet card is earned.
+func can_print() -> bool:
+	for id: String in MaskDeck.CARD_ORDER:
+		if not TrainingProgress.has_card(MaskDeck.LESSON, id):
+			return false
+	return true
+
+
+func open_print() -> void:
+	if _leaving or _print != null or not can_print():
+		return
+	Sfx.play(&"pop", 1.0, -8.0)
+	_print = PrintView.new()
+	_print.closed.connect(func() -> void: _print = null)
+	_field.add_child(_print)
+
+
+## The exam has been finished: the lesson card wears the diploma.
+static func has_diploma() -> bool:
+	return int(TrainingProgress.station(MaskDeck.LESSON, "exam")["best"]) >= 0
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if _print != null:
+		return   # the print view takes the keys
 	var k := event as InputEventKey
 	if k != null and k.pressed and not k.echo:
 		var code := k.keycode if k.keycode != KEY_NONE else k.physical_keycode
-		if code >= KEY_1 and code < KEY_1 + _chips.size():
+		if code == KEY_P and can_print():
+			open_print()
+		elif code >= KEY_1 and code < KEY_1 + _chips.size():
 			open_station(code - KEY_1)
 		elif code >= KEY_KP_1 and code < KEY_KP_1 + _chips.size():
 			open_station(code - KEY_KP_1)
@@ -275,6 +307,18 @@ func _build() -> void:
 		cc.position = PINS_RECT.position + Vector2(10 + (i % 2) * 196, 64 + (i / 2) * 148)
 		cc.rotation = deg_to_rad([-2.0, 1.5, 1.0, -1.5, -1.0][i])
 		_field.add_child(cc)
+	if can_print():
+		_print_btn = UiKit.button("PRINT VIEW", &"", Vector2(182, 132))
+		_print_btn.name = "print_view_button"
+		_print_btn.add_theme_font_size_override("font_size", 22)
+		_print_btn.position = PINS_RECT.position + Vector2(206, 362)
+		_print_btn.rotation = deg_to_rad(1.5)
+		_print_btn.pressed.connect(open_print)
+		if UiKit.show_key_hints():
+			var kc := UiKit.key_chip("P", 15)
+			kc.position = Vector2(8, 8)
+			_print_btn.add_child(kc)
+		_field.add_child(_print_btn)
 	_back_btn = UiKit.button("Back to the title", &"", Vector2(260, 52))
 	_back_btn.position = Vector2(36, FIELD.y - 70)
 	_back_btn.add_theme_font_size_override("font_size", 22)
@@ -289,6 +333,8 @@ func _build() -> void:
 func _welcome() -> String:
 	if TrainingProgress.data(MaskDeck.LESSON)["stations"].is_empty():
 		return "Welcome to my Training room! Short lessons, big ideas. Start with masking?"
+	if can_print():
+		return "Every card earned! Press P for the print view: all five on one page."
 	return "Welcome back! Pick a station, or replay one for its star."
 
 
@@ -321,7 +367,10 @@ func _draw_board(ci: Control) -> void:
 	UiDraw.rounded_rect(ci, lc, Color("#1f3a5f"), 26, 4, Palette.INK)
 	ci.draw_string(f, lc.position + Vector2(30, 56), "MASKING SCHOOL", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Palette.PAPER)
 	ci.draw_string(UiKit.font(600), lc.position + Vector2(32, 86), "Why, when and how much: and the occlusion effect.", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(Palette.PAPER, 0.85))
-	_draw_mask(ci, lc.position + Vector2(lc.size.x - 92, 50), 1.0)
+	if has_diploma():
+		Diploma.draw(ci, lc.position + Vector2(lc.size.x - 84, 46), 0.62, MaskDeck.exam_grade(int(TrainingProgress.station(MaskDeck.LESSON, "exam")["best"])))
+	else:
+		_draw_mask(ci, lc.position + Vector2(lc.size.x - 92, 50), 1.0)
 	var stars := TrainingProgress.stars(MaskDeck.LESSON)
 	ci.draw_string(f, lc.position + Vector2(lc.size.x - 340, 52), "%d of %d stars" % [stars, MaskDeck.STATIONS.size()], HORIZONTAL_ALIGNMENT_RIGHT, 200, 18, Palette.SUNNY)
 	ci.draw_circle(lc.position + Vector2(lc.size.x * 0.5, 4), 9.0, Palette.CORAL)
@@ -329,7 +378,9 @@ func _draw_board(ci: Control) -> void:
 	var pb := PINS_RECT
 	UiDraw.rounded_rect(ci, pb, Color(FRAME, 0.35), 22, 4, FRAME)
 	ci.draw_string(f, pb.position + Vector2(0, 42), "MY CHEAT SHEETS", HORIZONTAL_ALIGNMENT_CENTER, pb.size.x, 26, Palette.PAPER)
-	# "More lessons soon", dimmed, under the cards
+	# "More lessons soon", dimmed, under the cards (the print view's tile once every card is earned)
+	if can_print():
+		return
 	var soon := Rect2(pb.position + Vector2(206, 362), Vector2(182, 132))
 	UiDraw.rounded_rect(ci, soon, Color(Palette.PAPER, 0.25), 14, 3, Color(Palette.INK, 0.4))
 	ci.draw_string(f, soon.position + Vector2(0, 56), "More lessons", HORIZONTAL_ALIGNMENT_CENTER, soon.size.x, 20, Color(Palette.INK, 0.6))

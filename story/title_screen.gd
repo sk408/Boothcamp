@@ -980,6 +980,15 @@ func _stats_text() -> String:
 		parts.append("Comfy chair owned")
 	if Game.has_upgrade("insert_earphones"):
 		parts.append("Insert earphones owned")
+	# (training) the Masking School diploma (the exam finished), with its best grade
+	var best := -1
+	var tr: Variant = Game.progress.get("training", {})
+	if tr is Dictionary and (tr as Dictionary).get("masking", null) is Dictionary:
+		var st: Variant = ((tr as Dictionary)["masking"] as Dictionary).get("stations", {})
+		if st is Dictionary and (st as Dictionary).get("exam", null) is Dictionary:
+			best = int(((st as Dictionary)["exam"] as Dictionary).get("best", -1))
+	if best >= 0:
+		parts.append("Masking diploma: %s" % load("res://story/training/masking/mask_deck.gd").exam_grade(best))
 	return "  -  ".join(parts)
 
 

@@ -157,6 +157,10 @@ var _masking_ui := false
 ## (default true). False keeps only the AIR | BONE route (unmasked bone, before masking is taught).
 var _mask_deck := false
 const MASK_DECK_BUTTONS: Array[String] = ["mask_softer_button", "mask_toggle_button", "mask_louder_button"]
+## (training) The orange "OE" chip on the MASKING label: opens the Occlusion Pocket Card once Masking
+## School has earned it (docs/training/MASKING_TRAINER.md question 7). Shown with the MASKING group only.
+const OeChip := preload("res://story/training/oe_chip.gd")
+var _oe_chip: Control
 ## Quick visit: player stamps before Hoot's turn on this test (plan "hoot_turn_after").
 var _solo_limit := QUICK_SOLO_HOLES
 var _masker_key: Array = []
@@ -356,6 +360,7 @@ func start_test(patient: PatientProfile, ear: String, coached: bool, plan: Dicti
 	_auto_done_ears.erase(ear)
 	for id: String in MASK_BUTTONS:
 		(_buttons[id] as AoButton).visible = _mask_deck if MASK_DECK_BUTTONS.has(id) else _masking_ui
+	_oe_chip.visible = _mask_deck and OeChip.earned()
 	_layout()
 	session.coached[ear] = coached
 	session.ear = ear
@@ -2317,6 +2322,9 @@ func _build_ui() -> void:
 	_ff_banner.visible = false
 	_ff_banner.draw.connect(_draw_ff_banner)
 	_root.add_child(_ff_banner)
+	_oe_chip = OeChip.new()
+	_oe_chip.visible = false
+	_root.add_child(_oe_chip)
 	_fx = AoFx.new()
 	_root.add_child(_fx)
 	_refresh_keys()
@@ -2452,6 +2460,11 @@ func _layout_deck(deck: Rect2) -> void:
 			btn.size = Vector2(float(b[1]), h)
 			x += float(b[1]) + g_gap
 		x += spacing - g_gap
+	# (training) the OE chip sits at the right end of the MASKING label
+	for gl: Array in _group_labels:
+		if String(gl[0]).begins_with("MASKING") and _oe_chip != null:
+			var lr: Rect2 = gl[1]
+			_oe_chip.position = Vector2(lr.end.x - _oe_chip.size.x, lr.position.y - 2.0)
 	var ux := deck.end.x - 16.0 - util_w
 	var uy := deck.position.y + 14.0
 	var uh := (deck.size.y - 28.0 - 2.0 * 8.0) / 3.0

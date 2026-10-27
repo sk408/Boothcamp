@@ -39,11 +39,22 @@ func _draw() -> void:
 	# the title band
 	var band := Rect2(r.position + Vector2(8, 8), Vector2(r.size.x - 16, px + 16))
 	UiDraw.rounded_rect(self, band, Color(Palette.PAPER, 0.9), 10)
-	draw_string(UiKit.font(700), band.position + Vector2(0, px + 5), String(card.get("title", "")), HORIZONTAL_ALIGNMENT_CENTER, band.size.x, px + 2, Palette.INK)
+	var title := String(card.get("title", ""))
+	draw_string(UiKit.font(700), band.position + Vector2(0, px + 5), title, HORIZONTAL_ALIGNMENT_CENTER, band.size.x, _fit(title, 700, px + 2, band.size.x - 8), Palette.INK)
 	var y := band.end.y + px + 6
 	for line: String in card.get("lines", []):
-		draw_string(UiKit.font(600), Vector2(12, y), line, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, px, ink)
+		draw_string(UiKit.font(600), Vector2(12, y), line, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, _fit(line, 600, px, size.x - 24), ink)
 		y += px + 6
 	# the pin
 	draw_circle(Vector2(size.x * 0.5, 2), 8.0, Palette.CORAL)
 	draw_arc(Vector2(size.x * 0.5, 2), 8.0, 0.0, TAU, 16, Palette.INK, 2.5, true)
+
+
+## The largest size up to px at which the text fits the width (small pinned cards shrink long lines).
+func _fit(text: String, weight: int, px_max: int, width: float) -> int:
+	var f := UiKit.font(weight)
+	var p := px_max
+	while p > 10 and f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, p).x > width:
+		p -= 1
+	return p
+

@@ -9,7 +9,9 @@ extends Control
 ## Stations built so far: 1 "Why mask?" (who heard the beep?), 2 "When to mask?" (mask bone, air,
 ## both or neither?), 3 "How much to start?" (set the noise dial), 4 "The plateau walk" (shhh up, beep
 ## up, store, or no safe level, one presentation at a time), 5 "The occlusion effect" (the plug lab, six "Does
-## it count?" cards, then the pocket card filled from memory: one beat per tile).
+## it count?" cards, then the pocket card filled from memory: one beat per tile), 6 "The masking exam" (nine
+## mixed holes, each played by its card's own station rules, `_r()`; no Try it; Hoot's hint locked on a
+## first try; a grade S-C and the diploma).
 ## Controls: keys 1-3 answer, H hint (a stroke), Enter / Space go on, Up / Down (the louder / softer
 ## keys, either key style) move the beep or the dial, Enter sets the dial, R plays again on the
 ## scorecard, T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with
@@ -30,6 +32,7 @@ const Portraits := preload("res://story/portraits.gd")
 const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
 const TrainingProgress := preload("res://story/training/training_progress.gd")
 const CheatCard := preload("res://story/training/cheat_card.gd")
+const Diploma := preload("res://story/training/diploma.gd")
 const Stage2D := preload("res://story/explainers/explainer_stage.gd")
 const PLAYER_SCENE := "res://story/explainers/explainer_player.tscn"
 const ROOM_SCENE := "res://story/training/training_room.tscn"
@@ -79,6 +82,7 @@ var _picked: Dictionary = {}   # answers already tried on this hole
 var _drill := false             # station 5: placing pocket-card tiles (the options are the tiles)
 var _cells: Dictionary = {}     # station 5: the pocket card so far, "row|freq" -> dB
 var _blank_count := 0           # station 5: cells left blank at the start of this visit's card
+var _rules := ""                # station 6: the station whose rules the live hole plays by ("" = this station's)
 
 signal _go(what: StringName)
 
@@ -120,7 +124,8 @@ func _run() -> void:
 		await _play_movie()
 	if _leaving:
 		return
-	await _try_it()
+	if not _is_exam():   # the exam has no Try it: it is the test
+		await _try_it()
 	if _leaving:
 		return
 	await _round()
@@ -173,12 +178,21 @@ func _play_movie() -> void:
 
 # ---------------------------------------------------------------- station helpers
 
+## The station whose rules the live hole uses: this station's own, or (the exam) the card's "rules".
+func _r() -> String:
+	return _rules if _rules != "" else station_id
+
+
+func _is_exam() -> bool:
+	return station_id == "exam"
+
+
 func _is_dial() -> bool:
-	return station_id == "start"
+	return _r() == "start"
 
 
 func _is_walk() -> bool:
-	return station_id == "plateau"
+	return _r() == "plateau"
 
 
 const TILES: Array[StringName] = [&"t0", &"t10", &"t15"]
@@ -190,7 +204,7 @@ func _tile_db(a: StringName) -> int:
 
 ## The answers of a pick-one station, in key order.
 func _options() -> Array[StringName]:
-	match station_id:
+	match _r():
 		"when":
 			return MaskDeck.CALLS
 		"plateau":
@@ -201,7 +215,7 @@ func _options() -> Array[StringName]:
 
 
 func _word(a: StringName) -> String:
-	match station_id:
+	match _r():
 		"when":
 			return String(MaskDeck.CALL_WORDS[a])
 		"plateau":
@@ -212,9 +226,9 @@ func _word(a: StringName) -> String:
 
 
 func _verdict(a: StringName) -> String:
-	if station_id == "occlusion":
+	if _r() == "occlusion":
 		return ("Add it: +%d" % MaskDeck.boom(_card)) if a == &"add" else "Not this time: +0"
-	return String((MaskDeck.CALL_VERDICTS if station_id == "when" else MaskDeck.WHO_VERDICTS)[a])
+	return String((MaskDeck.CALL_VERDICTS if _r() == "when" else MaskDeck.WHO_VERDICTS)[a])
 
 
 func _tries() -> Array:
@@ -242,11 +256,13 @@ func _deal() -> Array[Dictionary]:
 			var cards := MaskDeck.count_round(rng)
 			cards.append({"drill": true})
 			return cards
+		"exam":
+			return MaskDeck.exam_round(rng)
 	return MaskDeck.who_heard_round(rng)
 
 
 func _right_answer(card: Dictionary) -> StringName:
-	match station_id:
+	match _r():
 		"when":
 			return MaskDeck.mask_call(card)
 		"occlusion":
@@ -544,7 +560,10 @@ func _round() -> void:
 		_hole_strokes = 1
 		_hinted = false
 		_picked.clear()
+		_rules = String(_card.get("rules", ""))
 		_set_top("Hole %d of %d" % [h + 1, cards.size()])
+		if _is_exam():
+			_set_top("Hole %d/%d: %s" % [h + 1, cards.size(), MaskDeck.exam_label(_card)])
 		_show_card(_card, false, false)
 		if _is_walk():
 			if not await _walk_hole(h):
@@ -560,14 +579,14 @@ func _round() -> void:
 			_dial_buttons()
 			_state = &"dial"
 			var best := MaskDeck.start_level(_card)
-			Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": best, "start": int(_card["dial"]),
+			Events.awaiting_input.emit(&"training_card", {"station": station_id, "rules": _r(), "hole": h, "best": best, "start": int(_card["dial"]),
 				"options": [], "mouse": {"click": "Set it"}}, _solve_dial.bind(best))
 		else:
 			_answer = _right_answer(_card)
-			if station_id == "occlusion":
+			if _r() == "occlusion":
 				_say("Does the occlusion add-on count here? Check all four things.")
 				_feedback_text("The masker covers this ear. Bone or air? Which pitch? Normal ear? Headphone or insert?")
-			elif station_id == "when":
+			elif _r() == "when":
 				_say("Righty is tested. Which tests need masking? Pick one.")
 				_feedback_text("%s at %d Hz. Gap check first, then the air check." % [MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])], int(_card["freq"])])
 			else:
@@ -576,7 +595,7 @@ func _round() -> void:
 			_answer_buttons()
 			_state = &"card"
 			var opts := _options()
-			Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": opts.find(_answer),
+			Events.awaiting_input.emit(&"training_card", {"station": station_id, "rules": _r(), "hole": h, "best": opts.find(_answer),
 				"options": opts.map(func(a: StringName) -> String: return _word(a)),
 				"mouse": {"click": _word(_answer)}}, func() -> void: pick(_answer))
 		if not _is_walk() and not _card.has("drill"):
@@ -608,7 +627,7 @@ func _walk_hole(h: int) -> bool:
 		_answer_buttons()
 		_state = &"card"
 		var opts := _options()
-		Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "step": step, "best": opts.find(_answer),
+		Events.awaiting_input.emit(&"training_card", {"station": station_id, "rules": _r(), "hole": h, "step": step, "best": opts.find(_answer),
 			"options": opts.map(func(a: StringName) -> String: return _word(a)),
 			"mouse": {"click": _word(_answer)}}, func() -> void: pick(_answer))
 		var what: StringName = await _go
@@ -651,6 +670,7 @@ func _walk_pick(a: StringName) -> void:
 	_picked[a] = true
 	if a != _answer:
 		_hole_strokes += 1
+		_unlock_hint()
 		Sfx.play(&"error", 1.0, -10.0)
 		_say(MaskDeck.walk_nudge(_answer))
 		for b: Button in _answer_list():
@@ -704,7 +724,7 @@ func _drill_hole(h: int) -> bool:
 		_picked.clear()
 		_answer_buttons()
 		_state = &"card"
-		Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "step": step, "best": TILES.find(_answer),
+		Events.awaiting_input.emit(&"training_card", {"station": station_id, "rules": _r(), "hole": h, "step": step, "best": TILES.find(_answer),
 			"options": TILES.map(func(a: StringName) -> String: return _word(a)), "mouse": {"click": _word(_answer)}},
 			func() -> void: pick(_answer))
 		await _go
@@ -755,10 +775,10 @@ func pick(a: StringName) -> void:
 		_state = &"busy"
 		Sfx.play(&"ding", 1.1, -6.0)
 		var lines: Array[String] = []
-		if station_id == "occlusion":
+		if _r() == "occlusion":
 			_stage.params["reveal"] = true
 			lines = [MaskDeck.boom_line(_card), "Pocket card: only bone, only a covered NORMAL ear, only low pitches."]
-		elif station_id == "when":
+		elif _r() == "when":
 			_stage.params["show_bone"] = true
 			_stage.params["show_air"] = true
 			lines = MaskDeck.when_lines(_card)
@@ -777,13 +797,16 @@ func pick(a: StringName) -> void:
 				b.disabled = false
 				b.modulate = Color(1, 1, 1)
 				b.text = "  " + _word(a) + "  "
+		if _hint_btn != null:
+			_hint_btn.disabled = true
 		_go.emit(&"right")
 		return
 	_hole_strokes += 1
+	_unlock_hint()
 	Sfx.play(&"error", 1.0, -10.0)
-	if station_id == "occlusion":
+	if _r() == "occlusion":
 		_say("Not quite. Bone, low pitch, normal ear, headphone: it needs all four.")
-	elif station_id == "when":
+	elif _r() == "when":
 		_say("Not quite. Gap check first, then air minus the wall.")
 	else:
 		_say("Not quite. Check both numbers: the test ear's, and what crosses the wall.")
@@ -845,10 +868,14 @@ func _dial_status() -> String:
 func hint() -> void:
 	if _state not in [&"card", &"dial"] or _hinted:
 		return
+	if not _hint_open():
+		Sfx.play(&"boing", 0.9, -12.0)
+		_say("Exam rules: no hints on a first try. Have a go!")
+		return
 	_hinted = true
 	_hole_strokes += 1
 	Sfx.play(&"pop", 1.0, -8.0)
-	match station_id:
+	match _r():
 		"when":
 			_say(MaskDeck.when_hint(_card))
 		"start":
@@ -860,6 +887,18 @@ func hint() -> void:
 		_:
 			_say(MaskDeck.hint_line(_card))
 	_hint_btn.disabled = true
+
+
+## The exam locks Hoot's hint until the hole's first try went wrong.
+func _hint_open() -> bool:
+	return not _is_exam() or _hole_strokes > 1
+
+
+## After a miss in the exam, Hoot's hint button wakes up.
+func _unlock_hint() -> void:
+	if _hint_btn != null and is_instance_valid(_hint_btn) and _is_exam() and not _hinted:
+		_hint_btn.disabled = false
+		_hint_btn.text = "Hoot's hint (+1)"
 
 
 func _hole_line() -> String:
@@ -887,9 +926,14 @@ func _scorecard() -> void:
 	var over := total - strokes.size()
 	var star_ok := _star_ok()
 	var star := over == 0 and star_ok
+	var first_exam := _is_exam() and int(TrainingProgress.station(MaskDeck.LESSON, station_id)["plays"]) == 0
 	var rec := TrainingProgress.record_round(MaskDeck.LESSON, station_id, over, String(info["card"]), star_ok)
+	rec["diploma"] = first_exam
 	last_result = {"station": station_id, "strokes": strokes.duplicate(), "over_par": over, "star": star,
 		"new_card": bool(rec["new_card"]), "best": int(rec["best"]), "star_ok": star_ok}
+	if _is_exam():
+		last_result["grade"] = MaskDeck.exam_grade(over)
+		last_result["diploma"] = first_exam
 	print("TRAINING_RESULT %s" % JSON.stringify(last_result))
 	_state = &"score"
 	_show_overlay(_score_panel(over, rec))
@@ -899,6 +943,9 @@ func _scorecard() -> void:
 	elif over == 0:
 		Sfx.play(&"ding", 1.2, -8.0)
 		_say("Even par! The star needs a blank pocket card: next visit has fewer helpers.")
+	elif _is_exam():
+		Sfx.play(&"fanfare" if first_exam else &"ding", 1.0, -10.0)
+		_say("Grade %s! %s Even par earns an S and the star." % [MaskDeck.exam_grade(over), "Diploma earned!" if first_exam else "Nicely done."])
 	else:
 		_say("%s. Play again for the star, or head back to the room." % MaskDeck.round_name(over))
 	Events.awaiting_input.emit(&"training_scorecard", {"station": station_id, "over_par": over, "star": star,
@@ -927,6 +974,8 @@ func _star_line() -> String:
 			return "Even par! Every walk textbook. That's a star."
 		"occlusion":
 			return "Even par, from a blank card! That's a star."
+		"exam":
+			return "Grade S: even par on the whole job! That's a star."
 	return "Even par! You caught every Ghost. That's a star."
 
 
@@ -1025,7 +1074,7 @@ func _build() -> void:
 	_top_label.position = Vector2(496, 26)
 	_field.add_child(_top_label)
 	_score_label = UiKit.label("", 20, Palette.INK_SOFT, 600)
-	_score_label.position = Vector2(660, 28)
+	_score_label.position = Vector2(748 if station_id == "exam" else 660, 28)   # the exam's hole labels are longer
 	_field.add_child(_score_label)
 	_leave_btn = UiKit.button("Back to the room", &"", Vector2(232, 48))
 	_leave_btn.position = Vector2(FIELD.x - 88 - 232, 14)   # clear of the pause button in the corner
@@ -1132,11 +1181,11 @@ func _show_card(card: Dictionary, reveal: bool, live: bool) -> void:
 	p["show_air"] = false
 	p["target"] = int(card.get("target", -1))
 	var set_id := {"when": "when_card", "start": "start_dial", "plateau": "plateau_walk",
-		"occlusion": "pe_ear" if live else "oe_count"}.get(station_id, "who_heard") as String
-	if station_id == "occlusion" and live:
+		"occlusion": "pe_ear" if live else "oe_count"}.get(_r(), "who_heard") as String
+	if _r() == "occlusion" and live:
 		p["cover"] = String(card.get("cur_cover", "open"))
 		p["freq"] = int(card.get("cur_freq", 250))
-	_stage.show_scene({"id": station_id, "set": set_id, "duration": 9999.0, "params": p})
+	_stage.show_scene({"id": _r(), "set": set_id, "duration": 9999.0, "params": p})
 
 
 func _clear_answers() -> void:
@@ -1164,8 +1213,8 @@ func _answer_buttons() -> void:
 		b.set_meta("answer", String(a))
 		b.pressed.connect(pick.bind(a))
 		_answers.add_child(b)
-	_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
-	_hint_btn.disabled = _hinted
+	_hint_btn = _side_button("Hoot's hint (+1)" if _hint_open() else "Hint: after a miss", "H", Vector2(SIDE_W, 50))
+	_hint_btn.disabled = _hinted or not _hint_open()
 	_hint_btn.pressed.connect(hint)
 	_answers.add_child(_hint_btn)
 
@@ -1216,7 +1265,8 @@ func _dial_buttons() -> void:
 	set_btn.set_meta("answer", "set")
 	set_btn.pressed.connect(set_dial)
 	_answers.add_child(set_btn)
-	_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
+	_hint_btn = _side_button("Hoot's hint (+1)" if _hint_open() else "No hints in the exam", "H", Vector2(SIDE_W, 50))
+	_hint_btn.disabled = not _hint_open()
 	_hint_btn.pressed.connect(hint)
 	_answers.add_child(_hint_btn)
 
@@ -1322,11 +1372,11 @@ func _intro_panel() -> Control:
 
 func _score_panel(over: int, rec: Dictionary) -> Control:
 	var p := UiKit.panel(Palette.PAPER, Palette.INK, 28)
-	p.custom_minimum_size = Vector2(820, 0)
+	p.custom_minimum_size = Vector2(940 if strokes.size() > 7 else 820, 0)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	p.add_child(v)
-	var head := UiKit.label("STATION %d SCORECARD" % int(info["num"]), 30, Palette.INK, 700)
+	var head := UiKit.label("THE MASKING EXAM" if _is_exam() else "STATION %d SCORECARD" % int(info["num"]), 30, Palette.INK, 700)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(head)
 	var holes := HBoxContainer.new()
@@ -1336,19 +1386,37 @@ func _score_panel(over: int, rec: Dictionary) -> Control:
 	for i in strokes.size():
 		var s := strokes[i]
 		var hp := UiKit.panel(HOLE_COLORS[clampi(s - 1, 0, HOLE_COLORS.size() - 1)], Palette.INK, 14)
-		hp.custom_minimum_size = Vector2(118 if strokes.size() <= 6 else 100, 0)
+		hp.custom_minimum_size = Vector2(118 if strokes.size() <= 6 else (100 if strokes.size() <= 7 else 90), 0)
 		var hv := VBoxContainer.new()
 		hp.add_child(hv)
 		var n := UiKit.label("Hole %d" % (i + 1), 16, Palette.INK, 600)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hv.add_child(n)
-		var g := UiKit.label(MaskDeck.hole_name(s), 18 if s < 3 else 15, Palette.INK, 700)
+		var g := UiKit.label(MaskDeck.hole_name(s), 18 if s < 3 and strokes.size() <= 7 else 14, Palette.INK, 700)
 		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hv.add_child(g)
 		holes.add_child(hp)
 	var total := UiKit.label("Round: %s" % MaskDeck.round_name(over), 34, Palette.grade_color("S") if over == 0 else Palette.INK, 700)
 	total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(total)
+	if _is_exam():
+		# the grade badge beside the round
+		var gr := MaskDeck.exam_grade(over)
+		var trow := HBoxContainer.new()
+		trow.alignment = BoxContainer.ALIGNMENT_CENTER
+		trow.add_theme_constant_override("separation", 18)
+		var badge := Control.new()
+		badge.name = "exam_grade"
+		badge.custom_minimum_size = Vector2(64, 64)
+		badge.draw.connect(func() -> void:
+			badge.draw_circle(Vector2(32, 35), 30.0, Color(Palette.INK, 0.3))
+			badge.draw_circle(Vector2(32, 32), 30.0, Palette.grade_color(gr))
+			badge.draw_arc(Vector2(32, 32), 30.0, 0.0, TAU, 32, Palette.INK, 3.0, true)
+			badge.draw_string(UiKit.font(700), Vector2(0, 46), gr, HORIZONTAL_ALIGNMENT_CENTER, 64, 40, Palette.PAPER))
+		trow.add_child(badge)
+		trow.add_child(total)
+		v.add_child(trow)
+	else:
+		v.add_child(total)
 	var star := Control.new()
 	star.custom_minimum_size = Vector2(0, 64)
 	star.draw.connect(func() -> void:
@@ -1357,9 +1425,20 @@ func _score_panel(over: int, rec: Dictionary) -> Control:
 		UiDraw.star(star, c, 30.0, Palette.SUNNY if bool(rec["star"]) else Color(Palette.INK_SOFT, 0.25))
 		var earned := over == 0 and _star_ok()
 		var t := "Star earned!" if earned else ("Star kept from before" if bool(rec["star"]) else
-			("Par! A blank card earns the star" if over == 0 else "Even par earns the star"))
+			("Par! A blank card earns the star" if over == 0 else ("Grade S (even par) earns the star" if _is_exam() else "Even par earns the star")))
 		star.draw_string(UiKit.font(700), c + Vector2(44, 8), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.INK))
 	v.add_child(star)
+	if bool(rec.get("diploma", false)):
+		var dl := UiKit.label("Masking School diploma earned! It's stamped on your lesson card.", 22, Palette.CORAL, 700)
+		dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(dl)
+		var dh := CenterContainer.new()
+		var stamp := Control.new()
+		stamp.custom_minimum_size = Vector2(150, 120)
+		var gr2 := MaskDeck.exam_grade(over)
+		stamp.draw.connect(func() -> void: Diploma.draw(stamp, Vector2(75, 60), 1.0, gr2))
+		dh.add_child(stamp)
+		v.add_child(dh)
 	if bool(rec["new_card"]):
 		var nc := UiKit.label("New card for your Training room!", 22, Palette.CORAL, 700)
 		nc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

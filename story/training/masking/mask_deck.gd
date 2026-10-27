@@ -32,7 +32,9 @@ const STATIONS: Array = [
 		"intro": "Cover a normal ear and low bone tones get LOUDER in it. That's the occlusion effect.\n"
 			+ "Play in the plug lab, call six cards (add it or not?), then fill the pocket card from memory."},
 	{"id": "exam", "num": 6, "name": "The masking exam", "pitch": "Nine holes, the whole job.", "color": Color("#8e5cc4"),
-		"card": "", "built": false, "movie": "", "intro": ""},
+		"card": "", "built": true, "movie": "",
+		"intro": "Nine holes, all mixed: who heard it, mask it?, set the dial, a plateau walk, the boom, and a dilemma.\n"
+			+ "No hints on a first try. Finish for the Masking School diploma; even par earns an S."},
 ]
 
 ## Holes in a station's round (the plateau walk deals three longer walks).
@@ -42,6 +44,8 @@ static func holes(station_id: String) -> int:
 			return WALK_KINDS.size()
 		"occlusion":
 			return ROUND_HOLES + 1   # six "Does it count?" cards, then the pocket card
+		"exam":
+			return EXAM_RULES.size()
 	return ROUND_HOLES
 
 
@@ -746,3 +750,56 @@ static func hole_name(strokes: int) -> String:
 ## "Even par", "+2"...
 static func round_name(over_par: int) -> String:
 	return "Even par" if over_par <= 0 else "+%d" % over_par
+
+
+# ---------------------------------------------------------------- station 6: the exam
+
+## The exam's nine holes by the station whose rules they use (a card's "rules" key): two "Who heard it?",
+## two "Mask it?", two dials, one plateau walk, one "Does it count?" and one masking dilemma (a walk).
+const EXAM_RULES: Array[String] = ["why", "why", "when", "when", "start", "start", "plateau", "occlusion", "dilemma"]
+## The exam's grade from strokes over par: S at even par, then A, B, C (a finished exam always earns the
+## diploma; its stamp shows the best grade).
+const EXAM_GRADES: Array = [[0, "S"], [2, "A"], [5, "B"]]
+
+
+static func exam_grade(over_par: int) -> String:
+	for g: Array in EXAM_GRADES:
+		if over_par <= int(g[0]):
+			return String(g[1])
+	return "C"
+
+
+## Nine mixed holes. Each card is its station's own card plus "rules" (the station id whose rules it
+## plays by; the dilemma is a plateau walk). Pairs never repeat an answer, so the exam covers each idea.
+static func exam_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var who: Array[StringName] = WHO.duplicate()
+	_shuffle(who, rng)
+	var calls: Array[StringName] = CALLS.duplicate()
+	_shuffle(calls, rng)
+	var starts: Array[String] = ["air", "high", "blocked", "inserts"]
+	_shuffle(starts, rng)
+	for i in 2:
+		out.append(_ruled(who_card(rng, who[i], _pick_transducer(rng)), "why"))
+		out.append(_ruled(when_card(rng, calls[i], _pick_weighted(rng, WHEN_WEIGHTS)), "when"))
+	out.append(_ruled(start_card(rng, "boom"), "start"))
+	out.append(_ruled(start_card(rng, starts[0]), "start"))
+	out.append(_ruled(walk_patient(rng, ["shift", "true"][rng.randi_range(0, 1)]), "plateau"))
+	out.append(_ruled(start_card(rng, "boom" if rng.randf() < 0.5 else starts[1]), "occlusion"))
+	out.append(_ruled(walk_patient(rng, "dilemma"), "plateau"))
+	_shuffle(out, rng)
+	return out
+
+
+static func _ruled(card: Dictionary, rules: String) -> Dictionary:
+	card["rules"] = rules
+	return card
+
+
+## The exam card's short label for the top bar ("Mask it?").
+static func exam_label(card: Dictionary) -> String:
+	var r := String(card.get("rules", ""))
+	if r == "plateau" and walk_dilemma(card):
+		return "a tricky walk"
+	return {"why": "who heard it?", "when": "mask it?", "start": "set the dial", "plateau": "walk it", "occlusion": "does it count?"}.get(r, "") as String
+

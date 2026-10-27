@@ -4,9 +4,11 @@ extends Node
 ## The main autoplay bot ends every run on a visit's results, so the Training room gets this harness.
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/training_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=why|when|start|plateau|occlusion picks the station (default why, Station 1). Station 5's
+## --station=why|when|start|plateau|occlusion|exam picks the station (default why, Station 1). Station 5's
 ## star needs a blank pocket card, so a fresh save's round ends at par without it. On the plateau walk
-## every move is a card; guess and hint act on each walk's first move only.
+## every move is a card; guess and hint act on each walk's first move only. The exam (station 6) plays
+## each hole by its card's own station rules (the beat's "rules"); its hint is locked on a first try, so
+## the hint policy checks that H costs nothing there and the round ends at par; it also needs the diploma.
 ## Policies (--policy=):
 ##   careful  every beat's solver: the movie skipped, each Try it stepped to its target, every hole at par
 ##   keys     real key presses: Enter, the louder key, 1-3 for the right answer (station 3: the louder /
@@ -231,7 +233,7 @@ class Driver extends Node:
 
 	func _card(beat: Dictionary, solver: Callable) -> void:
 		var best := int(beat["best"])
-		if station == "start":
+		if String(beat.get("rules", station)) == "start":
 			await _dial(beat, solver)
 			return
 		var first := int(beat.get("step", 0)) == 0
@@ -247,8 +249,11 @@ class Driver extends Node:
 				await _wait(0.2)
 				await _key(KEY_1 + best)
 			"hint":
+				var before := int(school.get("_hole_strokes")) if is_instance_valid(school) else 0
 				await _key(KEY_H)
 				await _wait(0.2)
+				if station == "exam" and is_instance_valid(school) and int(school.get("_hole_strokes")) != before:
+					problems.append("the exam took a first-try hint")
 				await _key(KEY_1 + best)
 
 	## Station 3: turn the dial to the level (one step high for guess) and set it.
@@ -283,7 +288,7 @@ class Driver extends Node:
 		var holes := MaskDeck.holes(station)
 		if strokes.size() != holes:
 			problems.append("%d holes, expected %d" % [strokes.size(), holes])
-		var want := 0 if policy in ["careful", "keys", "mouse"] else holes
+		var want := 0 if policy in ["careful", "keys", "mouse"] or (policy == "hint" and station == "exam") else holes
 		if over != want:
 			problems.append("%s run finished %d over par, expected %d (strokes %s)" % [policy, over, want, str(strokes)])
 		var star_ok := bool(result.get("star_ok", true))
@@ -293,7 +298,7 @@ class Driver extends Node:
 		if int(beats.get("explainer", 0)) != movies:
 			problems.append("Hoot's movie started %d times on a fresh save (expected %d)" % [int(beats.get("explainer", 0)), movies])
 		var tries: int = {"why": MaskDeck.WHY_TRIES.size(), "when": MaskDeck.WHEN_TRIES.size(), "start": MaskDeck.START_TRIES.size(),
-			"plateau": MaskDeck.WALK_TRIES.size(), "occlusion": MaskDeck.PLUG_TRIES.size()}[station]
+			"plateau": MaskDeck.WALK_TRIES.size(), "occlusion": MaskDeck.PLUG_TRIES.size(), "exam": 0}[station]
 		if int(beats.get("training_try", 0)) != tries:
 			problems.append("%d Try it steps, expected %d" % [int(beats.get("training_try", 0)), tries])
 
@@ -304,12 +309,19 @@ class Driver extends Node:
 		if bool(rec["star"]) != bool(result.get("star", false)):
 			problems.append("station %s's saved star is %s" % [station, str(rec["star"])])
 		var card_id := String(info["card"])
-		if not Progress.has_card(MaskDeck.LESSON, card_id):
-			problems.append("the %s card was not earned" % card_id)
 		var room := get_tree().get_first_node_in_group("training_room")
-		var card := room.find_child("card_" + card_id, true, false) if room != null else null
-		if card == null or not bool(card.get("earned")):
-			problems.append("the room does not pin the %s card" % card_id)
+		if card_id == "":
+			# the exam: its diploma, on the lesson card
+			if room == null or not bool(room.call("has_diploma")):
+				problems.append("the exam did not earn the diploma")
+			if String(result.get("grade", "")) != MaskDeck.exam_grade(int(result.get("over_par", -1))):
+				problems.append("the exam's grade is %s" % str(result.get("grade")))
+		else:
+			if not Progress.has_card(MaskDeck.LESSON, card_id):
+				problems.append("the %s card was not earned" % card_id)
+			var card := room.find_child("card_" + card_id, true, false) if room != null else null
+			if card == null or not bool(card.get("earned")):
+				problems.append("the room does not pin the %s card" % card_id)
 		var code := 0
 		if not problems.is_empty():
 			code = 1
