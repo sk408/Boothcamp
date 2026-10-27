@@ -2,13 +2,14 @@ extends Control
 ## MaskingSchool (training, story-internal): one Masking School station, played on Hoot's movie stage
 ## (docs/training/MASKING_TRAINER.md). The Training room sets `next_station` and opens this scene;
 ## the station runs its loop and comes back to the room:
-##   1. Hoot's card (what the station is for; station 1's first time, Hoot's masking movie plays after Start)
+##   1. Hoot's card (what the station is for; on a first visit to station 1 or 5, its Hoot movie plays after Start)
 ##   2. Try it (guided cards: nothing can go wrong)
 ##   3. Your round (MaskDeck.ROUND_HOLES holes, instant feedback, golf strokes)
 ##   4. The scorecard (holes, the round, the star, a new cheat-sheet card)
 ## Stations built so far: 1 "Why mask?" (who heard the beep?), 2 "When to mask?" (mask bone, air,
 ## both or neither?), 3 "How much to start?" (set the noise dial), 4 "The plateau walk" (shhh up, beep
-## up, store, or no safe level, one presentation at a time).
+## up, store, or no safe level, one presentation at a time), 5 "The occlusion effect" (the plug lab, six "Does
+## it count?" cards, then the pocket card filled from memory: one beat per tile).
 ## Controls: keys 1-3 answer, H hint (a stroke), Enter / Space go on, Up / Down (the louder / softer
 ## keys, either key style) move the beep or the dial, Enter sets the dial, R plays again on the
 ## scorecard, T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with
@@ -21,7 +22,8 @@ extends Control
 ##     station 4: one beat per move of the walk, with its step)
 ##   training_next {station, hole}                  solver: Next
 ##   training_scorecard {station, over_par, star}   solver: back to the room
-## The movie's own beat (explainer) plays in between on station 1's first visit.
+## The movie's own beat (explainer) plays in between on a first visit to station 1 (the masking movie) or
+## 5 ("The Plugged Ear").
 
 const UiKit := preload("res://story/ui_kit.gd")
 const Portraits := preload("res://story/portraits.gd")
@@ -74,6 +76,9 @@ var _answer: StringName = &""
 var _hole_strokes := 1
 var _hinted := false
 var _picked: Dictionary = {}   # answers already tried on this hole
+var _drill := false             # station 5: placing pocket-card tiles (the options are the tiles)
+var _cells: Dictionary = {}     # station 5: the pocket card so far, "row|freq" -> dB
+var _blank_count := 0           # station 5: cells left blank at the start of this visit's card
 
 signal _go(what: StringName)
 
@@ -159,7 +164,7 @@ func _movie() -> String:
 
 
 func _play_movie() -> void:
-	_say("A quick cartoon first: Hoot's masking movie!")
+	_say("A quick cartoon first: Hoot's movie!")
 	var player: Node = (load(PLAYER_SCENE) as PackedScene).instantiate()
 	add_child(player)
 	await player.call("play", _movie(), "training")
@@ -176,6 +181,13 @@ func _is_walk() -> bool:
 	return station_id == "plateau"
 
 
+const TILES: Array[StringName] = [&"t0", &"t10", &"t15"]
+
+
+func _tile_db(a: StringName) -> int:
+	return MaskDeck.OE_TILES[TILES.find(a)]
+
+
 ## The answers of a pick-one station, in key order.
 func _options() -> Array[StringName]:
 	match station_id:
@@ -183,6 +195,8 @@ func _options() -> Array[StringName]:
 			return MaskDeck.CALLS
 		"plateau":
 			return MaskDeck.MOVES
+		"occlusion":
+			return TILES if _drill else MaskDeck.COUNTS
 	return MaskDeck.WHO
 
 
@@ -192,10 +206,14 @@ func _word(a: StringName) -> String:
 			return String(MaskDeck.CALL_WORDS[a])
 		"plateau":
 			return String(MaskDeck.MOVE_WORDS[a])
+		"occlusion":
+			return "+%d" % _tile_db(a) if _drill else String(MaskDeck.COUNT_WORDS[a])
 	return String(MaskDeck.WHO_WORDS[a])
 
 
 func _verdict(a: StringName) -> String:
+	if station_id == "occlusion":
+		return ("Add it: +%d" % MaskDeck.boom(_card)) if a == &"add" else "Not this time: +0"
 	return String((MaskDeck.CALL_VERDICTS if station_id == "when" else MaskDeck.WHO_VERDICTS)[a])
 
 
@@ -207,6 +225,8 @@ func _tries() -> Array:
 			return MaskDeck.START_TRIES
 		"plateau":
 			return MaskDeck.WALK_TRIES
+		"occlusion":
+			return MaskDeck.PLUG_TRIES
 	return MaskDeck.WHY_TRIES
 
 
@@ -218,11 +238,20 @@ func _deal() -> Array[Dictionary]:
 			return MaskDeck.start_round(rng)
 		"plateau":
 			return MaskDeck.walk_round(rng)
+		"occlusion":
+			var cards := MaskDeck.count_round(rng)
+			cards.append({"drill": true})
+			return cards
 	return MaskDeck.who_heard_round(rng)
 
 
 func _right_answer(card: Dictionary) -> StringName:
-	return MaskDeck.mask_call(card) if station_id == "when" else MaskDeck.who_heard(card)
+	match station_id:
+		"when":
+			return MaskDeck.mask_call(card)
+		"occlusion":
+			return MaskDeck.count_answer(card)
+	return MaskDeck.who_heard(card)
 
 
 # ---------------------------------------------------------------- try it
@@ -241,14 +270,20 @@ func _try_it() -> void:
 			"plateau":
 				tr["records"] = MaskDeck.walk_first(tr)
 				tr["moves"] = 0
+			"occlusion":
+				tr["cur_cover"] = String(tr["start_cover"])
+				tr["cur_freq"] = int(tr["start_freq"])
 		_card = tr
 		_show_card(tr, false, true)
 		_say(String(tr["line"]))
 		_try_buttons()
 		_feedback_text(_try_status())
 		_state = &"try"
+		var mouse := {"click": _try_click()}
+		if station_id == "occlusion":
+			mouse["then"] = MaskDeck.oe_freq_word(int(tr["freq"]))
 		Events.awaiting_input.emit(&"training_try", {"station": station_id, "step": i, "target": _try_target(),
-			"mouse": {"click": _try_click()}}, _solve_try)
+			"mouse": mouse}, _solve_try)
 		await _go
 		Events.input_resolved.emit(&"training_try")
 		if _leaving:
@@ -264,6 +299,8 @@ func _try_target() -> int:
 			return MaskDeck.start_level(_card)
 		"plateau":
 			return int(MaskDeck.walk_textbook(_card)["moves"])
+		"occlusion":
+			return 1
 	return MaskDeck.try_target(_card)
 
 
@@ -276,6 +313,8 @@ func try_value() -> int:
 			return int(_card.get("dial", 0))
 		"plateau":
 			return int(_card.get("moves", 0))
+		"occlusion":
+			return 1 if _plug_matched() else 0
 	return int(_card.get("tone", 0))
 
 
@@ -287,6 +326,8 @@ func _try_click() -> String:
 			return "Shhh up +5"
 		"plateau":
 			return "Next step"
+		"occlusion":
+			return String(MaskDeck.COVER_WORDS[String(_card["cover"])])
 	return "Louder +5"
 
 
@@ -301,6 +342,14 @@ func try_step(dir: int) -> void:
 			_try_dial(dir)
 		"plateau":
 			_try_walk(dir)
+		"occlusion":
+			# one step toward Hoot's setting: the cover first, then the pitch
+			if String(_card["cur_cover"]) != String(_card["cover"]):
+				plug_cover(String(_card["cover"]))
+			else:
+				var i := MaskDeck.OE_FREQS.find(int(_card["cur_freq"]))
+				var j := MaskDeck.OE_FREQS.find(int(_card["freq"]))
+				plug_freq(MaskDeck.OE_FREQS[i + signi(j - i)])
 		_:
 			_try_beep(dir)
 
@@ -372,10 +421,46 @@ func _try_walk(dir: int) -> void:
 	_say("%s %s" % ["Heard, so shhh up 5." if m == &"shhh" else "Missed, so beep up 5.", "Heard again!" if heard else "No answer now."])
 
 
+## The plug lab: put a cover on (OPEN, HEADPHONE, DEEP INSERT).
+func plug_cover(c: String) -> void:
+	if _state != &"try" or station_id != "occlusion" or c == String(_card["cur_cover"]):
+		return
+	_card["cur_cover"] = c
+	Sfx.play(&"pop", 1.0, -10.0)
+	_plug_changed()
+
+
+## The plug lab: pick a pitch.
+func plug_freq(f: int) -> void:
+	if _state != &"try" or station_id != "occlusion" or f == int(_card["cur_freq"]):
+		return
+	_card["cur_freq"] = f
+	Sfx.play(&"blip", 0.8 + MaskDeck.OE_FREQS.find(f) * 0.1, -12.0)
+	_plug_changed()
+
+
+func plug_freq_step(dir: int) -> void:
+	var i := MaskDeck.OE_FREQS.find(int(_card["cur_freq"]))
+	plug_freq(MaskDeck.OE_FREQS[clampi(i + dir, 0, MaskDeck.OE_FREQS.size() - 1)])
+
+
+func _plug_matched() -> bool:
+	return String(_card.get("cur_cover", "")) == String(_card.get("cover", "-")) and int(_card.get("cur_freq", -1)) == int(_card.get("freq", -2))
+
+
+func _plug_changed() -> void:
+	_stage.params["cover"] = String(_card["cur_cover"])
+	_stage.params["freq"] = int(_card["cur_freq"])
+	_feedback_text(_try_status())
+	if _plug_matched():
+		Sfx.play(&"ding", 1.1, -8.0)
+		_try_done()
+
+
 func _try_done() -> void:
 	_state = &"try_done"
 	_say(_try_payoff())
-	for b in _answers.get_children():
+	for b in _answers.find_children("*", "Button", true, false):
 		(b as Button).disabled = true
 	_show_next("Next")
 
@@ -395,6 +480,10 @@ func _try_status() -> String:
 			return "Shhh at %d dB. Hoot's level: %d. Up or down 5 at a time." % [int(_card["dial"]), int(_card["target"])]
 		"plateau":
 			return _walk_status()
+		"occlusion":
+			var b := MaskDeck.oe_boost(String(_card["cur_cover"]), int(_card["cur_freq"]))
+			return "%s at %s Hz: bone tones get %s." % [String(MaskDeck.COVER_WORDS[String(_card["cur_cover"])]).capitalize(),
+				MaskDeck.oe_freq_word(int(_card["cur_freq"])), "+%d dB louder" % b if b > 0 else "no louder"]
 	var w := MaskDeck.wall(String(_card["transducer"]))
 	var tone := int(_card["tone"])
 	if w == 0:
@@ -421,6 +510,12 @@ func _try_payoff() -> String:
 			return "Spot on! Air test: Lefty's air plus 10, nothing more."
 		"plateau":
 			return "The beep chased the shhh, then held flat for 15. That's the plateau!"
+		"occlusion":
+			if String(_card["cover"]) == "insert":
+				return "Plus 0. A deep insert leaves no air to boom."
+			if int(_card["freq"]) >= 2000:
+				return "Nothing at 2k. High pitches don't boom."
+			return "Plus 15! A covered normal ear booms at the low pitches."
 	var tone := int(_card["tone"])
 	var w := MaskDeck.wall(String(_card["transducer"]))
 	match String(_card["transducer"]):
@@ -454,6 +549,9 @@ func _round() -> void:
 		if _is_walk():
 			if not await _walk_hole(h):
 				return
+		elif _card.has("drill"):
+			if not await _drill_hole(h):
+				return
 		elif _is_dial():
 			_card["dial"] = int(_card["other_air"])
 			_stage.params["dial"] = int(_card["dial"])
@@ -466,7 +564,10 @@ func _round() -> void:
 				"options": [], "mouse": {"click": "Set it"}}, _solve_dial.bind(best))
 		else:
 			_answer = _right_answer(_card)
-			if station_id == "when":
+			if station_id == "occlusion":
+				_say("Does the occlusion add-on count here? Check all four things.")
+				_feedback_text("The masker covers this ear. Bone or air? Which pitch? Normal ear? Headphone or insert?")
+			elif station_id == "when":
 				_say("Righty is tested. Which tests need masking? Pick one.")
 				_feedback_text("%s at %d Hz. Gap check first, then the air check." % [MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])], int(_card["freq"])])
 			else:
@@ -478,7 +579,7 @@ func _round() -> void:
 			Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": opts.find(_answer),
 				"options": opts.map(func(a: StringName) -> String: return _word(a)),
 				"mouse": {"click": _word(_answer)}}, func() -> void: pick(_answer))
-		if not _is_walk():
+		if not _is_walk() and not _card.has("drill"):
 			await _go
 			Events.input_resolved.emit(&"training_card")
 		if _leaving:
@@ -574,6 +675,71 @@ func _walk_pick(a: StringName) -> void:
 	_go.emit(&"step")
 
 
+## The pocket card (station 5's last hole): a beat per blank cell; the card earns its star only when
+## filled from blank (later visits start with fewer helper cells). Returns false when the player left.
+func _drill_hole(h: int) -> bool:
+	var plays := int(TrainingProgress.station(MaskDeck.LESSON, station_id)["plays"])
+	var blanks := MaskDeck.oe_blanks(rng, MaskDeck.oe_prefilled(plays))
+	_blank_count = blanks.size()
+	_cells.clear()
+	for row: String in MaskDeck.OE_ROWS:
+		for f: int in MaskDeck.OE_FREQS:
+			_cells["%s|%d" % [row, f]] = MaskDeck.oe_cell(row, f)
+	for c: Dictionary in blanks:
+		_cells.erase("%s|%d" % [String(c["row"]), int(c["freq"])])
+	_drill = true
+	_hinted = false
+	_stage_t = 0.0
+	_stage.show_scene({"id": "pocket", "set": "pocket_card", "duration": 9999.0, "params": {"cells": _cells, "focus": {}}})
+	if _blank_count < MaskDeck.OE_FREQS.size() * MaskDeck.OE_ROWS.size():
+		_say("Fill the blanks from memory. Next visit, fewer helpers!")
+	else:
+		_say("A blank card! Fill every cell from memory.")
+	for step in blanks.size():
+		_card = {"drill": true, "row": String(blanks[step]["row"]), "freq": int(blanks[step]["freq"])}
+		_answer = TILES[MaskDeck.OE_TILES.find(MaskDeck.oe_cell(String(_card["row"]), int(_card["freq"])))]
+		_stage.params["focus"] = {"row": _card["row"], "freq": _card["freq"]}
+		_stage.params["bounce"] = -1
+		_feedback_text("%s at %s Hz: how much louder? Pick a tile." % ["Headphone" if _card["row"] == "phones" else "Insert", MaskDeck.oe_freq_word(int(_card["freq"]))])
+		_picked.clear()
+		_answer_buttons()
+		_state = &"card"
+		Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "step": step, "best": TILES.find(_answer),
+			"options": TILES.map(func(a: StringName) -> String: return _word(a)), "mouse": {"click": _word(_answer)}},
+			func() -> void: pick(_answer))
+		await _go
+		Events.input_resolved.emit(&"training_card")
+		if _leaving:
+			_drill = false
+			return false
+	_drill = false
+	_stage.params["focus"] = {}
+	_feedback_text("Pocket card complete! 250 +15, 500 +15, 750 +10, 1k +10, 2k up 0. Inserts 0.")
+	_say("Pocket card complete! Fifteen, fifteen, ten, ten, then nothing. You've got it.")
+	_clear_answers()
+	return true
+
+
+func _drill_pick(a: StringName) -> void:
+	_picked[a] = true
+	if a != _answer:
+		_hole_strokes += 1
+		Sfx.play(&"boing", 1.0, -10.0)
+		_stage.params["bounce"] = _tile_db(a)
+		_stage.params["bounce_at"] = _stage_t
+		_say(MaskDeck.oe_reason(String(_card["row"]), int(_card["freq"])))
+		for b: Button in _answer_list():
+			if StringName(String(b.get_meta("answer", ""))) == a:
+				b.disabled = true
+				Juice.shake(b, 5.0, 0.25)
+		return
+	_state = &"busy"
+	Sfx.play(&"ding", 1.2, -8.0)
+	_cells["%s|%d" % [String(_card["row"]), int(_card["freq"])]] = _tile_db(a)
+	_stage.params["cells"] = _cells
+	_go.emit(&"right")
+
+
 ## Answer the live card (keys 1-4, a click or the solver).
 func pick(a: StringName) -> void:
 	if _state != &"card" or _picked.has(a):
@@ -581,12 +747,18 @@ func pick(a: StringName) -> void:
 	if _is_walk():
 		_walk_pick(a)
 		return
+	if _drill:
+		_drill_pick(a)
+		return
 	_picked[a] = true
 	if a == _answer:
 		_state = &"busy"
 		Sfx.play(&"ding", 1.1, -6.0)
 		var lines: Array[String] = []
-		if station_id == "when":
+		if station_id == "occlusion":
+			_stage.params["reveal"] = true
+			lines = [MaskDeck.boom_line(_card), "Pocket card: only bone, only a covered NORMAL ear, only low pitches."]
+		elif station_id == "when":
 			_stage.params["show_bone"] = true
 			_stage.params["show_air"] = true
 			lines = MaskDeck.when_lines(_card)
@@ -609,7 +781,9 @@ func pick(a: StringName) -> void:
 		return
 	_hole_strokes += 1
 	Sfx.play(&"error", 1.0, -10.0)
-	if station_id == "when":
+	if station_id == "occlusion":
+		_say("Not quite. Bone, low pitch, normal ear, headphone: it needs all four.")
+	elif station_id == "when":
 		_say("Not quite. Gap check first, then air minus the wall.")
 	else:
 		_say("Not quite. Check both numbers: the test ear's, and what crosses the wall.")
@@ -681,6 +855,8 @@ func hint() -> void:
 			_say(MaskDeck.start_hint(_card))
 		"plateau":
 			_say(MaskDeck.walk_hint(_card))
+		"occlusion":
+			_say(MaskDeck.oe_reason(String(_card["row"]), int(_card["freq"])) if _drill else MaskDeck.count_hint(_card))
 		_:
 			_say(MaskDeck.hint_line(_card))
 	_hint_btn.disabled = true
@@ -709,18 +885,23 @@ func _scorecard() -> void:
 	for s: int in strokes:
 		total += s
 	var over := total - strokes.size()
-	var rec := TrainingProgress.record_round(MaskDeck.LESSON, station_id, over, String(info["card"]))
-	last_result = {"station": station_id, "strokes": strokes.duplicate(), "over_par": over, "star": over == 0,
-		"new_card": bool(rec["new_card"]), "best": int(rec["best"])}
+	var star_ok := _star_ok()
+	var star := over == 0 and star_ok
+	var rec := TrainingProgress.record_round(MaskDeck.LESSON, station_id, over, String(info["card"]), star_ok)
+	last_result = {"station": station_id, "strokes": strokes.duplicate(), "over_par": over, "star": star,
+		"new_card": bool(rec["new_card"]), "best": int(rec["best"]), "star_ok": star_ok}
 	print("TRAINING_RESULT %s" % JSON.stringify(last_result))
 	_state = &"score"
 	_show_overlay(_score_panel(over, rec))
-	if over == 0:
+	if star:
 		Sfx.play(&"fanfare", 1.0, -8.0)
 		_say(_star_line())
+	elif over == 0:
+		Sfx.play(&"ding", 1.2, -8.0)
+		_say("Even par! The star needs a blank pocket card: next visit has fewer helpers.")
 	else:
 		_say("%s. Play again for the star, or head back to the room." % MaskDeck.round_name(over))
-	Events.awaiting_input.emit(&"training_scorecard", {"station": station_id, "over_par": over, "star": over == 0,
+	Events.awaiting_input.emit(&"training_scorecard", {"station": station_id, "over_par": over, "star": star,
 		"mouse": {"click": "Back to the Training room"}}, leave)
 	var what: StringName = await _go
 	Events.input_resolved.emit(&"training_scorecard")
@@ -731,6 +912,11 @@ func _scorecard() -> void:
 			await _scorecard()
 
 
+## Station 5's star needs the pocket card filled from blank; the others only need par.
+func _star_ok() -> bool:
+	return station_id != "occlusion" or _blank_count >= MaskDeck.OE_FREQS.size() * MaskDeck.OE_ROWS.size()
+
+
 func _star_line() -> String:
 	match station_id:
 		"when":
@@ -739,6 +925,8 @@ func _star_line() -> String:
 			return "Even par! Every dial spot on. That's a star."
 		"plateau":
 			return "Even par! Every walk textbook. That's a star."
+		"occlusion":
+			return "Even par, from a blank card! That's a star."
 	return "Even par! You caught every Ghost. That's a star."
 
 
@@ -778,6 +966,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		pick(_options()[code - KEY_KP_1])
 	elif _state in [&"card", &"dial"] and code == KEY_H:
 		hint()
+	elif _state == &"try" and station_id == "occlusion" and code >= KEY_1 and code < KEY_1 + MaskDeck.COVERS.size():
+		plug_cover(MaskDeck.COVERS[code - KEY_1])
+	elif _state == &"try" and station_id == "occlusion" and event.is_action_pressed(&"ui_right"):
+		plug_freq_step(1)
+	elif _state == &"try" and station_id == "occlusion" and event.is_action_pressed(&"ui_left"):
+		plug_freq_step(-1)
 	elif _state == &"try" and event.is_action_pressed(&"louder"):
 		try_step(1)
 	elif _state == &"try" and event.is_action_pressed(&"softer"):
@@ -882,7 +1076,9 @@ func _build() -> void:
 	_field.add_child(_feedback_panel)
 	if UiKit.show_key_hints():
 		var keys: Array = [["1", "2", "3"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"]
-		if _is_walk():
+		if station_id == "occlusion":
+			keys = [["1", "2", "3"], "answer / cover", ["Left", "Right"], "pitch", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"]
+		elif _is_walk():
 			keys = [["1", "2", "3", "4"], "move", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"]
 		elif _is_dial():
 			keys = [[Game.key_label(&"louder"), Game.key_label(&"softer")], "dial", ["Enter"], "set it / next", ["H"], "hint", ["T"], "room", ["Esc"], "pause"]
@@ -935,7 +1131,11 @@ func _show_card(card: Dictionary, reveal: bool, live: bool) -> void:
 	p["show_bone"] = false
 	p["show_air"] = false
 	p["target"] = int(card.get("target", -1))
-	var set_id := {"when": "when_card", "start": "start_dial", "plateau": "plateau_walk"}.get(station_id, "who_heard") as String
+	var set_id := {"when": "when_card", "start": "start_dial", "plateau": "plateau_walk",
+		"occlusion": "pe_ear" if live else "oe_count"}.get(station_id, "who_heard") as String
+	if station_id == "occlusion" and live:
+		p["cover"] = String(card.get("cur_cover", "open"))
+		p["freq"] = int(card.get("cur_freq", 250))
 	_stage.show_scene({"id": station_id, "set": set_id, "duration": 9999.0, "params": p})
 
 
@@ -972,6 +1172,23 @@ func _answer_buttons() -> void:
 
 func _try_buttons() -> void:
 	_clear_answers()
+	if station_id == "occlusion":
+		for i in MaskDeck.COVERS.size():
+			var c: String = MaskDeck.COVERS[i]
+			var b := _side_button(String(MaskDeck.COVER_WORDS[c]), str(i + 1), Vector2(SIDE_W, 54))
+			b.pressed.connect(plug_cover.bind(c))
+			_answers.add_child(b)
+		var grid := GridContainer.new()
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		for f: int in MaskDeck.OE_FREQS:
+			var fb := UiKit.button(MaskDeck.oe_freq_word(f), &"", Vector2((SIDE_W - 16) / 3.0, 50))
+			fb.add_theme_font_size_override("font_size", 20)
+			fb.pressed.connect(plug_freq.bind(f))
+			grid.add_child(fb)
+		_answers.add_child(grid)
+		return
 	if station_id in ["when", "plateau"]:
 		var check := _side_button(_try_click(), "Enter")
 		check.pressed.connect(try_step.bind(1))
@@ -1097,7 +1314,7 @@ func _intro_panel() -> Control:
 	back.pressed.connect(leave)
 	row.add_child(back)
 	if _movie() != "" and not Game.is_movie_seen(_movie()):
-		var note := UiKit.label("First time here: Hoot's masking movie plays after Start (Esc skips it).", 17, Color(ink, 0.85), 600)
+		var note := UiKit.label("First time here: Hoot's movie plays after Start (Esc skips it).", 17, Color(ink, 0.85), 600)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(note)
 	return p
@@ -1119,7 +1336,7 @@ func _score_panel(over: int, rec: Dictionary) -> Control:
 	for i in strokes.size():
 		var s := strokes[i]
 		var hp := UiKit.panel(HOLE_COLORS[clampi(s - 1, 0, HOLE_COLORS.size() - 1)], Palette.INK, 14)
-		hp.custom_minimum_size = Vector2(118, 0)
+		hp.custom_minimum_size = Vector2(118 if strokes.size() <= 6 else 100, 0)
 		var hv := VBoxContainer.new()
 		hp.add_child(hv)
 		var n := UiKit.label("Hole %d" % (i + 1), 16, Palette.INK, 600)
@@ -1138,7 +1355,9 @@ func _score_panel(over: int, rec: Dictionary) -> Control:
 		var c := Vector2(star.size.x * 0.5, 32)
 		UiDraw.star(star, c + Vector2(0, 3), 30.0, Color(Palette.INK, 0.3))
 		UiDraw.star(star, c, 30.0, Palette.SUNNY if bool(rec["star"]) else Color(Palette.INK_SOFT, 0.25))
-		var t := "Star earned!" if over == 0 else ("Star kept from before" if bool(rec["star"]) else "Even par earns the star")
+		var earned := over == 0 and _star_ok()
+		var t := "Star earned!" if earned else ("Star kept from before" if bool(rec["star"]) else
+			("Par! A blank card earns the star" if over == 0 else "Even par earns the star"))
 		star.draw_string(UiKit.font(700), c + Vector2(44, 8), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.INK))
 	v.add_child(star)
 	if bool(rec["new_card"]):

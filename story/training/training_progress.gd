@@ -30,12 +30,13 @@ static func station(lesson: String, id: String) -> Dictionary:
 	return {"best": int(r.get("best", -1)), "star": bool(r.get("star", false)), "plays": int(r.get("plays", 0))}
 
 
-## A finished round: keep the best, star it at par or better, earn the station's card. Saves.
-static func record_round(lesson: String, id: String, over_par: int, card := "") -> Dictionary:
+## A finished round: keep the best, star it at par or better (and star_ok: a station may ask for more,
+## like the pocket card filled from blank), earn the station's card. Saves.
+static func record_round(lesson: String, id: String, over_par: int, card := "", star_ok := true) -> Dictionary:
 	var old := station(lesson, id)
 	var over := maxi(0, over_par)
 	var new_best: bool = int(old["best"]) < 0 or over < int(old["best"])
-	var rec := {"best": over if new_best else int(old["best"]), "star": bool(old["star"]) or over == 0, "plays": int(old["plays"]) + 1}
+	var rec := {"best": over if new_best else int(old["best"]), "star": bool(old["star"]) or (over == 0 and star_ok), "plays": int(old["plays"]) + 1}
 	(data(lesson)["stations"] as Dictionary)[id] = rec
 	var new_card := false
 	if card != "" and not has_card(lesson, card):

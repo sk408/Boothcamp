@@ -417,8 +417,8 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   cheat-sheet cards), `story/training/masking/masking_school.tscn` (one station: Hoot's card, Try it, a six-hole
   round, the scorecard). The room sets `MaskingSchool.next_station`; `--scene=...masking_school.tscn --station=why`
   boots one station directly. The station draws on Hoot's movie stage through the sets hook
-  (`story/training/masking/school_sets.gd`, sets `who_heard`, `when_card`, `start_dial`, `plateau_walk`), so no
-  shared stage edit. Built: 1 why (who heard it?), 2 when (mask it?), 3 start (set the dial), 4 plateau (walk it); a new station is a `MaskDeck.STATIONS`
+  (`story/training/masking/school_sets.gd`, sets `who_heard`, `when_card`, `start_dial`, `plateau_walk`, `pe_open`, `pe_ear`, `pe_masker`, `oe_count`, `pocket_card`), so no
+  shared stage edit. Built: 1 why (who heard it?), 2 when (mask it?), 3 start (set the dial), 4 plateau (walk it), 5 occlusion (plug lab, does it count?, the pocket card); a new station is a `MaskDeck.STATIONS`
   entry with `built: true` plus its branches in `masking_school.gd` (`_tries`, `_deal`, `try_step`).
 - **Rules** live in `story/training/masking/mask_deck.gd` and read `ClinicRules` only (`ia_rule`,
   `ac_masking_needed`, `bc_masking_needed`, `initial_masking`, `occlusion_effect`, `OCCLUSION_DB`, `next_mask_step`, `plateau_run`, `overmask_limit`,
@@ -426,4 +426,7 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **Beats** `training_room`, `training_intro`, `training_try`, `training_card`, `training_next`,
   `training_scorecard` (CONTRACTS.md §3.2), and phases `training_room`, `training` (emitted, not in `Game.PHASES`'
   visit flow). A first visit to station 1 plays Hoot's masking movie (source `"training"`).
+- **movies.gd** (additive): registry line `"plugged_ear"` (`story/explainers/movies/plugged_ear.gd`, chapter `bonnie`,
+  stage `school_sets.gd`, `"training": true`), the lead-in of Station 5. `Movies.is_training`: a training movie is never a chapter's own (`for_chapter`), so Day 2 keeps its one movie; it shows on the title's list labelled "Training". `TrainingProgress.record_round(..., star_ok)`: a par round
+  earns the star only when `star_ok` (Station 5: a blank pocket card).
 - **Bot**: `story/tests/training_check.tscn` (tools/README.md). **No new data files**, so the Web preset needs nothing.

@@ -12,9 +12,17 @@ extends "res://story/explainers/explainer_sets.gd"
 ##     target (dB EM, or -1: "Try it" shows Hoot's level), reveal (bool: the sum on the dial), verdict, verdict_at.
 ##   plateau_walk: the patient (freq, t_test, t_other, gap_other, masker, kind), records (the presentations so
 ##     far: db, mask_db, responded), step_at (stage time of the latest), reveal (bool: the walk is over), verdict.
+## Station 5 and its movie, "The Plugged Ear" (story/explainers/movies/plugged_ear.gd uses this script as its stage):
+##   pe_open: the marquee card (card_hold s, questions), then pe_ear open with Hoot humming.
+##   pe_ear: a cut-away ear: cover ("open", "phones", "insert", "blocked"), freq, cover_at (when the cover goes on:
+##     open before it; -1 = on from the start), sweep (bool: 250 to 4k, a bar each, in place of the meter).
+##   pe_masker: the head: bone on Righty, a headphone on Lefty, Lefty booms, the shhh grows by the add-on.
+##   oe_count: "Does it count?": a start-card (test, freq, other_gap, masker) on the ear, reveal (the meter, verdict).
+##   pocket_card: the card grid: cells ({"row|freq": dB}), focus ({row, freq} or {}), bounce_at, bounce (tile dB).
 
 const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
-const SETS: Array[StringName] = [&"who_heard", &"when_card", &"start_dial", &"plateau_walk"]
+const SETS: Array[StringName] = [&"who_heard", &"when_card", &"start_dial", &"plateau_walk", &"pe_open", &"pe_ear", &"pe_masker",
+	&"oe_count", &"pocket_card"]
 
 const FOAM := Color("#f6c453")
 const TUBE := Color("#9aa3b5")
@@ -434,3 +442,263 @@ func _set_plateau_walk() -> void:
 	var verdict := String(params.get("verdict", ""))
 	if verdict != "" and reveal:
 		s._chip(verdict, Vector2(MINI_AT.x, 26), Palette.SUNNY, 18, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))))
+
+
+# ---------------------------------------------------------------- station 5: the plugged ear
+
+const EAR_Y := 250.0
+const CANAL_X0 := 150.0
+const CANAL_X1 := 400.0
+const CANAL_H := 34.0
+const COCHLEA_AT := Vector2(548, 318)
+const METER := Rect2(772, 96, 52, 260)
+const HUM_AT := Vector2(318, 104)
+
+
+func _set_pe_open() -> void:
+	var hold := float(params.get("card_hold", 7.0))
+	if t < hold:
+		var k := _pop(0.05, 0.5) * (1.0 - _k(hold - 0.4, hold))
+		s._push(Stage2D._about(Vector2(440, 220), 0.0, Vector2.ONE * maxf(0.02, k)))
+		s._panel(Rect2(110, 60, 660, 300), Stage2D.BACKDROP, 26)
+		s._text("HOOT'S MOVIE MATINEE", Vector2(440, 112), 22, Palette.SUNNY, 700)
+		s._text("The Plugged Ear", Vector2(440, 170), 50, Palette.PAPER, 700)
+		var qs: Array = params.get("questions", [])
+		for i in qs.size():
+			s._chip(String(qs[i]), Vector2(440, 244 + i * 54), Palette.SUNNY, 20, Stage2D.INK, _pop(1.6 + i * 2.4))
+		s._pop_xf()
+		s._hoot(Vector2(96, 380), 34.0, {"pop": _pop(0.6), "mood": &"wave"})
+		return
+	_ear({"cover": "open", "freq": 250, "cover_at": -1.0, "t0": hold, "hum": true})
+
+
+func _set_pe_ear() -> void:
+	_ear({"cover": String(params.get("cover", "open")), "freq": int(params.get("freq", 250)),
+		"cover_at": float(params.get("cover_at", -1.0)), "sweep": bool(params.get("sweep", false)), "hum": bool(params.get("hum", false))})
+
+
+## The cut-away ear: skull bone, the canal, the drum, a middle ear and the cochlea (a red snail), the
+## bone buzzer on top. Bone sound shakes the canal walls; the waves leak out of an open canal, bounce
+## back off a cover, or barely fit behind a deep insert. The meter shows how much louder it gets.
+func _ear(o: Dictionary) -> void:
+	var cover := String(o.get("cover", "open"))
+	var cover_at := float(o.get("cover_at", -1.0))
+	var t0 := float(o.get("t0", 0.0))
+	var on := cover_at < 0.0 or t >= cover_at
+	var shown := cover if on else "open"
+	var sweep := bool(o.get("sweep", false))
+	var freq := int(o.get("freq", 250))
+	var sweep_i := -1
+	if sweep:
+		sweep_i = clampi(int((t - 0.6) / 2.0), 0, MaskDeck.OE_FREQS.size() - 1)
+		freq = MaskDeck.OE_FREQS[sweep_i]
+	var cover_k := 1.0 if cover_at < 0.0 else s._ease_out(_k(cover_at, cover_at + 0.5))
+	var still := bool(o.get("still", false))
+	var bone := bool(o.get("bone", true))
+	var boost := MaskDeck.oe_boost(shown, freq) if shown != "blocked" and bone else 0
+	# skull bone, around the canal
+	s._panel(Rect2(178, 70, 470, 350), Color("#efe6d6"), 40)
+	for i in 6:
+		s.draw_circle(Vector2(230 + i * 78, 98 + (i % 2) * 20), 5.0, Color(Stage2D.BONE_GREY, 0.7), true, -1.0, true)
+	s._text("SKULL BONE", Vector2(560, 92), 13, Palette.INK_SOFT, 700)
+	# the canal (skin), open to the left
+	var canal := Rect2(CANAL_X0 - 40, EAR_Y - CANAL_H, CANAL_X1 - CANAL_X0 + 40, CANAL_H * 2)
+	s.draw_rect(canal, Stage2D.CANAL)
+	s.draw_line(Vector2(CANAL_X0 - 40, EAR_Y - CANAL_H), Vector2(CANAL_X1, EAR_Y - CANAL_H), Stage2D.INK, 4.0)
+	s.draw_line(Vector2(CANAL_X0 - 40, EAR_Y + CANAL_H), Vector2(CANAL_X1, EAR_Y + CANAL_H), Stage2D.INK, 4.0)
+	# the outer ear
+	s._blob(Vector2(112, EAR_Y), Vector2(34, 104), Palette.SKIN, 4.0)
+	s.draw_rect(Rect2(112, EAR_Y - CANAL_H + 2, 40, CANAL_H * 2 - 4), Stage2D.CANAL)
+	# drum, middle ear, ossicles
+	var mid := Rect2(CANAL_X1, EAR_Y - 58, 70, 116)
+	s._rbox(mid, Color("#fff8ec") if shown != "blocked" else Color("#cfe7ff"), 14, 4)
+	if shown == "blocked":
+		for i in 3:
+			s.draw_line(Vector2(mid.position.x + 10, mid.position.y + 30 + i * 28), Vector2(mid.end.x - 10, mid.position.y + 30 + i * 28 + sin(t * 2.0 + i) * 3.0), Color(Palette.LEFT_BLUE, 0.5), 3.0, true)
+	s.draw_line(Vector2(CANAL_X1, EAR_Y - CANAL_H - 6), Vector2(CANAL_X1, EAR_Y + CANAL_H + 6), Stage2D.INK, 6.0, true)
+	for p: Vector2 in [Vector2(418, EAR_Y - 8), Vector2(438, EAR_Y - 18), Vector2(456, EAR_Y - 6)]:
+		s._circ(p, 6.0, Stage2D.BONE_GREY, 2.5)
+	# the cochlea
+	var loud := boost / 15.0
+	s._snail(COCHLEA_AT, -1.0, Palette.RIGHT_RED, Stage2D.RIGHTY_BODY, {"mood": &"wow" if loud > 0.5 else (&"alert" if loud > 0.0 else &"idle"),
+		"squash": sin(t * 9.0) * 0.04 * loud})
+	s._text("cochlea", COCHLEA_AT + Vector2(0, 30), 14, Palette.INK_SOFT, 700)
+	# the bone buzzer (or a hum): it shakes the bone, so the canal walls ring
+	if not bone:
+		still = true
+	var bz := HUM_AT + (Vector2(sin(t * 60.0), cos(t * 53.0)) * 1.5 * s._motion if not still else Vector2.ZERO)
+	if bone:
+		s._rbox(Rect2(bz - Vector2(30, 22), Vector2(60, 44)), Stage2D.BUZZ_BEIGE, 12, 4)
+		s._text("BZZ" if not bool(o.get("hum", false)) else "mmm", bz, 16, Stage2D.INK, 700)
+	for i in (0 if still else 3):
+		var r := 30.0 + fposmod(t * 40.0 + i * 14.0, 42.0)
+		s.draw_arc(HUM_AT, r, PI * 0.15, PI * 0.85, 16, Color(Stage2D.INK, 0.5 * (1.0 - (r - 30.0) / 42.0)), 3.0, true)
+	if bool(o.get("hum", false)):
+		s._hoot(Vector2(96, 380), 30.0, {"mood": &"idle"})
+		s._chip("Hoot hums: mmm", Vector2(180, 400), Palette.PAPER, 15, Stage2D.INK, _pop(t0 + 0.4))
+	# the waves in the canal: low pitches are long, slow waves; high pitches tiny quick ones
+	var low := freq <= 1000
+	var spacing := lerpf(70.0, 30.0, clampf((freq - 250) / 750.0, 0.0, 1.0)) if low else 16.0
+	var speed := 50.0 if low else 160.0
+	var height := CANAL_H - 6.0
+	var open_end := CANAL_X0 - 40.0 if shown == "open" else (348.0 if shown == "insert" else CANAL_X0 - 8.0)
+	var n := 0 if still else int((CANAL_X1 - open_end) / spacing) + 2
+	for i in n:
+		# waves start at the walls near the drum and run outwards
+		var x := CANAL_X1 - fposmod(t * speed + i * spacing, CANAL_X1 - open_end + (60.0 if shown == "open" else 0.0))
+		var a := 0.85
+		if x < CANAL_X0 - 40.0:
+			a = 0.85 * clampf((x - (CANAL_X0 - 100.0)) / 60.0, 0.0, 1.0)   # leaking out of the open canal
+		s.draw_arc(Vector2(x + height, EAR_Y), height, PI * 0.62, PI * 1.38, 14, Color(Stage2D.NOISE if low else Palette.SELECT_ORANGE, a), 3.5 if low else 2.0, true)
+		if shown != "open" and shown != "insert" and low:
+			# bounced back off the cover: a second train heading for the drum
+			var xb := open_end + fposmod(t * speed + i * spacing + spacing * 0.5, CANAL_X1 - open_end)
+			s.draw_arc(Vector2(xb - height, EAR_Y), height, -PI * 0.38, PI * 0.38, 14, Color(Palette.SELECT_ORANGE, 0.85), 3.5, true)
+	if shown == "open" and not still:
+		s._text("leaks out", Vector2(70, EAR_Y - 70), 16, Stage2D.NOISE_DEEP, 700, 4)
+	# the cover
+	match shown:
+		"phones", "blocked":
+			s._push(Transform2D(0.0, Vector2.ONE, 0.0, Vector2(-60.0 * (1.0 - cover_k), 0)))
+			s._rbox(Rect2(46, EAR_Y - 120, 70, 240), Palette.RIGHT_RED, 26, 4)
+			s._rbox(Rect2(104, EAR_Y - 100, 26, 200), Palette.RIGHT_RED.darkened(0.3), 12, 3)
+			s._text("headphone", Vector2(80, EAR_Y + 142), 15, Stage2D.INK, 700, 4)
+			s._pop_xf()
+		"insert":
+			var ix := lerpf(120.0, 336.0, cover_k)
+			s.draw_line(Vector2(40, EAR_Y + 60), Vector2(ix - 10, EAR_Y + 4), Stage2D.INK, 8.0, true)
+			s.draw_line(Vector2(40, EAR_Y + 60), Vector2(ix - 10, EAR_Y + 4), TUBE, 4.0, true)
+			s._rbox(Rect2(ix - 14, EAR_Y - CANAL_H + 4, 28, CANAL_H * 2 - 8), FOAM, 10, 3)
+			s._text("deep insert", Vector2(ix - 20, EAR_Y + CANAL_H + 22), 15, Stage2D.INK, 700, 4)
+	if shown == "blocked":
+		s._chip("own conductive loss: already plugged", Vector2(440, 404), Palette.SKY, 16)
+	# the meter, or the sweep's bar chart
+	if sweep:
+		_oe_bars(sweep_i)
+	elif not still:
+		_oe_meter(boost, freq, shown, bool(o.get("label", true)))
+
+
+func _oe_meter(boost: int, freq: int, cover: String, label: bool) -> void:
+	s._panel(METER.grow_individual(44, 52, 20, 30), Palette.PAPER, 16)
+	s._text("LOUDER", Vector2(METER.get_center().x, METER.position.y - 34), 15, Stage2D.INK, 700)
+	s._text("by", Vector2(METER.get_center().x, METER.position.y - 16), 13, Palette.INK_SOFT, 600)
+	s._rbox(METER, Color("#ece7f5"), 10, 3)
+	var h := METER.size.y * boost / 15.0
+	if h > 0.0:
+		s._rbox(Rect2(METER.position.x + 4, METER.end.y - h - 4 + 4, METER.size.x - 8, h), Palette.SELECT_ORANGE, 8, 0)
+	for v: int in [0, 10, 15]:
+		var y := METER.end.y - METER.size.y * v / 15.0
+		s.draw_line(Vector2(METER.position.x - 6, y), Vector2(METER.position.x, y), Stage2D.INK, 2.0)
+		s._text("+%d" % v, Vector2(METER.position.x - 22, y), 13, Palette.INK_SOFT, 700)
+	s._chip("+%d dB" % boost, Vector2(METER.get_center().x, METER.end.y + 22), Palette.SELECT_ORANGE if boost > 0 else Palette.PAPER, 18)
+	if label:
+		s._chip("%s Hz, %s" % [MaskDeck.oe_freq_word(freq), String(MaskDeck.COVER_WORDS.get(cover, cover)).to_lower()],
+			Vector2(440, 34), Palette.SUNNY, 18)
+
+
+## The sweep: one bar per pocket-card pitch, up to the one playing now.
+func _oe_bars(upto: int) -> void:
+	var r := Rect2(664, 96, 196, 270)
+	s._panel(r.grow(10), Palette.PAPER, 16)
+	s._text("headphone boom", Vector2(r.get_center().x, r.position.y + 6), 15, Stage2D.INK, 700)
+	var w := r.size.x / MaskDeck.OE_FREQS.size()
+	var base := r.end.y - 30.0
+	for i in MaskDeck.OE_FREQS.size():
+		var f: int = MaskDeck.OE_FREQS[i]
+		var x := r.position.x + w * (i + 0.5)
+		s._text(MaskDeck.oe_freq_word(f), Vector2(x, base + 16), 13, Palette.INK_SOFT, 700)
+		if i > upto:
+			continue
+		var b := MaskDeck.oe_boost("phones", f)
+		var h := 180.0 * b / 15.0 * s._ease_out(_k(0.6 + i * 2.0, 1.1 + i * 2.0))
+		if h > 0.5:
+			s._rbox(Rect2(x - w * 0.32, base - h, w * 0.64, h), Palette.SELECT_ORANGE, 6, 2)
+		s._text("+%d" % b, Vector2(x, base - h - 14), 15, Stage2D.INK, 700, 3)
+
+
+func _set_pe_masker() -> void:
+	var cup_k := _pop(1.0)
+	var boom_k := _pop(3.0)
+	var grow := s._ease_in_out(_k(5.0, 7.5))
+	s._head_open(0.3)
+	s._head({"look": Vector2(0.6, -0.1), "mood": &"smile"})
+	s._wall(1.0, 0.28, true)
+	var r := lerpf(60.0, 96.0, grow)
+	if t >= 4.6:
+		s._cloud(Stage2D.CLOUD_AT, r, {"patchy": 0.0})
+	s._snail(Stage2D.RIGHTY_AT, 1.0, Palette.RIGHT_RED, Stage2D.RIGHTY_BODY, {"mood": &"alert", "look": Vector2(-1, -0.2)})
+	s._snail(Stage2D.LEFTY_AT, -1.0, Palette.LEFT_BLUE, Stage2D.LEFTY_BODY, {"mood": &"wow" if t >= 3.0 and t < 7.5 else &"idle",
+		"squash": _ring(3.0, 0.12, 14.0, 3.0), "look": Vector2(1, -0.3)})
+	s._buzzer(1.0, 1.0, 0.0)
+	s._cup(Stage2D.CUP_L_AT, Palette.LEFT_BLUE, "L", cup_k, 1.0)
+	s._head_close()
+	if t >= 4.6:
+		s._shhh_letters(Stage2D.CLOUD_AT, r)
+	s._chip("TEST: Righty's bone, 500 Hz", Vector2(470, 32), Palette.RIGHT_TINT, 17)
+	s._chip("Lefty covered: BOOM +15", Stage2D.LEFTY_AT + Vector2(20, -200), Palette.SELECT_ORANGE, 18, Stage2D.INK, boom_k, -0.05)
+	s._chip("shhh: air + 10 + 15", Vector2(700, 410), Stage2D.NOISE_FILL, 18, Stage2D.INK, _pop(5.4))
+	s._name_tag("RIGHTY", Stage2D.RIGHTY_AT, Palette.RIGHT_RED, 1.0)
+	s._name_tag("LEFTY", Stage2D.LEFTY_AT, Palette.LEFT_BLUE, 1.0)
+
+
+## "Does it count?": the card's ear (the covered one) with its test, pitch and masker, then the verdict.
+func _set_oe_count() -> void:
+	var card := {"test": String(params.get("test", "bc")), "freq": int(params.get("freq", 500)), "other_gap": int(params.get("other_gap", 0)),
+		"masker": String(params.get("masker", "phones")), "other_air": 0}
+	var reveal := bool(params.get("reveal", false))
+	var cover := "insert" if String(card["masker"]) == "inserts" else ("blocked" if int(card["other_gap"]) > ClinicRules.OCCLUSION_MAX_GAP_DB else "phones")
+	var bone := MaskDeck.is_bone_test(card)
+	s._push(Transform2D(0.0, Vector2.ONE * 0.86, 0.0, Vector2(0, 50)))
+	_ear({"cover": cover, "freq": int(card["freq"]), "cover_at": -1.0, "still": not reveal, "bone": bone, "label": false})
+	s._pop_xf()
+	var test_word := "BONE test" if bone else "AIR test (earphone, no buzzer)"
+	s._chip("%s, %s Hz" % [test_word, MaskDeck.oe_freq_word(int(card["freq"]))], Vector2(300, 24), Palette.RIGHT_TINT, 18)
+	var ear_word := "covered ear: NORMAL (gap %d)" % int(card["other_gap"]) if cover != "blocked" else "covered ear: its OWN gap %d" % int(card["other_gap"])
+	s._chip(ear_word, Vector2(300, 64), Palette.LEFT_TINT, 16)
+	var verdict := String(params.get("verdict", ""))
+	if reveal and verdict != "":
+		s._chip(verdict, Vector2(620, 24), Palette.SUNNY, 18, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))))
+
+
+# ---------------------------------------------------------------- the pocket card
+
+const CARD_RECT := Rect2(60, 40, 760, 360)
+
+
+func _set_pocket_card() -> void:
+	var cells: Dictionary = params.get("cells", {})
+	var focus: Dictionary = params.get("focus", {})
+	s._panel(CARD_RECT, Palette.SELECT_ORANGE, 24)
+	s._rbox(Rect2(CARD_RECT.position + Vector2(16, 16), Vector2(CARD_RECT.size.x - 32, 52)), Palette.PAPER, 14, 3)
+	s._text("OCCLUSION POCKET CARD", Vector2(CARD_RECT.get_center().x, CARD_RECT.position.y + 42), 26, Stage2D.INK, 700)
+	var x0 := CARD_RECT.position.x + 190.0
+	var cw := (CARD_RECT.size.x - 210.0) / MaskDeck.OE_FREQS.size()
+	var y0 := CARD_RECT.position.y + 112.0
+	var rh := 92.0
+	for i in MaskDeck.OE_FREQS.size():
+		s._text(MaskDeck.oe_freq_word(MaskDeck.OE_FREQS[i]), Vector2(x0 + cw * (i + 0.5), y0 - 12), 20, Stage2D.INK, 700)
+	for r in MaskDeck.OE_ROWS.size():
+		var row: String = MaskDeck.OE_ROWS[r]
+		var y := y0 + 14 + r * rh
+		s._rbox(Rect2(CARD_RECT.position.x + 20, y, 156, rh - 14), Palette.PAPER, 12, 3)
+		s._text("Headphone" if row == "phones" else "Insert", Vector2(CARD_RECT.position.x + 98, y + (rh - 14) * 0.5), 20, Stage2D.INK, 700)
+		for i in MaskDeck.OE_FREQS.size():
+			var f: int = MaskDeck.OE_FREQS[i]
+			var key := "%s|%d" % [row, f]
+			var rr := Rect2(x0 + cw * i + 6, y, cw - 12, rh - 14)
+			var is_focus := String(focus.get("row", "")) == row and int(focus.get("freq", -1)) == f
+			var bg := Palette.PAPER if cells.has(key) else Color(Palette.PAPER, 0.45)
+			if is_focus:
+				bg = Palette.SUNNY
+			var shake := Vector2(_ring(float(params.get("bounce_at", -10.0)), 8.0, 18.0, 5.0), 0) if is_focus else Vector2.ZERO
+			s._rbox(Rect2(rr.position + shake, rr.size), bg, 12, 4 if is_focus else 2)
+			if cells.has(key):
+				s._text("+%d" % int(cells[key]), rr.get_center(), 28, Stage2D.INK, 700)
+			elif is_focus:
+				s._text("?", rr.get_center() + shake, 34, Stage2D.INK, 700)
+				var b := int(params.get("bounce", -1))
+				var bk := 1.0 - _k(float(params.get("bounce_at", -10.0)) + 0.2, float(params.get("bounce_at", -10.0)) + 0.8)
+				if b >= 0 and bk > 0.0:
+					s._chip("+%d" % b, rr.get_center() + Vector2(46.0 * (1.0 - bk), -40.0 * (1.0 - bk)), Palette.CORAL, 20, Stage2D.INK, bk)
+	s._text("Only bone. Only a covered NORMAL ear.", Vector2(CARD_RECT.get_center().x, CARD_RECT.end.y - 26), 20, Stage2D.INK, 700)
