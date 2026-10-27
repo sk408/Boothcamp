@@ -4,7 +4,8 @@ extends Node
 ## The main autoplay bot ends every run on a visit's results, so the Training room gets this harness.
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/training_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=why|when|start picks the station (default why, Station 1).
+## --station=why|when|start|plateau picks the station (default why, Station 1). On the plateau walk
+## every move is a card; guess and hint act on each walk's first move only.
 ## Policies (--policy=):
 ##   careful  every beat's solver: the movie skipped, each Try it stepped to its target, every hole at par
 ##   keys     real key presses: Enter, the louder key, 1-3 for the right answer (station 3: the louder /
@@ -222,7 +223,8 @@ class Driver extends Node:
 		if station == "start":
 			await _dial(beat, solver)
 			return
-		match policy:
+		var first := int(beat.get("step", 0)) == 0
+		match "keys" if policy in ["guess", "hint"] and not first else policy:
 			"careful":
 				solver.call()
 			"mouse":
@@ -267,9 +269,10 @@ class Driver extends Node:
 	func _check_result(score: Dictionary) -> void:
 		var strokes: Array = result.get("strokes", [])
 		var over := int(result.get("over_par", -1))
-		if strokes.size() != MaskDeck.ROUND_HOLES:
-			problems.append("%d holes, expected %d" % [strokes.size(), MaskDeck.ROUND_HOLES])
-		var want := 0 if policy in ["careful", "keys", "mouse"] else MaskDeck.ROUND_HOLES
+		var holes := MaskDeck.holes(station)
+		if strokes.size() != holes:
+			problems.append("%d holes, expected %d" % [strokes.size(), holes])
+		var want := 0 if policy in ["careful", "keys", "mouse"] else holes
 		if over != want:
 			problems.append("%s run finished %d over par, expected %d (strokes %s)" % [policy, over, want, str(strokes)])
 		if bool(score.get("star", false)) != (want == 0):
@@ -277,7 +280,8 @@ class Driver extends Node:
 		var movies := 1 if String(info["movie"]) != "" else 0
 		if int(beats.get("explainer", 0)) != movies:
 			problems.append("Hoot's movie started %d times on a fresh save (expected %d)" % [int(beats.get("explainer", 0)), movies])
-		var tries: int = {"why": MaskDeck.WHY_TRIES.size(), "when": MaskDeck.WHEN_TRIES.size(), "start": MaskDeck.START_TRIES.size()}[station]
+		var tries: int = {"why": MaskDeck.WHY_TRIES.size(), "when": MaskDeck.WHEN_TRIES.size(), "start": MaskDeck.START_TRIES.size(),
+			"plateau": MaskDeck.WALK_TRIES.size()}[station]
 		if int(beats.get("training_try", 0)) != tries:
 			problems.append("%d Try it steps, expected %d" % [int(beats.get("training_try", 0)), tries])
 

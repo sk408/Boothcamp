@@ -24,12 +24,19 @@ const STATIONS: Array = [
 		"intro": "Masking on: how loud should the shhh start?\n"
 			+ "The other ear's AIR plus 10. Bone at low pitches with a normal ear covered? Add the occlusion boom. Six dials to set."},
 	{"id": "plateau", "num": 4, "name": "The plateau walk", "pitch": "Shhh up, or beep up?", "color": Color("#3a9d76"),
-		"card": "plateau", "built": false, "movie": "", "intro": ""},
+		"card": "plateau", "built": true, "movie": "",
+		"intro": "Masking on, now walk it. Heard? Shhh up 5. Missed? Beep up 5.\n"
+			+ "When the beep stays put through three shhh raises, that's the plateau: Righty's real bone. Three patients."},
 	{"id": "occlusion", "num": 5, "name": "The occlusion effect", "pitch": "Why a covered ear booms.", "color": Color("#ff9f1c"),
 		"card": "occlusion", "built": false, "movie": "", "intro": ""},
 	{"id": "exam", "num": 6, "name": "The masking exam", "pitch": "Nine holes, the whole job.", "color": Color("#8e5cc4"),
 		"card": "", "built": false, "movie": "", "intro": ""},
 ]
+
+## Holes in a station's round (the plateau walk deals three longer walks).
+static func holes(station_id: String) -> int:
+	return WALK_KINDS.size() if station_id == "plateau" else ROUND_HOLES
+
 
 ## Answers of "Who heard it?" (station 1), in key order 1-3.
 const WHO: Array[StringName] = [&"test", &"ghost", &"either"]
@@ -451,6 +458,180 @@ static func start_lines(card: Dictionary) -> Array[String]:
 
 static func start_hint(card: Dictionary) -> String:
 	return "Lefty's air plus 10. Then: bone, low pitch, normal ear under a headphone? Add the boom."
+
+
+# ---------------------------------------------------------------- station 4: the plateau walk
+
+## The moves of a masked bone walk, in key order 1-4.
+const MOVES: Array[StringName] = [&"shhh", &"beep", &"store", &"nosafe"]
+const MOVE_WORDS: Dictionary = {&"shhh": "SHHH UP 5", &"beep": "BEEP UP 5", &"store": "STORE IT", &"nosafe": "NO SAFE LEVEL"}
+## A walk round: three practice patients, one of each kind (shuffled): the tone shifts up before it
+## plateaus, the first answer was the truth (flat from the start), and a dilemma (no safe window).
+const WALK_KINDS: Array[String] = ["shift", "true", "dilemma"]
+const WALK_FREQS: Array[int] = [500, 1000, 2000, 4000]
+## The longest walk a dealt patient may need (moves), so a round stays bite-size.
+const WALK_MAX_MOVES := 14
+## "Try it" (station 4): Hoot walks one patient, a step per press.
+const WALK_TRIES: Array = [
+	{"kind": "shift", "freq": 1000, "t_test": 30, "t_other": 10, "gap_other": 0, "masker": "phones",
+		"line": "Righty's bone, masked. Press Next step and watch the board."},
+]
+
+
+## The non-test (covered) ear's air: its cochlea plus its own gap.
+static func walk_other_air(p: Dictionary) -> int:
+	return int(p["t_other"]) + int(p["gap_other"])
+
+
+## The masker's first level: ClinicRules.initial_masking for bone.
+static func walk_initial(p: Dictionary) -> int:
+	return ClinicRules.initial_masking(walk_other_air(p), int(p["freq"]), &"bc", int(p["gap_other"]), StringName(String(p["masker"])))
+
+
+## The first masked tone: the unmasked bone threshold (the better cochlea).
+static func walk_start_tone(p: Dictionary) -> int:
+	return mini(int(p["t_test"]), int(p["t_other"]))
+
+
+## Overmasking starts here for a bone tone at this level: ClinicRules.overmask_limit.
+static func walk_limit(p: Dictionary, tone: int) -> int:
+	return ClinicRules.overmask_limit(tone, &"bc", 0, StringName(String(p["masker"])))
+
+
+static func walk_dilemma(p: Dictionary) -> bool:
+	return ClinicRules.masking_dilemma(walk_initial(p), walk_limit(p, walk_start_tone(p)))
+
+
+## The practice patient (a drawn cartoon: the player's own hearing is never tested). A bone tone
+## reaches both cochleas (no wall). The covered ear hears it with its occlusion boost unless the noise
+## covers it (noise minus its own gap reaches its cochlea); the test cochlea hears it unless noise
+## crosses back over the wall onto it (overmasking).
+static func walk_hears(p: Dictionary, tone: int, mask: int) -> bool:
+	var masker := StringName(String(p["masker"]))
+	var oe := ClinicRules.occlusion_effect(int(p["freq"]), masker) if int(p["gap_other"]) <= ClinicRules.OCCLUSION_MAX_GAP_DB else 0
+	var other := tone + oe >= maxi(int(p["t_other"]), mask - int(p["gap_other"]))
+	var test := tone >= maxi(int(p["t_test"]), mask - ClinicRules.ia_rule(masker))
+	return other or test
+
+
+## The first presentation: the start tone with the initial masking.
+static func walk_first(p: Dictionary) -> Array[Dictionary]:
+	var tone := walk_start_tone(p)
+	var mask := walk_initial(p)
+	return [{"db": tone, "mask_db": mask, "responded": walk_hears(p, tone, mask)}]
+
+
+## The textbook move after the presentations so far (ClinicRules.next_mask_step, plateau_run).
+static func walk_move(p: Dictionary, records: Array) -> StringName:
+	if walk_dilemma(p):
+		return &"nosafe"
+	if not bool((records.back() as Dictionary)["responded"]):
+		return &"beep"
+	if int(ClinicRules.plateau_run(records)["steps"]) >= ClinicRules.PLATEAU_STEPS:
+		return &"store"
+	return &"shhh"
+
+
+## Play a SHHH UP or BEEP UP move: the next presentation and the patient's answer.
+static func walk_apply(p: Dictionary, records: Array, move: StringName) -> void:
+	var last: Dictionary = records.back()
+	var nx := ClinicRules.next_mask_step(int(last["db"]), int(last["mask_db"]), move == &"shhh")
+	records.append({"db": nx.x, "mask_db": nx.y, "responded": walk_hears(p, nx.x, nx.y)})
+
+
+## The whole textbook walk: {records, moves (count), stored (the threshold, or -1 for no safe level)}.
+static func walk_textbook(p: Dictionary) -> Dictionary:
+	var records := walk_first(p)
+	var moves := 0
+	while moves < 60:
+		var m := walk_move(p, records)
+		moves += 1
+		if m == &"store":
+			return {"records": records, "moves": moves, "stored": int((records.back() as Dictionary)["db"])}
+		if m == &"nosafe":
+			return {"records": records, "moves": moves, "stored": -1}
+		walk_apply(p, records, m)
+	return {"records": records, "moves": moves, "stored": -2}
+
+
+## The textbook walk stays inside the green window: masker at or over the start level, under the
+## overmasking limit, and the stored level is the test cochlea's own.
+static func walk_honest(p: Dictionary) -> bool:
+	var w := walk_textbook(p)
+	if String(p["kind"]) == "dilemma":
+		return walk_dilemma(p) and int(w["stored"]) == -1
+	if walk_dilemma(p) or int(w["stored"]) != int(p["t_test"]) or int(w["moves"]) > WALK_MAX_MOVES:
+		return false
+	for r: Dictionary in w["records"]:
+		if int(r["mask_db"]) >= walk_limit(p, int(r["db"])) or int(r["mask_db"]) > ClinicRules.MASK_MAX_DB:
+			return false
+		if int(r["db"]) > ClinicRules.BC_MAX_DB[int(p["freq"])] - 5:
+			return false
+	return true
+
+
+## One practice patient of a kind (Righty tested on bone, a headphone masker on Lefty).
+static func walk_patient(rng: RandomNumberGenerator, kind: String) -> Dictionary:
+	for i in 400:
+		var p := {"kind": kind, "masker": "phones", "freq": WALK_FREQS[rng.randi_range(0, WALK_FREQS.size() - 1)]}
+		match kind:
+			"dilemma":
+				p["t_other"] = 5 * rng.randi_range(0, 2)
+				p["gap_other"] = 5 * rng.randi_range(7, 10)
+				p["t_test"] = int(p["t_other"]) + 5 * rng.randi_range(0, 2)
+			"true":
+				p["t_other"] = 5 * rng.randi_range(1, 5)
+				p["gap_other"] = 5 * rng.randi_range(0, 1)
+				p["t_test"] = int(p["t_other"]) - 5 * rng.randi_range(0, 2)
+			_:
+				p["t_other"] = 5 * rng.randi_range(0, 3)
+				p["gap_other"] = 5 * rng.randi_range(0, 1)
+				p["t_test"] = int(p["t_other"]) + 5 * rng.randi_range(3, 7)
+		if walk_honest(p) and (kind != "true" or walk_start_tone(p) == int(p["t_test"])):
+			return p
+	var fb := {"shift": [30, 10, 0], "true": [20, 20, 0], "dilemma": [5, 5, 45]}
+	var v: Array = fb.get(kind, fb["shift"])
+	return {"kind": kind, "masker": "phones", "freq": 1000, "t_test": v[0], "t_other": v[1], "gap_other": v[2]}
+
+
+static func walk_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var kinds: Array[String] = WALK_KINDS.duplicate()
+	_shuffle(kinds, rng)
+	var out: Array[Dictionary] = []
+	for k: String in kinds:
+		out.append(walk_patient(rng, k))
+	return out
+
+
+## Hoot's line for a wrong move (what the right one is, and why).
+static func walk_nudge(want: StringName) -> String:
+	match want:
+		&"shhh":
+			return "Heard it! Heard means shhh up 5. Is it still there?"
+		&"beep":
+			return "No answer. Missed means beep up 5."
+		&"store":
+			return "Heard through three shhh raises in a row. That's the plateau: store it!"
+	return "Look at the board: the shhh is already too much at the start. No safe level."
+
+
+static func walk_hint(p: Dictionary) -> String:
+	if walk_dilemma(p):
+		return "Where is the green window? Start shhh at %d, too much from %d." % [walk_initial(p), walk_limit(p, walk_start_tone(p))]
+	return "Heard? Shhh up. Missed? Beep up. Heard on three raises in a row? Store."
+
+
+## The two lines under a finished walk.
+static func walk_lines(p: Dictionary) -> Array[String]:
+	if walk_dilemma(p):
+		return ["Start shhh %d, but %d already crosses back: %d + %d wall." % [walk_initial(p), walk_limit(p, walk_start_tone(p)),
+				walk_start_tone(p), ClinicRules.ia_rule(StringName(String(p["masker"])))],
+			"A masking dilemma: store nothing. Inserts' thicker wall may open a window."]
+	var t := int(p["t_test"])
+	var a := "Plateau at %d dB: three shhh raises (%d dB) and the beep held." % [t, ClinicRules.MASK_STEP_DB * ClinicRules.PLATEAU_STEPS]
+	if t == walk_start_tone(p):
+		return [a, "It was Righty all along: the first answer was the truth."]
+	return [a, "Righty's real bone is %d, not %d. Lefty was answering before." % [t, walk_start_tone(p)]]
 
 
 # ---------------------------------------------------------------- golf

@@ -359,7 +359,7 @@ Every wait for the player **outside the audiometer** must emit `awaiting_input` 
 | `tune_desk` **(Day 15)** | level_tuneup (tune-up desk, §15) | {ticket: ticket id}; solver uses the ticket's right tool |
 | `wax_guard` **(Day 15)** | level_tuneup (listening check, §15) | {step: "find" or "swap"}; solver picks the wax guard, then clicks in the new one |
 | `training_room` **(training)** | Training room (`story/training/training_room.gd`) | {stations, built, mouse}; solver opens the first built station without a star (else station 1) |
-| `training_intro`, `training_try`, `training_card`, `training_next`, `training_scorecard` **(training)** | Masking School (`story/training/masking/masking_school.gd`) | {station, ...}: Start; step Try it to its target (the beep to the Ghost, both checks, Hoot's dial level), then Next; the right answer (station 3: turn the dial to `best`, Set it); Next; back to the room (`docs/training/MASKING_TRAINER.md`) |
+| `training_intro`, `training_try`, `training_card`, `training_next`, `training_scorecard` **(training)** | Masking School (`story/training/masking/masking_school.gd`) | {station, ...}: Start; step Try it to its target (the beep to the Ghost, both checks, Hoot's dial level), then Next; the right answer (station 3: turn the dial to `best`, Set it; station 4: one beat per move of a walk, {step}); Next; back to the room (`docs/training/MASKING_TRAINER.md`) |
 
 New beats are fine if they follow the same rule. Add them to this table through `story/INTEGRATION_NOTES.md`.
 

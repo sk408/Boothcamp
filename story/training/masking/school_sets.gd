@@ -10,9 +10,11 @@ extends "res://story/explainers/explainer_sets.gd"
 ##     other_air (Lefty's air), show_bone / show_air (bool: draw each check), verdict, verdict_at.
 ##   start_dial: test ("ac", "bc"), freq, other_air, other_gap, masker ("phones", "inserts"), dial (dB EM),
 ##     target (dB EM, or -1: "Try it" shows Hoot's level), reveal (bool: the sum on the dial), verdict, verdict_at.
+##   plateau_walk: the patient (freq, t_test, t_other, gap_other, masker, kind), records (the presentations so
+##     far: db, mask_db, responded), step_at (stage time of the latest), reveal (bool: the walk is over), verdict.
 
 const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
-const SETS: Array[StringName] = [&"who_heard", &"when_card", &"start_dial"]
+const SETS: Array[StringName] = [&"who_heard", &"when_card", &"start_dial", &"plateau_walk"]
 
 const FOAM := Color("#f6c453")
 const TUBE := Color("#9aa3b5")
@@ -217,22 +219,15 @@ func _mini() -> Transform2D:
 	return Transform2D(0.0, Vector2.ONE * MINI_SCALE, 0.0, MINI_AT) * Transform2D(0.0, Vector2.ONE, 0.0, -Stage2D.HEAD_C)
 
 
-func _set_start_dial() -> void:
-	var card := {"test": String(params.get("test", "bc")), "freq": int(params.get("freq", 500)), "other_air": int(params.get("other_air", 15)),
-		"other_gap": int(params.get("other_gap", 0)), "masker": String(params.get("masker", "phones"))}
-	var dial := int(params.get("dial", 0))
-	var reveal := bool(params.get("reveal", false))
-	var target := int(params.get("target", -1))
-	var bone := MaskDeck.is_bone_test(card)
-	var inserts := String(card["masker"]) == "inserts"
-	var boom := MaskDeck.boom(card)
+## The head, shrunk to the left: Righty tested (bone buzzer, or her earphone), Lefty under the shhh
+## (a cloud sized by the masker). Returns the transform, to place chips over it.
+func _mini_head(bone: bool, inserts: bool, mask_db: int, mood: StringName = &"idle") -> Transform2D:
 	var xf := _mini()
-	# the head, shrunk to the left: Righty tested, Lefty under the shhh
 	s._push(xf)
 	s._head_open(0.0)
-	s._head({"look": Vector2(0.5, -0.1), "mood": &"smile"})
+	s._head({"look": Vector2(0.5, -0.1), "mood": &"smile" if mood == &"idle" else mood})
 	s._wall(1.0, 0.28 if bone else 1.0, bone)
-	var cloud_r := lerpf(34.0, 104.0, clampf(dial / 100.0, 0.0, 1.0))
+	var cloud_r := lerpf(34.0, 104.0, clampf(mask_db / 100.0, 0.0, 1.0))
 	s._cloud(Stage2D.CLOUD_AT, cloud_r, {"patchy": 0.0})
 	s._snail(Stage2D.RIGHTY_AT, 1.0, Palette.RIGHT_RED, Stage2D.RIGHTY_BODY, {"mood": &"alert", "look": Vector2(-1, -0.2)})
 	s._snail(Stage2D.LEFTY_AT, -1.0, Palette.LEFT_BLUE, Stage2D.LEFTY_BODY, {"mood": &"idle", "look": Vector2(1, -0.3)})
@@ -249,6 +244,19 @@ func _set_start_dial() -> void:
 	s._head_close()
 	s._shhh_letters(Stage2D.CLOUD_AT, cloud_r)
 	s._pop_xf()
+	return xf
+
+
+func _set_start_dial() -> void:
+	var card := {"test": String(params.get("test", "bc")), "freq": int(params.get("freq", 500)), "other_air": int(params.get("other_air", 15)),
+		"other_gap": int(params.get("other_gap", 0)), "masker": String(params.get("masker", "phones"))}
+	var dial := int(params.get("dial", 0))
+	var reveal := bool(params.get("reveal", false))
+	var target := int(params.get("target", -1))
+	var bone := MaskDeck.is_bone_test(card)
+	var inserts := String(card["masker"]) == "inserts"
+	var boom := MaskDeck.boom(card)
+	var xf := _mini_head(bone, inserts, dial)
 	if reveal and boom > 0:
 		s._chip("BOOM +%d" % boom, xf * (Stage2D.LEFTY_AT + Vector2(10, -200)), Palette.SELECT_ORANGE, 18, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))), 0.08)
 	s._name_tag("RIGHTY", xf * Stage2D.RIGHTY_AT, Palette.RIGHT_RED, 1.0)
@@ -326,3 +334,103 @@ func _insert_at(at: Vector2, side: float, letter: String, col: Color) -> void:
 	s.draw_polyline(tube, TUBE, 4.0, true)
 	s._blob(at, Vector2(20, 15), FOAM, 4.0)
 	s._text(letter, at + Vector2(-2 * side, 1), 16, col, 700)
+
+
+# ---------------------------------------------------------------- station 4: the plateau walk
+
+const BOARD := Rect2(420, 16, 444, 408)
+const PX0 := 478.0      # masker 0 dB EM
+const PX1 := 838.0      # masker 100
+const PY0 := 352.0      # beep -10 dB
+const PY1 := 64.0       # beep 70 dB
+
+
+func _bx(mask_db: float) -> float:
+	return lerpf(PX0, PX1, clampf(mask_db / 100.0, 0.0, 1.0))
+
+
+func _by(tone_db: float) -> float:
+	return lerpf(PY0, PY1, clampf((tone_db + 10.0) / 80.0, 0.0, 1.0))
+
+
+func _set_plateau_walk() -> void:
+	var p := {"kind": String(params.get("kind", "shift")), "freq": int(params.get("freq", 1000)), "t_test": int(params.get("t_test", 30)),
+		"t_other": int(params.get("t_other", 10)), "gap_other": int(params.get("gap_other", 0)), "masker": String(params.get("masker", "phones"))}
+	var records: Array = params.get("records", [])
+	var reveal := bool(params.get("reveal", false))
+	var step_at := float(params.get("step_at", 0.0))
+	var last: Dictionary = records.back() if not records.is_empty() else {"db": MaskDeck.walk_start_tone(p), "mask_db": MaskDeck.walk_initial(p), "responded": false}
+	var tone := int(last["db"])
+	var mask := int(last["mask_db"])
+	var heard := bool(last["responded"])
+	# the patient (a cartoon), under the shhh
+	var xf := _mini_head(true, false, mask, &"wow" if heard else &"idle")
+	var top := xf * (Stage2D.HEAD_C + Vector2(0, -230))
+	if heard:
+		s._chip("YES! (hand up)", top, Palette.MINT, 20, Stage2D.INK, _pop(step_at), sin(t * 6.0) * 0.04 * s._motion)
+	else:
+		s._chip("... no answer", top, Palette.PAPER, 18, Palette.INK_SOFT, _pop(step_at))
+	s._name_tag("RIGHTY", xf * Stage2D.RIGHTY_AT, Palette.RIGHT_RED, 1.0)
+	s._name_tag("LEFTY", xf * Stage2D.LEFTY_AT, Palette.LEFT_BLUE, 1.0)
+	s._chip("BEEP %d dB: Righty's bone, %d Hz" % [tone, int(p["freq"])], Vector2(MINI_AT.x, 372), Palette.RIGHT_TINT, 17)
+	s._chip("SHHH %d dB EM on Lefty" % mask, Vector2(MINI_AT.x, 414), Stage2D.NOISE_FILL, 17)
+	# the plateau board: shhh across, beep up
+	s._panel(BOARD, Stage2D.GRAPH_BG, 18)
+	for db in range(-10, 71, 10):
+		var y := _by(db)
+		s.draw_line(Vector2(PX0, y), Vector2(PX1, y), Color(Stage2D.INK, 0.2 if db % 20 == 10 else 0.1), 1.0)
+		if db % 20 == 10:
+			s._text(str(db), Vector2(PX0 - 22, y), 13, Palette.INK_SOFT, 600)
+	for m in range(0, 101, 20):
+		s._text(str(m), Vector2(_bx(m), PY0 + 16), 13, Palette.INK_SOFT, 600)
+	s._text("BEEP", Vector2(PX0 - 24, PY1 - 30), 13, Palette.RIGHT_RED, 700)
+	s._text("SHHH (dB EM)", Vector2((PX0 + PX1) * 0.5, PY0 + 33), 14, Stage2D.NOISE_DEEP, 700)
+	# the window for the current beep: too little, just right, too much
+	var lo := MaskDeck.walk_initial(p)
+	var hi := MaskDeck.walk_limit(p, tone)
+	var band_y := PY0 + 46.0
+	var dilemma := MaskDeck.walk_dilemma(p)
+	var bh := 16.0
+	s.draw_rect(Rect2(PX0, band_y, _bx(mini(lo, hi)) - PX0, bh), Palette.SUNNY)
+	if not dilemma:
+		s.draw_rect(Rect2(_bx(lo), band_y, _bx(hi) - _bx(lo), bh), Palette.MINT)
+	s.draw_rect(Rect2(_bx(hi), band_y, PX1 - _bx(hi), bh), Palette.CORAL)
+	s.draw_rect(Rect2(PX0, band_y, PX1 - PX0, bh), Stage2D.INK, false, 2.0)
+	var mid := band_y + bh * 0.5
+	if _bx(mini(lo, hi)) - PX0 >= 70:
+		s._text("too little", Vector2((PX0 + _bx(mini(lo, hi))) * 0.5, mid), 12, Stage2D.INK, 700)
+	if PX1 - _bx(hi) >= 70:
+		s._text("too much", Vector2((_bx(hi) + PX1) * 0.5, mid), 12, Stage2D.INK, 700)
+	if dilemma:
+		s._chip("? no safe window", Vector2(_bx((lo + hi) * 0.5), PY0 - 20), Palette.PLUM, 15, Palette.PAPER)
+	elif _bx(hi) - _bx(lo) >= 66:
+		s._text("just right", Vector2(_bx((lo + hi) * 0.5), mid), 12, Stage2D.INK, 700)
+	# the plateau run so far
+	var run := ClinicRules.plateau_run(records)
+	if int(run["steps"]) >= 1:
+		var ry := _by(int(run["db"]))
+		var x0 := _bx(int(run["start_mask"]))
+		var x1 := _bx(int(run["start_mask"]) + int(run["steps"]) * ClinicRules.MASK_STEP_DB)
+		var gold := int(run["steps"]) >= ClinicRules.PLATEAU_STEPS
+		s.draw_line(Vector2(x0 - 12, ry), Vector2(x1 + 12, ry), Color(Stage2D.GOLD, 0.9 if gold else 0.45), 16.0, true)
+		if gold:
+			s._chip("PLATEAU %d dB" % int(run["db"]), Vector2((x0 + x1) * 0.5, ry - 34), Stage2D.GOLD, 16, Stage2D.INK, _pop(step_at))
+	# the presentations: filled = heard, hollow = missed, joined in order
+	var pts := PackedVector2Array()
+	for r: Dictionary in records:
+		pts.append(Vector2(_bx(int(r["mask_db"])), _by(int(r["db"]))))
+	if pts.size() > 1:
+		s.draw_polyline(pts, Color(Stage2D.INK, 0.45), 2.5, true)
+	for i in records.size():
+		var r: Dictionary = records[i]
+		var c := pts[i]
+		var newest := i == records.size() - 1
+		var rad := 9.0 + (_ring(step_at, 4.0, 10.0, 4.0) if newest else 0.0)
+		if bool(r["responded"]):
+			s._circ(c, rad, Palette.MINT, 3.0)
+		else:
+			s.draw_circle(c, rad, Palette.PAPER, true, -1.0, true)
+			s.draw_arc(c, rad, 0.0, TAU, 24, Palette.CORAL, 3.5, true)
+	var verdict := String(params.get("verdict", ""))
+	if verdict != "" and reveal:
+		s._chip(verdict, Vector2(MINI_AT.x, 26), Palette.SUNNY, 18, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))))

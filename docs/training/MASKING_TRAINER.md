@@ -5,7 +5,7 @@ use it, helps them understand and memorize the occlusion effect, and is approach
 previous knowledge. Either a separate day or maybe time to introduce an extra training tab."
 
 This page is the design. It is built in small PRs after this one (section 9). **Built so far:** the Training
-button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3). **Steve: section 10 is your question
+button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3); Station 4 (PR 4). **Steve: section 10 is your question
 list. Reply by number only where you disagree; every default stands otherwise.**
 
 | | |
@@ -114,17 +114,24 @@ Six stations, in the suggested order (all open). Each reuses what the game alrea
 
 ### 3.4 Station 4: "The plateau walk"
 
-- **Try it:** a practice patient (a cartoon, never the player) in the booth. Hoot plays the masked test one step at a
-  time and names each move: "Heard it? Shhh up 5. Missed? Beep up 5." The **staircase board** draws each step as a
-  block: noise across, tone up. Three blocks flat at one tone = the plateau = the real threshold.
-- **Your round, "Walk it":** the player runs three masked bone tests on made-up patients (the patient's answer shows
-  as a raised hand and a "yes!" bubble, so it plays with sound off). Each step the player picks **SHHH UP 5** or
-  **BEEP UP 5**, and **STORE** when the plateau is there. Patients come from the game's `PatientSim`, so one sometimes
-  drifts or misses, as on the story days.
-- **Traps the walk shows, drawn, never played:** too little noise (the Ghost answers), overmasking (the noise
-  crosses back and the tone chases the noise up the board: the step turns red "Too much shhh!"), and one dilemma
-  patient where the green window is already shut (the purple ?: store nothing, reach for inserts).
-- **Par:** the textbook walk (`next_mask_step` from the start level to the plateau), with the game's fair golf.
+- **Try it:** a practice patient (a cartoon, never the player) in the booth. Hoot plays the masked bone test one
+  "Next step" press at a time and names each move: "Heard, so shhh up 5." The **plateau board** draws each
+  presentation as a dot (shhh across, beep up; filled = heard, hollow = no answer): the beep chases the shhh, then
+  holds flat for three raises. The gold bar is the plateau = Righty's real bone.
+- **Your round, "Walk it":** three practice patients, one of each kind, shuffled: the beep shifts up before it
+  plateaus (Lefty was answering), the first answer was the truth (flat from the start), and a dilemma. Every
+  presentation shows the answer as a "YES! (hand up)" bubble, so it plays with sound off. Each step the player picks
+  **SHHH UP 5**, **BEEP UP 5**, **STORE IT** (three raises held) or **NO SAFE LEVEL**.
+- **The window** under the board: too little shhh (yellow, under the start level), just right (mint), too much (coral,
+  from the overmasking limit for the current beep). The dilemma patient has no mint at all (purple "?"): store
+  nothing, reach for inserts.
+- **The patients (PR 4):** a small rule-based model in `MaskDeck.walk_hears`, built from ClinicRules (the covered ear
+  hears a bone tone with its occlusion boost unless the shhh covers it; the test ear hears unless shhh crosses back
+  over the wall). It answers the same way every time, so the textbook walk always finds the true threshold. That
+  changes question 10's default: wobbly `PatientSim` patients are saved for the exam (PR 6), where a drift is a fair
+  surprise.
+- **Par:** the textbook walk (`next_mask_step` from the start level until `plateau_run` holds for three raises), with
+  each wrong move or a hint +1. Hoot names the right move after a wrong one.
 - **Earns:** the **Plateau card**: "Heard: shhh +5. Missed: beep +5. Flat for 15 = the truth."
 - **Rules used:** `next_mask_step`, `plateau_run`, `PLATEAU_STEPS`, `overmask_limit`, `masking_dilemma`,
   `mask_status`. Steve's 5/15 plateau stays.
@@ -231,7 +238,7 @@ opens it big. A player who has every card sees a "Print view" with all five on o
 | Title button (additive) | `story/title_screen.gd`: the Training button and `_on_training()` |
 | Occlusion chip on the AudiOtron (additive, later PR) | `ui/audiometer/audiometer_screen.gd` |
 | Tests | `story/tests/test_training_*.gd` |
-| Bot | `story/tests/training_check.tscn` (`--station=why|when|start` (more as they land), `--policy=careful|keys|mouse|guess|hint`, `--via-title`, `--shots`), listed in `tools/README.md` |
+| Bot | `story/tests/training_check.tscn` (`--station=why|when|start|plateau` (more as they land), `--policy=careful|keys|mouse|guess|hint`, `--via-title`, `--shots`), listed in `tools/README.md` |
 
 No new data files outside code are planned (cards are generated), so the Web preset's `include_filter` does not
 change; if one is added, it goes on the filter in the same PR.
@@ -264,7 +271,9 @@ change; if one is added, it goes on the filter in the same PR.
    days opens it. It is a reminder, not an answer: the start level is still the player's to set.
 8. **Print view** of all five cards on one page, for a player who wants a paper copy.
 9. **Scoring:** golf per hole, par = a clean answer; a hint or a wrong first answer +1; no reward for speed.
-10. **The plateau patients** come from the game's patient simulator (sometimes a drift or a miss), not perfect robots.
+10. **The plateau patients** (changed in PR 4): Station 4's practice patients answer by the rules every time, so the
+    walk always lands on the truth; the exam's patients come from the game's patient simulator (sometimes a drift
+    or a miss).
 11. **The "you've felt it" line** (fingers in your ears while you talk) stays, with no tone ever played to test the
     player.
 12. **The name:** "Masking School" for the lesson, "Training" for the title button, "The Plugged Ear" for the movie.

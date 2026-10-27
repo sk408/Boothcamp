@@ -7,7 +7,8 @@ extends Control
 ##   3. Your round (MaskDeck.ROUND_HOLES holes, instant feedback, golf strokes)
 ##   4. The scorecard (holes, the round, the star, a new cheat-sheet card)
 ## Stations built so far: 1 "Why mask?" (who heard the beep?), 2 "When to mask?" (mask bone, air,
-## both or neither?), 3 "How much to start?" (set the noise dial).
+## both or neither?), 3 "How much to start?" (set the noise dial), 4 "The plateau walk" (shhh up, beep
+## up, store, or no safe level, one presentation at a time).
 ## Controls: keys 1-3 answer, H hint (a stroke), Enter / Space go on, Up / Down (the louder / softer
 ## keys, either key style) move the beep or the dial, Enter sets the dial, R plays again on the
 ## scorecard, T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with
@@ -16,7 +17,8 @@ extends Control
 ##   training_intro {station}                       solver: Start
 ##   training_try {station, step, target, mouse}    solver: step up to the target, then Next
 ##   training_card {station, hole, options, best, mouse}  solver: the right answer (station 3: best is
-##     the start level in dB EM, start the dial's first level, options empty; turn the dial, Set it)
+##     the start level in dB EM, start the dial's first level, options empty; turn the dial, Set it;
+##     station 4: one beat per move of the walk, with its step)
 ##   training_next {station, hole}                  solver: Next
 ##   training_scorecard {station, over_par, star}   solver: back to the room
 ## The movie's own beat (explainer) plays in between on station 1's first visit.
@@ -170,13 +172,27 @@ func _is_dial() -> bool:
 	return station_id == "start"
 
 
+func _is_walk() -> bool:
+	return station_id == "plateau"
+
+
 ## The answers of a pick-one station, in key order.
 func _options() -> Array[StringName]:
-	return MaskDeck.CALLS if station_id == "when" else MaskDeck.WHO
+	match station_id:
+		"when":
+			return MaskDeck.CALLS
+		"plateau":
+			return MaskDeck.MOVES
+	return MaskDeck.WHO
 
 
 func _word(a: StringName) -> String:
-	return String((MaskDeck.CALL_WORDS if station_id == "when" else MaskDeck.WHO_WORDS)[a])
+	match station_id:
+		"when":
+			return String(MaskDeck.CALL_WORDS[a])
+		"plateau":
+			return String(MaskDeck.MOVE_WORDS[a])
+	return String(MaskDeck.WHO_WORDS[a])
 
 
 func _verdict(a: StringName) -> String:
@@ -189,6 +205,8 @@ func _tries() -> Array:
 			return MaskDeck.WHEN_TRIES
 		"start":
 			return MaskDeck.START_TRIES
+		"plateau":
+			return MaskDeck.WALK_TRIES
 	return MaskDeck.WHY_TRIES
 
 
@@ -198,6 +216,8 @@ func _deal() -> Array[Dictionary]:
 			return MaskDeck.when_round(rng)
 		"start":
 			return MaskDeck.start_round(rng)
+		"plateau":
+			return MaskDeck.walk_round(rng)
 	return MaskDeck.who_heard_round(rng)
 
 
@@ -218,6 +238,9 @@ func _try_it() -> void:
 			"start":
 				tr["dial"] = int(tr["other_air"])
 				tr["target"] = MaskDeck.start_level(tr)
+			"plateau":
+				tr["records"] = MaskDeck.walk_first(tr)
+				tr["moves"] = 0
 		_card = tr
 		_show_card(tr, false, true)
 		_say(String(tr["line"]))
@@ -239,6 +262,8 @@ func _try_target() -> int:
 			return 2
 		"start":
 			return MaskDeck.start_level(_card)
+		"plateau":
+			return int(MaskDeck.walk_textbook(_card)["moves"])
 	return MaskDeck.try_target(_card)
 
 
@@ -249,6 +274,8 @@ func try_value() -> int:
 			return int(_card.get("step", 0))
 		"start":
 			return int(_card.get("dial", 0))
+		"plateau":
+			return int(_card.get("moves", 0))
 	return int(_card.get("tone", 0))
 
 
@@ -258,6 +285,8 @@ func _try_click() -> String:
 			return "Check it"
 		"start":
 			return "Shhh up +5"
+		"plateau":
+			return "Next step"
 	return "Louder +5"
 
 
@@ -270,6 +299,8 @@ func try_step(dir: int) -> void:
 			_try_check(dir)
 		"start":
 			_try_dial(dir)
+		"plateau":
+			_try_walk(dir)
 		_:
 			_try_beep(dir)
 
@@ -323,6 +354,24 @@ func _try_dial(dir: int) -> void:
 		_try_done()
 
 
+## Hoot plays the textbook move for the next presentation, naming it.
+func _try_walk(dir: int) -> void:
+	if dir <= 0:
+		return
+	var records: Array = _card["records"]
+	var m := MaskDeck.walk_move(_card, records)
+	_card["moves"] = int(_card["moves"]) + 1
+	if m == &"store" or m == &"nosafe":
+		_walk_reveal()
+		Sfx.play(&"ding", 1.1, -8.0)
+		_try_done()
+		return
+	MaskDeck.walk_apply(_card, records, m)
+	_walk_step_shown()
+	var heard := bool((records.back() as Dictionary)["responded"])
+	_say("%s %s" % ["Heard, so shhh up 5." if m == &"shhh" else "Missed, so beep up 5.", "Heard again!" if heard else "No answer now."])
+
+
 func _try_done() -> void:
 	_state = &"try_done"
 	_say(_try_payoff())
@@ -344,6 +393,8 @@ func _try_status() -> String:
 			return "%s\n%s" % [lines[0], lines[1]]
 		"start":
 			return "Shhh at %d dB. Hoot's level: %d. Up or down 5 at a time." % [int(_card["dial"]), int(_card["target"])]
+		"plateau":
+			return _walk_status()
 	var w := MaskDeck.wall(String(_card["transducer"]))
 	var tone := int(_card["tone"])
 	if w == 0:
@@ -368,6 +419,8 @@ func _try_payoff() -> String:
 			if MaskDeck.is_bone_test(_card):
 				return "Spot on! Inserts sit deep: no boom, no orange slice."
 			return "Spot on! Air test: Lefty's air plus 10, nothing more."
+		"plateau":
+			return "The beep chased the shhh, then held flat for 15. That's the plateau!"
 	var tone := int(_card["tone"])
 	var w := MaskDeck.wall(String(_card["transducer"]))
 	match String(_card["transducer"]):
@@ -398,7 +451,10 @@ func _round() -> void:
 		_picked.clear()
 		_set_top("Hole %d of %d" % [h + 1, cards.size()])
 		_show_card(_card, false, false)
-		if _is_dial():
+		if _is_walk():
+			if not await _walk_hole(h):
+				return
+		elif _is_dial():
 			_card["dial"] = int(_card["other_air"])
 			_stage.params["dial"] = int(_card["dial"])
 			_say("Masking on Lefty. Turn the shhh to the start level, then Set it.")
@@ -422,8 +478,9 @@ func _round() -> void:
 			Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": opts.find(_answer),
 				"options": opts.map(func(a: StringName) -> String: return _word(a)),
 				"mouse": {"click": _word(_answer)}}, func() -> void: pick(_answer))
-		await _go
-		Events.input_resolved.emit(&"training_card")
+		if not _is_walk():
+			await _go
+			Events.input_resolved.emit(&"training_card")
 		if _leaving:
 			return
 		strokes.append(_hole_strokes)
@@ -437,9 +494,92 @@ func _round() -> void:
 			return
 
 
-## Answer the live card (keys 1-3, a click or the solver).
+## One plateau walk: a beat per move until STORE IT or NO SAFE LEVEL. Returns false when the player left.
+func _walk_hole(h: int) -> bool:
+	_card["records"] = MaskDeck.walk_first(_card)
+	_stage.params["records"] = _card["records"]
+	_say("Masking's on at the start level. Watch the hand, then pick a move.")
+	var step := 0
+	while true:
+		_walk_step_shown()
+		_answer = MaskDeck.walk_move(_card, _card["records"])
+		_picked.clear()
+		_answer_buttons()
+		_state = &"card"
+		var opts := _options()
+		Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "step": step, "best": opts.find(_answer),
+			"options": opts.map(func(a: StringName) -> String: return _word(a)),
+			"mouse": {"click": _word(_answer)}}, func() -> void: pick(_answer))
+		var what: StringName = await _go
+		Events.input_resolved.emit(&"training_card")
+		if _leaving:
+			return false
+		if what == &"right":
+			return true
+		step += 1
+	return true
+
+
+func _walk_step_shown() -> void:
+	_stage.params["records"] = _card["records"]
+	_stage.params["step_at"] = _stage_t
+	_feedback_text(_walk_status())
+
+
+func _walk_status() -> String:
+	var last: Dictionary = (_card["records"] as Array).back()
+	var run := ClinicRules.plateau_run(_card["records"])
+	var held := ""
+	if bool(last["responded"]) and int(run["steps"]) > 0:
+		held = " Held through %d raise%s." % [int(run["steps"]), "" if int(run["steps"]) == 1 else "s"]
+	return "Beep %d, shhh %d: %s%s" % [int(last["db"]), int(last["mask_db"]), "HEARD." if bool(last["responded"]) else "no answer.", held]
+
+
+## The walk is over: the board shows the plateau (or the shut window) and the lines say why.
+func _walk_reveal() -> void:
+	_stage.params["reveal"] = true
+	var dilemma := MaskDeck.walk_dilemma(_card)
+	_stage.params["verdict"] = "No safe level: store nothing" if dilemma else "Masked bone: %d dB" % int(_card["t_test"])
+	_stage.params["verdict_at"] = _stage_t
+	var lines := MaskDeck.walk_lines(_card)
+	_feedback_text("%s\n%s" % [lines[0], lines[1]])
+
+
+## A move in the walk: right moves play on (or end the walk), wrong ones cost a stroke.
+func _walk_pick(a: StringName) -> void:
+	_picked[a] = true
+	if a != _answer:
+		_hole_strokes += 1
+		Sfx.play(&"error", 1.0, -10.0)
+		_say(MaskDeck.walk_nudge(_answer))
+		for b: Button in _answer_list():
+			if StringName(String(b.get_meta("answer", ""))) == a:
+				b.disabled = true
+				b.text = "Not this one"
+				Juice.shake(b, 5.0, 0.25)
+		return
+	_state = &"busy"
+	if a == &"store" or a == &"nosafe":
+		Sfx.play(&"ding", 1.1, -6.0)
+		_walk_reveal()
+		_say(_hole_line())
+		for b: Button in _answer_list():
+			b.disabled = true
+		if _hint_btn != null:
+			_hint_btn.disabled = true
+		_go.emit(&"right")
+		return
+	Sfx.play(&"blip", 1.0 if a == &"beep" else 0.8, -10.0)
+	MaskDeck.walk_apply(_card, _card["records"], a)
+	_go.emit(&"step")
+
+
+## Answer the live card (keys 1-4, a click or the solver).
 func pick(a: StringName) -> void:
 	if _state != &"card" or _picked.has(a):
+		return
+	if _is_walk():
+		_walk_pick(a)
 		return
 	_picked[a] = true
 	if a == _answer:
@@ -539,6 +679,8 @@ func hint() -> void:
 			_say(MaskDeck.when_hint(_card))
 		"start":
 			_say(MaskDeck.start_hint(_card))
+		"plateau":
+			_say(MaskDeck.walk_hint(_card))
 		_:
 			_say(MaskDeck.hint_line(_card))
 	_hint_btn.disabled = true
@@ -595,6 +737,8 @@ func _star_line() -> String:
 			return "Even par! You spotted every risk. That's a star."
 		"start":
 			return "Even par! Every dial spot on. That's a star."
+		"plateau":
+			return "Even par! Every walk textbook. That's a star."
 	return "Even par! You caught every Ghost. That's a star."
 
 
@@ -649,7 +793,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			&"intro":
 				start()
 			&"try":
-				if station_id == "when":
+				if station_id in ["when", "plateau"]:
 					try_step(1)
 				else:
 					handled = false
@@ -738,7 +882,9 @@ func _build() -> void:
 	_field.add_child(_feedback_panel)
 	if UiKit.show_key_hints():
 		var keys: Array = [["1", "2", "3"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"]
-		if _is_dial():
+		if _is_walk():
+			keys = [["1", "2", "3", "4"], "move", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"]
+		elif _is_dial():
 			keys = [[Game.key_label(&"louder"), Game.key_label(&"softer")], "dial", ["Enter"], "set it / next", ["H"], "hint", ["T"], "room", ["Esc"], "pause"]
 		var hr := UiKit.hint_row(keys, 16)
 		hr.position = Vector2(24, 676)
@@ -789,7 +935,7 @@ func _show_card(card: Dictionary, reveal: bool, live: bool) -> void:
 	p["show_bone"] = false
 	p["show_air"] = false
 	p["target"] = int(card.get("target", -1))
-	var set_id := {"when": "when_card", "start": "start_dial"}.get(station_id, "who_heard") as String
+	var set_id := {"when": "when_card", "start": "start_dial", "plateau": "plateau_walk"}.get(station_id, "who_heard") as String
 	_stage.show_scene({"id": station_id, "set": set_id, "duration": 9999.0, "params": p})
 
 
@@ -814,19 +960,20 @@ func _answer_buttons() -> void:
 	var opts := _options()
 	for i in opts.size():
 		var a: StringName = opts[i]
-		var b := _side_button(_word(a), str(i + 1))
+		var b := _side_button(_word(a), str(i + 1), Vector2(SIDE_W, 56 if opts.size() > 3 else 64))
 		b.set_meta("answer", String(a))
 		b.pressed.connect(pick.bind(a))
 		_answers.add_child(b)
 	_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
+	_hint_btn.disabled = _hinted
 	_hint_btn.pressed.connect(hint)
 	_answers.add_child(_hint_btn)
 
 
 func _try_buttons() -> void:
 	_clear_answers()
-	if station_id == "when":
-		var check := _side_button("Check it", "Enter")
+	if station_id in ["when", "plateau"]:
+		var check := _side_button(_try_click(), "Enter")
 		check.pressed.connect(try_step.bind(1))
 		_answers.add_child(check)
 		return
