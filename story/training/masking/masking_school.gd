@@ -1,0 +1,733 @@
+extends Control
+## MaskingSchool (training, story-internal): one Masking School station, played on Hoot's movie stage
+## (docs/training/MASKING_TRAINER.md). The Training room sets `next_station` and opens this scene;
+## the station runs its loop and comes back to the room:
+##   1. Hoot's card (what the station is for; the first time, Hoot's masking movie plays after Start)
+##   2. Try it (guided cards: nothing can go wrong)
+##   3. Your round (MaskDeck.ROUND_HOLES holes, instant feedback, golf strokes)
+##   4. The scorecard (holes, the round, the star, a new cheat-sheet card)
+## Stations built so far: 1 "Why mask?" (who heard the beep?).
+## Controls: keys 1-3 answer, H hint (a stroke), Enter / Space go on, Up / Down (the louder / softer
+## keys, either key style) move the beep in Try it, R plays again on the scorecard, T leaves for the
+## room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off: every answer
+## is drawn.
+## Beats (CONTRACTS.md §3.2; solvers go through the same code as a click):
+##   training_intro {station}                       solver: Start
+##   training_try {station, step, target, mouse}    solver: raise the beep to the target, then Next
+##   training_card {station, hole, options, best, mouse}  solver: the right answer
+##   training_next {station, hole}                  solver: Next
+##   training_scorecard {station, over_par, star}   solver: back to the room
+## The movie's own beat (explainer) plays in between on a first visit.
+
+const UiKit := preload("res://story/ui_kit.gd")
+const Portraits := preload("res://story/portraits.gd")
+const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
+const TrainingProgress := preload("res://story/training/training_progress.gd")
+const CheatCard := preload("res://story/training/cheat_card.gd")
+const Stage2D := preload("res://story/explainers/explainer_stage.gd")
+const PLAYER_SCENE := "res://story/explainers/explainer_player.tscn"
+const ROOM_SCENE := "res://story/training/training_room.tscn"
+const SETS_PATH := "res://story/training/masking/school_sets.gd"
+const MOVIE_ID := "masking"
+
+const FIELD := Vector2(1280, 720)
+const STAGE_AT := Vector2(24, 84)
+const SIDE_X := 924.0
+const SIDE_W := 332.0
+const BG := Color("#f3e3c3")
+const HOLE_COLORS: Array[Color] = [Color("#5bc8a3"), Color("#ffd23f"), Color("#ff6f59"), Color("#8e5cc4")]
+
+## The station the room opens next (a room button sets it before goto_scene).
+static var next_station := "why"
+## The last finished round, for the tests and the bot: {station, strokes, over_par, star, new_card}.
+static var last_result: Dictionary = {}
+
+var station_id := "why"
+var info: Dictionary = {}
+var strokes: Array[int] = []
+var rng := RandomNumberGenerator.new()
+
+var _field: Control
+var _stage: Stage2D
+var _stage_t := 0.0
+var _hoot_face: Control
+var _hoot_label: Label
+var _top_label: Label
+var _score_label: Label
+var _answers: VBoxContainer
+var _next_btn: Button
+var _hint_btn: Button
+var _feedback: Label
+var _feedback_panel: PanelContainer
+var _overlay: Control
+var _leave_btn: Button
+var _state: StringName = &"busy"
+var _leaving := false
+var _talk := 0.0
+
+# the live card or try
+var _card: Dictionary = {}
+var _answer: StringName = &""
+var _hole_strokes := 1
+var _hinted := false
+var _picked: Dictionary = {}   # answers already tried on this hole
+
+signal _go(what: StringName)
+
+
+func demo_start() -> void:
+	pass   # boots straight into next_station (--scene=res://story/training/masking/masking_school.tscn)
+
+
+func _ready() -> void:
+	add_to_group("masking_school")
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	Hoot.clear()
+	station_id = Game.cli_value("station", next_station) if Game.cli.has("station") else next_station
+	if MaskDeck.station(station_id).is_empty() or not bool(MaskDeck.station(station_id)["built"]):
+		station_id = "why"
+	info = MaskDeck.station(station_id)
+	rng.seed = int(Game.cli.get("seed", Time.get_ticks_usec()))
+	_build()
+	get_viewport().size_changed.connect(_layout)
+	_layout()
+	_run.call_deferred()
+
+
+func _process(delta: float) -> void:
+	_stage_t += delta
+	_stage.t = _stage_t
+	_talk = maxf(0.0, _talk - delta)
+	_hoot_face.queue_redraw()
+
+
+# ================================================================ the flow
+
+func _run() -> void:
+	Events.phase_changed.emit(&"training", {"lesson": MaskDeck.LESSON, "station": station_id})
+	if not await _intro():
+		return
+	if not Game.is_movie_seen(MOVIE_ID):
+		await _play_movie()
+	if _leaving:
+		return
+	await _try_it()
+	if _leaving:
+		return
+	await _round()
+	if _leaving:
+		return
+	await _scorecard()
+
+
+## Hoot's card. Returns false when the player left from it.
+func _intro() -> bool:
+	_state = &"intro"
+	_show_overlay(_intro_panel())
+	_say("%s %s" % [String(info["pitch"]), "Let's go!"])
+	Events.awaiting_input.emit(&"training_intro", {"station": station_id, "mouse": {"click": "Start"}}, start)
+	var what: StringName = await _go
+	Events.input_resolved.emit(&"training_intro")
+	if what == &"movie":
+		await _play_movie()
+		return await _intro()
+	_hide_overlay()
+	return what == &"start"
+
+
+func start() -> void:
+	if _state == &"intro":
+		_state = &"busy"
+		Sfx.play(&"click")
+		_go.emit(&"start")
+
+
+func rewatch() -> void:
+	if _state == &"intro":
+		_state = &"busy"
+		Sfx.play(&"click")
+		_go.emit(&"movie")
+
+
+func _play_movie() -> void:
+	_say("A quick cartoon first: Hoot's masking movie!")
+	var player: Node = (load(PLAYER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", MOVIE_ID, "training")
+	player.queue_free()
+
+
+# ---------------------------------------------------------------- try it
+
+func _try_it() -> void:
+	_set_top("Try it")
+	for i in MaskDeck.WHY_TRIES.size():
+		var tr: Dictionary = (MaskDeck.WHY_TRIES[i] as Dictionary).duplicate()
+		_card = tr
+		_show_card(tr, false, true)
+		_say(String(tr["line"]))
+		_try_buttons()
+		_feedback_text(_try_status())
+		_state = &"try"
+		Events.awaiting_input.emit(&"training_try", {"station": station_id, "step": i, "target": MaskDeck.try_target(tr),
+			"mouse": {"click": "Louder +5"}}, _solve_try)
+		await _go
+		Events.input_resolved.emit(&"training_try")
+		if _leaving:
+			return
+
+
+## The beep up (+1 step) or down (-1) in Try it.
+func try_step(dir: int) -> void:
+	if _state != &"try":
+		return
+	var tone := clampi(int(_card["tone"]) + dir * MaskDeck.TRY_STEP_DB, 0, MaskDeck.try_max(_card))
+	if tone == int(_card["tone"]):
+		return
+	_card["tone"] = tone
+	Sfx.play(&"blip", 1.0 + tone / 200.0, -10.0)
+	_stage.params["tone"] = tone
+	_feedback_text(_try_status())
+	if MaskDeck.other_hears(_card):
+		_state = &"try_done"
+		_stage.params["boo_at"] = _stage_t
+		Sfx.play(&"boing", 1.1, -8.0)
+		_say(_try_payoff())
+		for b in _answers.get_children():
+			(b as Button).disabled = true
+		_show_next("Next")
+	else:
+		_say(String(_card["line"]))
+
+
+func _try_status() -> String:
+	var w := MaskDeck.wall(String(_card["transducer"]))
+	var tone := int(_card["tone"])
+	if w == 0:
+		return "Beep %d. Bone has no wall: Lefty gets all %d. Lefty hears from %d." % [tone, tone, int(_card["other_thr"])]
+	return "Beep %d. Through the wall: %d - %d = %d. Lefty hears from %d." % [tone, tone, w, tone - w, int(_card["other_thr"])]
+
+
+func _try_payoff() -> String:
+	var tone := int(_card["tone"])
+	var w := MaskDeck.wall(String(_card["transducer"]))
+	match String(_card["transducer"]):
+		"inserts":
+			return "BOO at %d! The thicker wall (%d) held longer. Inserts mean fewer Ghosts." % [tone, w]
+		"bone":
+			return "BOO at just %d! Bone shakes the whole skull: no wall at all." % tone
+	return "BOO at %d! %d - %d = %d: Lefty heard it. That's cross-hearing." % [tone, tone, w, tone - w]
+
+
+func _solve_try() -> void:
+	for i in 40:
+		if _state != &"try":
+			break
+		try_step(1)
+	press_next()
+
+
+# ---------------------------------------------------------------- the round
+
+func _round() -> void:
+	strokes.clear()
+	var cards := MaskDeck.who_heard_round(rng)
+	for h in cards.size():
+		_card = cards[h]
+		_answer = MaskDeck.who_heard(_card)
+		_hole_strokes = 1
+		_hinted = false
+		_picked.clear()
+		_set_top("Hole %d of %d" % [h + 1, cards.size()])
+		_show_card(_card, false, false)
+		_say("Who could answer this beep? Pick one.")
+		_feedback_text("%s on the right ear. Read the numbers, then pick." % MaskDeck.TRANSDUCER_WORDS[String(_card["transducer"])])
+		_answer_buttons()
+		_state = &"card"
+		var best := MaskDeck.WHO.find(_answer)
+		Events.awaiting_input.emit(&"training_card", {"station": station_id, "hole": h, "best": best,
+			"options": MaskDeck.WHO.map(func(a: StringName) -> String: return String(MaskDeck.WHO_WORDS[a])),
+			"mouse": {"click": String(MaskDeck.WHO_WORDS[_answer])}}, func() -> void: pick(_answer))
+		await _go
+		Events.input_resolved.emit(&"training_card")
+		if _leaving:
+			return
+		strokes.append(_hole_strokes)
+		_update_score()
+		_state = &"next"
+		_show_next("Next hole" if h < cards.size() - 1 else "Scorecard")
+		Events.awaiting_input.emit(&"training_next", {"station": station_id, "hole": h, "mouse": {"click": _next_btn.text}}, press_next)
+		await _go
+		Events.input_resolved.emit(&"training_next")
+		if _leaving:
+			return
+
+
+## Answer the live card (keys 1-3, a click or the solver).
+func pick(a: StringName) -> void:
+	if _state != &"card" or _picked.has(a):
+		return
+	_picked[a] = true
+	if a == _answer:
+		_state = &"busy"
+		Sfx.play(&"ding", 1.1, -6.0)
+		_stage.params["reveal"] = true
+		_stage.params["verdict"] = String(MaskDeck.WHO_VERDICTS[_answer])
+		_stage.params["verdict_at"] = _stage_t
+		if _answer == &"ghost":
+			_stage.params["boo_at"] = _stage_t
+		var lines := MaskDeck.why_lines(_card)
+		_feedback_text("%s\n%s" % [lines[0], lines[1]])
+		_say(_hole_line())
+		for b: Button in _answer_list():
+			b.disabled = true
+			if StringName(String(b.get_meta("answer", ""))) == a:
+				b.disabled = false
+				b.modulate = Color(1, 1, 1)
+				b.text = "  " + String(MaskDeck.WHO_WORDS[a]) + "  "
+		_go.emit(&"right")
+		return
+	_hole_strokes += 1
+	Sfx.play(&"error", 1.0, -10.0)
+	_say("Not quite. Check both numbers: the test ear's, and what crosses the wall.")
+	for b: Button in _answer_list():
+		if StringName(String(b.get_meta("answer", ""))) == a:
+			b.disabled = true
+			b.text = "Not quite"
+			Juice.shake(b, 5.0, 0.25)
+
+
+func hint() -> void:
+	if _state != &"card" or _hinted:
+		return
+	_hinted = true
+	_hole_strokes += 1
+	Sfx.play(&"pop", 1.0, -8.0)
+	_say(MaskDeck.hint_line(_card))
+	_hint_btn.disabled = true
+
+
+func _hole_line() -> String:
+	match _hole_strokes:
+		1:
+			return "Spot on! Par."
+		2:
+			return "Got there. A bogey: one extra stroke."
+	return "Got it in the end. Read both numbers first next time."
+
+
+func press_next() -> void:
+	if _state in [&"next", &"try_done"]:
+		_state = &"busy"
+		Sfx.play(&"click")
+		_go.emit(&"next")
+
+
+# ---------------------------------------------------------------- the scorecard
+
+func _scorecard() -> void:
+	var total := 0
+	for s: int in strokes:
+		total += s
+	var over := total - strokes.size()
+	var rec := TrainingProgress.record_round(MaskDeck.LESSON, station_id, over, String(info["card"]))
+	last_result = {"station": station_id, "strokes": strokes.duplicate(), "over_par": over, "star": over == 0,
+		"new_card": bool(rec["new_card"]), "best": int(rec["best"])}
+	print("TRAINING_RESULT %s" % JSON.stringify(last_result))
+	_state = &"score"
+	_show_overlay(_score_panel(over, rec))
+	if over == 0:
+		Sfx.play(&"fanfare", 1.0, -8.0)
+		_say("Even par! You caught every Ghost. That's a star.")
+	else:
+		_say("%s. Play again for the star, or head back to the room." % MaskDeck.round_name(over))
+	Events.awaiting_input.emit(&"training_scorecard", {"station": station_id, "over_par": over, "star": over == 0,
+		"mouse": {"click": "Back to the Training room"}}, leave)
+	var what: StringName = await _go
+	Events.input_resolved.emit(&"training_scorecard")
+	if what == &"again":
+		_hide_overlay()
+		await _round()
+		if not _leaving:
+			await _scorecard()
+
+
+func play_again() -> void:
+	if _state == &"score":
+		_state = &"busy"
+		Sfx.play(&"click")
+		_go.emit(&"again")
+
+
+## Back to the Training room (from anywhere in the station).
+func leave() -> void:
+	if _leaving:
+		return
+	_leaving = true
+	_state = &"busy"
+	Sfx.play(&"click")
+	_go.emit(&"leave")
+	Events.goto_scene.emit(ROOM_SCENE)
+
+
+# ================================================================ input
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_pressed() or event.is_echo():
+		return
+	var k := event as InputEventKey
+	var code := KEY_NONE
+	if k != null:
+		code = k.keycode if k.keycode != KEY_NONE else k.physical_keycode
+	var handled := true
+	if code == KEY_T:
+		leave()
+	elif _state == &"card" and code >= KEY_1 and code < KEY_1 + MaskDeck.WHO.size():
+		pick(MaskDeck.WHO[code - KEY_1])
+	elif _state == &"card" and code >= KEY_KP_1 and code < KEY_KP_1 + MaskDeck.WHO.size():
+		pick(MaskDeck.WHO[code - KEY_KP_1])
+	elif _state == &"card" and code == KEY_H:
+		hint()
+	elif _state == &"try" and event.is_action_pressed(&"louder"):
+		try_step(1)
+	elif _state == &"try" and event.is_action_pressed(&"softer"):
+		try_step(-1)
+	elif _state == &"score" and code == KEY_R:
+		play_again()
+	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"advance_dialogue"):
+		match _state:
+			&"intro":
+				start()
+			&"next", &"try_done":
+				press_next()
+			&"score":
+				leave()
+			_:
+				handled = false
+	else:
+		handled = false
+	if handled:
+		get_viewport().set_input_as_handled()
+
+
+# ================================================================ building
+
+func _build() -> void:
+	var bg := UiKit.full_rect()
+	bg.draw.connect(func() -> void: bg.draw_rect(Rect2(Vector2.ZERO, bg.size), BG))
+	add_child(bg)
+	_field = Control.new()
+	_field.size = FIELD
+	_field.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_field)
+	# the top bar: the lesson chip, the station, the hole, the strokes, Leave
+	var chip := UiKit.panel(info["color"], Palette.INK, 16)
+	chip.position = Vector2(24, 16)
+	var chip_l := UiKit.label("MASKING SCHOOL  %d: %s" % [int(info["num"]), String(info["name"])], 22, Palette.PAPER, 700)
+	chip.add_child(chip_l)
+	_field.add_child(chip)
+	_top_label = UiKit.label("", 22, Palette.INK, 700)
+	_top_label.position = Vector2(470, 26)
+	_field.add_child(_top_label)
+	_score_label = UiKit.label("", 20, Palette.INK_SOFT, 600)
+	_score_label.position = Vector2(640, 28)
+	_field.add_child(_score_label)
+	_leave_btn = UiKit.button("Back to the room", &"", Vector2(232, 48))
+	_leave_btn.position = Vector2(FIELD.x - 88 - 232, 14)   # clear of the pause button in the corner
+	_leave_btn.add_theme_font_size_override("font_size", 20)
+	_leave_btn.pressed.connect(leave)
+	_field.add_child(_leave_btn)
+	# the stage
+	_stage = Stage2D.new()
+	_stage.size = Vector2(880, 440)
+	_stage.position = STAGE_AT
+	_stage.use_movie({"stage": SETS_PATH})
+	_field.add_child(_stage)
+	# Hoot's corner
+	var hoot := UiKit.panel(Palette.PAPER, Palette.INK, 20)
+	hoot.position = Vector2(SIDE_X, 84)
+	hoot.custom_minimum_size = Vector2(SIDE_W, 172)
+	hoot.size = Vector2(SIDE_W, 172)
+	var hh := HBoxContainer.new()
+	hh.add_theme_constant_override("separation", 10)
+	hoot.add_child(hh)
+	_hoot_face = Control.new()
+	_hoot_face.custom_minimum_size = Vector2(86, 86)
+	_hoot_face.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_hoot_face.draw.connect(func() -> void:
+		Portraits.draw(_hoot_face, "Hoot", Vector2(43, 43), 38.0, _talk > 0.0 and fmod(_talk, 0.25) > 0.12))
+	hh.add_child(_hoot_face)
+	_hoot_label = UiKit.label("", 19, Palette.INK, 600)
+	_hoot_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hoot_label.custom_minimum_size = Vector2(SIDE_W - 130, 0)
+	_hoot_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hh.add_child(_hoot_label)
+	_field.add_child(hoot)
+	# the answer buttons, the hint and Next
+	_answers = VBoxContainer.new()
+	_answers.position = Vector2(SIDE_X, 272)
+	_answers.custom_minimum_size = Vector2(SIDE_W, 0)
+	_answers.add_theme_constant_override("separation", 10)
+	_field.add_child(_answers)
+	# the feedback card under the stage
+	_feedback_panel = UiKit.panel(Palette.PAPER, Palette.INK, 18)
+	_feedback_panel.position = Vector2(24, 540)
+	_feedback_panel.custom_minimum_size = Vector2(880, 120)
+	_feedback_panel.size = Vector2(880, 120)
+	_feedback = UiKit.label("", 20, Palette.INK, 600)
+	_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_feedback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_feedback_panel.add_child(_feedback)
+	_field.add_child(_feedback_panel)
+	if UiKit.show_key_hints():
+		var hr := UiKit.hint_row([["1", "2", "3"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"], 16)
+		hr.position = Vector2(24, 676)
+		_field.add_child(hr)
+	_overlay = UiKit.full_rect(Control.MOUSE_FILTER_STOP)
+	_overlay.visible = false
+	add_child(_overlay)
+
+
+func _layout() -> void:
+	var vp := get_viewport_rect().size
+	var off := ((vp - FIELD) * 0.5).floor()
+	_field.position = Vector2(maxf(off.x, 0.0), maxf(off.y, 0.0))
+
+
+func _say(text: String) -> void:
+	_hoot_label.text = text
+	_talk = minf(2.0, text.length() / 30.0)
+	Events.dialogue_line.emit("Hoot", text)
+
+
+func _set_top(text: String) -> void:
+	_top_label.text = text
+	_update_score()
+
+
+func _update_score() -> void:
+	if strokes.is_empty():
+		_score_label.text = ""
+		return
+	var total := 0
+	for s: int in strokes:
+		total += s
+	_score_label.text = "Strokes %d (%s)" % [total, MaskDeck.round_name(total - strokes.size())]
+
+
+func _feedback_text(text: String) -> void:
+	_feedback.text = text
+
+
+func _show_card(card: Dictionary, reveal: bool, live: bool) -> void:
+	_stage_t = 0.0
+	var p := card.duplicate()
+	p["reveal"] = reveal
+	p["live"] = live
+	p["boo_at"] = -1.0
+	p["verdict"] = ""
+	_stage.show_scene({"id": "who", "set": "who_heard", "duration": 9999.0, "params": p})
+
+
+func _clear_answers() -> void:
+	for c in _answers.get_children():
+		c.queue_free()
+		_answers.remove_child(c)
+	_next_btn = null
+	_hint_btn = null
+
+
+func _answer_list() -> Array[Button]:
+	var out: Array[Button] = []
+	for c in _answers.get_children():
+		if c is Button and c.has_meta("answer"):
+			out.append(c as Button)
+	return out
+
+
+func _answer_buttons() -> void:
+	_clear_answers()
+	for i in MaskDeck.WHO.size():
+		var a: StringName = MaskDeck.WHO[i]
+		var b := _side_button(String(MaskDeck.WHO_WORDS[a]), str(i + 1))
+		b.set_meta("answer", String(a))
+		b.pressed.connect(pick.bind(a))
+		_answers.add_child(b)
+	_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
+	_hint_btn.pressed.connect(hint)
+	_answers.add_child(_hint_btn)
+
+
+func _try_buttons() -> void:
+	_clear_answers()
+	var up := _side_button("Louder +5", Game.key_label(&"louder"))
+	up.pressed.connect(try_step.bind(1))
+	_answers.add_child(up)
+	var down := _side_button("Softer -5", Game.key_label(&"softer"), Vector2(SIDE_W, 54))
+	down.pressed.connect(try_step.bind(-1))
+	_answers.add_child(down)
+
+
+func _show_next(text: String) -> void:
+	_next_btn = _side_button(text, "Enter")
+	_next_btn.pressed.connect(press_next)
+	_answers.add_child(_next_btn)
+	Juice.pop(_next_btn, 1.08, 0.2)
+
+
+## A wide side-column button with its key chip drawn at the left.
+func _side_button(text: String, key: String, min_size := Vector2(SIDE_W, 64)) -> Button:
+	var b := UiKit.button(text, &"", min_size)
+	b.add_theme_font_size_override("font_size", 20)
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if UiKit.show_key_hints() and key != "":
+		var kc := UiKit.key_chip(key, 15)
+		kc.position = Vector2(8, 8)
+		b.add_child(kc)
+	return b
+
+
+# ---------------------------------------------------------------- overlays
+
+func _show_overlay(panel: Control) -> void:
+	for c in _overlay.get_children():
+		c.queue_free()
+	var dim := UiKit.full_rect()
+	dim.draw.connect(func() -> void: dim.draw_rect(Rect2(Vector2.ZERO, dim.size), Color(Palette.INK, 0.35)))
+	_overlay.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay.add_child(center)
+	center.add_child(panel)
+	_overlay.visible = true
+	Juice.bounce_in(panel)
+
+
+func _hide_overlay() -> void:
+	_overlay.visible = false
+	for c in _overlay.get_children():
+		c.queue_free()
+
+
+func _intro_panel() -> Control:
+	var p := UiKit.panel(info["color"], Palette.INK, 28)
+	p.custom_minimum_size = Vector2(720, 0)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	p.add_child(v)
+	var ink: Color = Palette.PAPER
+	var num := UiKit.label("STATION %d" % int(info["num"]), 20, Palette.SUNNY, 700)
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(num)
+	var title := UiKit.label(String(info["name"]), 44, ink, 700)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(title)
+	var body := UiKit.panel(Palette.PAPER, Palette.INK, 20)
+	var bh := HBoxContainer.new()
+	bh.add_theme_constant_override("separation", 14)
+	body.add_child(bh)
+	var face := Control.new()
+	face.custom_minimum_size = Vector2(96, 96)
+	face.draw.connect(func() -> void: Portraits.draw(face, "Hoot", Vector2(48, 48), 42.0))
+	bh.add_child(face)
+	var lines := UiKit.label("Ears cheat. A loud beep in one ear can sneak across the skull to the other.\n"
+		+ "Learn the skull wall, then catch the Cross-Hearing Ghost: six beeps, who heard each one?", 20, Palette.INK, 600)
+	lines.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lines.custom_minimum_size = Vector2(540, 0)
+	bh.add_child(lines)
+	v.add_child(body)
+	var card := MaskDeck.cheat_card(String(info["card"]))
+	if not card.is_empty():
+		var earn := UiKit.label("You'll earn: the %s card" % String(card["title"]), 20, Palette.SUNNY, 700)
+		earn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(earn)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	v.add_child(row)
+	var go := UiKit.button("Start", &"", Vector2(220, 60))
+	go.add_theme_font_size_override("font_size", 26)
+	go.pressed.connect(start)
+	row.add_child(go)
+	if Game.is_movie_seen(MOVIE_ID):
+		var mv := UiKit.button("Rewatch the movie", &"", Vector2(240, 60))
+		mv.add_theme_font_size_override("font_size", 20)
+		mv.pressed.connect(rewatch)
+		row.add_child(mv)
+	var back := UiKit.button("Back to the room", &"", Vector2(220, 60))
+	back.add_theme_font_size_override("font_size", 20)
+	back.pressed.connect(leave)
+	row.add_child(back)
+	if not Game.is_movie_seen(MOVIE_ID):
+		var note := UiKit.label("First time here: Hoot's masking movie plays after Start (Esc skips it).", 17, Color(Palette.PAPER, 0.85), 600)
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(note)
+	return p
+
+
+func _score_panel(over: int, rec: Dictionary) -> Control:
+	var p := UiKit.panel(Palette.PAPER, Palette.INK, 28)
+	p.custom_minimum_size = Vector2(820, 0)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	p.add_child(v)
+	var head := UiKit.label("STATION %d SCORECARD" % int(info["num"]), 30, Palette.INK, 700)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	var holes := HBoxContainer.new()
+	holes.alignment = BoxContainer.ALIGNMENT_CENTER
+	holes.add_theme_constant_override("separation", 8)
+	v.add_child(holes)
+	for i in strokes.size():
+		var s := strokes[i]
+		var hp := UiKit.panel(HOLE_COLORS[clampi(s - 1, 0, HOLE_COLORS.size() - 1)], Palette.INK, 14)
+		hp.custom_minimum_size = Vector2(118, 0)
+		var hv := VBoxContainer.new()
+		hp.add_child(hv)
+		var n := UiKit.label("Hole %d" % (i + 1), 16, Palette.INK, 600)
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hv.add_child(n)
+		var g := UiKit.label(MaskDeck.hole_name(s), 18 if s < 3 else 15, Palette.INK, 700)
+		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hv.add_child(g)
+		holes.add_child(hp)
+	var total := UiKit.label("Round: %s" % MaskDeck.round_name(over), 34, Palette.grade_color("S") if over == 0 else Palette.INK, 700)
+	total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(total)
+	var star := Control.new()
+	star.custom_minimum_size = Vector2(0, 64)
+	star.draw.connect(func() -> void:
+		var c := Vector2(star.size.x * 0.5, 32)
+		UiDraw.star(star, c + Vector2(0, 3), 30.0, Color(Palette.INK, 0.3))
+		UiDraw.star(star, c, 30.0, Palette.SUNNY if bool(rec["star"]) else Color(Palette.INK_SOFT, 0.25))
+		var t := "Star earned!" if over == 0 else ("Star kept from before" if bool(rec["star"]) else "Even par earns the star")
+		star.draw_string(UiKit.font(700), c + Vector2(44, 8), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.INK))
+	v.add_child(star)
+	if bool(rec["new_card"]):
+		var nc := UiKit.label("New card for your Training room!", 22, Palette.CORAL, 700)
+		nc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(nc)
+		var holder := CenterContainer.new()
+		var cc := CheatCard.new(MaskDeck.cheat_card(String(info["card"])), true, 20)
+		cc.custom_minimum_size = Vector2(400, 170)
+		holder.add_child(cc)
+		v.add_child(holder)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	v.add_child(row)
+	var again := UiKit.button("Play again", &"", Vector2(200, 58))
+	again.add_theme_font_size_override("font_size", 22)
+	again.pressed.connect(play_again)
+	row.add_child(again)
+	var back := UiKit.button("Back to the Training room", &"", Vector2(340, 58))
+	back.add_theme_font_size_override("font_size", 22)
+	back.pressed.connect(leave)
+	row.add_child(back)
+	if UiKit.show_key_hints():
+		var hr := UiKit.hint_row([["R"], "play again", ["Enter"], "back to the room"], 16)
+		hr.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_child(hr)
+	return p

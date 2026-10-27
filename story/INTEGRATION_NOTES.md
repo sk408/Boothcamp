@@ -405,3 +405,22 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   autoplay) the title adds `story/demo_attract.gd` and starts it after `attract_after()` seconds with nobody there
   (`ATTRACT_S` 30, `--attract-after=N`), hiding the menu and the notice; a key, click or mouse movement ends it and the
   notice shows. CONTRACTS.md §14.
+
+## The Training room and Masking School (docs/training/MASKING_TRAINER.md)
+
+- **title_screen.gd** (additive): a **Training** button shares a row with Days (`_on_training()` goes to
+  `TRAINING_SCENE` = `res://story/training/training_room.tscn`); the menu keeps its rows, so a returning player's
+  eight buttons still clear the footer. "New player" also wipes `training`.
+- **Game** (additive): `DEFAULT_PROGRESS["training"]` = {} (lesson -> {stations: {id: {best, star, plays}}, cards}),
+  read and written only through `story/training/training_progress.gd`.
+- **New scenes**: `story/training/training_room.tscn` (the cork board: lesson card, station chips 1-6, pinned
+  cheat-sheet cards), `story/training/masking/masking_school.tscn` (one station: Hoot's card, Try it, a six-hole
+  round, the scorecard). The room sets `MaskingSchool.next_station`; `--scene=...masking_school.tscn --station=why`
+  boots one station directly. The station draws on Hoot's movie stage through the sets hook
+  (`story/training/masking/school_sets.gd`, set `who_heard`), so no shared stage edit.
+- **Rules** live in `story/training/masking/mask_deck.gd` and read `ClinicRules` only (`ia_rule`,
+  `ac_masking_needed`, `OCCLUSION_DB`, the plateau numbers).
+- **Beats** `training_room`, `training_intro`, `training_try`, `training_card`, `training_next`,
+  `training_scorecard` (CONTRACTS.md §3.2), and phases `training_room`, `training` (emitted, not in `Game.PHASES`'
+  visit flow). A first visit to station 1 plays Hoot's masking movie (source `"training"`).
+- **Bot**: `story/tests/training_check.tscn` (tools/README.md). **No new data files**, so the Web preset needs nothing.
