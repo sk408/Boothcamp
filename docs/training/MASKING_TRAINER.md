@@ -5,7 +5,7 @@ use it, helps them understand and memorize the occlusion effect, and is approach
 previous knowledge. Either a separate day or maybe time to introduce an extra training tab."
 
 This page is the design. It is built in small PRs after this one (section 9). **Built so far:** the Training
-button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3); Station 4 (PR 4); Station 5 and Hoot's movie "The Plugged Ear" (PR 5). **Steve: section 10 is your question
+button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3); Station 4 (PR 4); Station 5 and Hoot's movie "The Plugged Ear" (PR 5); Station 6 (the exam), the print view and the AudiOtron's OE chip (PR 6): the whole trainer. **Steve: section 10 is your question
 list. Reply by number only where you disagree; every default stands otherwise.**
 
 | | |
@@ -181,12 +181,22 @@ The station Steve asked for by name: understand it, then memorize it.
   No hints for the first try of a hole; the scorecard is golf with a grade (S to C), saved as the trainer's best.
 - **Earns:** a **Masking School diploma** stamp on the lesson card (Hoot in a mortarboard), and the title's stats
   line counts it.
+- **As built (PR 6):** two "Who heard it?" (different answers), two "Mask it?" (different calls), two dials (one
+  with the occlusion boom), one plateau walk, one "Does it count?" and one masking dilemma walk, shuffled. Each hole
+  plays by its own station's rules and screen; the top bar names the kind ("Hole 3/9: set the dial"). No Try it and
+  no movie. Hoot's hint is locked on a first try ("Hint: after a miss") and opens after a wrong answer, still +1.
+  Grade from strokes over par: S at even par (and the star), A up to +2, B up to +5, C beyond. Finishing the exam
+  at any grade earns the diploma; its stamp (and the title's "Masking diploma: A") shows the best grade.
+  The exam's walks use the same rule-based patients as Station 4 (see question 10).
 
 ## 4. The cheat-sheet cards
 
 Each station earns one card (five, plus the diploma). They are the trainer's "notes": short, coloured, one rule
 each, and always worded the same way the stations say it. Earned cards are pinned in the Training room; tapping one
-opens it big. A player who has every card sees a "Print view" with all five on one page (question 8).
+opens it big. A player who has every card sees a "Print view" with all five on one page (question 8). **As built (PR 6):**
+the "More lessons soon" slot on the pin board becomes a PRINT VIEW tile (or press P); the page shows the five cards
+and the diploma stamp, and "Save picture" writes it as a PNG (Documents/BoothCamp/masking-cheat-sheets.png on a PC,
+a download on the web) for printing. Pinned cards shrink a long line to fit instead of cutting it.
 
 | Card | Colour | Text |
 |---|---|---|
@@ -213,7 +223,8 @@ opens it big. A player who has every card sees a "Print view" with all five on o
   which happens when the player stores a plateau that the board shows the moment it is there).
 - **A station's star:** the round at par or better (any number of tries; the best round counts).
 - **Save:** `Game` progress gets a `training` key (`{"masking": {"stations": {id: {best, star}}, "cards": [...],
-  "exam": {best, grade}}}`), an additive change; "New player" wipes it like the rest.
+  "exam": {best, grade}}}`), an additive change; "New player" wipes it like the rest. As built, the exam is the
+  station `exam` like any other (`{best, star, plays}`); its grade is `MaskDeck.exam_grade(best)`, not stored.
 
 ## 7. Hoot's lines (short, 18 words or fewer)
 
@@ -244,7 +255,7 @@ opens it big. A player who has every card sees a "Print view" with all five on o
 | Title button (additive) | `story/title_screen.gd`: the Training button and `_on_training()` |
 | Occlusion chip on the AudiOtron (additive, later PR) | `ui/audiometer/audiometer_screen.gd` |
 | Tests | `story/tests/test_training_*.gd` |
-| Bot | `story/tests/training_check.tscn` (`--station=why|when|start|plateau` (more as they land), `--policy=careful|keys|mouse|guess|hint`, `--via-title`, `--shots`), listed in `tools/README.md` |
+| Bot | `story/tests/training_check.tscn` (`--station=why|when|start|plateau|occlusion|exam`, `--policy=careful|keys|mouse|guess|hint`, `--via-title`, `--shots`), listed in `tools/README.md` |
 
 No new data files outside code are planned (cards are generated), so the Web preset's `include_filter` does not
 change; if one is added, it goes on the filter in the same PR.
@@ -274,12 +285,15 @@ change; if one is added, it goes on the filter in the same PR.
    insertion"), with a line in the movie that shallow inserts leave some. Only for bone, only when the covered ear
    is normal (its own gap 10 or less).
 7. **The AudiOtron chip:** once the Pocket Card is earned, a small orange "OE" chip on the masking deck in the story
-   days opens it. It is a reminder, not an answer: the start level is still the player's to set.
+   days opens it. It is a reminder, not an answer: the start level is still the player's to set. As built (PR 6):
+   the chip sits at the right end of the MASKING label on the AudiOtron's deck, shown only with the MASKING group;
+   a click opens the card above the deck and another closes it. It never reads the live test.
 8. **Print view** of all five cards on one page, for a player who wants a paper copy.
 9. **Scoring:** golf per hole, par = a clean answer; a hint or a wrong first answer +1; no reward for speed.
 10. **The plateau patients** (changed in PR 4): Station 4's practice patients answer by the rules every time, so the
-    walk always lands on the truth; the exam's patients come from the game's patient simulator (sometimes a drift
-    or a miss).
+    walk always lands on the truth. Changed again in PR 6: the exam's walks use the same rule-based patients, so
+    every hole has one right move and the closing lines stay true; the simulator's drift and misses stay on the
+    story days.
 11. **The "you've felt it" line** (fingers in your ears while you talk) stays, with no tone ever played to test the
     player.
 12. **The name:** "Masking School" for the lesson, "Training" for the title button, "The Plugged Ear" for the movie.

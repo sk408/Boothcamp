@@ -8,6 +8,8 @@ const TrainingProgress := preload("res://story/training/training_progress.gd")
 const MaskingSchool := preload("res://story/training/masking/masking_school.gd")
 const TitleScreen := preload("res://story/title_screen.gd")
 const Movies := preload("res://story/explainers/movies.gd")
+const TrainingRoom := preload("res://story/training/training_room.gd")
+const OeChip := preload("res://story/training/oe_chip.gd")
 
 
 func before_each() -> void:
@@ -207,8 +209,8 @@ func test_room_opens_built_stations_only() -> void:
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
 	MaskingSchool.next_station = ""
-	room.call("open_station", 5)   # The masking exam (not built yet)
-	assert_eq(went, [], "a SOON station does not open")
+	room.call("open_station", 9)   # no such station
+	assert_eq(went, [], "only a station chip opens")
 	solvers[0].call()
 	Events.goto_scene.disconnect(gcb)
 	assert_eq(went, ["res://story/training/masking/masking_school.tscn"])
@@ -267,7 +269,7 @@ func _play_by_solvers(id: String, movies: int, star := true) -> void:
 	Events.goto_scene.disconnect(gcb)
 	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
 	assert_eq(int(beats.get(&"explainer", 0)), movies, "%s: the masking movie plays on a fresh save only before station 1" % id)
-	assert_eq(int(beats.get(&"training_try", 0)), 1 if id == "plateau" else 3)
+	assert_eq(int(beats.get(&"training_try", 0)), {"plateau": 1, "exam": 0}.get(id, 3))
 	assert_eq(int(beats.get(&"training_scorecard", 0)), 1)
 	assert_eq(int(beats.get(&"training_next", 0)), MaskDeck.holes(id))
 	assert_eq(MaskingSchool.last_result.get("station"), id)
@@ -276,7 +278,8 @@ func _play_by_solvers(id: String, movies: int, star := true) -> void:
 	par.fill(1)
 	assert_eq(MaskingSchool.last_result.get("strokes"), par)
 	assert_eq(bool(TrainingProgress.station("masking", id)["star"]), star, "%s: the star" % id)
-	assert_true(TrainingProgress.has_card("masking", String(MaskDeck.station(id)["card"])))
+	if id != "exam":
+		assert_true(TrainingProgress.has_card("masking", String(MaskDeck.station(id)["card"])))
 
 
 # ---------------------------------------------------------------- station 2: mask it?
@@ -530,3 +533,150 @@ func test_plugged_ear_movie() -> void:
 			st.queue_redraw()
 			await wait_frames(1)
 	st.queue_free()
+
+
+# ---------------------------------------------------------------- station 6: the exam
+
+## The exam: nine mixed holes, no Try it, no movie; par earns the star, an S and the diploma.
+func test_station_6_plays_by_solvers() -> void:
+	await _play_by_solvers("exam", 0)
+	assert_eq(MaskingSchool.last_result.get("grade"), "S")
+	assert_true(bool(MaskingSchool.last_result.get("diploma")), "the first finished exam earns the diploma")
+	assert_true(TrainingRoom.has_diploma())
+
+
+## Two of each pick, two dials, a walk, a boom call and a dilemma, every card honest by its own rules.
+func test_exam_rounds_are_honest() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed in 60:
+		rng.seed = seed
+		var cards := MaskDeck.exam_round(rng)
+		assert_eq(cards.size(), MaskDeck.holes("exam"))
+		var by := {}
+		var dilemmas := 0
+		for c: Dictionary in cards:
+			var r := String(c["rules"])
+			by[r] = int(by.get(r, 0)) + 1
+			match r:
+				"why":
+					assert_true(MaskDeck.who_heard(c) in MaskDeck.WHO, "a who-heard card")
+				"when":
+					assert_true(MaskDeck.mask_call(c) in MaskDeck.CALLS)
+				"start", "occlusion":
+					assert_true(MaskDeck.start_level(c) >= ClinicRules.MASK_MIN_DB)
+				"plateau":
+					assert_true(MaskDeck.walk_honest(c), "an honest walk")
+					if MaskDeck.walk_dilemma(c):
+						dilemmas += 1
+			assert_ne(MaskDeck.exam_label(c), "")
+		assert_eq(by, {"why": 2, "when": 2, "start": 2, "plateau": 2, "occlusion": 1}, "seed %d" % seed)
+		assert_eq(dilemmas, 1, "one dilemma, seed %d" % seed)
+
+
+func test_exam_grades() -> void:
+	assert_eq(MaskDeck.exam_grade(0), "S")
+	assert_eq(MaskDeck.exam_grade(2), "A")
+	assert_eq(MaskDeck.exam_grade(5), "B")
+	assert_eq(MaskDeck.exam_grade(6), "C")
+
+
+## No hints on a first try: H does nothing (no stroke) until a wrong answer, then it costs one.
+func test_exam_hint_waits_for_a_miss() -> void:
+	Game.cli = {"seed": 3}
+	MaskingSchool.next_station = "exam"
+	var cards: Array = []
+	var acb := func(beat: StringName, data: Dictionary, solver: Callable) -> void:
+		if beat == &"training_intro":
+			solver.call_deferred()
+		elif beat == &"training_card":
+			cards.append(data)
+	Events.awaiting_input.connect(acb)
+	var school: Control = (load("res://story/training/masking/masking_school.tscn") as PackedScene).instantiate()
+	add_node(school)
+	for i in 120:
+		if not cards.is_empty():
+			break
+		await wait_frames(1)
+	Events.awaiting_input.disconnect(acb)
+	assert_false(cards.is_empty(), "the first hole")
+	var rules := String(cards[0]["rules"])
+	school.call("hint")
+	assert_eq(int(school.get("_hole_strokes")), 1, "a first-try hint is refused")
+	if rules != "start":
+		var opts: Array = cards[0]["options"]
+		school.call("pick", school.call("_options")[(int(cards[0]["best"]) + 1) % opts.size()])
+		assert_eq(int(school.get("_hole_strokes")), 2, "a miss")
+		school.call("hint")
+		assert_eq(int(school.get("_hole_strokes")), 3, "after a miss the hint opens (+1)")
+	school.call("leave")
+	await wait_frames(2)
+
+
+## The print view: only with all five cards; it draws every card and closes with Enter.
+func test_print_view() -> void:
+	Game.progress["training"] = {"masking": {"stations": {}, "cards": ["skull_wall", "when_to_mask", "start_level", "plateau"]}}
+	var room: Control = (load("res://story/training/training_room.tscn") as PackedScene).instantiate()
+	add_node(room)
+	await wait_frames(2)
+	assert_false(bool(room.call("can_print")), "four cards: no print view")
+	assert_true(room.find_child("print_view_button", true, false) == null)
+	room.call("open_print")
+	assert_true(room.find_child("PrintView", true, false) == null)
+	room.queue_free()
+	await wait_frames(2)
+	(Game.progress["training"]["masking"]["cards"] as Array).append("occlusion")
+	room = (load("res://story/training/training_room.tscn") as PackedScene).instantiate()
+	add_node(room)
+	await wait_frames(2)
+	assert_true(bool(room.call("can_print")))
+	assert_true(room.find_child("print_view_button", true, false) != null, "the tile replaces More lessons soon")
+	room.call("open_print")
+	await wait_frames(2)
+	var pv: Node = room.find_child("PrintView", true, false)
+	assert_true(pv != null, "the print view opens")
+	for id: String in MaskDeck.CARD_ORDER:
+		var cc: Node = pv.find_child("print_" + id, true, false)
+		assert_true(cc != null and bool(cc.get("earned")), "%s on the page" % id)
+	pv.call("close_view")
+	await wait_frames(2)
+	assert_true(room.find_child("PrintView", true, false) == null, "closed")
+
+
+## The AudiOtron's OE chip: shown with the MASKING group once the pocket card is earned; opens the card.
+func test_oe_chip() -> void:
+	Game.progress["training"] = {}
+	assert_false(OeChip.earned())
+	Game.progress["training"] = {"masking": {"stations": {}, "cards": ["occlusion"]}}
+	assert_true(OeChip.earned())
+	var chip: Control = OeChip.new()
+	add_node(chip)
+	await wait_frames(1)
+	chip.call("toggle")
+	var card: Node = chip.find_child("oe_card", true, false)
+	assert_true(card != null and String(card.get("card")["id"]) == "occlusion", "the pocket card opens")
+	chip.call("toggle")
+	assert_false(bool(chip.call("is_open")), "and closes")
+
+
+## On a story day the chip rides the MASKING group: hidden before the card is earned, shown after.
+func test_audiotron_oe_chip() -> void:
+	for earned: bool in [false, true]:
+		Game.progress["training"] = {"masking": {"stations": {}, "cards": ["occlusion"] if earned else []}}
+		var screen: Node = (load("res://ui/audiometer/audiometer_screen.tscn") as PackedScene).instantiate()
+		add_node(screen)
+		await wait_frames(1)
+		screen.call("start_test", Game.load_patient("bonnie"), "right", false, {"test": "bc", "hoot_turn_after": 99})
+		await wait_frames(2)
+		var chip: Control = screen.find_child("oe_chip", true, false)
+		assert_true(chip != null, "the AudiOtron carries the chip")
+		assert_eq(chip.visible, earned, "shown only with the pocket card earned")
+		screen.queue_free()
+		await wait_frames(2)
+	# Day 1's air test has no MASKING group, so no chip even with the card
+	var day1: Node = (load("res://ui/audiometer/audiometer_screen.tscn") as PackedScene).instantiate()
+	add_node(day1)
+	await wait_frames(1)
+	day1.call("start_test", Game.load_patient("gus"), "right", true)
+	await wait_frames(2)
+	assert_false((day1.find_child("oe_chip", true, false) as Control).visible, "no chip without the MASKING group")
+
