@@ -6,9 +6,13 @@ extends "res://story/explainers/explainer_sets.gd"
 ##   who_heard: transducer ("phones", "inserts", "bone"), tone, test_thr, other_thr (dB),
 ##     reveal (bool: draw who hears it), live (bool: "Try it": the answer follows the beep as it moves),
 ##     boo_at (stage time the Ghost popped up, or -1), verdict ("" or the callout).
+##   when_card: transducer ("phones", "inserts"), freq, air (Righty's air), bone (the unmasked bone),
+##     other_air (Lefty's air), show_bone / show_air (bool: draw each check), verdict, verdict_at.
+##   start_dial: test ("ac", "bc"), freq, other_air, other_gap, masker ("phones", "inserts"), dial (dB EM),
+##     target (dB EM, or -1: "Try it" shows Hoot's level), reveal (bool: the sum on the dial), verdict, verdict_at.
 
 const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
-const SETS: Array[StringName] = [&"who_heard"]
+const SETS: Array[StringName] = [&"who_heard", &"when_card", &"start_dial"]
 
 const FOAM := Color("#f6c453")
 const TUBE := Color("#9aa3b5")
@@ -91,12 +95,234 @@ func _head_close() -> void:
 
 ## A foam insert tip squeezed into her right ear canal, with its sound tube.
 func _insert() -> void:
-	var at := Stage2D.CUP_R_AT + Vector2(22, 0)
+	_insert_at(Stage2D.CUP_R_AT + Vector2(22, 0), 1.0, "R", Palette.RIGHT_RED)
+
+
+# ---------------------------------------------------------------- station 2: mask it?
+
+const CHART := Rect2(20, 20, 360, 400)
+const PLOT_TOP := 84.0
+const PLOT_BOTTOM := 354.0
+const COL_X := 215.0
+const SIDE_C := 630.0
+
+
+func _db_y(db: float) -> float:
+	return lerpf(PLOT_TOP, PLOT_BOTTOM, (db + 10.0) / 130.0)
+
+
+func _set_when_card() -> void:
+	var card := {"transducer": String(params.get("transducer", "phones")), "freq": int(params.get("freq", 1000)),
+		"air": int(params.get("air", 40)), "bone": int(params.get("bone", 20)), "other_air": int(params.get("other_air", 25))}
+	var show_bone := bool(params.get("show_bone", false))
+	var show_air := bool(params.get("show_air", false))
+	var w := MaskDeck.wall(String(card["transducer"]))
+	var air := int(card["air"])
+	var bone := int(card["bone"])
+	# the chart: one frequency lit
+	s._panel(CHART, Stage2D.GRAPH_BG, 18)
+	s._text("%d Hz" % int(card["freq"]), Vector2(COL_X, 48), 22, Stage2D.INK, 700)
+	for db in range(-10, 121, 10):
+		var y := _db_y(db)
+		s.draw_line(Vector2(76, y), Vector2(CHART.end.x - 18, y), Color(Stage2D.INK, 0.25 if db % 20 == 0 else 0.1), 2.0 if db == 0 else 1.0)
+		if db % 20 == 0:
+			s._text(str(db), Vector2(56, y), 14, Palette.INK_SOFT, 600)
+	s.draw_line(Vector2(COL_X, PLOT_TOP), Vector2(COL_X, PLOT_BOTTOM), Color(Palette.SUNNY, 0.6), 22.0)
+	s._text("dB HL", Vector2(52, PLOT_TOP - 22), 12, Palette.INK_SOFT, 600)
+	# the symbols: O Righty's air, < the unmasked bone, X Lefty's air
+	_sym_x(Vector2(COL_X + 34, _db_y(int(card["other_air"]))), Palette.LEFT_BLUE)
+	_sym_bone(Vector2(COL_X - 30, _db_y(bone)), Palette.RIGHT_RED)
+	s.draw_arc(Vector2(COL_X, _db_y(air)), 11.0, 0.0, TAU, 28, Palette.RIGHT_RED, 4.0, true)
+	var ly := CHART.end.y - 32
+	s.draw_arc(Vector2(44, ly), 8.0, 0.0, TAU, 20, Palette.RIGHT_RED, 3.0, true)
+	s._text("Righty air", Vector2(58, ly), 14, Stage2D.INK, 700, 0, Palette.PAPER, 0.0)
+	_sym_bone(Vector2(160, ly), Palette.RIGHT_RED, 7.0)
+	s._text("bone", Vector2(172, ly), 14, Stage2D.INK, 700, 0, Palette.PAPER, 0.0)
+	_sym_x(Vector2(240, ly), Palette.LEFT_BLUE, 7.0)
+	s._text("Lefty air", Vector2(254, ly), 14, Stage2D.INK, 700, 0, Palette.PAPER, 0.0)
+	# the checks drawn on the chart
+	if show_bone:
+		var x := 128.0
+		s.draw_line(Vector2(x, _db_y(bone)), Vector2(x, _db_y(air)), Stage2D.INK, 3.0, true)
+		for y: float in [_db_y(bone), _db_y(air)]:
+			s.draw_line(Vector2(x - 8, y), Vector2(x + 8, y), Stage2D.INK, 3.0, true)
+		s._chip("gap %d" % MaskDeck.gap(card), Vector2(x, (_db_y(bone) + _db_y(air)) * 0.5), Palette.CORAL if MaskDeck.mask_bone(card) else Palette.MINT, 14)
+	if show_air:
+		var x := 300.0
+		var crossed := maxi(air - w, -10)   # the chart stops at -10
+		var hit := MaskDeck.mask_air(card)
+		_dashed(Vector2(COL_X + 54, _db_y(bone)), Vector2(CHART.end.x - 18, _db_y(bone)), Palette.RIGHT_RED)
+		_arrow(Vector2(x, _db_y(air)), Vector2(x, _db_y(crossed)), Palette.INK)
+		s._text("-%d" % w, Vector2(x + 30, (_db_y(air) + _db_y(crossed)) * 0.5), 16, Stage2D.INK, 700, 4)
+		s._circ(Vector2(x, _db_y(crossed)), 9.0, Palette.CORAL if hit else Palette.MINT, 3.0)
+	# the side: who's tested, the earphone, the numbers
+	s._chip("RIGHTY IS THE TEST EAR", Vector2(SIDE_C, 40), Palette.RIGHT_RED, 18, Palette.PAPER)
+	var tr_word := "Inserts: wall %d" % w if String(card["transducer"]) == "inserts" else "Headphones: wall %d" % w
+	s._chip(tr_word, Vector2(SIDE_C, 90), Palette.SKY if String(card["transducer"]) == "inserts" else Palette.PAPER, 18)
+	s._chip("Righty AIR  %d" % air, Vector2(SIDE_C - 110, 146), Palette.RIGHT_TINT, 20)
+	s._chip("BONE  %d" % bone, Vector2(SIDE_C + 110, 146), Palette.RIGHT_TINT, 20)
+	s._text("bone, no masking: the better cochlea", Vector2(SIDE_C, 182), 14, Palette.INK_SOFT, 600)
+	s._chip("Lefty AIR  %d" % int(card["other_air"]), Vector2(SIDE_C, 220), Palette.LEFT_TINT, 18)
+	# the two checks
+	if show_bone:
+		var yes := MaskDeck.mask_bone(card)
+		s._chip("Bone: %d - %d = gap %d" % [air, bone, MaskDeck.gap(card)], Vector2(SIDE_C - 70, 282), Palette.PAPER, 18)
+		s._chip("MASK BONE" if yes else "NO", Vector2(SIDE_C + 150, 282), Palette.CORAL if yes else Palette.MINT, 17)
+	if show_air:
+		var yes := MaskDeck.mask_air(card)
+		s._chip("Air: %d - %d = %d vs bone %d" % [air, w, air - w, bone], Vector2(SIDE_C - 70, 334), Palette.PAPER, 18)
+		s._chip("MASK AIR" if yes else "SAFE", Vector2(SIDE_C + 150, 334), Palette.CORAL if yes else Palette.MINT, 17)
+	var verdict := String(params.get("verdict", ""))
+	if verdict != "":
+		s._chip(verdict, Vector2(SIDE_C, 396), Palette.SUNNY, 19, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))))
+
+
+## The audiogram's X (left air).
+func _sym_x(c: Vector2, col: Color, r: float = 10.0) -> void:
+	s.draw_line(c + Vector2(-r, -r), c + Vector2(r, r), col, 4.0, true)
+	s.draw_line(c + Vector2(-r, r), c + Vector2(r, -r), col, 4.0, true)
+
+
+## The audiogram's < (right bone, unmasked).
+func _sym_bone(c: Vector2, col: Color, r: float = 10.0) -> void:
+	s.draw_polyline(PackedVector2Array([c + Vector2(r * 0.7, -r), c + Vector2(-r * 0.7, 0), c + Vector2(r * 0.7, r)]), col, 4.0, true)
+
+
+func _dashed(a: Vector2, b: Vector2, col: Color) -> void:
+	var n := int(a.distance_to(b) / 12.0)
+	for i in n:
+		if i % 2 == 0:
+			s.draw_line(a.lerp(b, float(i) / n), a.lerp(b, float(i + 1) / n), col, 2.5, true)
+
+
+## An arrow drawn, not typed (the web font has no arrow glyphs).
+func _arrow(a: Vector2, b: Vector2, col: Color) -> void:
+	if a.distance_to(b) < 2.0:
+		return
+	var d := (b - a).normalized()
+	s.draw_line(a, b - d * 8.0, col, 4.0, true)
+	var n := Vector2(-d.y, d.x)
+	s.draw_colored_polygon(PackedVector2Array([b, b - d * 14.0 + n * 8.0, b - d * 14.0 - n * 8.0]), col)
+
+
+# ---------------------------------------------------------------- station 3: set the dial
+
+const MINI_AT := Vector2(230, 236)
+const MINI_SCALE := 0.62
+const DIAL_C := Vector2(640, 200)
+const DIAL_R := 110.0
+
+
+func _mini() -> Transform2D:
+	return Transform2D(0.0, Vector2.ONE * MINI_SCALE, 0.0, MINI_AT) * Transform2D(0.0, Vector2.ONE, 0.0, -Stage2D.HEAD_C)
+
+
+func _set_start_dial() -> void:
+	var card := {"test": String(params.get("test", "bc")), "freq": int(params.get("freq", 500)), "other_air": int(params.get("other_air", 15)),
+		"other_gap": int(params.get("other_gap", 0)), "masker": String(params.get("masker", "phones"))}
+	var dial := int(params.get("dial", 0))
+	var reveal := bool(params.get("reveal", false))
+	var target := int(params.get("target", -1))
+	var bone := MaskDeck.is_bone_test(card)
+	var inserts := String(card["masker"]) == "inserts"
+	var boom := MaskDeck.boom(card)
+	var xf := _mini()
+	# the head, shrunk to the left: Righty tested, Lefty under the shhh
+	s._push(xf)
+	s._head_open(0.0)
+	s._head({"look": Vector2(0.5, -0.1), "mood": &"smile"})
+	s._wall(1.0, 0.28 if bone else 1.0, bone)
+	var cloud_r := lerpf(34.0, 104.0, clampf(dial / 100.0, 0.0, 1.0))
+	s._cloud(Stage2D.CLOUD_AT, cloud_r, {"patchy": 0.0})
+	s._snail(Stage2D.RIGHTY_AT, 1.0, Palette.RIGHT_RED, Stage2D.RIGHTY_BODY, {"mood": &"alert", "look": Vector2(-1, -0.2)})
+	s._snail(Stage2D.LEFTY_AT, -1.0, Palette.LEFT_BLUE, Stage2D.LEFTY_BODY, {"mood": &"idle", "look": Vector2(1, -0.3)})
+	if bone:
+		s._buzzer(1.0, 0.6, 0.0)
+	elif inserts:
+		_insert_at(Stage2D.CUP_R_AT + Vector2(22, 0), 1.0, "R", Palette.RIGHT_RED)
+	else:
+		s._cup(Stage2D.CUP_R_AT, Palette.RIGHT_RED, "R", 1.0, -1.0)
+	if inserts:
+		_insert_at(Stage2D.CUP_L_AT + Vector2(-22, 0), -1.0, "L", Palette.LEFT_BLUE)
+	else:
+		s._cup(Stage2D.CUP_L_AT, Palette.LEFT_BLUE, "L", 1.0, 1.0)
+	s._head_close()
+	s._shhh_letters(Stage2D.CLOUD_AT, cloud_r)
+	s._pop_xf()
+	if reveal and boom > 0:
+		s._chip("BOOM +%d" % boom, xf * (Stage2D.LEFTY_AT + Vector2(10, -200)), Palette.SELECT_ORANGE, 18, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))), 0.08)
+	s._name_tag("RIGHTY", xf * Stage2D.RIGHTY_AT, Palette.RIGHT_RED, 1.0)
+	s._name_tag("LEFTY", xf * Stage2D.LEFTY_AT, Palette.LEFT_BLUE, 1.0)
+	var test_word := "BONE" if bone else "AIR"
+	s._chip("TEST: Righty's %s at %d Hz" % [test_word, int(card["freq"])], Vector2(MINI_AT.x, 372), Palette.RIGHT_TINT, 17)
+	s._chip("Shhh: %s on Lefty" % MaskDeck.MASKER_WORDS[String(card["masker"])], Vector2(MINI_AT.x, 414), Stage2D.NOISE_FILL, 17)
+	# the dial
+	_noise_dial(dial, target, card, reveal)
+	s._chip("Lefty's AIR  %d" % int(card["other_air"]), Vector2(DIAL_C.x, 300), Palette.LEFT_TINT, 19)
+	var gap := int(card["other_gap"])
+	var gap_word := "Lefty's gap %d: normal middle ear" % gap if gap <= ClinicRules.OCCLUSION_MAX_GAP_DB else "Lefty's gap %d: blocked middle ear" % gap
+	s._chip(gap_word, Vector2(DIAL_C.x, 344), Palette.PAPER, 16)
+	if reveal:
+		var lvl := MaskDeck.start_level(card)
+		var sum := "%d + %d = %d" % [int(card["other_air"]), ClinicRules.MASK_SAFETY_DB, lvl]
+		if boom > 0:
+			sum = "%d + %d + %d = %d" % [int(card["other_air"]), ClinicRules.MASK_SAFETY_DB, boom, lvl]
+		s._chip(sum, Vector2(DIAL_C.x, 392), Palette.SUNNY, 22)
+	var verdict := String(params.get("verdict", ""))
+	if verdict != "":
+		s._chip(verdict, Vector2(440, 26), Palette.SUNNY, 19, Stage2D.INK, _pop(float(params.get("verdict_at", 0.0))))
+
+
+## The grey noise dial, 0-100 dB EM. Revealed: the sum as slices (Lefty's air grey-blue, +10 mint, the
+## occlusion boom orange) and the right level as a gold tick. target >= 0 marks Hoot's level in Try it.
+func _noise_dial(dial: int, target: int, card: Dictionary, reveal: bool) -> void:
+	var c := DIAL_C
+	var r := DIAL_R
+	s._panel(Rect2(c - Vector2(r + 40, r + 34), Vector2((r + 40) * 2.0, r + 102)), Palette.PAPER, 22)
+	s.draw_arc(c, r - 10.0, PI, TAU, 40, Color("#c9ccd6"), 18.0, true)
+	if reveal or target >= 0:
+		var air := float(card["other_air"])
+		var lvl := float(MaskDeck.start_level(card))
+		var boom := float(MaskDeck.boom(card))
+		_slice(0.0, air, Palette.LEFT_TINT.darkened(0.15))
+		_slice(air, lvl - boom, Palette.MINT)
+		if boom > 0.0:
+			_slice(lvl - boom, lvl, Palette.SELECT_ORANGE)
+		_tick(lvl, Stage2D.GOLD, 26.0)
+	s.draw_arc(c, r, PI, TAU, 40, Stage2D.INK, 3.0, true)
+	for db in range(0, 101, 10):
+		var a := PI + PI * db / 100.0
+		var dir := Vector2(cos(a), sin(a))
+		s.draw_line(c + dir * (r - 2.0), c + dir * (r + (10.0 if db % 20 == 0 else 5.0)), Stage2D.INK, 2.0, true)
+		if db % 20 == 0:
+			s._text(str(db), c + dir * (r + 22.0), 13, Palette.INK_SOFT, 600)
+	var ang := PI + PI * clampf(dial / 100.0, 0.0, 1.0)
+	s.draw_line(c, c + Vector2(cos(ang), sin(ang)) * (r - 6.0), Stage2D.INK, 6.0, true)
+	s.draw_circle(c, 9.0, Stage2D.INK, true, -1.0, true)
+	s._text("SHHH %d" % dial, c + Vector2(0, 30), 26, Stage2D.NOISE_DEEP, 700)
+	s._text("dB EM", c + Vector2(0, 52), 13, Palette.INK_SOFT, 600)
+
+
+func _slice(from_db: float, to_db: float, col: Color) -> void:
+	if to_db <= from_db:
+		return
+	s.draw_arc(DIAL_C, DIAL_R - 10.0, PI + PI * from_db / 100.0, PI + PI * to_db / 100.0, 16, col, 18.0, true)
+
+
+func _tick(db: float, col: Color, len: float) -> void:
+	var a := PI + PI * clampf(db / 100.0, 0.0, 1.0)
+	var dir := Vector2(cos(a), sin(a))
+	s.draw_line(DIAL_C + dir * (DIAL_R - len), DIAL_C + dir * (DIAL_R + 6.0), Stage2D.INK, 8.0, true)
+	s.draw_line(DIAL_C + dir * (DIAL_R - len + 2.0), DIAL_C + dir * (DIAL_R + 4.0), col, 4.0, true)
+
+
+## A foam insert tip in an ear canal (side 1: her right ear, the screen's left; -1: her left).
+func _insert_at(at: Vector2, side: float, letter: String, col: Color) -> void:
 	var tube := PackedVector2Array()
 	for i in 9:
 		var u := i / 8.0
-		tube.append(at + Vector2(-20.0 - 50.0 * u, 8.0 + 90.0 * u * u))
+		tube.append(at + Vector2(side * (-20.0 - 50.0 * u), 8.0 + 90.0 * u * u))
 	s.draw_polyline(tube, Stage2D.INK, 9.0, true)
 	s.draw_polyline(tube, TUBE, 4.0, true)
 	s._blob(at, Vector2(20, 15), FOAM, 4.0)
-	s._text("R", at + Vector2(-2, 1), 16, Palette.RIGHT_RED, 700)
+	s._text(letter, at + Vector2(-2 * side, 1), 16, col, 700)

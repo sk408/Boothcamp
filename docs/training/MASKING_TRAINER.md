@@ -5,7 +5,7 @@ use it, helps them understand and memorize the occlusion effect, and is approach
 previous knowledge. Either a separate day or maybe time to introduce an extra training tab."
 
 This page is the design. It is built in small PRs after this one (section 9). **Built so far:** the Training
-button, the Training room and Station 1 (PR 2). **Steve: section 10 is your question
+button, the Training room and Station 1 (PR 2); Stations 2 and 3 (PR 3). **Steve: section 10 is your question
 list. Reply by number only where you disagree; every default stands otherwise.**
 
 | | |
@@ -83,23 +83,32 @@ Six stations, in the suggested order (all open). Each reuses what the game alrea
 
 ### 3.2 Station 2: "When to mask?" (spot the risk)
 
-- **Try it:** Hoot walks two charts. Bone first: "a gap of 10 or more on this ear? Mask." Air second: "this ear's
-  air, minus the wall, reaches the other ear's bone? Mask."
-- **Your round, "Mask it?":** a two-ear audiogram (the game's `Audiogram`), one frequency lit, the test ear named.
-  Answer **NO MASK**, **MASK BONE**, **MASK AIR**, **MASK BOTH**. The feedback writes the sum on the card in gold:
-  "70 - 40 = 30. Left bone is 10. 30 reaches 10: mask air."
-- Unlike MASQUERADE (the arcade's fast version), this station uses the **non-test ear's own bone** when it is known
-  and offers inserts on some cards ("Would inserts save us?"), so MASK AIR alone can happen (question 4).
+- **Try it:** Hoot walks three charts, one "Check it" press per check. Bone first: "a gap of 10 or more on this ear?
+  Mask." Air second: "this ear's air, minus the wall, reaches the bone? Mask." The second chart is the first one again
+  with inserts on: the thicker wall saves the air test. The third has no gap at all.
+- **Your round, "Mask it?":** a one-frequency audiogram (O Righty's air, < the unmasked bone, X Lefty's air; Righty is
+  the test ear) beside the numbers and the earphone. Answer **NO MASKING**, **MASK BONE ONLY** or **MASK BONE AND
+  AIR**. The reveal draws both checks on the chart (the gap bracket; the air arrow dropping by the wall to the bone
+  line) and writes the sums: "Air: 70 - 40 = 30 vs bone 30: MASK AIR".
+- **Why three answers, not four (question 4, corrected in PR 3):** before masking, the only bone we have is the
+  unmasked bone, which reads the better cochlea, so it is also the best the other ear can be. Air crossing then means
+  air minus the wall reaches that bone, which is a gap of at least the wall (40 or 55), and bone needs masking too. So
+  "mask air only" cannot happen on these charts (a test checks every pair). Inserts still matter: a 45 dB gap is
+  "mask both" under headphones and "bone only" under inserts. Headphones and inserts are dealt 2:1.
 - **Earns:** the **When-to-Mask card**: "BONE: gap 10 or more. AIR: test air - wall reaches other bone."
 - **Rules used:** `ac_masking_needed`, `bc_masking_needed`, `ia_rule`.
 
 ### 3.3 Station 3: "How much to start?" (the noise dial)
 
-- **Try it:** Hoot sets the first one: "Other ear's air is 15. Add 10. Start the shhh at 25."
-- **Your round, "Set the dial":** the player turns the grey noise dial with Up/Down (or drags it) in 5 dB steps and
-  presses Enter. Cards mix air and bone tests at every bone frequency, so the occlusion add-on shows up here first:
-  a low bone tone with a normal covered ear needs "+15" more, and the dial's orange slice shows it after the answer.
-- **Par:** the right level, with no hint. A dial 5 dB off counts as a bogey (the answer is close, the habit is not).
+- **Try it:** Hoot names three sums and the player turns the dial to each: an air test ("Lefty's air is 15. Add 10:
+  25"), bone at 500 Hz under a headphone ("15 + 10 + 15 = 40"), and the same with an insert masker (25, no boom).
+- **Your round, "Set the dial":** the player turns the grey noise dial with Up/Down (or the buttons) in 5 dB steps,
+  starting at Lefty's air, and presses Enter (Set it). Each round deals one air test, two low bone tests under a
+  headphone (the boom), one bone test at 2k or up, one low bone test with a blocked covered ear (its own gap 20 or
+  more) and one with an insert masker. The reveal paints the sum on the dial: Lefty's air (blue), +10 (mint), the
+  occlusion boom (orange), with a gold tick on the start level.
+- **Par:** the right level, with no hint. A dial 5 dB off counts as a bogey (the answer is close, the habit is not);
+  further off is a double bogey. One setting per hole.
 - **Earns:** the **Start Level card**: "Other ear's AIR + 10. Bone, low pitches: + occlusion."
 - **Rules used:** `initial_masking`, `MASK_SAFETY_DB`, `occlusion_effect`, `OCCLUSION_MAX_GAP_DB`.
 
@@ -222,7 +231,7 @@ opens it big. A player who has every card sees a "Print view" with all five on o
 | Title button (additive) | `story/title_screen.gd`: the Training button and `_on_training()` |
 | Occlusion chip on the AudiOtron (additive, later PR) | `ui/audiometer/audiometer_screen.gd` |
 | Tests | `story/tests/test_training_*.gd` |
-| Bot | `story/tests/training_check.tscn` (`--station=1..6`, `--policy=careful|keys|mouse|guess`, `--via-title`, `--shots`), listed in `tools/README.md` |
+| Bot | `story/tests/training_check.tscn` (`--station=why|when|start` (more as they land), `--policy=careful|keys|mouse|guess|hint`, `--via-title`, `--shots`), listed in `tools/README.md` |
 
 No new data files outside code are planned (cards are generated), so the Web preset's `include_filter` does not
 change; if one is added, it goes on the filter in the same PR.
@@ -244,8 +253,9 @@ change; if one is added, it goes on the filter in the same PR.
 2. **Six stations**, all open, in the order of section 3; the exam last.
 3. **Station 1** reuses the Cross-Hearing Ghost movie as its lead-in (first time only, then a replay chip); only
    Station 5 gets a new movie.
-4. **Station 2** uses the other ear's own bone when known and includes inserts, so MASK AIR alone is an answer here
-   (MASQUERADE keeps its three chutes).
+4. **Station 2** (corrected in PR 3): three answers, NO MASKING, MASK BONE ONLY, MASK BONE AND AIR. With the unmasked
+   bone as the other ear's bone, "mask air only" cannot happen (section 3.2 says why). Inserts are dealt on a third of
+   the charts, so the player sees a thicker wall save the air test.
 5. **Interaural attenuation:** 40 headphones, 55 inserts, 0 bone, flat across frequencies (the story's numbers).
 6. **Occlusion numbers taught:** headphones 250 +15, 500 +15, 750 +10, 1k +10, 2k and up 0; inserts 0 ("deep
    insertion"), with a line in the movie that shallow inserts leave some. Only for bone, only when the covered ear

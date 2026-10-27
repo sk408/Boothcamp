@@ -4,15 +4,19 @@ extends Node
 ## The main autoplay bot ends every run on a visit's results, so the Training room gets this harness.
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/training_check.tscn --fresh --policy=careful --speed=4 --seed=1
+## --station=why|when|start picks the station (default why, Station 1).
 ## Policies (--policy=):
-##   careful  every beat's solver: the movie skipped, each Try it raised to the Ghost, every hole at par
-##   keys     real key presses: Enter, the louder key, 1-3 for the right answer, Enter, T on the scorecard
-##   mouse    real clicks only: Start, "Louder +5", Next, the right answer, "Back to the Training room"
-##   guess    real keys, a wrong answer first on every hole: every hole a bogey, no star
+##   careful  every beat's solver: the movie skipped, each Try it stepped to its target, every hole at par
+##   keys     real key presses: Enter, the louder key, 1-3 for the right answer (station 3: the louder /
+##            softer keys to the level, Enter), Enter, T on the scorecard
+##   mouse    real clicks only: Start, the Try it button, Next, the right answer (station 3: "Shhh up +5" /
+##            "Shhh down -5", "Set it"), "Back to the Training room"
+##   guess    real keys, a wrong answer first on every hole (station 3: the dial set one step high):
+##            every hole a bogey, no star
 ##   hint     real keys, Hoot's hint (H) then the right answer: every hole a bogey, no star
 ## --via-title: start on the title, open the Training room from its Training button and pick station 1
-## there (a click with --policy=mouse; Down arrows, Enter and the 1 key otherwise), as a player would.
-## Every run ends back in the Training room, whose station 1 must then show its record.
+## there (a click with --policy=mouse; the station's number key otherwise), as a player would.
+## Every run ends back in the Training room, whose station must then show its record and card.
 ## --shots=/abs/dir under xvfb: training_room, training_intro, training_try, training_try_boo,
 ## training_card, training_card_right, training_scorecard.
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
@@ -61,6 +65,8 @@ class Driver extends Node:
 	const Progress := preload("res://story/training/training_progress.gd")
 
 	var policy := "careful"
+	var station := "why"
+	var info: Dictionary = {}
 	var errors := ErrorCounter.new()
 	var misses: PackedStringArray = []
 	var problems: PackedStringArray = []
@@ -78,6 +84,11 @@ class Driver extends Node:
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		OS.add_logger(errors)
 		policy = Game.cli_value("policy", "careful")
+		station = Game.cli_value("station", "why")
+		info = MaskDeck.station(station)
+		if info.is_empty() or not bool(info["built"]):
+			_finish.call_deferred(1, "no built station '%s'" % station)
+			return
 		Events.awaiting_input.connect(_on_awaiting)
 		Events.scene_changed.connect(func(path: String, node: Node) -> void:
 			_last = _clock
@@ -108,7 +119,7 @@ class Driver extends Node:
 		Events.screenshot_requested.emit(n)
 		await _wait(0.2)
 
-	func _on_awaiting(beat: StringName, info: Dictionary, solver: Callable) -> void:
+	func _on_awaiting(beat: StringName, data: Dictionary, solver: Callable) -> void:
 		_last = _clock
 		beats[String(beat)] = int(beats.get(String(beat), 0)) + 1
 		match beat:
@@ -128,12 +139,14 @@ class Driver extends Node:
 				if rooms > 1:
 					_check_room()
 					return
-				if policy == "careful":
+				if policy == "careful" and station == "why":
 					solver.call()
+				elif policy == "careful":
+					get_tree().get_first_node_in_group("training_room").call("open_station", int(info["num"]) - 1)
 				elif policy == "mouse":
-					await _click_text("Why mask?")
-				elif Game.cli_flag("via-title"):
-					await _key(KEY_1)
+					await _click_text(String(info["name"]))
+				elif Game.cli_flag("via-title") or station != "why":
+					await _key(KEY_1 + int(info["num"]) - 1)
 				else:
 					await _action(&"ui_accept")
 			&"training_intro":
@@ -152,11 +165,11 @@ class Driver extends Node:
 			&"training_try":
 				await _wait(READ_S)
 				await _shoot("training_try")
-				await _try(info, solver)
+				await _try(data, solver)
 			&"training_card":
 				await _wait(READ_S)
 				await _shoot("training_card")
-				await _card(info, solver)
+				await _card(data, solver)
 			&"training_next":
 				await _wait(0.4)
 				await _shoot("training_card_right")
@@ -164,14 +177,14 @@ class Driver extends Node:
 					"careful":
 						solver.call()
 					"mouse":
-						await _click_text(String((info.get("mouse", {}) as Dictionary).get("click", "Next")))
+						await _click_text(String((data.get("mouse", {}) as Dictionary).get("click", "Next")))
 					_:
 						await _action(&"ui_accept")
 			&"training_scorecard":
 				await _wait(0.6)
 				await _shoot("training_scorecard")
 				result = MaskingSchool.last_result
-				_check_result(info)
+				_check_result(data)
 				match policy:
 					"careful":
 						solver.call()
@@ -182,8 +195,8 @@ class Driver extends Node:
 					_:
 						await _action(&"ui_accept")
 
-	func _try(info: Dictionary, solver: Callable) -> void:
-		var target := int(info["target"])
+	func _try(beat: Dictionary, solver: Callable) -> void:
+		var target := int(beat["target"])
 		if policy == "careful":
 			solver.call()
 			return
@@ -191,30 +204,33 @@ class Driver extends Node:
 			if _school_state() != &"try":
 				break
 			if policy == "mouse":
-				await _click_text("Louder +5")
+				await _click_text(String((beat["mouse"] as Dictionary)["click"]))
 			else:
 				await _action(&"louder")
 			await _wait(0.1)
 		await _shoot("training_try_boo")
-		var tone := int((school.get("_card") as Dictionary).get("tone", -1)) if is_instance_valid(school) else -1
-		if tone != target or _school_state() != &"try_done":
-			problems.append("Try it %d: the Ghost answered at %d, expected %d" % [int(info["step"]), tone, target])
+		var got := int(school.call("try_value")) if is_instance_valid(school) else -1
+		if got != target or _school_state() != &"try_done":
+			problems.append("Try it %d: done at %d, expected %d" % [int(beat["step"]), got, target])
 		if policy == "mouse":
 			await _click_text("Next")
 		else:
 			await _action(&"ui_accept")
 
-	func _card(info: Dictionary, solver: Callable) -> void:
-		var best := int(info["best"])
+	func _card(beat: Dictionary, solver: Callable) -> void:
+		var best := int(beat["best"])
+		if station == "start":
+			await _dial(beat, solver)
+			return
 		match policy:
 			"careful":
 				solver.call()
 			"mouse":
-				await _click_text(String((info["options"] as Array)[best]))
+				await _click_text(String((beat["options"] as Array)[best]))
 			"keys":
 				await _key(KEY_1 + best)
 			"guess":
-				await _key(KEY_1 + (best + 1) % MaskDeck.WHO.size())
+				await _key(KEY_1 + (best + 1) % (beat["options"] as Array).size())
 				await _wait(0.2)
 				await _key(KEY_1 + best)
 			"hint":
@@ -222,10 +238,33 @@ class Driver extends Node:
 				await _wait(0.2)
 				await _key(KEY_1 + best)
 
+	## Station 3: turn the dial to the level (one step high for guess) and set it.
+	func _dial(beat: Dictionary, solver: Callable) -> void:
+		var want := int(beat["best"]) + (ClinicRules.MASK_STEP_DB if policy == "guess" else 0)
+		if policy == "careful":
+			solver.call()
+			return
+		if policy == "hint":
+			await _key(KEY_H)
+			await _wait(0.2)
+		for i in 30:
+			var dial := int((school.get("_card") as Dictionary).get("dial", 0))
+			if dial == want or _school_state() != &"dial":
+				break
+			if policy == "mouse":
+				await _click_text("Shhh up +5" if want > dial else "Shhh down -5")
+			else:
+				await _action(&"louder" if want > dial else &"softer")
+			await _wait(0.05)
+		if policy == "mouse":
+			await _click_text("Set it")
+		else:
+			await _action(&"ui_accept")
+
 	func _school_state() -> StringName:
 		return StringName(school.get("_state")) if is_instance_valid(school) else &""
 
-	func _check_result(info: Dictionary) -> void:
+	func _check_result(score: Dictionary) -> void:
 		var strokes: Array = result.get("strokes", [])
 		var over := int(result.get("over_par", -1))
 		if strokes.size() != MaskDeck.ROUND_HOLES:
@@ -233,25 +272,28 @@ class Driver extends Node:
 		var want := 0 if policy in ["careful", "keys", "mouse"] else MaskDeck.ROUND_HOLES
 		if over != want:
 			problems.append("%s run finished %d over par, expected %d (strokes %s)" % [policy, over, want, str(strokes)])
-		if bool(info.get("star", false)) != (want == 0):
-			problems.append("the scorecard's star is %s" % str(info.get("star")))
-		if int(beats.get("explainer", 0)) != 1:
-			problems.append("Hoot's masking movie started %d times on a fresh save (expected once)" % int(beats.get("explainer", 0)))
-		if int(beats.get("training_try", 0)) != MaskDeck.WHY_TRIES.size():
-			problems.append("%d Try it steps, expected %d" % [int(beats.get("training_try", 0)), MaskDeck.WHY_TRIES.size()])
+		if bool(score.get("star", false)) != (want == 0):
+			problems.append("the scorecard's star is %s" % str(score.get("star")))
+		var movies := 1 if String(info["movie"]) != "" else 0
+		if int(beats.get("explainer", 0)) != movies:
+			problems.append("Hoot's movie started %d times on a fresh save (expected %d)" % [int(beats.get("explainer", 0)), movies])
+		var tries: int = {"why": MaskDeck.WHY_TRIES.size(), "when": MaskDeck.WHEN_TRIES.size(), "start": MaskDeck.START_TRIES.size()}[station]
+		if int(beats.get("training_try", 0)) != tries:
+			problems.append("%d Try it steps, expected %d" % [int(beats.get("training_try", 0)), tries])
 
 	func _check_room() -> void:
-		var rec: Dictionary = Progress.station(MaskDeck.LESSON, "why")
+		var rec: Dictionary = Progress.station(MaskDeck.LESSON, station)
 		if int(rec["plays"]) != 1:
-			problems.append("station 1 saved %d plays" % int(rec["plays"]))
+			problems.append("station %s saved %d plays" % [station, int(rec["plays"])])
 		if bool(rec["star"]) != (int(result.get("over_par", -1)) == 0):
-			problems.append("station 1's saved star is %s" % str(rec["star"]))
-		if not Progress.has_card(MaskDeck.LESSON, "skull_wall"):
-			problems.append("the Skull Wall card was not earned")
+			problems.append("station %s's saved star is %s" % [station, str(rec["star"])])
+		var card_id := String(info["card"])
+		if not Progress.has_card(MaskDeck.LESSON, card_id):
+			problems.append("the %s card was not earned" % card_id)
 		var room := get_tree().get_first_node_in_group("training_room")
-		var card := room.find_child("card_skull_wall", true, false) if room != null else null
+		var card := room.find_child("card_" + card_id, true, false) if room != null else null
 		if card == null or not bool(card.get("earned")):
-			problems.append("the room does not pin the Skull Wall card")
+			problems.append("the room does not pin the %s card" % card_id)
 		var code := 0
 		if not problems.is_empty():
 			code = 1
@@ -259,7 +301,7 @@ class Driver extends Node:
 			code = 5
 		elif not misses.is_empty():
 			code = 6
-		print("TRAINING_CHECK_RESULT " + JSON.stringify({"policy": policy, "result": result, "beats": beats, "problems": problems,
+		print("TRAINING_CHECK_RESULT " + JSON.stringify({"policy": policy, "station": station, "result": result, "beats": beats, "problems": problems,
 			"errors": errors.count, "error_messages": errors.messages, "misses": misses}))
 		_finish(code, "; ".join(problems + misses + errors.messages))
 

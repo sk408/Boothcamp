@@ -417,9 +417,11 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   cheat-sheet cards), `story/training/masking/masking_school.tscn` (one station: Hoot's card, Try it, a six-hole
   round, the scorecard). The room sets `MaskingSchool.next_station`; `--scene=...masking_school.tscn --station=why`
   boots one station directly. The station draws on Hoot's movie stage through the sets hook
-  (`story/training/masking/school_sets.gd`, set `who_heard`), so no shared stage edit.
+  (`story/training/masking/school_sets.gd`, sets `who_heard`, `when_card`, `start_dial`), so no shared stage edit.
+  Built: 1 why (who heard it?), 2 when (mask it?), 3 start (set the dial); a new station is a `MaskDeck.STATIONS`
+  entry with `built: true` plus its branches in `masking_school.gd` (`_tries`, `_deal`, `try_step`).
 - **Rules** live in `story/training/masking/mask_deck.gd` and read `ClinicRules` only (`ia_rule`,
-  `ac_masking_needed`, `OCCLUSION_DB`, the plateau numbers).
+  `ac_masking_needed`, `bc_masking_needed`, `initial_masking`, `occlusion_effect`, `OCCLUSION_DB`, the plateau numbers).
 - **Beats** `training_room`, `training_intro`, `training_try`, `training_card`, `training_next`,
   `training_scorecard` (CONTRACTS.md §3.2), and phases `training_room`, `training` (emitted, not in `Game.PHASES`'
   visit flow). A first visit to station 1 plays Hoot's masking movie (source `"training"`).
