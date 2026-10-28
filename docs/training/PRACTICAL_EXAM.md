@@ -3,7 +3,8 @@
 Steve asked (2026-10-28) for "exhaustive research into the california hearing aid dispenser practical exam" and to
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
-(section 9). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
+(PR 2). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -65,6 +66,13 @@ less, non-bleach wipes, a clear bag; the listening check; an approved subject.
 - **Can they be your subject?** Three people with a one-line card ("My cousin. She's an audiologist." / "My
   neighbour, 70, clean ears last Tuesday." / "My friend. He sat for this exam in March."). Yes or no.
 - **Earns:** the **Kit Bag** card (grey and gold).
+- **As built (PR 2):** six holes, all pick-one cards with keys 1-4: two "Which one stays home?" trays (three kit
+  items and one decoy each, two different decoys), one "Which audiometer can come?" (three calibration stickers
+  against an exam in March 2027, one inside 12 months, none on the edge), one listening check (crackly cord, cups
+  swapped, silent bone oscillator, or all clear) and two "Can they be your subject?" (one who qualifies, one who
+  doesn't). Try it is two guided cards (the inserts tray, the swapped cups) where only the right answer is open.
+  The room shows the lessons as two tabs under the sign (Tab switches), not two cards side by side: the board
+  keeps its size, and the eight chips sit in two columns of four.
 
 ### 3.2 Station 2: "Steady hands" (Safe Support Technique and the look)
 
