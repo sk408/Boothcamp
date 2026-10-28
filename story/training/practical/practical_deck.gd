@@ -24,8 +24,10 @@ const STATIONS: Array = [
 		"intro": "Hands, head and light: one unit. If they sneeze, you ride along.\n"
 			+ "Pick the safe grip, keep it clean, then look and decide: go ahead, or a doctor first?"},
 	{"id": "tones", "num": 3, "name": "Station A: the tones", "pitch": "Air, bone, mask, record.", "color": Color("#2d6cdf"),
-		"card": "station_a", "built": false, "movie": "",
-		"intro": "Air and bone on a live subject, masked by the plateau, every symbol on the chart."},
+		"card": "station_a", "built": true, "movie": "",
+		"star_line": "Even par! Clean beeps, the right symbols, masked where it mattered. That's a star.",
+		"intro": "Air and bone on a live subject, on the real AudiOtron. Better ear first, mask by the plateau.\n"
+			+ "You stamp the first thresholds of each test; Hoot fills the rest. Your subject answers by the rules."},
 	{"id": "td", "num": 4, "name": "Too loud?", "pitch": "Threshold of discomfort.", "color": Color("#f2b632"),
 		"card": "td_steps", "built": true, "movie": "", "star_line": "Even par! You watched the face, not the dial. That's a star.",
 		"intro": "Watch the face, not the dial. Pairs of beeps from %d, up %d at a time, until the hand goes up.\n" % [70, 5]
@@ -322,6 +324,8 @@ static func deal(station_id: String, rng: RandomNumberGenerator) -> Array[Dictio
 			return hands_round(rng)
 		"td":
 			return td_round(rng)
+		"tones":
+			return tone_round(rng)
 	return []
 
 
@@ -333,6 +337,8 @@ static func tries(station_id: String) -> Array[Dictionary]:
 			return hands_tries()
 		"td":
 			return td_tries()
+		"tones":
+			return tone_tries()
 	return []
 
 
@@ -728,4 +734,226 @@ static func td_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
 	out.append(walk_card(-1 if rng.randi_range(0, 2) == 0 else int(tds[1]), rng.randi_range(0, 2) == 0))
 	_shuffle(ro, rng)
 	out.append(rule_card(rules[1], ro))
+	return out
+
+
+# ================================================================ Station 3: Station A, the tones
+
+## Station A on a live subject (Candidate Information Bulletin, March 2025, p. 5; CA_PRACTICAL_EXAM.md §3.4):
+## air and bone, unmasked and masked by the plateau, on over-ear headphones. Here the subject is one of
+## Station 1's good subjects, answering "by the rules" on the real AudiOtron (never the player's ears).
+## Booth holes: the player stamps `stamps` thresholds, then Hoot fills the rest of the ear in a montage.
+## mask: what the finished unmasked chart needs (ClinicRules' rules, checked by the tests). better: the
+## ear with the better air. Thresholds are dB HL; bone equals air unless listed.
+const TONE_SUBJECTS: Array = [
+	{"id": "pt_dev", "name": "Dev", "age": 34, "pronoun": "he", "better": "left", "mask": "none",
+		"says": "\"Both fine, I think. Maybe the left's a touch better?\"",
+		"ac_right": {250: 15, 500: 15, 1000: 15, 1500: 15, 2000: 15, 3000: 15, 4000: 20, 6000: 20, 8000: 15},
+		"ac_left": {250: 10, 500: 10, 1000: 10, 1500: 10, 2000: 10, 3000: 10, 4000: 15, 6000: 15, 8000: 10}},
+	{"id": "pt_rosa", "name": "Rosa", "age": 70, "pronoun": "she", "better": "right", "mask": "bone",
+		"says": "\"The right is my good ear. The left feels a bit stuffy.\"",
+		"ac_right": {250: 15, 500: 15, 1000: 20, 1500: 25, 2000: 30, 3000: 40, 4000: 45, 6000: 50, 8000: 55},
+		"ac_left": {250: 25, 500: 30, 1000: 25, 1500: 30, 2000: 35, 3000: 45, 4000: 50, 6000: 55, 8000: 60},
+		"bc_left": {250: 20, 500: 20, 1000: 25, 1500: 30, 2000: 35, 3000: 45, 4000: 50}},
+	{"id": "pt_may", "name": "Aunt May", "age": 58, "pronoun": "she", "better": "right", "mask": "both",
+		"says": "\"My left went quiet years ago. The right's still sharp.\"",
+		"ac_right": {250: 10, 500: 10, 1000: 10, 1500: 10, 2000: 10, 3000: 10, 4000: 15, 6000: 15, 8000: 10},
+		"ac_left": {250: 45, 500: 50, 1000: 50, 1500: 55, 2000: 55, 3000: 60, 4000: 60, 6000: 65, 8000: 65}},
+]
+## The player's own stamps per booth hole before Hoot's montage fills the ear.
+const TONE_STAMPS: Dictionary = {"ac": 2, "bc": 2, "bc_masked": 1, "ac_masked": 1}
+## A booth hole's extra strokes: one per technique slip or stamp 10 dB off, at most this many.
+const BOOTH_MAX_EXTRA := 3
+const BOOTH_OFF_DB := 10
+const TEST_WORDS: Dictionary = {"ac": "Air", "bc": "Bone", "bc_masked": "Masked bone", "ac_masked": "Masked air"}
+const SYMBOL_TESTS: Dictionary = {"ac": "air", "bc": "unmasked bone", "bc_masked": "masked bone", "ac_masked": "masked air"}
+const MASK_WORDS: Array[String] = ["Nothing to mask", "Mask the bone", "Mask the air", "Mask bone and air"]
+const MASK_ANSWER: Dictionary = {"none": 0, "bone": 1, "air": 2, "both": 3}
+const PHONE_WORDS: Array[String] = ["Red cup", "Blue cup", "Either: they match", "The one with the long cord"]
+const FIRST_WORDS: Array[String] = ["Right ear", "Left ear"]
+const BONE_SPOTS: Array[String] = ["mastoid", "pinna", "canal", "crown"]
+const BONE_WORDS: Dictionary = {"mastoid": "Behind the ear, on the bone", "pinna": "Pressed on the outer ear",
+	"canal": "Right over the ear canal", "crown": "On top of the head"}
+## The ASHA symbols, [ear, test] -> words (the chart's colours: right red, left blue).
+const SYMBOLS: Array = [["right", "ac"], ["left", "ac"], ["right", "bc"], ["left", "bc"], ["right", "bc_masked"], ["left", "bc_masked"],
+	["right", "ac_masked"], ["left", "ac_masked"]]
+const SYMBOL_WORDS: Dictionary = {"right:ac": "Red O", "left:ac": "Blue X", "right:bc": "Red <", "left:bc": "Blue >",
+	"right:bc_masked": "Red [", "left:bc_masked": "Blue ]", "right:ac_masked": "Red triangle", "left:ac_masked": "Blue square"}
+
+## Hoot's guided cards for Station 3.
+const TONE_TRIES: Array = [
+	{"kind": "phones", "ear": "right", "order": [1, 0, 2, 3],
+		"line": "Red on the right, blue on the left: the chart uses the same colours. The red cup."},
+	{"kind": "bone", "order": ["crown", "mastoid", "canal", "pinna"],
+		"line": "Bone sits behind the ear on the mastoid, off the outer ear. That one."},
+]
+
+
+static func tone_subject(id: String) -> Dictionary:
+	for s: Dictionary in TONE_SUBJECTS:
+		if String(s["id"]) == id:
+			return s
+	return {}
+
+
+static func other_ear(ear: String) -> String:
+	return "left" if ear == "right" else "right"
+
+
+## The practice subject as a PatientProfile that answers by the rules: the steepest psychometric slope,
+## full attention, no false alarms, no fatigue, no tinnitus, steady reaction times.
+static func tone_patient(s: Dictionary) -> PatientProfile:
+	var p := PatientProfile.new()
+	p.id = String(s["id"])
+	p.display_name = String(s["name"])
+	p.age = int(s["age"])
+	p.pronoun = String(s["pronoun"])
+	p.complaint = String(s["says"])
+	for ear: String in ["right", "left"]:
+		var ac: Dictionary[int, int] = {}
+		var bc: Dictionary[int, int] = {}
+		var src: Dictionary = s["ac_" + ear]
+		var bsrc: Dictionary = s.get("bc_" + ear, {})
+		for f: Variant in src:
+			ac[int(f)] = int(src[f])
+			if int(f) in ClinicRules.BC_FREQS:
+				bc[int(f)] = int(bsrc.get(f, src[f]))
+		if ear == "right":
+			p.thresholds_right = ac
+			p.bc_right = bc
+		else:
+			p.thresholds_left = ac
+			p.bc_left = bc
+	p.psychometric_slope_db = 0.5
+	p.attention = 1.0
+	p.false_alarms_per_minute = 0.0
+	p.fatigue_per_tone = 0.0
+	p.tinnitus_hz = 0
+	p.rhythm_sensitivity = 0.0
+	p.reaction_time_min_s = 0.5
+	p.reaction_time_max_s = 0.7
+	p.tags = PackedStringArray(["practice_subject"])
+	return p
+
+
+## "Phones on": which cup goes on this ear? order: indexes into PHONE_WORDS.
+static func phones_card(ear: String, order: Array) -> Dictionary:
+	var right := 0 if ear == "right" else 1
+	var words: Array[String] = []
+	for i: Variant in order:
+		words.append(PHONE_WORDS[int(i)])
+	return {"kind": "phones", "title": "Phones on", "ear": ear, "cups": order.duplicate(), "options": words, "answer": order.find(right),
+		"lines": ["%s on the %s: the chart's own colour." % [PHONE_WORDS[right].replace(" cup", ""), ear.to_upper()],
+			"Cups centred on the canals. Glasses, earrings and hair out of the way."],
+		"hint": "Red, right. Blue, left. The chart's O is red, the X is blue."}
+
+
+## "Which ear first?": the better ear, from what the subject says.
+static func first_card(s: Dictionary) -> Dictionary:
+	var better := String(s["better"])
+	return {"kind": "first", "title": "Which ear first?", "subject": String(s["id"]), "who": "%s, %d" % [String(s["name"]), int(s["age"])],
+		"says": String(s["says"]), "options": FIRST_WORDS.duplicate(), "answer": 0 if better == "right" else 1,
+		"lines": ["The %s: start with the better ear." % better.to_upper(), "Its bone and air set up the masking for the other ear."],
+		"hint": "Not always the right. Start where they hear best."}
+
+
+## "Where does the bone go?" order: four BONE_SPOTS.
+static func bone_card(order: Array) -> Dictionary:
+	var words: Array[String] = []
+	for id: Variant in order:
+		words.append(String(BONE_WORDS[String(id)]))
+	return {"kind": "bone", "title": "Bone on", "spots": order.duplicate(), "options": words, "answer": order.find("mastoid"),
+		"lines": ["On the mastoid, behind the ear: not touching the outer ear.", "Phones off for unmasked bone; for masked bone, noise on the other ear."],
+		"hint": "Find the hard bump behind the ear. Clear of the pinna, flat and snug."}
+
+
+## A booth hole on the AudiOtron: one test on one ear. No options: the player plays the real screen.
+static func booth_card(s: Dictionary, test: String, ear: String) -> Dictionary:
+	var n := int(TONE_STAMPS[test])
+	return {"kind": "booth", "title": "%s, %s ear" % [TEST_WORDS[test], ear], "subject": String(s["id"]), "test": test, "ear": ear,
+		"stamps": n, "options": [], "answer": -1,
+		"lines": ["%s, %s ear: on the chart." % [TEST_WORDS[test], ear], "Par is a clean hole: no slips, no stamp %d dB off." % BOOTH_OFF_DB],
+		"hint": "Down 10 after a yes, up 5 after a no. Two yeses going up: store."}
+
+
+## "What does the chart need now?" from the subject's unmasked chart.
+static func mask_card(s: Dictionary) -> Dictionary:
+	var m := String(s["mask"])
+	var why: Dictionary = {
+		"none": "No air-bone gap of %d or more, and no air %d above the other ear's bone." % [ClinicRules.BC_MASK_GAP_DB, ClinicRules.IA_RULE_DB[&"phones"]],
+		"bone": "The %s ear's air sits %d or more above the bone: mask the bone." % [other_ear(String(s["better"])), ClinicRules.BC_MASK_GAP_DB],
+		"air": "The %s ear's air is %d or more above the other ear's bone: mask the air." % [other_ear(String(s["better"])), ClinicRules.IA_RULE_DB[&"phones"]],
+		"both": "A gap over the bone AND air %d above the other ear's bone: mask both." % ClinicRules.IA_RULE_DB[&"phones"],
+	}
+	return {"kind": "mask", "title": "Mask?", "subject": String(s["id"]), "options": MASK_WORDS.duplicate(), "answer": int(MASK_ANSWER[m]),
+		"lines": [String(why[m]), "Then the plateau: noise up %d, tone up %d, until 3 steps hold." % [ClinicRules.MASK_STEP_DB, ClinicRules.MASK_STEP_DB]],
+		"hint": "Bone: a gap of %d or more. Air: %d or more above the other ear's bone (headphones)." % [ClinicRules.BC_MASK_GAP_DB, ClinicRules.IA_RULE_DB[&"phones"]]}
+
+
+## "Record it": which symbol? want: [ear, test]; others: three more SYMBOLS entries.
+static func symbol_card(want: Array, others: Array, rng: RandomNumberGenerator) -> Dictionary:
+	var pool: Array = [want] + others.slice(0, 3)
+	_shuffle(pool, rng)
+	var words: Array[String] = []
+	for p: Variant in pool:
+		words.append(String(SYMBOL_WORDS["%s:%s" % [p[0], p[1]]]))
+	var key := "%s:%s" % [want[0], want[1]]
+	return {"kind": "symbol", "title": "Record it", "want": want.duplicate(), "symbols": pool, "options": words, "answer": pool.find(want),
+		"lines": ["%s ear, %s: %s." % [String(want[0]).capitalize(), String(SYMBOL_TESTS[String(want[1])]), String(SYMBOL_WORDS[key])],
+			"Right red, left blue. O X air, < > bone, [ ] masked bone, triangle and square masked air."],
+		"hint": "Masked bone wears brackets, masked air a triangle (right) or a square (left)."}
+
+
+static func tone_tries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for t: Dictionary in TONE_TRIES:
+		var c := phones_card(String(t["ear"]), t["order"]) if String(t["kind"]) == "phones" else bone_card(t["order"])
+		c["line"] = String(t["line"])
+		out.append(c)
+	return out
+
+
+## One subject's Station A: phones, the first ear, air on both (better first), the bone, bone on the better
+## ear, the masking call, the masked sheets it needs (on the poorer ear), and one symbol to record.
+static func tone_round(rng: RandomNumberGenerator, subject_id := "") -> Array[Dictionary]:
+	var s := tone_subject(subject_id)
+	if s.is_empty():
+		s = TONE_SUBJECTS[rng.randi_range(0, TONE_SUBJECTS.size() - 1)]
+	var better := String(s["better"])
+	var worse := other_ear(better)
+	var out: Array[Dictionary] = []
+	var po: Array = [0, 1, 2, 3]
+	_shuffle(po, rng)
+	out.append(phones_card(better if rng.randi_range(0, 1) == 0 else worse, po))
+	out.append(first_card(s))
+	out.append(booth_card(s, "ac", better))
+	out.append(booth_card(s, "ac", worse))
+	var spots: Array = BONE_SPOTS.duplicate()
+	_shuffle(spots, rng)
+	out.append(bone_card(spots))
+	out.append(booth_card(s, "bc", better))
+	out.append(mask_card(s))
+	var m := String(s["mask"])
+	if m in ["bone", "both"]:
+		out.append(booth_card(s, "bc_masked", worse))
+	if m in ["air", "both"]:
+		out.append(booth_card(s, "ac_masked", worse))
+	var syms: Array = SYMBOLS.duplicate()
+	_shuffle(syms, rng)
+	var want: Array = syms[0]
+	for sy: Variant in syms:
+		if String(sy[1]) != "ac":
+			want = sy   # air O / X is easy: ask a bone or masked symbol
+			break
+	var others: Array = []
+	for sy: Variant in syms:
+		if sy != want:
+			others.append(sy)
+	# a fair set: the same ear's other bone symbol and the other ear's same symbol are always among the decoys
+	var twin: Array = [other_ear(String(want[0])), want[1]]
+	var sib: Array = [want[0], "bc" if String(want[1]) == "bc_masked" else ("bc_masked" if String(want[1]) == "bc" else "ac")]
+	others.erase(twin)
+	others.erase(sib)
+	others = [twin, sib] + others
+	out.append(symbol_card(want, others, rng))
 	return out

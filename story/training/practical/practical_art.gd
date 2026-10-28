@@ -55,6 +55,18 @@ static func draw_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: b
 			_rule(ci, size, card, reveal, wrong)
 		"walk":
 			_walk(ci, size, card, reveal, wrong, t)
+		"phones":
+			_phones(ci, size, card, reveal, wrong, t)
+		"first":
+			_first(ci, size, card, reveal, t)
+		"bone":
+			_bone(ci, size, card, reveal, wrong, t)
+		"booth":
+			_booth(ci, size, card, reveal)
+		"mask":
+			_mask(ci, size, card, reveal, wrong)
+		"symbol":
+			_symbols(ci, size, card, reveal, wrong)
 
 
 # ---------------------------------------------------------------- the kit tray
@@ -821,6 +833,190 @@ static func _ring(pts: PackedVector2Array) -> PackedVector2Array:
 	var o := pts.duplicate()
 	o.append(pts[0])
 	return o
+
+
+# ---------------------------------------------------------------- Station 3: Station A, the tones
+
+## "Phones on": the subject faces you (their right is on YOUR left), the asked ear glows; the headset waits.
+static func _phones(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	var ear := String(card["ear"])
+	var fc := Vector2(250, 250)
+	var nod := 0.0 if Game.settings.get("reduced_motion", false) else sin(t * 1.6) * 3.0
+	var ear_x := -1.0 if ear == "right" else 1.0   # their right = the viewer's left
+	ci.draw_circle(fc + Vector2(0, -14 + nod), 112.0, HAIR)
+	ci.draw_colored_polygon(_oval(fc + Vector2(0, nod), 96.0, 106.0, 32), Palette.SKIN)
+	ci.draw_polyline(_ring(_oval(fc + Vector2(0, nod), 96.0, 106.0, 32)), Palette.INK, 4.0, true)
+	for sd: float in [-1.0, 1.0]:
+		var ec := fc + Vector2(sd * 100, 6 + nod)
+		var glow := sd == ear_x and not reveal
+		if glow:
+			ci.draw_circle(ec, 34.0 + 4.0 * sin(t * 5.0), Color(Palette.SUNNY, 0.6))
+		ci.draw_colored_polygon(_oval(ec, 16.0, 28.0, 16), Palette.SKIN.darkened(0.08))
+		ci.draw_polyline(_ring(_oval(ec, 16.0, 28.0, 16)), Palette.INK, 3.0, true)
+		ci.draw_circle(fc + Vector2(sd * 34, -14 + nod), 9.0, Palette.INK)
+		ci.draw_string(UiKit.font(700), fc + Vector2(sd * 110 - 60, 160), "THEIR %s" % ("RIGHT" if sd < 0 else "LEFT"), HORIZONTAL_ALIGNMENT_CENTER, 120, 18,
+			Palette.INK if sd == ear_x else Palette.INK_SOFT)
+	ci.draw_arc(fc + Vector2(0, 34 + nod), 30.0, 0.3, PI - 0.3, 12, Palette.INK, 4.0, true)
+	if reveal:
+		var col := Palette.RIGHT_RED if ear == "right" else Palette.LEFT_BLUE
+		ci.draw_arc(fc + Vector2(0, nod), 118.0, PI * 1.08, PI * 1.92, 24, Palette.INK, 9.0, true)
+		ci.draw_circle(fc + Vector2(ear_x * 112, 6 + nod), 34.0, Palette.INK)
+		ci.draw_circle(fc + Vector2(ear_x * 112, 6 + nod), 29.0, col)
+	# the headset on the table: two cups, a band (the colour is the answer)
+	var hs := Rect2(500, 110, 340, 290)
+	UiDraw.rounded_rect(ci, hs, Palette.PAPER, 22, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), hs.position + Vector2(0, 34), "Over-ear headphones", HORIZONTAL_ALIGNMENT_CENTER, hs.size.x, 20, Palette.INK)
+	_headset(ci, hs.position + Vector2(hs.size.x * 0.5, 120), 2.0, Palette.RIGHT_RED, Palette.LEFT_BLUE)
+	ci.draw_string(UiKit.font(600), hs.position + Vector2(0, 250), "Which cup goes on this ear?", HORIZONTAL_ALIGNMENT_CENTER, hs.size.x, 18, Palette.INK_SOFT)
+	if reveal:
+		_stamp(ci, hs.position + Vector2(hs.size.x * 0.5, 210), "RED RIGHT, BLUE LEFT", GREEN, -0.05)
+	elif not wrong.is_empty():
+		_stamp(ci, hs.position + Vector2(hs.size.x * 0.5, 210), "NOT QUITE", GREY, 0.05)
+
+
+## "Which ear first?": the subject's card with what they say.
+static func _first(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	_subject(ci, size, {"subject": card["subject"], "who": card["who"], "about": "Says: %s" % String(card["says"])}, false, t)
+	if reveal:
+		var better := "RIGHT" if int(card["answer"]) == 0 else "LEFT"
+		_stamp(ci, Vector2(size.x - 260, 318), "BETTER EAR: %s" % better, Palette.RIGHT_RED if better == "RIGHT" else Palette.LEFT_BLUE, -0.08)
+
+
+## "Bone on": the head side-on with four numbered spots; the oscillator lands on the mastoid.
+static func _bone(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	var k := 1.2
+	var e := Vector2(380, 230)
+	_profile(ci, e, k, Vector2.ZERO)
+	var at := {"mastoid": e + Vector2(40, 34) * k, "pinna": e + Vector2(10, -44) * k, "canal": e + Vector2(-4, 4) * k, "crown": e + Vector2(-36, -118) * k}
+	var spots: Array = card["spots"]
+	for i in spots.size():
+		var c: Vector2 = at[String(spots[i])]
+		var right := reveal and i == int(card["answer"])
+		if right:
+			# the oscillator, its band over the head
+			ci.draw_arc(e + Vector2(-36, -20) * k, 108.0 * k, -PI * 0.62, PI * 0.2, 24, Palette.INK, 7.0, true)
+			UiDraw.rounded_rect(ci, Rect2(c - Vector2(20, 14), Vector2(40, 28)), METAL, 8, 3, Palette.INK)
+			continue
+		var col := GREY if wrong.has(i) else Palette.SUNNY
+		var pulse := 0.0 if Game.settings.get("reduced_motion", false) else 2.0 * sin(t * 4.0 + i)
+		ci.draw_circle(c, 17.0 + pulse, Palette.INK)
+		ci.draw_circle(c, 14.0 + pulse, col)
+		ci.draw_string(UiKit.font(700), c + Vector2(-17, 7), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 18, Palette.INK)
+	var note := Rect2(600, 100, 250, 300)
+	UiDraw.rounded_rect(ci, note, Palette.PAPER, 20, 3, Palette.INK)
+	UiDraw.rounded_rect(ci, Rect2(note.position + Vector2(85, 30), Vector2(80, 54)), METAL, 12, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), note.position + Vector2(0, 118), "Bone oscillator", HORIZONTAL_ALIGNMENT_CENTER, note.size.x, 20, Palette.INK)
+	_wrap(ci, "Unmasked bone: the phones come off. Where does it sit?", Rect2(note.position + Vector2(20, 136), Vector2(note.size.x - 40, 120)), 18, Palette.INK_SOFT)
+	if reveal:
+		_stamp(ci, note.position + Vector2(note.size.x * 0.5, 262), "ON THE MASTOID", GREEN, -0.06)
+
+
+## A booth hole's card: the chart so far (filled in after the AudiOtron) and the hole's tally.
+static func _booth(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool) -> void:
+	var r := Rect2(30, 86, 470, 330)
+	mini_chart(ci, r, card.get("chart", []))
+	var side := Rect2(520, 86, size.x - 550, 330)
+	UiDraw.rounded_rect(ci, side, Palette.PAPER, 20, 3, Palette.INK)
+	var col := Palette.RIGHT_RED if String(card["ear"]) == "right" else Palette.LEFT_BLUE
+	UiDraw.rounded_rect(ci, Rect2(side.position + Vector2(20, 20), Vector2(side.size.x - 40, 50)), col, 14, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), side.position + Vector2(20, 54), String(card["title"]).to_upper(), HORIZONTAL_ALIGNMENT_CENTER, side.size.x - 40, 22, Palette.PAPER)
+	if not reveal:
+		_wrap(ci, "Into the booth: the AudiOtron. Your first %d stamp%s, then Hoot fills the rest." % [int(card["stamps"]), "" if int(card["stamps"]) == 1 else "s"],
+			Rect2(side.position + Vector2(24, 96), Vector2(side.size.x - 48, 200)), 22, Palette.INK)
+		return
+	var rows: Array = [["Your stamps", str(int(card.get("mine", 0)))], ["Hoot's stamps", str(int(card.get("hoots", 0)))],
+		["Slips", str(int(card.get("slips", 0)))], ["%d dB off" % PracticalDeck.BOOTH_OFF_DB, str(int(card.get("off", 0)))]]
+	for i in rows.size():
+		var y := side.position.y + 112 + i * 44
+		ci.draw_string(UiKit.font(600), Vector2(side.position.x + 26, y), String(rows[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.INK)
+		ci.draw_string(UiKit.font(700), Vector2(side.position.x + 26, y), String(rows[i][1]), HORIZONTAL_ALIGNMENT_RIGHT, side.size.x - 52, 22, Palette.INK)
+	var clean := int(card.get("slips", 0)) + int(card.get("off", 0)) == 0
+	_stamp(ci, side.position + Vector2(side.size.x * 0.5, 300), "CLEAN" if clean else "CHECK THE TIPS", GREEN if clean else GOLD.darkened(0.3), -0.06)
+
+
+## "Mask?": the unmasked chart and the two rules.
+static func _mask(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	mini_chart(ci, Rect2(30, 86, 470, 330), card.get("chart", []))
+	var rules: Array = [["BONE", "Air %d+ over the bone:\nmask the bone." % ClinicRules.BC_MASK_GAP_DB, Color("#c9e9ff")],
+		["AIR", "Air %d+ over the other\near's bone: mask the air." % ClinicRules.IA_RULE_DB[&"phones"], Color("#ffe1d6")]]
+	for i in rules.size():
+		var b := Rect2(520, 86 + i * 120, size.x - 550, 108)
+		UiDraw.rounded_rect(ci, b, rules[i][2], 18, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(18, 32), String(rules[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.INK)
+		var ls: PackedStringArray = String(rules[i][1]).split("\n")
+		for j in ls.size():
+			ci.draw_string(UiKit.font(600), b.position + Vector2(18, 62 + j * 24), ls[j], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK)
+	ci.draw_string(UiKit.font(600), Vector2(520, 344), "Headphones: the rules assume", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Palette.INK_SOFT)
+	ci.draw_string(UiKit.font(600), Vector2(520, 366), "%d dB between the ears." % ClinicRules.IA_RULE_DB[&"phones"], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Palette.INK_SOFT)
+	if reveal:
+		_stamp(ci, Vector2(265, 250), String(card["options"][int(card["answer"])]).to_upper(), GREEN, -0.08)
+	elif not wrong.is_empty():
+		_stamp(ci, Vector2(685, 396), "LOOK AGAIN", GREY, 0.05)
+
+
+## "Record it": four drawn symbols, numbered.
+static func _symbols(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var want: Array = card["want"]
+	var ask := Rect2(40, 86, size.x - 80, 64)
+	UiDraw.rounded_rect(ci, ask, Palette.PAPER, 16, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), ask.position + Vector2(0, 42), "%s EAR, %s" % [String(want[0]).to_upper(), String(PracticalDeck.SYMBOL_TESTS[String(want[1])]).to_upper()],
+		HORIZONTAL_ALIGNMENT_CENTER, ask.size.x, 28, Palette.ear_color(String(want[0])))
+	var syms: Array = card["symbols"]
+	var w := (size.x - 80 - 3 * 14) / 4.0
+	for i in syms.size():
+		var b := Rect2(40 + i * (w + 14), 166, w, 236)
+		var right := reveal and i == int(card["answer"])
+		UiDraw.rounded_rect(ci, b, Color(GREEN, 0.18) if right else (Color(RED, 0.15) if wrong.has(i) else Palette.PAPER), 18, 3, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(b.position + Vector2(10, 10), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(10, 35), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		UiDraw.audiogram_symbol(ci, b.position + Vector2(b.size.x * 0.5, 118), String(syms[i][0]), StringName(String(syms[i][1])), 64.0, 7.0)
+		if right:
+			_stamp(ci, b.position + Vector2(b.size.x * 0.5, 204), "ON THE CHART", GREEN, -0.06)
+		elif wrong.has(i):
+			_stamp(ci, b.position + Vector2(b.size.x * 0.5, 204), "NOT THIS", GREY, 0.05)
+
+
+## A small audiogram: marks are [ear, test, freq, db, no_response]. Air (O / X) joined by lines per ear.
+static func mini_chart(ci: CanvasItem, r: Rect2, marks: Array) -> void:
+	UiDraw.rounded_rect(ci, r, Palette.PAPER, 18, 3, Palette.INK)
+	var freqs: Array[int] = ClinicRules.ROUTINE_FREQS
+	var g := Rect2(r.position + Vector2(56, 26), r.size - Vector2(80, 60))
+	var top := -10
+	var bottom := 100
+	for db in range(top, bottom + 1, 10):
+		var y := g.position.y + (db - top) * g.size.y / float(bottom - top)
+		ci.draw_line(Vector2(g.position.x, y), Vector2(g.end.x, y), Color(Palette.INK, 0.12 if db != 20 else 0.3), 2.0 if db == 20 else 1.0)
+		ci.draw_string(UiKit.font(600), Vector2(r.position.x + 6, y + 6), str(db), HORIZONTAL_ALIGNMENT_RIGHT, 40, 13, Palette.INK_SOFT)
+	for i in freqs.size():
+		var x := g.position.x + i * g.size.x / float(freqs.size() - 1)
+		ci.draw_line(Vector2(x, g.position.y), Vector2(x, g.end.y), Color(Palette.INK, 0.12), 1.0)
+		var f := freqs[i]
+		ci.draw_string(UiKit.font(700), Vector2(x - 30, r.end.y - 12), ("%sk" % str(f / 1000.0).trim_suffix(".0")) if f >= 1000 else str(f), HORIZONTAL_ALIGNMENT_CENTER, 60, 13, Palette.INK)
+	var lines := {"right": {}, "left": {}}
+	var pts: Array = []
+	for m: Variant in marks:
+		var f := int(m[2])
+		var i := freqs.find(f)
+		if i < 0:
+			continue
+		var c := Vector2(g.position.x + i * g.size.x / float(freqs.size() - 1), g.position.y + (clampi(int(m[3]), top, bottom) - top) * g.size.y / float(bottom - top))
+		var test := StringName(String(m[1]))
+		if test == &"ac" or test == &"ac_masked":
+			(lines[String(m[0])] as Dictionary)[f] = c   # masked air wins: it comes later in marks
+		pts.append([String(m[0]), test, c + UiDraw.symbol_offset(String(m[0]), test, 16.0), bool(m[4])])
+	for e: String in lines:
+		var by: Dictionary = lines[e]
+		var keys: Array = by.keys()
+		keys.sort()
+		var poly := PackedVector2Array()
+		for f: Variant in keys:
+			poly.append(by[f])
+		if poly.size() > 1:
+			ci.draw_polyline(poly, Color(Palette.ear_color(e), 0.6), 2.0, true)
+	for p: Variant in pts:
+		UiDraw.audiogram_symbol(ci, p[2], String(p[0]), p[1], 16.0, 2.5, bool(p[3]))
+	if marks.is_empty():
+		ci.draw_string(UiKit.font(600), g.position + Vector2(0, g.size.y * 0.5), "The chart fills in at the AudiOtron.", HORIZONTAL_ALIGNMENT_CENTER, g.size.x, 18, Palette.INK_SOFT)
 
 
 static func _box(ci: CanvasItem, r: Rect2, col: Color) -> void:

@@ -132,7 +132,7 @@ func test_room_switches_to_the_practical() -> void:
 	Events.awaiting_input.disconnect(acb)
 	assert_eq(beats.size(), 2, "the switch emits the beat again")
 	assert_eq(String(beats[1]["lesson"]), "practical")
-	assert_eq(beats[1]["built"], ["kit", "hands", "td"])
+	assert_eq(beats[1]["built"], ["kit", "hands", "tones", "td"])
 	assert_eq((room.get("_chips") as Array).size(), 8)
 	assert_true(room.find_child("card_kit_bag", true, false) != null, "the practical's pins")
 	assert_true(room.find_child("card_skull_wall", true, false) == null, "masking's pins are gone")
@@ -570,3 +570,154 @@ func test_ladder_rungs_and_strokes() -> void:
 	school.call("hint")
 	assert_eq(int(school.get("_hole_strokes")), 3, "one hint a hole")
 	school.queue_free()
+
+
+# ---------------------------------------------------------------- Station 3: Station A, the tones
+
+## Each practice subject answers by the rules: the AudiOtron's own textbook search finds their true air on
+## both ears and the better cochlea's bone, and the masking rules ask for exactly what the subject says.
+func test_tone_subjects_answer_by_the_rules() -> void:
+	for sd: Dictionary in PracticalDeck.TONE_SUBJECTS:
+		var p := PracticalDeck.tone_patient(sd)
+		var better := String(sd["better"])
+		var worse := PracticalDeck.other_ear(better)
+		var s := AudiometrySession.new(p, 7)
+		s.scoring = false
+		s.configure({"test": "ac", "air_transducer": "phones"})
+		for e: String in [better, worse]:
+			var guard := 0
+			while not s.is_ear_complete(e) and guard < 30:
+				guard += 1
+				assert_false(s.instant_measure(e, s.required_remaining(e)[0]).is_empty(), "%s %s measured" % [p.id, e])
+			var ac := s.stored_thresholds(e, &"ac")
+			var truth: Dictionary = sd["ac_" + e]
+			for f: int in ac:
+				assert_eq(int(ac[f]), int(truth[f]), "%s %s air %d by the rules" % [p.id, e, f])
+		var avg := func(e: String) -> float:
+			var t: Dictionary = sd["ac_" + e]
+			return float(int(t[500]) + int(t[1000]) + int(t[2000])) / 3.0
+		assert_true(float(avg.call(better)) < float(avg.call(worse)), "%s: the better ear is %s" % [p.id, better])
+		s.configure({"test": "bc", "bc_freqs": ClinicRules.BC_REQUIRED})
+		s.set_transducer(&"bone")
+		while not s.is_ear_complete(better) and s.required_remaining(better).size() > 0:
+			assert_false(s.instant_measure(better, s.required_remaining(better)[0]).is_empty())
+		var res := s.results_view()
+		var bone := ClinicRules.masked_freqs_needed(res, worse, &"bc_masked")
+		var air := ClinicRules.masked_freqs_needed(res, worse, &"ac_masked")
+		var m := String(sd["mask"])
+		assert_eq(not bone.is_empty(), m in ["bone", "both"], "%s masked bone: %s" % [p.id, bone])
+		assert_eq(not air.is_empty(), m in ["air", "both"], "%s masked air: %s" % [p.id, air])
+		assert_true(ClinicRules.masked_freqs_needed(res, better, &"bc_masked").is_empty(), "%s: nothing to mask on the better ear" % p.id)
+		assert_true(ClinicRules.masked_freqs_needed(res, better, &"ac_masked").is_empty())
+		assert_eq(p.psychometric_slope_db, 0.5)
+		assert_eq(p.false_alarms_per_minute, 0.0)
+
+
+func test_tone_round_is_honest() -> void:
+	var seen := {}
+	for seed in 60:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		var cards := PracticalDeck.tone_round(rng)
+		var kinds: Array = cards.map(func(c: Dictionary) -> String: return String(c["kind"]))
+		assert_eq(kinds.slice(0, 7), ["phones", "first", "booth", "booth", "bone", "booth", "mask"])
+		assert_eq(String(kinds[-1]), "symbol")
+		var sd := PracticalDeck.tone_subject(String(cards[1]["subject"]))
+		seen[String(sd["id"])] = true
+		var better := String(sd["better"])
+		var tests: Array = []
+		for c: Dictionary in cards:
+			assert_eq((c["lines"] as Array).size(), 2)
+			if String(c["kind"]) == "booth":
+				tests.append("%s:%s" % [c["test"], c["ear"]])
+				assert_eq(String(c["subject"]), String(sd["id"]))
+				assert_eq(int(c["stamps"]), int(PracticalDeck.TONE_STAMPS[String(c["test"])]))
+				continue
+			var ans := int(c["answer"])
+			var opts: Array = c["options"]
+			assert_true(ans >= 0 and ans < opts.size() and opts.size() <= 4, "answer in range")
+			var uniq := {}
+			for o: Variant in opts:
+				uniq[String(o)] = true
+			assert_eq(uniq.size(), opts.size(), "no repeated options")
+			match String(c["kind"]):
+				"phones":
+					assert_eq(String(opts[ans]), "Red cup" if String(c["ear"]) == "right" else "Blue cup")
+				"first":
+					assert_eq(String(opts[ans]), "%s ear" % better.capitalize())
+				"mask":
+					assert_eq(ans, int(PracticalDeck.MASK_ANSWER[String(sd["mask"])]))
+				"symbol":
+					var want: Array = c["want"]
+					assert_ne(String(want[1]), "ac", "a bone or masked symbol")
+					assert_eq(String(opts[ans]), String(PracticalDeck.SYMBOL_WORDS["%s:%s" % [want[0], want[1]]]))
+					assert_true((c["symbols"] as Array).has([PracticalDeck.other_ear(String(want[0])), want[1]]), "the other ear's twin is a decoy")
+		var worse := PracticalDeck.other_ear(better)
+		var want_tests := ["ac:" + better, "ac:" + worse, "bc:" + better]
+		if String(sd["mask"]) in ["bone", "both"]:
+			want_tests.append("bc_masked:" + worse)
+		if String(sd["mask"]) in ["air", "both"]:
+			want_tests.append("ac_masked:" + worse)
+		assert_eq(tests, want_tests, "%s's booth holes" % sd["id"])
+	assert_eq(seen.size(), PracticalDeck.TONE_SUBJECTS.size(), "every subject comes up")
+
+
+func test_tone_cards_draw() -> void:
+	var c := Control.new()
+	c.size = Vector2(880, 440)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4
+	var cards := PracticalDeck.tone_round(rng, "pt_may") + PracticalDeck.tone_tries()
+	var marks := [["right", "ac", 1000, 10, false], ["left", "ac", 1000, 50, false], ["right", "bc", 1000, 10, false],
+		["left", "bc_masked", 1000, 50, false], ["left", "ac_masked", 8000, 100, true]]
+	for card: Dictionary in cards:
+		if String(card["kind"]) in ["booth", "mask"]:
+			card["chart"] = marks
+	var k := [0]
+	c.draw.connect(func() -> void:
+		var card: Dictionary = cards[(k[0] / 2) % cards.size()]
+		PracticalArt.draw_card(c, c.size, card, k[0] % 2 == 0, [] if k[0] % 2 == 0 else [1], 0.4))
+	add_node(c)
+	for i in cards.size() * 2:
+		k[0] = i
+		c.queue_redraw()
+		await wait_frames(1)
+	c.queue_free()
+
+
+## Station 3 plays through by its solvers with Aunt May (both masked sheets): two guided cards, the pick
+## holes and five booth holes on the real AudiOtron at par, Hoot's montage finishing each ear, the
+## Station A Order card.
+func test_tones_plays_by_solvers() -> void:
+	Game.cli = {"seed": 3, "subject": "pt_may"}
+	PracticalSchool.next_station = "tones"
+	PracticalSchool.last_result = {}
+	var firsts := {}
+	var booths: Array = []
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		firsts[beat] = int(firsts.get(beat, 0)) + 1
+		if beat == &"practical_booth":
+			booths.append("%s:%s" % [info["test"], info["ear"]])
+		solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	var scale := Engine.time_scale
+	Engine.time_scale = 4.0
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	add_node(school)
+	var t0 := Time.get_ticks_msec()
+	while went.is_empty() and Time.get_ticks_msec() - t0 < 120000:
+		await wait_frames(1)
+	Engine.time_scale = scale
+	Events.awaiting_input.disconnect(acb)
+	Events.goto_scene.disconnect(gcb)
+	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
+	assert_eq(int(firsts.get(&"practical_try", 0)), 2)
+	assert_eq(int(firsts.get(&"practical_card", 0)), 5, "phones, first ear, bone, mask, symbol")
+	assert_eq(booths, ["ac:right", "ac:left", "bc:right", "bc_masked:left", "ac_masked:left"])
+	assert_eq(PracticalSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+	assert_true(TrainingProgress.has_card("practical", "station_a"))
+	assert_eq(school.get("_screen"), null, "the AudiOtron left with the round")
+	assert_eq(school.find_children("*", "AudiometerScreen", true, false).size(), 0)
