@@ -73,19 +73,19 @@ static func card_station(card_id: String) -> int:
 	return 0
 
 
-## A cheat-sheet card: {id, title, color, ink, lines}.
+## A cheat-sheet card: {id, title, color, ink, lines}. Four lines at most: the room pins eight small cards.
 static func cheat_card(id: String) -> Dictionary:
 	match id:
 		"kit_bag":
 			return {"id": id, "title": "Kit Bag", "color": Color("#c9ccd6"), "ink": Palette.INK,
-				"lines": ["Audiometer: cal. in %d months." % CAL_MONTHS, "Over-ear phones. Bone. Otoscope.",
-					"One-piece syringe or hand gun.", "Dams. In-date material. Tube.", "Gel %d oz max. No-bleach wipes." % SANITIZER_MAX_OZ]}
+				"lines": ["Audiometer: cal. in %d months." % CAL_MONTHS, "Over-ear phones, bone, otoscope.",
+					"One-piece syringe or hand gun.", "Gel %d oz max. No-bleach wipes." % SANITIZER_MAX_OZ]}
 		"safe_support":
 			return {"id": id, "title": "Safe Support", "color": Color("#5bc8a3"), "ink": Palette.INK,
 				"lines": ["Bridge hand on the head.", "Instrument hand braced.", "Hands, head, light: one unit."]}
 		"refer_8":
 			return {"id": id, "title": "California Refer 8", "color": Color("#e5383b"), "ink": Palette.PAPER,
-				"lines": ["Deformity. Drainage (90 d).", "Sudden loss (90 d). Dizzy.", "One-sided sudden loss.", "Big air-bone gap. Wax/object.", "Pain."]}
+				"lines": ["Deformity. Drainage (90 d).", "Sudden loss (90 d). Dizzy.", "One-sided sudden loss. Pain.", "Big air-bone gap. Wax/object."]}
 		"station_a":
 			return {"id": id, "title": "Station A Order", "color": Color("#f2b632"), "ink": Palette.INK,
 				"lines": ["Check. Wash. Look.", "Air, better ear first. Bone.", "Mask: plateau. TD. Record."]}

@@ -451,12 +451,12 @@ func _build_lesson() -> void:
 	var order: Array = d.CARD_ORDER
 	for i in order.size():
 		var id := String(order[i])
-		var cc := CheatCard.new(d.cheat_card(id), got.has(id), 13 if small else 15)
+		var cc := CheatCard.new(d.cheat_card(id), got.has(id), 12 if small else 15)
 		cc.name = "card_%s" % id
 		cc.hint = "Station %d" % (PracticalDeck.card_station(id) if lesson == "practical" else i + 1)
 		if small:
-			cc.size = Vector2(182, 100)
-			cc.position = PINS_RECT.position + Vector2(10 + (i % 2) * 196, 62 + (i / 2) * 112)
+			cc.size = Vector2(182, 110)
+			cc.position = PINS_RECT.position + Vector2(10 + (i % 2) * 196, 56 + (i / 2) * 115)
 		else:
 			cc.size = Vector2(182, 132)
 			cc.position = PINS_RECT.position + Vector2(10 + (i % 2) * 196, 64 + (i / 2) * 148)

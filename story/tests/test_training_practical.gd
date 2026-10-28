@@ -36,7 +36,7 @@ func test_deck_is_complete() -> void:
 		var c := PracticalDeck.cheat_card(id)
 		assert_false(c.is_empty(), "card %s" % id)
 		assert_true(PracticalDeck.card_station(id) > 0, "a station earns %s" % id)
-		assert_true((c["lines"] as Array).size() >= 3)
+		assert_true((c["lines"] as Array).size() >= 3 and (c["lines"] as Array).size() <= 4, "%s: 3-4 lines fit a pinned card" % id)
 	assert_true(bool(PracticalDeck.station("kit")["built"]))
 	assert_eq(PracticalDeck.cheat_card("nope"), {})
 
