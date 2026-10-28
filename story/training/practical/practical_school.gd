@@ -16,7 +16,8 @@ extends Control
 ## a symbol, and booth holes on the real AudiOtron with a practice subject who answers by the rules: the
 ## player's first stamps, then Hoot's montage). 5 "One good impression" (the steps, one rung at a time with four
 ## choices each; the dam's size or depth; the syringe tip or the fill; the cure or the way out; two impressions
-## to judge).
+## to judge). 6 "Delivery day" (the retube, the RIC's wire and dome, three of Gus's first-week questions). 7 "The
+## bench" (three aids with a ticket and a find, the whistle, the test box, fix / send / replace).
 ## Controls: keys 1-4 answer, H hint (a stroke), Enter / Space go on, R plays again on the scorecard,
 ## T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off:
 ## every answer is drawn, and no tone is ever played to test the player.
@@ -525,6 +526,22 @@ func _ask_line() -> String:
 			return "It's out. What now?" if bool(_card["after"]) else "Cured. How does it come out?"
 		"judge":
 			return "Here's the impression. Send it, or what's wrong?"
+		"tube":
+			return "The old tube is hard and yellow. Which new tube is right?"
+		"wire":
+			return "Same RIC on three wire lengths. Which one fits this ear?"
+		"dome":
+			return "Wire's right. Which dome for this canal?"
+		"counsel":
+			return "Gus is back for his week-one chat. What do you say?"
+		"bench":
+			return "Read the ticket and the find. What's the fix?"
+		"box":
+			return "Easy fixes done, still not right. Which measure is off?"
+		"whistle":
+			return "It whistles. What kind of whistle is it?"
+		"fate":
+			return "Fix it here, send it to the maker, or replace it?"
 	return "Pick one."
 
 
@@ -567,6 +584,12 @@ func _ask_feedback() -> String:
 			return "Your subject's chart from the booth. The rules are drawn on the right."
 		"symbol":
 			return "The board marks every symbol: right red, left blue, the right shape for each test."
+		"tube", "wire", "dome":
+			return "Station B's delivery: retube with pre-bent #13 tubing, fit the RIC to the ear, then orient a new user."
+		"counsel":
+			return "Realistic expectations, wearing time, care: answer true AND kind."
+		"bench", "box", "whistle", "fate":
+			return "The bench tree: look, listen, test, fix. Can't fix it? Send it in. Can't send it? Replace."
 		"steps", "dam", "depth", "tip", "fill", "cure", "out", "judge":
 			return "One impression only. Safe support for the light and the syringe; an unsafe pick is a STOP (+%d)." % PracticalDeck.UNSAFE_STROKES
 	return ""

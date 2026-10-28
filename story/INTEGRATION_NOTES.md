@@ -460,7 +460,9 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   booth strokes: 1 + slips (`session.errors`) + stamps 10 dB off (`error_db`), at most +3; beat `practical_booth`).
   The audiometer and clinic are used as is: no change to `ui/` or `world/`. 5 impression ("One good impression":
   the steps, the dam's size or depth, the syringe tip or the fill, the cure or the way out, two impressions to
-  judge; a ladder card may carry `rung_options`, its own four choices per rung). A new station is a `PracticalDeck.STATIONS` entry with
+  judge; a ladder card may carry `rung_options`, its own four choices per rung); 6 delivery ("Delivery day": the
+  retube, the RIC's wire and dome, Gus's week-one questions) and 7 bench ("The bench": aids with tickets, the
+  whistle, the test box, fix / send / replace). Only Station 8, the exam day, is left to build. A new station is a `PracticalDeck.STATIONS` entry with
   `built: true` plus its `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot
   `story/tests/practical_check.tscn`. No new data files.
   - **movies.gd** (additive): registry line `"steady_hand"` (`story/explainers/movies/steady_hand.gd`, chapter `gus`,
