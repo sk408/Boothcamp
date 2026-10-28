@@ -458,7 +458,9 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   practice subject built in code, `PracticalDeck.tone_patient()`: three of Station 1's subjects who answer by the rules
   (slope 0.5, no false alarms), `start_test` plans with `hoot_turn_after` = the player's stamps and `montage_after`;
   booth strokes: 1 + slips (`session.errors`) + stamps 10 dB off (`error_db`), at most +3; beat `practical_booth`).
-  The audiometer and clinic are used as is: no change to `ui/` or `world/`. A new station is a `PracticalDeck.STATIONS` entry with
+  The audiometer and clinic are used as is: no change to `ui/` or `world/`. 5 impression ("One good impression":
+  the steps, the dam's size or depth, the syringe tip or the fill, the cure or the way out, two impressions to
+  judge; a ladder card may carry `rung_options`, its own four choices per rung). A new station is a `PracticalDeck.STATIONS` entry with
   `built: true` plus its `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot
   `story/tests/practical_check.tscn`. No new data files.
   - **movies.gd** (additive): registry line `"steady_hand"` (`story/explainers/movies/steady_hand.gd`, chapter `gus`,

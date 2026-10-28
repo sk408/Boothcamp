@@ -14,7 +14,9 @@ extends Control
 ## (the seat, the first pitch, the TD routine's rules, two ladder walks: one call per rung of beep pairs,
 ## the face drawn, nothing loud ever played). 3 "Station A: the tones" (phones, first ear, bone, the masking call,
 ## a symbol, and booth holes on the real AudiOtron with a practice subject who answers by the rules: the
-## player's first stamps, then Hoot's montage).
+## player's first stamps, then Hoot's montage). 5 "One good impression" (the steps, one rung at a time with four
+## choices each; the dam's size or depth; the syringe tip or the fill; the cure or the way out; two impressions
+## to judge).
 ## Controls: keys 1-4 answer, H hint (a stroke), Enter / Space go on, R plays again on the scorecard,
 ## T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off:
 ## every answer is drawn, and no tone is ever played to test the player.
@@ -507,12 +509,31 @@ func _ask_line() -> String:
 			return "Air on both ears, bone on the better one. What does the chart need now?"
 		"symbol":
 			return "Record it. Which symbol goes on the chart?"
+		"steps":
+			return _rung_line()
+		"dam":
+			return "This is a %s canal. Which dam?" % String(_card["canal"])
+		"depth":
+			return "Dam picked. How deep does it go?"
+		"tip":
+			return "Material mixed and loaded. Which syringe is ready to fill?"
+		"fill":
+			return "Dam placed and checked. How do you fill?"
+		"cure":
+			return "%d minutes in. Fingernail test on the leftover: cured?" % int(_card["minutes"])
+		"out":
+			return "It's out. What now?" if bool(_card["after"]) else "Cured. How does it come out?"
+		"judge":
+			return "Here's the impression. Send it, or what's wrong?"
 	return "Pick one."
 
 
 ## The ladder's live rung, in words: what the face does (the answer is the player's to call).
 func _rung_line() -> String:
 	var step := int(_card.get("step", 0))
+	if String(_card["kind"]) == "steps":
+		var done := int(_card["from"]) + step - 1
+		return "What comes first?" if done < 0 else "Done: %s. What comes next?" % PracticalDeck.IMP_STEPS[done].to_lower()
 	var db := int((_card["levels"] as Array)[step])
 	var face := String((_card["faces"] as Array)[step])
 	var words := {"calm": "a calm face.", "frown": "a little frown.", "finger": "a finger goes up.", "hand": "the whole hand goes up!"}
@@ -546,6 +567,8 @@ func _ask_feedback() -> String:
 			return "Your subject's chart from the booth. The rules are drawn on the right."
 		"symbol":
 			return "The board marks every symbol: right red, left blue, the right shape for each test."
+		"steps", "dam", "depth", "tip", "fill", "cure", "out", "judge":
+			return "One impression only. Safe support for the light and the syringe; an unsafe pick is a STOP (+%d)." % PracticalDeck.UNSAFE_STROKES
 	return ""
 
 
@@ -561,6 +584,8 @@ func pick(i: int) -> void:
 		# a ladder rung, right: the next pair (a soft tick and a drawn wave; nothing loud ever plays)
 		_card["step"] = step + 1
 		_card["answer"] = int(answers[step + 1])
+		if _card.has("rung_options"):   # Station 5's steps: each rung has its own four
+			_card["options"] = (_card["rung_options"][step + 1] as Array).duplicate()
 		_card["rung_at"] = _stage_t
 		_wrong.clear()
 		Sfx.play(&"click", 1.3, -14.0)

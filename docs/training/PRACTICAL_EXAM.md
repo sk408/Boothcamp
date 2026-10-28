@@ -4,7 +4,7 @@ Steve asked (2026-10-28) for "exhaustive research into the california hearing ai
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
 (section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
-(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5); Station 5, One good impression (PR 6). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -177,6 +177,15 @@ judge the impression. Only one impression.
 - **Judge it:** a round of six cartoon impressions; tap the fault or OK: **void, too short (no second bend), dam
   missing, folded helix, blob, OK**.
 - **Earns:** the **Impression Steps** card (orange).
+- **As built (PR 6):** the same pick-one frame as Stations 1, 2 and 4 (no drag-and-drop yet), six holes, keys 1-4:
+  "What comes next?" (a ladder over four of the eleven steps in a row: each rung shows the checklist so far and
+  offers the next step with three later or long-done ones; a miss is +1 and stays on the rung), the dam (its size
+  for a drawn small, medium or large canal, where "No dam" is a STOP, or how deep it goes, where "against the
+  eardrum" is a STOP), the syringe tip (four drawn tips: fully expressed, a bubble, half-way, already setting) or
+  the fill (from the dam outward, tip buried), the cure (the fingernail test and a drawn clock) or the way out
+  (break the seal; or, once out, look in the ear again), and two impressions to judge out of OK, a void, too
+  short, no dam on the tip, a folded helix and a blob. Try it: the dam's depth, then an OK impression. The real
+  steps of placing the dam under safe support live in Station 2's grips; a hands-on squeeze is a later idea.
 
 ### 3.6 Station 6: "Delivery day" (RIC fit, retube and counselling)
 

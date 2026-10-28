@@ -109,7 +109,7 @@ func test_kit_tries_and_months() -> void:
 	assert_eq(String(tries[0]["items"][int(tries[0]["answer"])]), "inserts")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH), "Mar 2027")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH - 3), "Dec 2026")
-	assert_eq(PracticalDeck.deal("impression", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
+	assert_eq(PracticalDeck.deal("delivery", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
 
 
 ## The room's tabs: Masking School first; THE PRACTICAL shows eight chips and its own cards, emits its
@@ -132,7 +132,7 @@ func test_room_switches_to_the_practical() -> void:
 	Events.awaiting_input.disconnect(acb)
 	assert_eq(beats.size(), 2, "the switch emits the beat again")
 	assert_eq(String(beats[1]["lesson"]), "practical")
-	assert_eq(beats[1]["built"], ["kit", "hands", "tones", "td"])
+	assert_eq(beats[1]["built"], ["kit", "hands", "tones", "td", "impression"])
 	assert_eq((room.get("_chips") as Array).size(), 8)
 	assert_true(room.find_child("card_kit_bag", true, false) != null, "the practical's pins")
 	assert_true(room.find_child("card_skull_wall", true, false) == null, "masking's pins are gone")
@@ -140,7 +140,7 @@ func test_room_switches_to_the_practical() -> void:
 	var went := []
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
-	room.call("open_station", 4)   # SOON
+	room.call("open_station", 5)   # SOON
 	assert_eq(went, [])
 	PracticalSchool.next_station = ""
 	solvers[1].call()
@@ -721,3 +721,119 @@ func test_tones_plays_by_solvers() -> void:
 	assert_true(TrainingProgress.has_card("practical", "station_a"))
 	assert_eq(school.get("_screen"), null, "the AudiOtron left with the round")
 	assert_eq(school.find_children("*", "AudiometerScreen", true, false).size(), 0)
+
+
+# ---------------------------------------------------------------- Station 5: One good impression
+
+func test_impression_round_is_honest() -> void:
+	var faults := {}
+	for seed in 60:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		var cards := PracticalDeck.impression_round(rng)
+		assert_eq(cards.size(), PracticalDeck.ROUND_HOLES)
+		assert_eq(String(cards[0]["kind"]), "steps")
+		assert_true(String(cards[1]["kind"]) in ["dam", "depth"])
+		assert_true(String(cards[2]["kind"]) in ["tip", "fill"])
+		assert_true(String(cards[3]["kind"]) in ["cure", "out"])
+		assert_eq(String(cards[4]["kind"]), "judge")
+		assert_eq(String(cards[5]["kind"]), "judge")
+		assert_ne(String(cards[4]["fault"]), String(cards[5]["fault"]), "two different impressions")
+		assert_false(String(cards[4]["fault"]) == "ok" and String(cards[5]["fault"]) == "ok")
+		for c: Dictionary in cards:
+			var opts: Array = c["options"]
+			var ans := int(c["answer"])
+			assert_true(ans >= 0 and ans < opts.size() and opts.size() <= 4)
+			assert_eq((c["lines"] as Array).size(), 2)
+			for u: Variant in c.get("unsafe", []):
+				assert_ne(int(u), ans, "the right answer is never a STOP")
+			match String(c["kind"]):
+				"steps":
+					var from := int(c["from"])
+					var ro: Array = c["rung_options"]
+					assert_eq(ro.size(), PracticalDeck.STEP_RUNGS)
+					for r in ro.size():
+						var words: Array = ro[r]
+						assert_eq(words.size(), 4)
+						assert_eq(String(words[int(c["answers"][r])]), PracticalDeck.IMP_STEPS[from + r], "the next step")
+						for w: Variant in words:
+							var i := PracticalDeck.IMP_STEPS.find(String(w))
+							assert_true(i == from + r or i > from + r or i < from, "no step already done in this ladder")
+				"dam":
+					assert_eq(PracticalDeck.SIZES[ans], String(c["canal"]))
+					assert_eq(c["unsafe"], [PracticalDeck.DAM_NONE])
+				"depth":
+					assert_eq(String(c["depths"][ans]), "second")
+					assert_eq(String(c["depths"][int(c["unsafe"][0])]), "eardrum")
+				"tip":
+					assert_eq(String(c["tips"][ans]), "ready")
+				"fill":
+					assert_eq(String(opts[ans]), PracticalDeck.FILL_RIGHT)
+				"cure":
+					assert_eq(ans, 0 if bool(c["dent"]) else 1)
+				"out":
+					assert_eq(String(opts[ans]), PracticalDeck.AFTER_RIGHT if bool(c["after"]) else PracticalDeck.OUT_RIGHT)
+				"judge":
+					faults[String(c["fault"])] = true
+					assert_eq(String(c["faults"][ans]), String(c["fault"]))
+					assert_eq(String(opts[ans]), String(PracticalDeck.FAULTS_IMP[String(c["fault"])]["name"]))
+	assert_eq(faults.size(), PracticalDeck.FAULTS_IMP.size(), "every fault and OK come up")
+
+
+func test_impression_cards_draw() -> void:
+	var c := Control.new()
+	c.size = Vector2(880, 440)
+	var cards: Array[Dictionary] = PracticalDeck.impression_tries()
+	for seed in 6:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		cards.append_array(PracticalDeck.impression_round(rng))
+	for f: String in PracticalDeck.FAULTS_IMP:
+		cards.append(PracticalDeck.judge_card(f, ["ok", "void", "short", "fold"] if f in ["ok", "void", "short", "fold"] else [f, "ok", "void", "short"]))
+	var k := [0]
+	c.draw.connect(func() -> void:
+		var card: Dictionary = cards[(k[0] / 2) % cards.size()]
+		PracticalArt.draw_card(c, c.size, card, k[0] % 2 == 0, [] if k[0] % 2 == 0 else [1], 0.4))
+	add_node(c)
+	for i in cards.size() * 2:
+		k[0] = i
+		c.queue_redraw()
+		await wait_frames(1)
+	c.queue_free()
+
+
+## Station 5 plays through by its solvers: two guided cards, six holes at par (the steps ladder asks once per
+## rung with that rung's own four), the Impression Steps card.
+func test_impression_plays_by_solvers() -> void:
+	Game.cli = {"seed": 4}
+	PracticalSchool.next_station = "impression"
+	PracticalSchool.last_result = {}
+	var firsts := {}
+	var rung_opts: Array = []
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		if int(info.get("sub", 0)) == 0:
+			firsts[beat] = int(firsts.get(beat, 0)) + 1
+		if beat == &"practical_card" and String(info.get("kind", "")) == "steps":
+			rung_opts.append((info["options"] as Array)[int(info["best"])])
+		solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	add_node(school)
+	for i in 1200:
+		if not went.is_empty():
+			break
+		await wait_frames(1)
+	Events.awaiting_input.disconnect(acb)
+	Events.goto_scene.disconnect(gcb)
+	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
+	assert_eq(int(firsts.get(&"practical_try", 0)), 2)
+	assert_eq(int(firsts.get(&"practical_card", 0)), 6)
+	assert_eq(rung_opts.size(), PracticalDeck.STEP_RUNGS, "one beat per rung")
+	var i0 := PracticalDeck.IMP_STEPS.find(String(rung_opts[0]))
+	for r in rung_opts.size():
+		assert_eq(String(rung_opts[r]), PracticalDeck.IMP_STEPS[i0 + r], "each rung's best is the next step")
+	assert_eq(PracticalSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1])
+	assert_true(TrainingProgress.has_card("practical", "impression"))
