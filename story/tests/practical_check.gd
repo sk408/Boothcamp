@@ -3,18 +3,19 @@ extends Node
 ## end to end with a test bot and prints PRACTICAL_CHECK_RESULT {json} (docs/training/PRACTICAL_EXAM.md).
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/practical_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=kit picks the station (default kit, the only one built so far). The room opens on Masking
+## --station=kit|hands picks the station (default kit). The room opens on Masking
 ## School, so the bot first switches to THE PRACTICAL (the tab's click with --policy=mouse, Tab with keys,
 ## select_lesson for careful), then opens the station.
 ## Policies (--policy=):
 ##   careful  every beat's solver: each Try it and hole answered right, at par
 ##   keys     real key presses: Enter, 1-4 for the right answer, Enter, T on the scorecard
 ##   mouse    real clicks only: the tab, the station, Start, the answers, Next, "Back to the Training room"
-##   guess    real keys, a wrong answer first on every hole: every hole a bogey, no star
+##   guess    real keys, a wrong answer first on every hole: every hole a bogey (an unsafe grip a STOP,
+##            PracticalDeck.UNSAFE_STROKES over), no star
 ##   hint     real keys, Hoot's hint (H) then the right answer: every hole a bogey, no star
 ## --via-title: start on the title and open the Training room from its Training button, as a player would.
 ## Every run ends back in the Training room on THE PRACTICAL, whose station must then show its record
-## and card. --shots=/abs/dir under xvfb: practical_room, practical_intro, practical_try, practical_card,
+## and card(s). A first visit to a station with a movie (Station 2) starts it; the bot skips it. --shots=/abs/dir under xvfb: practical_room, practical_intro, practical_try, practical_card,
 ## practical_card_right, practical_scorecard, practical_room_after.
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
@@ -70,6 +71,7 @@ class Driver extends Node:
 	var beats := {}
 	var school: Node
 	var visits := 0
+	var expect_over := 0   # what this run's misses and hints should cost
 	var result: Dictionary = {}
 	var _clock := 0.0
 	var _last := 0.0
@@ -161,9 +163,18 @@ class Driver extends Node:
 				await _wait(READ_S)
 				await _shoot("practical_try")
 				await _answer(data, solver, false)
+			&"explainer":
+				await _wait(0.6)
+				solver.call()   # skip Hoot's movie (test_training_practical checks it)
 			&"practical_card":
 				await _wait(READ_S)
 				await _shoot("practical_card")
+				await _shoot("practical_card_%s" % String(data.get("kind", "")))
+				var n := (data["options"] as Array).size()
+				if policy == "guess":
+					expect_over += PracticalDeck.UNSAFE_STROKES if (data.get("unsafe", []) as Array).has((int(data["best"]) + 1) % n) else 1
+				elif policy == "hint":
+					expect_over += 1
 				await _answer(data, solver, true)
 			&"practical_next":
 				await _wait(0.4)
@@ -209,7 +220,7 @@ class Driver extends Node:
 			"careful":
 				solver.call()
 			"mouse":
-				await _click_text(String((beat["options"] as Array)[best]))
+				await _click_text(String((beat["options"] as Array)[best]), true)   # the button, not Hoot's line
 			"keys":
 				await _key(KEY_1 + best)
 			"guess":
@@ -227,7 +238,7 @@ class Driver extends Node:
 		var holes := PracticalDeck.ROUND_HOLES
 		if strokes.size() != holes:
 			problems.append("%d holes, expected %d" % [strokes.size(), holes])
-		var want := 0 if policy in ["careful", "keys", "mouse"] else holes
+		var want := expect_over
 		if over != want:
 			problems.append("%s run finished %d over par, expected %d (strokes %s)" % [policy, over, want, str(strokes)])
 		if bool(score.get("star", false)) != (want == 0):
@@ -242,13 +253,15 @@ class Driver extends Node:
 			problems.append("station %s saved %d plays" % [station, int(rec["plays"])])
 		if bool(rec["star"]) != bool(result.get("star", false)):
 			problems.append("station %s's saved star is %s" % [station, str(rec["star"])])
-		var card_id := String(info["card"])
-		if not Progress.has_card(PracticalDeck.LESSON, card_id):
-			problems.append("the %s card was not earned" % card_id)
 		var room := get_tree().get_first_node_in_group("training_room")
-		var card := room.find_child("card_" + card_id, true, false) if room != null else null
-		if card == null or not bool(card.get("earned")):
-			problems.append("the room does not pin the %s card" % card_id)
+		for card_id: String in [String(info["card"]), String(info.get("card2", ""))]:
+			if card_id == "":
+				continue
+			if not Progress.has_card(PracticalDeck.LESSON, card_id):
+				problems.append("the %s card was not earned" % card_id)
+			var card := room.find_child("card_" + card_id, true, false) if room != null else null
+			if card == null or not bool(card.get("earned")):
+				problems.append("the room does not pin the %s card" % card_id)
 		if Progress.stars("masking") != 0 or not Progress.cards("masking").is_empty():
 			problems.append("The Practical wrote into Masking School's save")
 		var code := 0
@@ -325,11 +338,11 @@ class Driver extends Node:
 			Input.parse_input_event(ev)
 			await _frames(2)
 
-	func _find_text(prefix: String, root: Node = null) -> Control:
+	func _find_text(prefix: String, root: Node = null, buttons := false) -> Control:
 		if root == null:
 			root = get_tree().root
 		for c in root.get_children():
-			var found := _find_text(prefix, c)
+			var found := _find_text(prefix, c, buttons)
 			if found != null:
 				return found
 		if root is Control and (root as Control).is_visible_in_tree():
@@ -338,14 +351,14 @@ class Driver extends Node:
 				t = (root as Button).text
 				if (root as Button).disabled:
 					t = ""
-			elif root is Label:
+			elif root is Label and not buttons:
 				t = (root as Label).text
 			if t != "" and t.strip_edges().begins_with(prefix):
 				return root as Control
 		return null
 
-	func _click_text(prefix: String) -> void:
-		var c := _find_text(prefix)
+	func _click_text(prefix: String, buttons := false) -> void:
+		var c := _find_text(prefix, null, buttons)
 		if c == null:
 			misses.append("text '%s'" % prefix)
 			return

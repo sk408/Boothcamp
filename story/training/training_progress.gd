@@ -46,6 +46,15 @@ static func record_round(lesson: String, id: String, over_par: int, card := "", 
 	return {"best": rec["best"], "star": rec["star"], "new_best": new_best, "new_card": new_card, "new_star": rec["star"] and not old["star"]}
 
 
+## (the Practical) Earn a card outside a round's own (Station 2 earns two). True when it is new. Saves.
+static func earn_card(lesson: String, id: String) -> bool:
+	if id == "" or has_card(lesson, id):
+		return false
+	(data(lesson)["cards"] as Array).append(id)
+	Game.save_game()
+	return true
+
+
 static func cards(lesson: String) -> PackedStringArray:
 	var out := PackedStringArray()
 	for v: Variant in data(lesson)["cards"]:

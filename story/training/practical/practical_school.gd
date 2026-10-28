@@ -2,19 +2,23 @@ extends Control
 ## PracticalSchool (training, story-internal): one station of The Practical, the Training room's second
 ## lesson (docs/training/PRACTICAL_EXAM.md). The room sets `next_station` and opens this scene; the
 ## station runs Masking School's loop and comes back to the room:
-##   1. Hoot's card (what the station is for, the lesson's disclaimer)
+##   1. Hoot's card (what the station is for, the lesson's disclaimer; on a first visit to a station
+##      with a movie, Hoot's movie plays after Start)
 ##   2. Try it (Hoot's guided cards: only the right answer is open)
 ##   3. Your round (PracticalDeck.ROUND_HOLES pick-one cards, instant feedback, golf strokes)
 ##   4. The scorecard (holes, the round, the star, a new cheat-sheet card)
 ## Stations built so far: 1 "Pack the bag" (what stays home, the calibration sticker, the listening
-## check, the subject).
+## check, the subject); 2 "Steady hands" (the safe grip, a grip to judge, hygiene, three looks to go
+## ahead or refer by California's eight; its movie "The Steady Hand"). An unsafe pick (a grip that
+## isn't braced) is the lesson's one STOP: it costs PracticalDeck.UNSAFE_STROKES, not one.
 ## Controls: keys 1-4 answer, H hint (a stroke), Enter / Space go on, R plays again on the scorecard,
 ## T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off:
 ## every answer is drawn, and no tone is ever played to test the player.
 ## Beats (CONTRACTS.md §3.2; solvers go through the same code as a click):
 ##   practical_intro {station}                                solver: Start
+##   explainer (the station's movie, first visit)             solver: skip
 ##   practical_try {station, step, best, options, mouse}      solver: the right answer, then Next
-##   practical_card {station, hole, best, options, mouse}     solver: the right answer
+##   practical_card {station, hole, kind, best, options, unsafe, mouse}  solver: the right answer
 ##   practical_next {station, hole}                           solver: Next
 ##   practical_scorecard {station, over_par, star}            solver: back to the room
 
@@ -25,6 +29,7 @@ const PracticalArt := preload("res://story/training/practical/practical_art.gd")
 const TrainingProgress := preload("res://story/training/training_progress.gd")
 const CheatCard := preload("res://story/training/cheat_card.gd")
 const ROOM_SCENE := "res://story/training/training_room.tscn"
+const PLAYER_SCENE := "res://story/explainers/explainer_player.tscn"
 
 const FIELD := Vector2(1280, 720)
 const STAGE_AT := Vector2(24, 84)
@@ -104,6 +109,10 @@ func _run() -> void:
 	Events.phase_changed.emit(&"training", {"lesson": PracticalDeck.LESSON, "station": station_id})
 	if not await _intro():
 		return
+	if _movie() != "" and not Game.is_movie_seen(_movie()):
+		await _play_movie()
+	if _leaving:
+		return
 	await _try_it()
 	if _leaving:
 		return
@@ -121,6 +130,10 @@ func _intro() -> bool:
 	Events.awaiting_input.emit(&"practical_intro", {"station": station_id, "mouse": {"click": "Start"}}, start)
 	var what: StringName = await _go
 	Events.input_resolved.emit(&"practical_intro")
+	if what == &"movie":
+		_hide_overlay()
+		await _play_movie()
+		return await _intro()
 	_hide_overlay()
 	return what == &"start"
 
@@ -130,6 +143,26 @@ func start() -> void:
 		_state = &"busy"
 		Sfx.play(&"click")
 		_go.emit(&"start")
+
+
+func rewatch() -> void:
+	if _state == &"intro":
+		_state = &"busy"
+		Sfx.play(&"click")
+		_go.emit(&"movie")
+
+
+## The station's lead-in movie ("" for none).
+func _movie() -> String:
+	return String(info.get("movie", ""))
+
+
+func _play_movie() -> void:
+	_say("A quick cartoon first: Hoot's movie!")
+	var player: Node = (load(PLAYER_SCENE) as PackedScene).instantiate()
+	add_child(player)
+	await player.call("play", _movie(), "training")
+	player.queue_free()
 
 
 # ---------------------------------------------------------------- try it
@@ -178,7 +211,8 @@ func _round() -> void:
 		var opts: Array = _card["options"]
 		var best := int(_card["answer"])
 		Events.awaiting_input.emit(&"practical_card", {"station": station_id, "hole": h, "kind": String(_card["kind"]), "best": best,
-			"options": opts, "mouse": {"click": String(opts[best])}}, func() -> void: pick(best))
+			"options": opts, "unsafe": (_card.get("unsafe", []) as Array).duplicate(), "mouse": {"click": String(opts[best])}},
+			func() -> void: pick(best))
 		await _go
 		Events.input_resolved.emit(&"practical_card")
 		if _leaving:
@@ -213,6 +247,14 @@ func _ask_line() -> String:
 			return "Your listening check, before the subject sits down. What do you do?"
 		"subject":
 			return "The board approves your subject first. Can this person be yours?"
+		"grip":
+			return "Four ways to hold it. Only one is safe support. Which?"
+		"brace":
+			return "Hands set. Look at both of them before you go in."
+		"wash":
+			return "Clean hands, clean tools. What now?"
+		"look":
+			return "Look in the ear and read the card. Go ahead, or a doctor first?"
 	return "Pick one."
 
 
@@ -226,6 +268,12 @@ func _ask_feedback() -> String:
 			return String(_card["symptom"])
 		"subject":
 			return "%s: %s" % [String(_card["who"]), String(_card["about"])]
+		"grip", "brace":
+			return "Safe support: a bridge hand on the head, the instrument hand braced on it. An unsafe pick is a STOP (+%d)." % PracticalDeck.UNSAFE_STROKES
+		"wash":
+			return "Hygiene counts at both exam stations: hands, tools, every contact."
+		"look":
+			return "California's list, from the law: deformity, drainage, sudden loss, dizziness, one-sided loss, a big gap, wax, pain."
 	return ""
 
 
@@ -238,6 +286,8 @@ func pick(i: int) -> void:
 	if i == int(_card["answer"]):
 		_state = &"busy"
 		_reveal = true
+		if not _card.has("sneeze_at"):
+			_card["sneeze_at"] = _stage_t   # a grip card: now let them sneeze
 		Sfx.play(&"ding", 1.1, -6.0)
 		var lines: Array = _card["lines"]
 		_feedback_text("%s\n%s" % [String(lines[0]), String(lines[1])])
@@ -253,13 +303,19 @@ func pick(i: int) -> void:
 		_go.emit(&"right")
 		return
 	_wrong.append(i)
-	_hole_strokes += 1
+	var unsafe := (_card.get("unsafe", []) as Array).has(i)
+	_hole_strokes += PracticalDeck.UNSAFE_STROKES if unsafe else 1
 	Sfx.play(&"error", 1.0, -10.0)
-	_say("Not quite. %s" % String(_card["hint"]))
+	if unsafe:
+		_say("STOP! That's the one they stop you for. Brace first, then go in.")
+		if not _card.has("sneeze_at"):
+			_card["sneeze_at"] = _stage_t
+	else:
+		_say("Not quite. %s" % String(_card["hint"]))
 	for b: Button in _answer_list():
 		if int(b.get_meta("answer", -1)) == i:
 			b.disabled = true
-			b.text = "Not quite"
+			b.text = "STOP: unsafe" if unsafe else "Not quite"
 			Juice.shake(b, 5.0, 0.25)
 
 
@@ -299,6 +355,9 @@ func _scorecard() -> void:
 	var over := total - strokes.size()
 	var star := over == 0
 	var rec := TrainingProgress.record_round(PracticalDeck.LESSON, station_id, over, String(info["card"]))
+	# Station 2 earns a second card (California's Refer 8) with the first
+	var card2 := String(info.get("card2", ""))
+	rec["new_card2"] = card2 != "" and TrainingProgress.earn_card(PracticalDeck.LESSON, card2)
 	last_result = {"station": station_id, "strokes": strokes.duplicate(), "over_par": over, "star": star,
 		"new_card": bool(rec["new_card"]), "best": int(rec["best"])}
 	print("PRACTICAL_RESULT %s" % JSON.stringify(last_result))
@@ -306,7 +365,7 @@ func _scorecard() -> void:
 	_show_overlay(_score_panel(over, rec))
 	if star:
 		Sfx.play(&"fanfare", 1.0, -8.0)
-		_say("Even par! Packed, checked and ready. That's a star.")
+		_say(String(info.get("star_line", "Even par! That's a star.")))
 	else:
 		_say("%s. Play again for the star, or head back to the room." % PracticalDeck.round_name(over))
 	Events.awaiting_input.emit(&"practical_scorecard", {"station": station_id, "over_par": over, "star": star,
@@ -590,8 +649,10 @@ func _intro_panel() -> Control:
 	bh.add_child(lines)
 	v.add_child(body)
 	var card := PracticalDeck.cheat_card(String(info["card"]))
+	var card2 := PracticalDeck.cheat_card(String(info.get("card2", "")))
 	if not card.is_empty():
-		var earn := UiKit.label("You'll earn: the %s card" % String(card["title"]), 20, accent, 700)
+		var earn := UiKit.label("You'll earn: the %s card" % String(card["title"]) if card2.is_empty()
+			else "You'll earn: the %s and %s cards" % [String(card["title"]), String(card2["title"])], 20, accent, 700)
 		earn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(earn)
 	var row := HBoxContainer.new()
@@ -602,10 +663,19 @@ func _intro_panel() -> Control:
 	go.add_theme_font_size_override("font_size", 26)
 	go.pressed.connect(start)
 	row.add_child(go)
+	if _movie() != "" and Game.is_movie_seen(_movie()):
+		var mv := UiKit.button("Rewatch the movie", &"", Vector2(240, 60))
+		mv.add_theme_font_size_override("font_size", 20)
+		mv.pressed.connect(rewatch)
+		row.add_child(mv)
 	var back := UiKit.button("Back to the room", &"", Vector2(220, 60))
 	back.add_theme_font_size_override("font_size", 20)
 	back.pressed.connect(leave)
 	row.add_child(back)
+	if _movie() != "" and not Game.is_movie_seen(_movie()):
+		var mnote := UiKit.label("First time here: Hoot's movie plays after Start (Esc skips it).", 17, Color(ink, 0.85), 600)
+		mnote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(mnote)
 	var note := UiKit.label(PracticalDeck.DISCLAIMER, 16, Color(ink, 0.85), 600)
 	note.name = "disclaimer"
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -653,14 +723,22 @@ func _score_panel(over: int, rec: Dictionary) -> Control:
 		var t := "Star earned!" if over == 0 else ("Star kept from before" if bool(rec["star"]) else "Even par earns the star")
 		star.draw_string(UiKit.font(700), c + Vector2(44, 8), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.INK))
 	v.add_child(star)
+	var fresh: Array[String] = []
 	if bool(rec["new_card"]):
-		var nc := UiKit.label("New card for your Training room!", 22, Palette.CORAL, 700)
+		fresh.append(String(info["card"]))
+	if bool(rec.get("new_card2", false)):
+		fresh.append(String(info["card2"]))
+	if not fresh.is_empty():
+		var nc := UiKit.label("New card%s for your Training room!" % ("s" if fresh.size() > 1 else ""), 22, Palette.CORAL, 700)
 		nc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(nc)
-		var holder := CenterContainer.new()
-		var cc := CheatCard.new(PracticalDeck.cheat_card(String(info["card"])), true, 18)
-		cc.custom_minimum_size = Vector2(420, 180)
-		holder.add_child(cc)
+		var holder := HBoxContainer.new()
+		holder.alignment = BoxContainer.ALIGNMENT_CENTER
+		holder.add_theme_constant_override("separation", 16)
+		for id: String in fresh:
+			var cc := CheatCard.new(PracticalDeck.cheat_card(id), true, 18 if fresh.size() == 1 else 16)
+			cc.custom_minimum_size = Vector2(420, 180) if fresh.size() == 1 else Vector2(380, 170)
+			holder.add_child(cc)
 		v.add_child(holder)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER

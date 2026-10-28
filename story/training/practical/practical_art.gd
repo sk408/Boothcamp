@@ -8,6 +8,7 @@ extends RefCounted
 
 const UiKit := preload("res://story/ui_kit.gd")
 const PracticalDeck := preload("res://story/training/practical/practical_deck.gd")
+const ArcadeArt := preload("res://story/arcade/arcade_art.gd")
 
 const TEAL := Color("#1f9aa5")
 const GREEN := Color("#3a9d76")
@@ -15,6 +16,12 @@ const RED := Color("#e5383b")
 const GREY := Color("#7d8398")
 const METAL := Color("#c9ccd6")
 const CLEAR := Color("#dff4ff")
+const HAND := Color("#f2c9a0")
+const SHIRT := Color("#5b7fc7")
+const HAIR := Color("#6b4a2f")
+## A sneeze, after a grip is judged: one every SNEEZE_EVERY s, the head jolting for SNEEZE_S.
+const SNEEZE_EVERY := 2.6
+const SNEEZE_S := 0.7
 
 
 static func draw_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
@@ -32,6 +39,14 @@ static func draw_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: b
 			_listen(ci, size, card, reveal, t)
 		"subject":
 			_subject(ci, size, card, reveal, t)
+		"grip":
+			_grips(ci, size, card, reveal, wrong, t)
+		"brace":
+			_brace(ci, size, card, reveal, wrong, t)
+		"wash":
+			_wash(ci, size, card, reveal, wrong, t)
+		"look":
+			_look(ci, size, card, reveal, t)
 
 
 # ---------------------------------------------------------------- the kit tray
@@ -296,7 +311,290 @@ static func _subject(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bo
 		_stamp(ci, r.position + Vector2(r.size.x - 140, 226), "APPROVED" if ok else "NOT THIS TIME", GREEN if ok else RED, -0.1)
 
 
+# ---------------------------------------------------------------- Station 2: grips
+
+## How far the head has jolted in a sneeze (0..1), t seconds after the sneezing started (-1: none yet).
+static func sneeze(t: float) -> float:
+	if t < 0.0:
+		return 0.0
+	var ph := fmod(t, SNEEZE_EVERY)
+	if ph > SNEEZE_S:
+		return 0.0
+	return sin(ph / SNEEZE_S * PI)
+
+
+## One grip: a head in profile (facing left) with its ear at e, the hands and the tool, at scale k.
+## jolt (0..1): a sneeze moves the head toward the tool; whatever is braced on the head moves with it,
+## the rest stays put, and an unbraced tip pokes in (a red OW!). wobble: a floating hand's shake.
+## o: {"bridge": show the bridge hand (default: the grip's), "tool": show the tool and its hand (true)}.
+static func draw_grip(ci: CanvasItem, e: Vector2, k: float, tool: String, grip: String, jolt: float, wobble := 0.0, o := {}) -> void:
+	var g: Dictionary = PracticalDeck.GRIPS.get(grip, PracticalDeck.GRIPS["safe"])
+	var bridge := bool(o.get("bridge", g["bridge"]))
+	var braced := bool(g["braced"]) and bridge
+	var show_tool := bool(o.get("tool", true))
+	var jv := Vector2(16, -2) * jolt * k
+	var he := e + jv   # the ear, where the head is now
+	_profile(ci, e, k, jv)
+	if bridge:
+		_bridge_hand(ci, he, k)
+	if not show_tool:
+		return
+	var te := he if braced else e + Vector2(0, wobble) * k   # where the tool thinks the ear is
+	var tip := te + Vector2(2, 0) * k
+	if grip == "pencil":
+		tip = te + Vector2(8, 4) * k
+	_tool(ci, tip, k, tool, grip == "pencil")
+	var hold := _hold_point(tip, k, tool, grip == "pencil")
+	if grip != "pencil":
+		UiDraw.rounded_rect(ci, Rect2(hold - Vector2(20, 16) * k, Vector2(40, 32) * k), HAND, int(12 * k), 3, Palette.INK)
+	else:
+		for i in 2:
+			ci.draw_circle(hold + Vector2(i * 10, -6 + i * 12) * k, 8.0 * k, HAND)
+			ci.draw_arc(hold + Vector2(i * 10, -6 + i * 12) * k, 8.0 * k, 0.0, TAU, 14, Palette.INK, 2.5, true)
+	# the bracing finger: onto the bridge hand (or the head behind the ear, handle down)
+	if grip == "safe" or grip == "float":
+		var to := _brace_point(he, k, tool)
+		var from := hold + (to - hold).normalized() * 18.0 * k
+		var reach := to if braced else from.lerp(to, 0.55)
+		ci.draw_line(from, reach, Palette.INK, 11.0 * k, true)
+		ci.draw_line(from, reach, HAND, 7.0 * k, true)
+		if braced:
+			ci.draw_circle(to, 5.0 * k, GREEN)
+		else:
+			for i in 3:
+				var wv := reach.lerp(to, 0.25 + i * 0.25)
+				ci.draw_arc(wv, 4.0 * k, 0.0, PI, 6, Color(RED, 0.8), 2.0, true)
+	if not braced and jolt > 0.35:
+		_ow(ci, e + Vector2(-6, -40) * k, k * (0.7 + 0.5 * jolt))
+
+
+## The head in profile (facing left): hair, face, eye, nose, the neck and the shoulders (which never
+## jolt), and the outer ear at e + jv.
+static func _profile(ci: CanvasItem, e: Vector2, k: float, jv: Vector2) -> void:
+	var h := e + Vector2(-40, -18) * k + jv
+	# shoulders and neck stay put
+	var sh := e + Vector2(-26, 150) * k
+	ci.draw_colored_polygon(_oval(sh, 120.0 * k, 42.0 * k, 24), SHIRT)
+	ci.draw_polyline(_ring(_oval(sh, 120.0 * k, 42.0 * k, 24)), Palette.INK, 3.0, true)
+	var neck := Rect2(e + Vector2(-58, 52) * k + jv * 0.4, Vector2(52, 66) * k)
+	ci.draw_rect(neck, Palette.SKIN)
+	ci.draw_line(neck.position, neck.position + Vector2(0, neck.size.y), Palette.INK, 3.0, true)
+	ci.draw_line(neck.position + Vector2(neck.size.x, 0), neck.end, Palette.INK, 3.0, true)
+	ci.draw_circle(h + Vector2(8, -10) * k, 96.0 * k, HAIR)
+	ci.draw_colored_polygon(_oval(h, 92.0 * k, 88.0 * k, 32), Palette.SKIN)
+	var nose := PackedVector2Array([h + Vector2(-84, -10) * k, h + Vector2(-112, 18) * k, h + Vector2(-82, 26) * k])
+	ci.draw_colored_polygon(nose, Palette.SKIN)
+	ci.draw_polyline(nose, Palette.INK, 3.0, true)
+	ci.draw_arc(h, 92.0 * k, PI * 0.62, PI * 1.08, 16, Palette.INK, 3.0, true)
+	ci.draw_arc(h, 92.0 * k, PI * 1.22, PI * 2.36, 30, Palette.INK, 3.0, true)
+	ci.draw_circle(h + Vector2(-52, -14) * k, 7.0 * k, Palette.INK)
+	ci.draw_arc(h + Vector2(-56, 40) * k, 14.0 * k, 0.4, PI - 0.6, 8, Palette.INK, 3.0, true)
+	# the outer ear and the canal's mouth
+	var ear := _oval(e + jv + Vector2(6, -4) * k, 20.0 * k, 32.0 * k, 20)
+	ci.draw_colored_polygon(ear, Palette.SKIN.darkened(0.08))
+	ci.draw_polyline(_ring(ear), Palette.INK, 3.0, true)
+	ci.draw_arc(e + jv + Vector2(8, -6) * k, 12.0 * k, -PI * 0.6, PI * 0.5, 10, Color(Palette.INK, 0.5), 2.0, true)
+	ci.draw_circle(e + jv, 6.0 * k, Color("#5a2f2f"))
+
+
+## Where the bridge hand sits: on the head, above and behind the ear.
+const BRIDGE_AT := Vector2(4, -80)
+
+
+## The bridge hand: on the head above and behind the ear (its arm off the top), its thumb lifting the
+## outer ear.
+static func _bridge_hand(ci: CanvasItem, he: Vector2, k: float) -> void:
+	var p := he + BRIDGE_AT * k
+	ci.draw_line(p + Vector2(18, -14) * k, p + Vector2(74, -116) * k, Palette.INK, 30.0 * k, true)
+	ci.draw_line(p + Vector2(18, -14) * k, p + Vector2(74, -116) * k, SHIRT.lightened(0.2), 24.0 * k, true)
+	UiDraw.rounded_rect(ci, Rect2(p - Vector2(30, 18) * k, Vector2(62, 38) * k), HAND, int(14 * k), 3, Palette.INK)
+	ci.draw_line(p + Vector2(-8, 16) * k, he + Vector2(2, -36) * k, Palette.INK, 10.0 * k, true)
+	ci.draw_line(p + Vector2(-8, 16) * k, he + Vector2(2, -36) * k, HAND, 6.0 * k, true)
+
+
+## Where the instrument hand's finger rests: the bridge hand, or (handle down) the head behind the ear,
+## or (a straight tool) the head just behind the top of the ear.
+static func _brace_point(he: Vector2, k: float, tool: String) -> Vector2:
+	match tool:
+		"oto_down":
+			return he + Vector2(26, 34) * k
+		"earlight", "syringe":
+			return he + Vector2(34, -28) * k
+	return he + (BRIDGE_AT + Vector2(32, 6)) * k
+
+
+## The tool, its tip at the ear's mouth, pointing left into it.
+static func _tool(ci: CanvasItem, tip: Vector2, k: float, tool: String, tilted: bool) -> void:
+	var rot := -0.3 if tilted else 0.0
+	var p := func(v: Vector2) -> Vector2: return tip + (v * k).rotated(rot)
+	match tool:
+		"oto_up", "oto_down":
+			var up := -1.0 if tool == "oto_up" else 1.0
+			_poly(ci, PackedVector2Array([p.call(Vector2(0, -4)), p.call(Vector2(40, -10)), p.call(Vector2(40, 10)), p.call(Vector2(0, 4))]), Palette.INK)
+			_poly(ci, PackedVector2Array([p.call(Vector2(40, -16)), p.call(Vector2(78, -16)), p.call(Vector2(78, 16)), p.call(Vector2(40, 16))]), METAL)
+			_poly(ci, PackedVector2Array([p.call(Vector2(50, 16 * up)), p.call(Vector2(68, 16 * up)), p.call(Vector2(68, 96 * up)), p.call(Vector2(50, 96 * up))]), Color("#3b3f52"))
+		"earlight":
+			ci.draw_line(p.call(Vector2(0, 0)), p.call(Vector2(36, 0)), Palette.INK, 5.0 * k, true)
+			ci.draw_circle(tip, 6.0 * k, Color(Palette.SUNNY, 0.6))
+			_poly(ci, PackedVector2Array([p.call(Vector2(36, -10)), p.call(Vector2(120, -10)), p.call(Vector2(120, 10)), p.call(Vector2(36, 10))]), Color("#ffb347"))
+		_:
+			_poly(ci, PackedVector2Array([p.call(Vector2(0, -3)), p.call(Vector2(26, -10)), p.call(Vector2(26, 10)), p.call(Vector2(0, 3))]), CLEAR)
+			_poly(ci, PackedVector2Array([p.call(Vector2(26, -14)), p.call(Vector2(104, -14)), p.call(Vector2(104, 14)), p.call(Vector2(26, 14))]), CLEAR)
+			_poly(ci, PackedVector2Array([p.call(Vector2(32, -8)), p.call(Vector2(70, -8)), p.call(Vector2(70, 8)), p.call(Vector2(32, 8))]), Color(Palette.SELECT_ORANGE, 0.8))
+			ci.draw_line(p.call(Vector2(104, 0)), p.call(Vector2(130, 0)), Palette.INK, 5.0 * k, true)
+			ci.draw_line(p.call(Vector2(130, -14)), p.call(Vector2(130, 14)), Palette.INK, 5.0 * k, true)
+
+
+## Where the instrument hand holds the tool.
+static func _hold_point(tip: Vector2, k: float, tool: String, tilted: bool) -> Vector2:
+	if tilted:
+		return tip + (Vector2(126, 0) * k).rotated(-0.3) if tool == "earlight" or tool == "syringe" else tip + (Vector2(60, -90) * k).rotated(-0.3)
+	match tool:
+		"oto_up":
+			return tip + Vector2(59, -62) * k
+		"oto_down":
+			return tip + Vector2(59, 62) * k
+	return tip + Vector2(66, 0) * k
+
+
+## A red cartoon OW! burst.
+static func _ow(ci: CanvasItem, c: Vector2, k: float) -> void:
+	var pts := PackedVector2Array()
+	for i in 16:
+		var r := (34.0 if i % 2 == 0 else 20.0) * k
+		pts.append(c + Vector2.from_angle(TAU * i / 16.0) * r)
+	ci.draw_colored_polygon(pts, Palette.SUNNY)
+	ci.draw_polyline(_ring(pts), RED, 3.0, true)
+	ci.draw_string(UiKit.font(700), c + Vector2(-30, 7) * k, "OW!", HORIZONTAL_ALIGNMENT_CENTER, 60.0 * k, int(20 * k), RED)
+
+
+## "Which grip is safe?": four panels. After the answer (or an unsafe pick) the heads start sneezing.
+static func _grips(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	var grips: Array = card["grips"]
+	var w := (size.x - 36 - 3 * 14) / 4.0
+	var st := t - float(card.get("sneeze_at", INF))
+	var j := sneeze(st)
+	ci.draw_string(UiKit.font(700), Vector2(0, 92), PracticalDeck.TOOL_WORDS.get(String(card["tool"]), ""), HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Palette.INK_SOFT)
+	for i in grips.size():
+		var r := Rect2(18 + i * (w + 14), 100, w, 306)
+		var safe := String(grips[i]) == "safe"
+		var bg := Palette.PAPER
+		if reveal and safe:
+			bg = Color(GREEN, 0.15)
+		elif wrong.has(i):
+			bg = Color(RED, 0.15)
+		UiDraw.rounded_rect(ci, Rect2(r.position + Vector2(0, 6), r.size), Color(0, 0, 0, 0.18), 20)
+		UiDraw.rounded_rect(ci, r, bg, 20, 3, Palette.INK)
+		var wob := 0.0 if Game.settings.get("reduced_motion", false) or bool(PracticalDeck.GRIPS[String(grips[i])]["braced"]) else sin(t * 9.0 + i) * 2.0
+		draw_grip(ci, r.position + Vector2(w * 0.55, 150), 0.68, String(card["tool"]), String(grips[i]), j, wob)
+		UiDraw.rounded_rect(ci, Rect2(r.position + Vector2(10, 10), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), r.position + Vector2(10, 35), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		if reveal and safe:
+			_stamp(ci, r.position + Vector2(w * 0.5, 276), "SAFE", GREEN, -0.08)
+		elif wrong.has(i) or (reveal and not safe):
+			_stamp(ci, r.position + Vector2(w * 0.5, 276), "STOP", RED, 0.06)
+
+
+## "Ready to go in?": one big grip; the sneeze plays once it is judged.
+static func _brace(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	var r := Rect2(18, 84, 470, 322)
+	UiDraw.rounded_rect(ci, Rect2(r.position + Vector2(0, 6), r.size), Color(0, 0, 0, 0.18), 22)
+	UiDraw.rounded_rect(ci, r, Palette.PAPER, 22, 3, Palette.INK)
+	var grip := String(card["grip"])
+	var st := t - float(card.get("sneeze_at", INF))
+	var j := sneeze(st)
+	var wob := 0.0 if Game.settings.get("reduced_motion", false) or grip == "safe" else sin(t * 9.0) * 2.5
+	draw_grip(ci, r.position + Vector2(270, 150), 0.86, String(card["tool"]), grip, j, wob)
+	if j > 0.15:
+		ci.draw_string(UiKit.font(700), r.position + Vector2(24, 60), "ACHOO!", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, RED)
+	var side := Rect2(508, 84, size.x - 526, 322)
+	UiDraw.rounded_rect(ci, side, Color("#e3f1ee"), 22, 3, Palette.INK)
+	_wrap(ci, String(PracticalDeck.TOOL_WORDS.get(String(card["tool"]), "")), Rect2(side.position + Vector2(22, 14), Vector2(side.size.x - 44, 40)), 24, Palette.INK)
+	_wrap(ci, "Your hands are set. The subject might sneeze. Safe to go in?", Rect2(side.position + Vector2(22, 70), Vector2(side.size.x - 44, 140)), 22, Palette.INK)
+	var safe := grip == "safe"
+	if reveal:
+		_stamp(ci, side.position + Vector2(side.size.x * 0.5, 262), "MOVES WITH THE HEAD" if safe else "STOP: UNSAFE", GREEN if safe else RED, -0.06)
+	elif not wrong.is_empty():
+		_stamp(ci, side.position + Vector2(side.size.x * 0.5, 262), "STOP: UNSAFE" if wrong.has(0) else "IT WAS FINE", RED if wrong.has(0) else GREY, 0.05)
+
+
+# ---------------------------------------------------------------- Station 2: wash and look
+
+static func _wash(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	# the hygiene chip: a gel bottle and a speculum
+	var chip := Rect2(36, 96, 240, 300)
+	UiDraw.rounded_rect(ci, chip, Color("#d9dce4"), 26, 3, Palette.INK)
+	var c := chip.position + Vector2(84, 150)
+	_box(ci, Rect2(c + Vector2(-34, -40), Vector2(68, 110)), Color("#bfe6ff"))
+	_box(ci, Rect2(c + Vector2(-12, -64), Vector2(24, 26)), Palette.INK_SOFT)
+	ci.draw_line(c + Vector2(0, -64), c + Vector2(26, -74), Palette.INK, 5.0, true)
+	ci.draw_string(UiKit.font(700), c + Vector2(-34, 18), "GEL", HORIZONTAL_ALIGNMENT_CENTER, 68, 20, Palette.INK)
+	var sp := chip.position + Vector2(176, 110)
+	_poly(ci, PackedVector2Array([sp + Vector2(-8, -40), sp + Vector2(8, -40), sp + Vector2(22, 40), sp + Vector2(-22, 40)]), Palette.INK_SOFT)
+	ci.draw_string(UiKit.font(700), chip.position + Vector2(0, 280), "HYGIENE", HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 22, Palette.INK)
+	var paper := Rect2(300, 96, size.x - 336, 300)
+	UiDraw.rounded_rect(ci, Rect2(paper.position + Vector2(0, 6), paper.size), Color(0, 0, 0, 0.18), 22)
+	UiDraw.rounded_rect(ci, paper, Palette.PAPER, 22, 3, Palette.INK)
+	_wrap(ci, String(card["ask"]), Rect2(paper.position + Vector2(28, 26), Vector2(paper.size.x - 56, 180)), 30, Palette.INK)
+	if reveal:
+		_stamp(ci, paper.position + Vector2(paper.size.x * 0.5, 250), "CLEAN", GREEN, -0.07)
+	elif not wrong.is_empty():
+		_germ(ci, paper.position + Vector2(paper.size.x - 90, 236), t)
+		_stamp(ci, paper.position + Vector2(paper.size.x * 0.4, 250), "GERMS!", Color("#4f9a3a"), 0.06)
+
+
+## A cartoon germ, wiggling.
+static func _germ(ci: CanvasItem, c: Vector2, t: float) -> void:
+	var pts := PackedVector2Array()
+	for i in 20:
+		var a := TAU * i / 20.0
+		pts.append(c + Vector2.from_angle(a) * (30.0 + 5.0 * sin(a * 5.0 + t * 4.0)))
+	ci.draw_colored_polygon(pts, Color("#8fd16a"))
+	ci.draw_polyline(_ring(pts), Palette.INK, 3.0, true)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_circle(c + Vector2(s * 10, -6), 6.0, Palette.PAPER)
+		ci.draw_circle(c + Vector2(s * 10, -5), 3.0, Palette.INK)
+	ci.draw_arc(c + Vector2(0, 8), 10.0, 0.2, PI - 0.2, 8, Palette.INK, 3.0, true)
+
+
+static func _look(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	var ear := String(card["ear"])
+	var col: Color = Palette.RIGHT_RED if ear == "right" else Palette.LEFT_BLUE
+	var vr := Rect2(54, 92, 300, 300)
+	ArcadeArt.oto_view(ci, vr, {"view": StringName(card["view"]), "lookalike": bool(card["lookalike"]), "variant": 1}, ear, t)
+	if bool(card["sore"]):
+		ci.draw_arc(vr.get_center(), vr.size.x * 0.36, 0.0, TAU, 40, Color(RED, 0.4), vr.size.x * 0.12, true)
+	_tag(ci, vr.position + Vector2(vr.size.x * 0.5, vr.size.y + 4), "RIGHT EAR" if ear == "right" else "LEFT EAR", col, 1.4)
+	var paper := Rect2(392, 92, size.x - 410, 314)
+	UiDraw.rounded_rect(ci, Rect2(paper.position + Vector2(0, 6), paper.size), Color(0, 0, 0, 0.18), 22)
+	UiDraw.rounded_rect(ci, paper, Palette.PAPER, 22, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), paper.position + Vector2(24, 40), "Intake card", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, TEAL)
+	ci.draw_line(paper.position + Vector2(24, 52), paper.position + Vector2(paper.size.x - 24, 52), Color(TEAL, 0.5), 2.0)
+	_wrap(ci, "\"%s\"" % String(card["note"]) if not String(card["note"]).begins_with("You see") else String(card["note"]),
+		Rect2(paper.position + Vector2(24, 64), Vector2(paper.size.x - 48, 160)), 26, Palette.INK)
+	if reveal:
+		var flag := int(card["flag"])
+		var line := "Not on the list: go ahead" if flag == 0 else "On the list, %d: %s" % [flag, PracticalDeck.REFER_8[flag - 1]]
+		var chip := Rect2(paper.position + Vector2(16, 240), Vector2(paper.size.x - 32, 56))
+		UiDraw.rounded_rect(ci, chip, GREEN if flag == 0 else RED, 14, 3, Palette.INK)
+		_wrap(ci, line, Rect2(chip.position + Vector2(12, 4), chip.size - Vector2(24, 8)), 18, Palette.PAPER)
+
+
 # ---------------------------------------------------------------- helpers
+
+static func _oval(c: Vector2, rx: float, ry: float, n: int) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n:
+		var a := TAU * i / n
+		pts.append(c + Vector2(cos(a) * rx, sin(a) * ry))
+	return pts
+
+
+static func _ring(pts: PackedVector2Array) -> PackedVector2Array:
+	var o := pts.duplicate()
+	o.append(pts[0])
+	return o
+
 
 static func _box(ci: CanvasItem, r: Rect2, col: Color) -> void:
 	UiDraw.rounded_rect(ci, r, col, 8, 3, Palette.INK)

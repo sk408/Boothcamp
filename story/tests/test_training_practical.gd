@@ -7,6 +7,9 @@ const PracticalDeck := preload("res://story/training/practical/practical_deck.gd
 const PracticalSchool := preload("res://story/training/practical/practical_school.gd")
 const TrainingProgress := preload("res://story/training/training_progress.gd")
 const TrainingRoom := preload("res://story/training/training_room.gd")
+const Movies := preload("res://story/explainers/movies.gd")
+const Stage2D := preload("res://story/explainers/explainer_stage.gd")
+const PracticalArt := preload("res://story/training/practical/practical_art.gd")
 
 
 func before_each() -> void:
@@ -38,6 +41,7 @@ func test_deck_is_complete() -> void:
 		assert_true(PracticalDeck.card_station(id) > 0, "a station earns %s" % id)
 		assert_true((c["lines"] as Array).size() >= 3 and (c["lines"] as Array).size() <= 4, "%s: 3-4 lines fit a pinned card" % id)
 	assert_true(bool(PracticalDeck.station("kit")["built"]))
+	assert_true(bool(PracticalDeck.station("hands")["built"]))
 	assert_eq(PracticalDeck.cheat_card("nope"), {})
 
 
@@ -105,7 +109,7 @@ func test_kit_tries_and_months() -> void:
 	assert_eq(String(tries[0]["items"][int(tries[0]["answer"])]), "inserts")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH), "Mar 2027")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH - 3), "Dec 2026")
-	assert_eq(PracticalDeck.deal("hands", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
+	assert_eq(PracticalDeck.deal("tones", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
 
 
 ## The room's tabs: Masking School first; THE PRACTICAL shows eight chips and its own cards, emits its
@@ -128,7 +132,7 @@ func test_room_switches_to_the_practical() -> void:
 	Events.awaiting_input.disconnect(acb)
 	assert_eq(beats.size(), 2, "the switch emits the beat again")
 	assert_eq(String(beats[1]["lesson"]), "practical")
-	assert_eq(beats[1]["built"], ["kit"])
+	assert_eq(beats[1]["built"], ["kit", "hands"])
 	assert_eq((room.get("_chips") as Array).size(), 8)
 	assert_true(room.find_child("card_kit_bag", true, false) != null, "the practical's pins")
 	assert_true(room.find_child("card_skull_wall", true, false) == null, "masking's pins are gone")
@@ -225,4 +229,193 @@ func test_wrong_picks_and_hints_cost_strokes() -> void:
 	school.call("pick", (b + 1) % (cards[0]["options"] as Array).size())
 	school.call("pick", b)
 	assert_eq(int(school.get("_hole_strokes")), 3, "par + a hint + a miss")
+	school.queue_free()
+
+
+# ================================================================ Station 2: Steady hands
+
+## California's eight, every one taught by a look; the looks that go ahead are on nobody's list.
+func test_refer_8_and_the_looks() -> void:
+	assert_eq(PracticalDeck.REFER_8.size(), 8)
+	var seen := {}
+	for l: Dictionary in PracticalDeck.LOOKS:
+		var f := int(l["flag"])
+		assert_true(f >= 0 and f <= 8, "%s flag" % l["id"])
+		seen[f] = true
+		assert_true(String(l["why"]) != "" and String(l["note"]) != "")
+		assert_true(["clear", "wax", "object"].has(String(l["view"])), "%s: a view ArcadeArt draws" % l["id"])
+	for f in 9:
+		assert_true(seen.has(f), "a look for flag %d" % f)
+	assert_true(String(PracticalDeck.cheat_card("refer_8")["lines"][0]).contains("90"), "the card says 90 days")
+	assert_eq(PracticalDeck.REFER_DAYS, 90)
+
+
+## Every dealt round is honest: one safe grip among four, every other grip an unsafe pick; a judged grip
+## is unsafe exactly when it isn't braced; the clean answer is the wash's right one; three different
+## looks, at least one to go ahead and one to refer.
+func test_hands_round_is_honest() -> void:
+	for seed in 60:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		var cards := PracticalDeck.hands_round(rng)
+		assert_eq(cards.size(), PracticalDeck.ROUND_HOLES)
+		var kinds: Array = cards.map(func(c: Dictionary) -> String: return String(c["kind"]))
+		assert_eq(kinds, ["grip", "brace", "wash", "look", "look", "look"])
+		var looks := {}
+		var go := 0
+		var refer := 0
+		for c: Dictionary in cards:
+			var ans := int(c["answer"])
+			assert_true(ans >= 0 and ans < (c["options"] as Array).size(), "answer in range")
+			assert_eq((c["lines"] as Array).size(), 2)
+			assert_false((c.get("unsafe", []) as Array).has(ans), "the answer is never unsafe")
+			match String(c["kind"]):
+				"grip":
+					var grips: Array = c["grips"]
+					assert_eq(grips.count("safe"), 1)
+					assert_eq(String(grips[ans]), "safe")
+					assert_eq((c["unsafe"] as Array).size(), 3)
+					assert_true(PracticalDeck.TOOLS.has(String(c["tool"])))
+				"brace":
+					var safe := String(c["grip"]) == "safe"
+					assert_eq(ans, 0 if safe else 1)
+					assert_eq(c["unsafe"], [] if safe else [0])
+				"wash":
+					assert_eq(String(c["options"][ans]), String(PracticalDeck.wash(String(c["wash"]))["right"]))
+				"look":
+					looks[String(c["look"])] = true
+					var named := String(PracticalDeck.look(String(c["look"])).get("ear", ""))
+					if named != "":
+						assert_eq(String(c["ear"]), named, "the ear the note names")
+					assert_eq(ans == 1, int(c["flag"]) > 0)
+					if int(c["flag"]) > 0:
+						refer += 1
+						assert_true(String(c["lines"][1]).contains(PracticalDeck.REFER_8[int(c["flag"]) - 1]))
+					else:
+						go += 1
+		assert_eq(looks.size(), 3, "three different looks")
+		assert_true(go >= 1 and refer >= 1, "one to go ahead, one to refer")
+
+
+## A sneeze jolts only for a moment, again and again, and never before it starts.
+func test_sneeze_and_grips_draw() -> void:
+	assert_eq(PracticalArt.sneeze(-1.0), 0.0)
+	assert_true(PracticalArt.sneeze(PracticalArt.SNEEZE_S * 0.5) > 0.9)
+	assert_eq(PracticalArt.sneeze(PracticalArt.SNEEZE_S + 0.1), 0.0)
+	assert_true(PracticalArt.sneeze(PracticalArt.SNEEZE_EVERY + PracticalArt.SNEEZE_S * 0.5) > 0.9)
+	assert_true(bool(PracticalDeck.GRIPS["safe"]["bridge"]) and bool(PracticalDeck.GRIPS["safe"]["braced"]))
+	for g: String in PracticalDeck.UNSAFE_GRIPS:
+		assert_false(bool(PracticalDeck.GRIPS[g]["braced"]), "%s is not braced" % g)
+	# every card kind draws, before and after the answer, sneezing
+	var c := Control.new()
+	c.size = Vector2(880, 440)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var cards := PracticalDeck.hands_round(rng) + PracticalDeck.hands_tries()
+	var k := [0]
+	c.draw.connect(func() -> void:
+		var card: Dictionary = cards[k[0] % cards.size()]
+		card["sneeze_at"] = 0.0
+		PracticalArt.draw_card(c, c.size, card, k[0] % 2 == 0, [] if k[0] % 2 == 0 else [int(card["answer"]) ^ 1], 0.3))
+	add_node(c)
+	for i in cards.size() * 2:
+		k[0] = i
+		c.queue_redraw()
+		await wait_frames(1)
+	c.queue_free()
+
+
+## The movie: valid, quiet, a Training movie on the title's list, never Gus's own; every scene draws.
+func test_steady_hand_movie() -> void:
+	var bad := Movies.validate("steady_hand", Stage2D.SETS)
+	assert_true(bad.is_empty(), ", ".join(bad))
+	assert_has(Movies.replay_ids(), "steady_hand", "on the title's movie list")
+	assert_true(Movies.is_training("steady_hand"))
+	assert_false(Movies.for_chapter("gus").has("steady_hand"), "never Day 1's own movie")
+	assert_eq(Movies.day_label("steady_hand"), "Training")
+	assert_eq(String(PracticalDeck.station("hands")["movie"]), "steady_hand")
+	var total := Movies.total_s("steady_hand")
+	assert_true(total >= 60.0 and total <= 90.0, "about a minute and a bit (%.0f s)" % total)
+	var player_script: GDScript = load("res://story/explainers/explainer_player.gd")
+	var cue_max := float(player_script.get_script_constant_map()["CUE_MAX_DB"])
+	var m := Movies.movie("steady_hand")
+	var st: Control = Stage2D.new()
+	st.size = Vector2(880, 440)
+	add_node(st)
+	st.call("use_movie", m)
+	for sc: Dictionary in m["scenes"]:
+		for cue: Dictionary in sc.get("cues", []):
+			assert_has(Sfx.SOUNDS, StringName(String(cue["sfx"])), "%s: a known Sfx" % sc["id"])
+			assert_true(float(cue.get("vol_db", 0.0)) <= cue_max, "%s: quiet" % sc["id"])
+		st.call("show_scene", sc)
+		var d := float(sc["duration"])
+		for tt: float in [0.0, d * 0.3, d * 0.6, d]:
+			st.set("t", tt)
+			st.queue_redraw()
+			await wait_frames(1)
+	st.queue_free()
+
+
+## Station 2 plays through by its solvers on a fresh save: the movie (skipped), three guided cards, six
+## holes at par, both cards earned.
+func test_hands_plays_by_solvers() -> void:
+	Game.cli = {"seed": 11}
+	PracticalSchool.next_station = "hands"
+	PracticalSchool.last_result = {}
+	var beats := {}
+	var acb := func(beat: StringName, _info: Dictionary, solver: Callable) -> void:
+		beats[beat] = int(beats.get(beat, 0)) + 1
+		solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	add_node(school)
+	for i in 900:
+		if not went.is_empty():
+			break
+		await wait_frames(1)
+	Events.awaiting_input.disconnect(acb)
+	Events.goto_scene.disconnect(gcb)
+	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
+	assert_eq(int(beats.get(&"explainer", 0)), 1, "Hoot's movie on a first visit")
+	assert_eq(int(beats.get(&"practical_try", 0)), 3)
+	assert_eq(int(beats.get(&"practical_card", 0)), 6)
+	assert_eq(PracticalSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1])
+	assert_true(bool(TrainingProgress.station("practical", "hands")["star"]))
+	assert_true(TrainingProgress.has_card("practical", "safe_support"))
+	assert_true(TrainingProgress.has_card("practical", "refer_8"), "the second card")
+	assert_eq(PracticalDeck.card_station("refer_8"), 2)
+
+
+## An unsafe pick is a STOP: two strokes, the sneeze plays; an over-careful one is a plain miss.
+func test_unsafe_pick_is_a_stop() -> void:
+	Game.cli = {"seed": 4}
+	Game.mark_movie_seen("steady_hand")
+	PracticalSchool.next_station = "hands"
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	var cards: Array[Dictionary] = []
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		if beat == &"practical_try" or beat == &"practical_next":
+			solver.call_deferred()
+		elif beat == &"practical_card":
+			cards.append(info)
+	Events.awaiting_input.connect(acb)
+	add_node(school)
+	await wait_frames(3)
+	school.call("start")
+	for i in 120:
+		if not cards.is_empty():
+			break
+		await wait_frames(1)
+	Events.awaiting_input.disconnect(acb)
+	assert_eq(String(cards[0]["kind"]), "grip")
+	var b := int(cards[0]["best"])
+	var bad := int((cards[0]["unsafe"] as Array)[0])
+	school.call("pick", bad)
+	assert_eq(int(school.get("_hole_strokes")), 1 + PracticalDeck.UNSAFE_STROKES, "par + the STOP")
+	assert_true((school.get("_card") as Dictionary).has("sneeze_at"), "the sneeze plays")
+	school.call("pick", b)
+	assert_eq(int(school.get("_hole_strokes")), 3)
 	school.queue_free()

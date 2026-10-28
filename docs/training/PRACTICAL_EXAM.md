@@ -4,7 +4,7 @@ Steve asked (2026-10-28) for "exhaustive research into the california hearing ai
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
 (section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
-(PR 2). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -94,6 +94,17 @@ stopped. Hygienic precautions. Otoscopy decides referral and whether an impressi
   rapid loss in 90 days, dizziness, one-sided sudden loss in 90 days, significant air-bone gap, significant wax or a
   foreign body, pain), on its own card in this lesson (question 5).
 - **Earns:** the **Safe Support** card (green) and the **California Refer 8** card (red).
+- **As built (PR 3):** Hoot's movie "The Steady Hand" (nine scenes, about 86 s: the pencil grip and its OW, the
+  bridge hand, the braced light, the sneeze it rides, a floating hand, the four tools of the board's sheet, the STOP
+  card, the Safe Support card) plays on the first visit; replay from the station card or the title's Hoot's Movies.
+  Six holes, pick-one with keys 1-4: "Which grip is safe?" (four drawings of one tool: safe, a floating instrument
+  hand, no bridge hand, held like a pencil), "Ready to go in?" (one grip to judge: go in, or STOP: brace first),
+  "Keep it clean" (one of five hygiene moments, three answers) and three "Look, then call it" cards (the arcade's
+  otoscope view plus an intake card; at least one to go ahead and one to refer; twelve looks cover all eight
+  flags and three that are fine). The heads sneeze once a grip is judged: braced, everything rides along; unbraced,
+  a cartoon OW. An unsafe pick is the lesson's STOP: +2, not +1. The calls are two (go ahead / refer first), not
+  three: California's list says when to refer, not when an impression alone must wait. Try it: a grip line-up, a
+  floating hand to stop, a wax-filled ear to refer.
 
 ### 3.3 Station 3: "Station A: the tones" (air, bone, masking, record)
 

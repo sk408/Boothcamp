@@ -15,12 +15,14 @@ const LESSON := "practical"
 ## earns a second, card2).
 const STATIONS: Array = [
 	{"id": "kit", "num": 1, "name": "Pack the bag", "pitch": "Your kit, checked. No sharing.", "color": Color("#7d8398"),
-		"card": "kit_bag", "built": true, "movie": "",
+		"card": "kit_bag", "built": true, "movie": "", "star_line": "Even par! Packed, checked and ready. That's a star.",
 		"intro": "On exam day you bring your own kit and your own subject. Nothing is shared, nothing is lent.\n"
 			+ "Spot what stays home, pick an audiometer in calibration, run the listening check, and choose a subject who qualifies."},
 	{"id": "hands", "num": 2, "name": "Steady hands", "pitch": "Brace it. Look. Refer?", "color": Color("#3a9d76"),
-		"card": "safe_support", "card2": "refer_8", "built": false, "movie": "",
-		"intro": "Hands, head and light: one unit. Then look, and decide: test, impression, or a doctor first?"},
+		"card": "safe_support", "card2": "refer_8", "built": true, "movie": "steady_hand",
+		"star_line": "Even par! Steady hands and sharp eyes. That's a star.",
+		"intro": "Hands, head and light: one unit. If they sneeze, you ride along.\n"
+			+ "Pick the safe grip, keep it clean, then look and decide: go ahead, or a doctor first?"},
 	{"id": "tones", "num": 3, "name": "Station A: the tones", "pitch": "Air, bone, mask, record.", "color": Color("#2d6cdf"),
 		"card": "station_a", "built": false, "movie": "",
 		"intro": "Air and bone on a live subject, masked by the plateau, every symbol on the chart."},
@@ -315,6 +317,8 @@ static func deal(station_id: String, rng: RandomNumberGenerator) -> Array[Dictio
 	match station_id:
 		"kit":
 			return kit_round(rng)
+		"hands":
+			return hands_round(rng)
 	return []
 
 
@@ -322,7 +326,211 @@ static func tries(station_id: String) -> Array[Dictionary]:
 	match station_id:
 		"kit":
 			return kit_tries()
+		"hands":
+			return hands_tries()
 	return []
+
+
+# ================================================================ Station 2: Steady hands
+
+## Safe Support Technique (the board's Safe Support sheet and the bulletin, CA_PRACTICAL_EXAM.md §3.3): one
+## hand is the bridge on the head, the other holds the instrument braced on it, so a sneeze moves hands,
+## head and instrument as one unit. An unsafe move is stopped: a wrong pick on a grip costs this many
+## strokes (the miss and the STOP), not one.
+const UNSAFE_STROKES := 2
+## The tools the board's sheet shows under safe support.
+const TOOLS: Array[String] = ["oto_up", "oto_down", "earlight", "syringe"]
+const TOOL_WORDS: Dictionary = {"oto_up": "Otoscope, handle up", "oto_down": "Otoscope, handle down", "earlight": "Ear light",
+	"syringe": "Impression syringe"}
+## Grips. bridge: a hand on the head; braced: the instrument hand rests on it. Only "safe" is both.
+const GRIPS: Dictionary = {
+	"safe": {"bridge": true, "braced": true, "why": "Bridge hand on the head, the instrument hand braced on it."},
+	"float": {"bridge": true, "braced": false, "why": "The instrument hand floats: a sneeze drives the tip in."},
+	"no_bridge": {"bridge": false, "braced": false, "why": "No bridge hand: nothing holds the head or lifts the ear."},
+	"pencil": {"bridge": false, "braced": false, "why": "Held like a pencil at the far end: nothing touches the head."},
+}
+const UNSAFE_GRIPS: Array[String] = ["float", "no_bridge", "pencil"]
+const GRIP_WORDS: Array[String] = ["Grip 1", "Grip 2", "Grip 3", "Grip 4"]
+const BRACE_WORDS: Array[String] = ["Go in: it's braced", "STOP: brace first"]
+
+## Hygiene moments (the outline's "sanitize equipment before contact with client"; the bulletin's
+## non-bleach wipes). The right answer first; the deal shuffles the order.
+const WASH: Array = [
+	{"id": "start", "ask": "Your subject sits down. Before the otoscope touches anything:",
+		"right": "Sanitize hands, clean speculum", "wrongs": ["Go straight in: ears look clean", "Sanitize after the look"],
+		"why": "Clean hands and a clean speculum before every contact."},
+	{"id": "dropped", "ask": "The speculum rolls off the table onto the floor.",
+		"right": "Take a fresh one", "wrongs": ["Blow on it and carry on", "Wipe it on your sleeve"],
+		"why": "Off the floor means dirty: a fresh speculum."},
+	{"id": "other_ear", "ask": "The right ear had wax and debris. Now the left ear.",
+		"right": "Fresh speculum for the left", "wrongs": ["Same one: same person", "Tap it on the table first"],
+		"why": "A fresh speculum for each ear: don't carry debris across."},
+	{"id": "wipes", "ask": "Between subjects you wipe the headphones down. With what?",
+		"right": "Non-bleach wipes", "wrongs": ["Bleach wipes", "A dry tissue"],
+		"why": "The kit list says non-bleach disinfecting wipes."},
+	{"id": "after", "ask": "The look is done. The next task needs your hands in the ear again.",
+		"right": "Sanitize again", "wrongs": ["They were clean an hour ago", "Wipe them on your trousers"],
+		"why": "Sanitize before each contact, not once a day."},
+]
+
+## California's medical referral list (Business and Professions Code 2538.36(a), paraphrased;
+## CA_PRACTICAL_EXAM.md §9): before fitting, suggest in writing a visit to an ear doctor for any of these.
+const REFER_DAYS := 90
+const REFER_8: Array[String] = [
+	"Visible deformity of the ear",
+	"Drainage now or in the last %d days" % REFER_DAYS,
+	"Sudden or fast loss in %d days" % REFER_DAYS,
+	"Dizziness, now or ongoing",
+	"One-sided sudden loss, %d days" % REFER_DAYS,
+	"A significant air-bone gap",
+	"Significant wax or an object",
+	"Pain or discomfort in the ear",
+]
+const LOOK_WORDS: Array[String] = ["Go ahead: test, impression", "Refer to a doctor first"]
+## The looks: view (ArcadeArt.oto_view: clear, wax, object; lookalike: dry flakes or a cotton tip;
+## sore: a red canal), the intake note, and flag: 0 = nothing on the list, else 1-8 on REFER_8. ear: the
+## ear the note names (else either).
+const LOOKS: Array = [
+	{"id": "clear", "view": "clear", "note": "Slow loss in both ears over ten years. No pain, no dizziness.", "flag": 0,
+		"why": "A clear canal, a clear drum, nothing on the list."},
+	{"id": "flakes", "view": "clear", "lookalike": true, "note": "Ears itch a little in winter. Hearing slowly worse.", "flag": 0,
+		"why": "A few dry flakes on the wall aren't significant wax: the drum is in view."},
+	{"id": "long_ago", "view": "clear", "note": "Ear infections as a child. Nothing since, forty years.", "flag": 0,
+		"why": "Drainage counts within %d days. Forty years ago doesn't." % REFER_DAYS},
+	{"id": "wax", "view": "wax", "note": "That ear has felt plugged since last week.", "flag": 7,
+		"why": "Wax hides the drum: significant wax is on the list."},
+	{"id": "bud", "view": "object", "lookalike": true, "note": "Cleans her ears with cotton buds every morning.", "flag": 7,
+		"why": "A cotton-bud tip left in the canal: a foreign body."},
+	{"id": "leak", "view": "clear", "note": "My ear leaked yellow stuff three weeks ago.", "flag": 2,
+		"why": "Drainage in the last %d days, even if it's dry today." % REFER_DAYS},
+	{"id": "bite", "view": "clear", "note": "You see: the outer ear is scarred and folded from an old dog bite.", "flag": 1,
+		"why": "A visible deformity of the ear, from birth or an injury."},
+	{"id": "woke", "view": "clear", "ear": "left", "note": "Woke up deaf in my left ear three weeks ago.", "flag": 5,
+		"why": "One ear, sudden, inside %d days: a doctor first, fast." % REFER_DAYS},
+	{"id": "fast", "view": "clear", "note": "Both ears got much worse over the last two months.", "flag": 3,
+		"why": "A rapidly worsening loss inside %d days." % REFER_DAYS},
+	{"id": "spin", "view": "clear", "note": "The room spins when I roll over in bed, most weeks.", "flag": 4,
+		"why": "Dizziness, now or ongoing."},
+	{"id": "ache", "view": "clear", "sore": true, "note": "It aches deep inside since Friday.", "flag": 8,
+		"why": "Pain or discomfort in the ear."},
+	{"id": "gap", "view": "clear", "note": "Her last chart: at 500 Hz, air 50, bone 10, both ears.", "flag": 6,
+		"why": "A 40 dB air-bone gap is significant."},
+]
+
+## Hoot's guided cards for Station 2.
+const HANDS_TRIES: Array = [
+	{"kind": "grip", "tool": "oto_up", "order": ["float", "safe", "pencil", "no_bridge"],
+		"line": "Grip 2: the bridge hand is on the head, and the light hand rests on it. Safe!"},
+	{"kind": "brace", "tool": "oto_down", "grip": "float",
+		"line": "This light hand floats. If they sneeze, the tip goes in. STOP: brace first."},
+	{"kind": "look", "look": "wax", "ear": "right",
+		"line": "Wax fills the canal: that's on California's list. Refer first."},
+]
+
+
+static func look(id: String) -> Dictionary:
+	for l: Dictionary in LOOKS:
+		if String(l["id"]) == id:
+			return l
+	return {}
+
+
+static func wash(id: String) -> Dictionary:
+	for w: Dictionary in WASH:
+		if String(w["id"]) == id:
+			return w
+	return {}
+
+
+## "Which grip is safe?": four drawings of one tool, one safe grip. order: four GRIPS ids.
+static func grip_card(tool: String, order: Array) -> Dictionary:
+	var answer := order.find("safe")
+	var unsafe: Array[int] = []
+	for i in order.size():
+		if i != answer:
+			unsafe.append(i)
+	return {"kind": "grip", "title": "Which grip is safe?", "tool": tool, "grips": order.duplicate(), "options": GRIP_WORDS.duplicate(),
+		"answer": answer, "unsafe": unsafe,
+		"lines": ["Grip %d: %s" % [answer + 1, String(GRIPS["safe"]["why"])], "Hands, head and %s: one unit. A sneeze moves them together." % _tool_short(tool)],
+		"hint": "Look for two things: a hand on the head, and the instrument hand resting on it."}
+
+
+## "Ready to go in?": one grip; safe or STOP.
+static func brace_card(tool: String, grip: String) -> Dictionary:
+	var safe := grip == "safe"
+	return {"kind": "brace", "title": "Ready to go in?", "tool": tool, "grip": grip, "options": BRACE_WORDS.duplicate(),
+		"answer": 0 if safe else 1, "unsafe": [] if safe else [0],
+		"lines": [String(GRIPS[grip]["why"]), "A sneeze moves them together. Go in." if safe else "Brace first, then go in. Unsafe gets you stopped."],
+		"hint": "Is a hand on the head? Does the instrument hand rest on it?"}
+
+
+## A hygiene moment. order: three indexes into [right, wrong 1, wrong 2].
+static func wash_card(w: Dictionary, order: Array) -> Dictionary:
+	var all: Array[String] = [String(w["right"]), String(w["wrongs"][0]), String(w["wrongs"][1])]
+	var words: Array[String] = []
+	for i: Variant in order:
+		words.append(all[int(i)])
+	return {"kind": "wash", "title": "Keep it clean", "wash": String(w["id"]), "ask": String(w["ask"]), "options": words,
+		"answer": order.find(0), "lines": [String(w["why"]), "Hygiene is scored at both exam stations."],
+		"hint": "Would you want it in your own ear? Clean hands, clean tools, every contact."}
+
+
+## "Look and call": the view down the otoscope, the intake note, go ahead or refer.
+static func look_card(l: Dictionary, ear: String) -> Dictionary:
+	var flag := int(l["flag"])
+	return {"kind": "look", "title": "Look, then call it", "look": String(l["id"]), "ear": ear, "view": String(l["view"]),
+		"lookalike": bool(l.get("lookalike", false)), "sore": bool(l.get("sore", false)), "note": String(l["note"]), "flag": flag,
+		"options": LOOK_WORDS.duplicate(), "answer": 0 if flag == 0 else 1,
+		"lines": [String(l["why"]), "Not on the list: test, then the impression." if flag == 0 else "On the list (%d): %s." % [flag, REFER_8[flag - 1]]],
+		"hint": "Read the intake card too. California's list: deformity, drainage, sudden loss, dizzy, one-sided, gap, wax, pain."}
+
+
+static func _tool_short(tool: String) -> String:
+	return {"oto_up": "light", "oto_down": "light", "earlight": "light", "syringe": "syringe"}.get(tool, "tool")
+
+
+static func hands_tries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for t: Dictionary in HANDS_TRIES:
+		var c: Dictionary
+		match String(t["kind"]):
+			"grip":
+				c = grip_card(String(t["tool"]), t["order"])
+			"brace":
+				c = brace_card(String(t["tool"]), String(t["grip"]))
+			_:
+				c = look_card(look(String(t["look"])), String(t["ear"]))
+		c["line"] = String(t["line"])
+		out.append(c)
+	return out
+
+
+## Six honest cards: a grip line-up, one grip to judge (safe or not), a hygiene moment and three looks
+## (at least one to go ahead and one to refer, all different).
+static func hands_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var tools := TOOLS.duplicate()
+	_shuffle(tools, rng)
+	var order: Array = ["safe"] + UNSAFE_GRIPS.duplicate()
+	_shuffle(order, rng)
+	out.append(grip_card(tools[0], order))
+	var g := "safe" if rng.randi_range(0, 2) == 0 else UNSAFE_GRIPS[rng.randi_range(0, UNSAFE_GRIPS.size() - 1)]
+	out.append(brace_card(tools[1], g))
+	var wo: Array = [0, 1, 2]
+	_shuffle(wo, rng)
+	out.append(wash_card(WASH[rng.randi_range(0, WASH.size() - 1)], wo))
+	var oks: Array = []
+	var refs: Array = []
+	for l: Dictionary in LOOKS:
+		(oks if int(l["flag"]) == 0 else refs).append(l)
+	_shuffle(oks, rng)
+	_shuffle(refs, rng)
+	var picks: Array = [oks[0], refs[0], oks[1] if rng.randi_range(0, 2) == 0 else refs[1]]
+	_shuffle(picks, rng)
+	for l: Dictionary in picks:
+		var side := "right" if rng.randi_range(0, 1) == 0 else "left"
+		out.append(look_card(l, String(l.get("ear", side))))
+	return out
 
 
 static func _shuffle(a: Array, rng: RandomNumberGenerator) -> void:

@@ -30,6 +30,8 @@ const MOVIES: Dictionary = {
 	"tuneup": "res://story/explainers/movies/tuneup.gd",
 	## (training, docs/training/MASKING_TRAINER.md) Masking School's occlusion movie, Station 5's lead-in
 	"plugged_ear": "res://story/explainers/movies/plugged_ear.gd",
+	## (training, docs/training/PRACTICAL_EXAM.md) The Practical's Safe Support movie, Station 2's lead-in
+	"steady_hand": "res://story/explainers/movies/steady_hand.gd",
 }
 ## Tests and dev tools only: more movies at run time, id -> a movie file path or the MOVIE
 ## Dictionary itself (tests/test_contracts_v4.gd adds fakes and clears it after). Never set by the game.
