@@ -47,6 +47,14 @@ static func draw_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: b
 			_wash(ci, size, card, reveal, wrong, t)
 		"look":
 			_look(ci, size, card, reveal, t)
+		"seat":
+			_seats(ci, size, card, reveal, wrong, t)
+		"order":
+			_order(ci, size, card, reveal, wrong)
+		"rule":
+			_rule(ci, size, card, reveal, wrong)
+		"walk":
+			_walk(ci, size, card, reveal, wrong, t)
 
 
 # ---------------------------------------------------------------- the kit tray
@@ -578,6 +586,225 @@ static func _look(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool,
 		var chip := Rect2(paper.position + Vector2(16, 240), Vector2(paper.size.x - 32, 56))
 		UiDraw.rounded_rect(ci, chip, GREEN if flag == 0 else RED, 14, 3, Palette.INK)
 		_wrap(ci, line, Rect2(chip.position + Vector2(12, 4), chip.size - Vector2(24, 8)), 18, Palette.PAPER)
+
+
+# ---------------------------------------------------------------- Station 4: Too loud?
+
+const GOLD := Color("#f2b632")
+## What you'd see of each seat from the desk (a description, drawn under the chair).
+const SEAT_LOOKS: Dictionary = {"face": "side-on to you", "back": "back to you", "wall": "facing the wall", "far": "behind the post"}
+
+
+## The booth from above: the audiometer desk (YOU) at the bottom, four chairs; each subject's head shows
+## a face (toward you, side-on), hair (back to you), or sits behind the window post.
+static func _seats(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	var room := Rect2(30, 84, size.x - 60, 330)
+	UiDraw.rounded_rect(ci, room, Color("#efe6d2"), 22, 3, Palette.INK)
+	# the booth window and its post
+	ci.draw_line(Vector2(room.position.x + 20, 314), Vector2(room.end.x - 20, 314), Color("#9ad0ec"), 10.0, true)
+	ci.draw_line(Vector2(room.position.x + 20, 314), Vector2(room.end.x - 20, 314), Palette.INK, 2.0, true)
+	# the desk and you
+	var desk := Rect2(Vector2(size.x * 0.5 - 150, 340), Vector2(300, 56))
+	_box(ci, desk, Color("#c9a77c"))
+	_box(ci, Rect2(desk.position + Vector2(100, 8), Vector2(100, 40)), Color("#e8e2d6"))
+	ci.draw_string(UiKit.font(700), desk.position + Vector2(0, 40), "YOU", HORIZONTAL_ALIGNMENT_LEFT, 90, 22, Palette.INK)
+	var seats: Array = card["seats"]
+	for i in seats.size():
+		var c := Vector2(150 + i * 194, 186)
+		var id := String(seats[i])
+		var hl := Palette.PAPER
+		if reveal and id == "face":
+			hl = Color(GREEN, 0.3)
+		elif wrong.has(i):
+			hl = Color(RED, 0.2)
+		ci.draw_circle(c, 70.0, hl)
+		ci.draw_arc(c, 70.0, 0.0, TAU, 32, Color(Palette.INK, 0.4), 2.0, true)
+		# which way they face: toward the desk (down-right, side-on), away (up), the wall (sideways out)
+		var dir := Vector2(0.55, 0.85).normalized()
+		match id:
+			"back":
+				dir = Vector2(0, -1)
+			"wall":
+				dir = Vector2(-1, 0) if i < 2 else Vector2(1, 0)
+			"far":
+				dir = Vector2(0.3, 0.95).normalized()
+		# where they look: a soft cone
+		var cone := PackedVector2Array([c + dir * 20, c + dir.rotated(0.45) * 92, c + dir.rotated(-0.45) * 92])
+		ci.draw_colored_polygon(cone, Color(Palette.SUNNY, 0.45))
+		_chair(ci, c, dir)
+		if id == "far":
+			ci.draw_rect(Rect2(c + Vector2(-16, 24), Vector2(34, 60)), Color("#7d8398"))   # the window post in the way
+			ci.draw_rect(Rect2(c + Vector2(-16, 24), Vector2(34, 60)), Palette.INK, false, 2.0)
+		ci.draw_string(UiKit.font(700), c + Vector2(-90, 96), String(SEAT_LOOKS[id]), HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(c + Vector2(-60, -96), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), c + Vector2(-60, -71), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		if reveal and id == "face":
+			_stamp(ci, c + Vector2(0, -78), "FACE IN VIEW", GREEN, -0.06)
+
+
+## A chair seen from above with its sitter facing dir: the seat, the back rest behind them, the head (a
+## face drawn toward dir).
+static func _chair(ci: CanvasItem, c: Vector2, dir: Vector2) -> void:
+	var side := dir.orthogonal()
+	var seat := PackedVector2Array([c + (dir + side) * 34, c + (dir - side) * 34, c + (-dir - side) * 34, c + (-dir + side) * 34])
+	_poly(ci, seat, Color("#c9a77c"))
+	ci.draw_line(c - dir * 36 + side * 38, c - dir * 36 - side * 38, Palette.INK, 14.0, true)
+	ci.draw_line(c - dir * 36 + side * 36, c - dir * 36 - side * 36, Color("#6b4a2f"), 10.0, true)
+	ci.draw_circle(c, 24.0, HAIR)
+	ci.draw_circle(c + dir * 6, 19.0, Palette.SKIN)
+	ci.draw_arc(c, 24.0, 0.0, TAU, 24, Palette.INK, 2.5, true)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_circle(c + dir * 14 + side * 7 * s, 3.0, Palette.INK)
+	ci.draw_circle(c + dir * 24, 4.0, Palette.SKIN.darkened(0.15))
+
+
+## "Which pitch first?": the chart's top row with the tested pitches dotted, then the four choices.
+static func _order(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var r := Rect2(40, 92, size.x - 80, 150)
+	UiDraw.rounded_rect(ci, r, Palette.PAPER, 18, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), r.position + Vector2(18, 30), "Tested on this chart:", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.INK)
+	var all: Array = PracticalDeck.TD_FREQ_POOL
+	var tested: Array = card["tested"]
+	for i in all.size():
+		var x := r.position.x + 70 + i * (r.size.x - 140) / (all.size() - 1)
+		var f := int(all[i])
+		var on := tested.has(f)
+		ci.draw_line(Vector2(x, r.position.y + 54), Vector2(x, r.position.y + 104), Color(Palette.INK, 0.25), 2.0)
+		if on:
+			ci.draw_circle(Vector2(x, r.position.y + 80), 13.0, Palette.RIGHT_RED)
+			ci.draw_arc(Vector2(x, r.position.y + 80), 13.0, 0.0, TAU, 18, Palette.INK, 2.0, true)
+		else:
+			ci.draw_string(UiKit.font(700), Vector2(x - 40, r.position.y + 88), "not tested", HORIZONTAL_ALIGNMENT_CENTER, 80, 14, Palette.INK_SOFT)
+		ci.draw_string(UiKit.font(700), Vector2(x - 40, r.position.y + 132), "%dk" % (f / 1000) if f >= 1000 else str(f), HORIZONTAL_ALIGNMENT_CENTER, 80, 18, Palette.INK)
+	var freqs: Array = card["freqs"]
+	var w := (size.x - 80 - 3 * 14) / 4.0
+	for i in freqs.size():
+		var b := Rect2(40 + i * (w + 14), 262, w, 140)
+		var right := reveal and i == int(card["answer"])
+		UiDraw.rounded_rect(ci, b, Color(GREEN, 0.18) if right else (Color(RED, 0.15) if wrong.has(i) else Color("#fff4cf")), 18, 3, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(b.position + Vector2(10, 10), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(10, 35), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(0, 92), "%d Hz" % int(freqs[i]), HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 30, Palette.INK)
+		if right:
+			_stamp(ci, b.position + Vector2(b.size.x * 0.5, 122), "FIRST", GREEN, -0.06)
+		elif wrong.has(i):
+			_stamp(ci, b.position + Vector2(b.size.x * 0.5, 122), "NOT YET", GREY, 0.05)
+
+
+## A TD rule: a gold ladder chip and the question.
+static func _rule(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var chip := Rect2(36, 96, 240, 300)
+	UiDraw.rounded_rect(ci, chip, Color("#fff1c2"), 26, 3, Palette.INK)
+	var x0 := chip.position.x + 80
+	for side: float in [0.0, 80.0]:
+		ci.draw_line(Vector2(x0 + side, chip.position.y + 30), Vector2(x0 + side, chip.position.y + 240), Palette.INK, 6.0, true)
+	for k in 6:
+		var y := chip.position.y + 50 + k * 36
+		ci.draw_line(Vector2(x0, y), Vector2(x0 + 80, y), GOLD.darkened(0.2), 5.0, true)
+	ci.draw_string(UiKit.font(700), chip.position + Vector2(0, 280), "TD ROUTINE", HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 22, Palette.INK)
+	var paper := Rect2(300, 96, size.x - 336, 300)
+	UiDraw.rounded_rect(ci, Rect2(paper.position + Vector2(0, 6), paper.size), Color(0, 0, 0, 0.18), 22)
+	UiDraw.rounded_rect(ci, paper, Palette.PAPER, 22, 3, Palette.INK)
+	_wrap(ci, String(card["ask"]), Rect2(paper.position + Vector2(28, 26), Vector2(paper.size.x - 56, 180)), 30, Palette.INK)
+	if reveal:
+		_stamp(ci, paper.position + Vector2(paper.size.x * 0.5, 250), "BY THE ROUTINE", GREEN, -0.07)
+	elif not wrong.is_empty():
+		_stamp(ci, paper.position + Vector2(paper.size.x * 0.5, 250), "NOT QUITE", GREY, 0.06)
+
+
+## The ladder walk: the subject's face (big, left) and the ladder from 70 to 110 with the live rung, the
+## pairs already given, and a drawn pair of bursts (no sound).
+static func _walk(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array, t: float) -> void:
+	var step := int(card["step"])
+	var levels: Array = card["levels"]
+	var faces: Array = card["faces"]
+	var face := String(faces[step])
+	var db := int(levels[step])
+	# the face, in a booth window
+	var win := Rect2(24, 84, 420, 322)
+	UiDraw.rounded_rect(ci, win, Color("#d8eef7"), 22, 3, Palette.INK)
+	var since := t - float(card.get("rung_at", 0.0))
+	_td_face(ci, win.position + Vector2(210, 176), face, bool(card["blink"]) and face == "finger", since)
+	_headset(ci, win.position + Vector2(210, 150), 1.4, Palette.RIGHT_RED, Palette.LEFT_BLUE)
+	# the pair of bursts just given, drawn
+	var pk := clampf(since / 0.6, 0.0, 1.0)
+	for b in 2:
+		var bx := win.position.x + 30 + b * 60
+		for k in 6:
+			var x := bx + k * 7
+			var hgt := 18.0 * sin(PI * k / 5.0) * (1.0 if pk > 0.3 + b * 0.3 else 0.3)
+			ci.draw_line(Vector2(x, win.position.y + 40 - hgt), Vector2(x, win.position.y + 40 + hgt), GOLD.darkened(0.2), 3.0, true)
+	ci.draw_string(UiKit.font(700), win.position + Vector2(20, 300), "%d dB" % db, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.INK)
+	# the ladder
+	var lad := Rect2(470, 84, size.x - 488, 322)
+	UiDraw.rounded_rect(ci, lad, Palette.PAPER, 22, 3, Palette.INK)
+	var top_db := PracticalDeck.TD_LIMIT_DB
+	var rungs := (top_db - PracticalDeck.TD_START_DB) / PracticalDeck.TD_STEP_DB + 1
+	var y_of := func(d: int) -> float: return lad.end.y - 30 - (d - PracticalDeck.TD_START_DB) / float(PracticalDeck.TD_STEP_DB) * (lad.size.y - 60) / (rungs - 1)
+	var lx := lad.position.x + 150
+	ci.draw_line(Vector2(lx, lad.position.y + 20), Vector2(lx, lad.end.y - 20), Palette.INK, 4.0, true)
+	ci.draw_line(Vector2(lx + 120, lad.position.y + 20), Vector2(lx + 120, lad.end.y - 20), Palette.INK, 4.0, true)
+	for k in rungs:
+		var d := PracticalDeck.TD_START_DB + k * PracticalDeck.TD_STEP_DB
+		var y: float = y_of.call(d)
+		var given := k <= step
+		ci.draw_line(Vector2(lx, y), Vector2(lx + 120, y), GOLD if given else Color(Palette.INK, 0.25), 5.0 if given else 3.0, true)
+		ci.draw_string(UiKit.font(700), Vector2(lad.position.x + 20, y + 7), "%d" % d, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK if given else Palette.INK_SOFT)
+		if given and k < faces.size():
+			var f := String(faces[k])
+			var tag: String = {"calm": "", "frown": "frown", "finger": "finger", "hand": "HAND"}[f]
+			if tag != "":
+				ci.draw_string(UiKit.font(700), Vector2(lx + 130, y + 6), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, RED if f == "hand" else Palette.INK)
+	var ly: float = y_of.call(db)
+	ci.draw_circle(Vector2(lx + 60, ly), 12.0, Palette.CORAL)
+	ci.draw_arc(Vector2(lx + 60, ly), 12.0, 0.0, TAU, 16, Palette.INK, 2.5, true)
+	if reveal:
+		var td := int(card["td"])
+		if td > 0:
+			_stamp(ci, Vector2(lx + 60, ly - 34), "TD %d" % td, GREEN, -0.06)
+		else:
+			ci.draw_line(Vector2(lx + 60, ly - 50), Vector2(lx + 60, ly + 4), RED, 4.0, true)
+			ci.draw_line(Vector2(lx + 60, ly + 4), Vector2(lx + 50, ly - 8), RED, 4.0, true)
+			ci.draw_line(Vector2(lx + 60, ly + 4), Vector2(lx + 70, ly - 8), RED, 4.0, true)
+			_stamp(ci, Vector2(lx + 60, ly + 40), "TD: no hand", RED, 0.05)
+	elif not wrong.is_empty():
+		_stamp(ci, lad.get_center() + Vector2(0, 40), "EXAMINER: NO", RED, 0.06)
+
+
+## The TD subject's face, big: calm, a frown, a raised finger (annoying), the whole hand (stop); blink:
+## a hard blink and a flinch (a reflex to watch for).
+static func _td_face(ci: CanvasItem, c: Vector2, face: String, blink: bool, since: float) -> void:
+	ci.draw_circle(c + Vector2(0, -10), 98.0, Color("#5a3a22"))
+	ci.draw_circle(c, 86.0, Palette.SKIN)
+	ci.draw_arc(c, 86.0, 0.0, TAU, 40, Palette.INK, 4.0, true)
+	var shut := blink and fmod(since, 1.6) < 0.25
+	for s: float in [-1.0, 1.0]:
+		var e := c + Vector2(s * 30, -14)
+		if shut:
+			ci.draw_line(e - Vector2(12, 0), e + Vector2(12, 0), Palette.INK, 4.0, true)
+		else:
+			ci.draw_circle(e, 9.0, Palette.INK)
+		if face != "calm":
+			var tilt := 6.0 if face == "frown" else 10.0
+			ci.draw_line(e + Vector2(-14, -22 + (tilt if s > 0 else 0.0)), e + Vector2(14, -22 + (0.0 if s > 0 else tilt)), Palette.INK, 4.0, true)
+	match face:
+		"calm":
+			ci.draw_arc(c + Vector2(0, 26), 24.0, 0.3, PI - 0.3, 12, Palette.INK, 4.0, true)
+		"frown", "finger":
+			ci.draw_line(c + Vector2(-20, 40), c + Vector2(20, 40), Palette.INK, 4.0, true)
+		"hand":
+			ci.draw_arc(c + Vector2(0, 52), 22.0, PI + 0.3, TAU - 0.3, 12, Palette.INK, 4.0, true)
+	if face == "finger":
+		var h := c + Vector2(118, 40)
+		UiDraw.rounded_rect(ci, Rect2(h + Vector2(-18, -8), Vector2(36, 40)), Palette.SKIN, 10, 3, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(h + Vector2(-6, -52), Vector2(12, 48)), Palette.SKIN, 6, 3, Palette.INK)
+	elif face == "hand":
+		var h := c + Vector2(122, -10)
+		UiDraw.rounded_rect(ci, Rect2(h + Vector2(-26, 0), Vector2(52, 48)), Palette.SKIN, 12, 3, Palette.INK)
+		for k in 4:
+			UiDraw.rounded_rect(ci, Rect2(h + Vector2(-24 + k * 13, -40), Vector2(11, 44)), Palette.SKIN, 5, 2, Palette.INK)
+	if blink and face == "finger":
+		ci.draw_string(UiKit.font(700), c + Vector2(-130, -96), "blink!", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, RED)
 
 
 # ---------------------------------------------------------------- helpers

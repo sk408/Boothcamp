@@ -3,7 +3,7 @@ extends Node
 ## end to end with a test bot and prints PRACTICAL_CHECK_RESULT {json} (docs/training/PRACTICAL_EXAM.md).
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/practical_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=kit|hands picks the station (default kit). The room opens on Masking
+## --station=kit|hands|td picks the station (default kit). The room opens on Masking
 ## School, so the bot first switches to THE PRACTICAL (the tab's click with --policy=mouse, Tab with keys,
 ## select_lesson for careful), then opens the station.
 ## Policies (--policy=):
@@ -72,6 +72,7 @@ class Driver extends Node:
 	var school: Node
 	var visits := 0
 	var expect_over := 0   # what this run's misses and hints should cost
+	var tries_seen := 0    # Try it cards (a guided ladder asks once per rung)
 	var result: Dictionary = {}
 	var _clock := 0.0
 	var _last := 0.0
@@ -160,6 +161,8 @@ class Driver extends Node:
 					_:
 						await _action(&"ui_accept")
 			&"practical_try":
+				if int(data.get("sub", 0)) == 0:
+					tries_seen += 1
 				await _wait(READ_S)
 				await _shoot("practical_try")
 				await _answer(data, solver, false)
@@ -171,9 +174,9 @@ class Driver extends Node:
 				await _shoot("practical_card")
 				await _shoot("practical_card_%s" % String(data.get("kind", "")))
 				var n := (data["options"] as Array).size()
-				if policy == "guess":
+				if policy == "guess":   # a wrong pick on every rung of a ladder too
 					expect_over += PracticalDeck.UNSAFE_STROKES if (data.get("unsafe", []) as Array).has((int(data["best"]) + 1) % n) else 1
-				elif policy == "hint":
+				elif policy == "hint" and int(data.get("sub", 0)) == 0:   # one hint a hole
 					expect_over += 1
 				await _answer(data, solver, true)
 			&"practical_next":
@@ -244,8 +247,8 @@ class Driver extends Node:
 		if bool(score.get("star", false)) != (want == 0):
 			problems.append("the scorecard's star is %s" % str(score.get("star")))
 		var tries := PracticalDeck.tries(station).size()
-		if int(beats.get("practical_try", 0)) != tries:
-			problems.append("%d Try it cards, expected %d" % [int(beats.get("practical_try", 0)), tries])
+		if tries_seen != tries:
+			problems.append("%d Try it cards, expected %d" % [tries_seen, tries])
 
 	func _check_room() -> void:
 		var rec: Dictionary = Progress.station(PracticalDeck.LESSON, station)

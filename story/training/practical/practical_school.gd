@@ -10,7 +10,9 @@ extends Control
 ## Stations built so far: 1 "Pack the bag" (what stays home, the calibration sticker, the listening
 ## check, the subject); 2 "Steady hands" (the safe grip, a grip to judge, hygiene, three looks to go
 ## ahead or refer by California's eight; its movie "The Steady Hand"). An unsafe pick (a grip that
-## isn't braced) is the lesson's one STOP: it costs PracticalDeck.UNSAFE_STROKES, not one.
+## isn't braced) is the lesson's one STOP: it costs PracticalDeck.UNSAFE_STROKES, not one. 4 "Too loud?"
+## (the seat, the first pitch, the TD routine's rules, two ladder walks: one call per rung of beep pairs,
+## the face drawn, nothing loud ever played).
 ## Controls: keys 1-4 answer, H hint (a stroke), Enter / Space go on, R plays again on the scorecard,
 ## T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off:
 ## every answer is drawn, and no tone is ever played to test the player.
@@ -18,7 +20,8 @@ extends Control
 ##   practical_intro {station}                                solver: Start
 ##   explainer (the station's movie, first visit)             solver: skip
 ##   practical_try {station, step, best, options, mouse}      solver: the right answer, then Next
-##   practical_card {station, hole, kind, best, options, unsafe, mouse}  solver: the right answer
+##   practical_card {station, hole, kind, sub, best, options, unsafe, mouse}  solver: the right answer
+##     (a ladder card asks again per rung: sub 0, 1, 2...; so does a guided ladder's practical_try)
 ##   practical_next {station, hole}                           solver: Next
 ##   practical_scorecard {station, over_par, star}            solver: back to the room
 
@@ -177,12 +180,7 @@ func _try_it() -> void:
 		_feedback_text("Hoot shows you this one. Pick the answer he points at.")
 		_answer_buttons()
 		_state = &"card"
-		var opts: Array = _card["options"]
-		var best := int(_card["answer"])
-		Events.awaiting_input.emit(&"practical_try", {"station": station_id, "step": i, "best": best, "options": opts,
-			"mouse": {"click": String(opts[best])}}, func() -> void: pick(best))
-		await _go
-		Events.input_resolved.emit(&"practical_try")
+		await _ask(&"practical_try", {"station": station_id, "step": i})
 		if _leaving:
 			return
 		_state = &"next"
@@ -208,13 +206,7 @@ func _round() -> void:
 		_feedback_text(_ask_feedback())
 		_answer_buttons()
 		_state = &"card"
-		var opts: Array = _card["options"]
-		var best := int(_card["answer"])
-		Events.awaiting_input.emit(&"practical_card", {"station": station_id, "hole": h, "kind": String(_card["kind"]), "best": best,
-			"options": opts, "unsafe": (_card.get("unsafe", []) as Array).duplicate(), "mouse": {"click": String(opts[best])}},
-			func() -> void: pick(best))
-		await _go
-		Events.input_resolved.emit(&"practical_card")
+		await _ask(&"practical_card", {"station": station_id, "hole": h, "kind": String(_card["kind"])})
 		if _leaving:
 			return
 		strokes.append(_hole_strokes)
@@ -226,6 +218,24 @@ func _round() -> void:
 		Events.input_resolved.emit(&"practical_next")
 		if _leaving:
 			return
+
+
+## Emit the live card's beat and wait for its answer. A ladder card ("answers", Station 4) asks once per
+## rung: the beat comes again with the next rung's best ("sub" counts the rungs).
+func _ask(beat: StringName, base: Dictionary) -> void:
+	var sub := 0
+	while true:
+		var opts: Array = _card["options"]
+		var best := int(_card["answer"])
+		var data := base.duplicate()
+		data.merge({"best": best, "options": opts, "sub": sub, "unsafe": (_card.get("unsafe", []) as Array).duplicate(),
+			"mouse": {"click": String(opts[best])}}, true)
+		Events.awaiting_input.emit(beat, data, func() -> void: pick(best))
+		var what: StringName = await _go
+		Events.input_resolved.emit(beat)
+		if what != &"step" or _leaving:
+			return
+		sub += 1
 
 
 func _deal_card(c: Dictionary) -> void:
@@ -255,7 +265,26 @@ func _ask_line() -> String:
 			return "Clean hands, clean tools. What now?"
 		"look":
 			return "Look in the ear and read the card. Go ahead, or a doctor first?"
+		"seat":
+			return "From the audiometer you must see their face the whole time. Which chair?"
+		"order":
+			return "Your chart's ready. Which pitch does the TD start on?"
+		"rule":
+			return String(_card["ask"])
+		"walk":
+			return _rung_line()
 	return "Pick one."
+
+
+## The ladder's live rung, in words: what the face does (the answer is the player's to call).
+func _rung_line() -> String:
+	var step := int(_card.get("step", 0))
+	var db := int((_card["levels"] as Array)[step])
+	var face := String((_card["faces"] as Array)[step])
+	var words := {"calm": "a calm face.", "frown": "a little frown.", "finger": "a finger goes up.", "hand": "the whole hand goes up!"}
+	if db >= PracticalDeck.TD_LIMIT_DB and face != "hand":
+		return "%d dB, the limit: %s No hand." % [db, words[face]]
+	return "%d dB, a pair of bursts: %s" % [db, words[face]]
 
 
 func _ask_feedback() -> String:
@@ -274,6 +303,9 @@ func _ask_feedback() -> String:
 			return "Hygiene counts at both exam stations: hands, tools, every contact."
 		"look":
 			return "California's list, from the law: deformity, drainage, sudden loss, dizziness, one-sided loss, a big gap, wax, pain."
+		"seat", "order", "rule", "walk":
+			return "The board's suggested TD routine: face in view, top pitch first, %d dB, pairs, up %d, finger, hand, arrow at %d." % [
+				PracticalDeck.TD_START_DB, PracticalDeck.TD_STEP_DB, PracticalDeck.TD_LIMIT_DB]
 	return ""
 
 
@@ -282,6 +314,19 @@ func pick(i: int) -> void:
 	if _state != &"card" or _wrong.has(i) or i < 0 or i >= (_card["options"] as Array).size():
 		return
 	if _guided and i != int(_card["answer"]):
+		return
+	var answers: Array = _card.get("answers", [])
+	var step := int(_card.get("step", 0))
+	if i == int(_card["answer"]) and step < answers.size() - 1:
+		# a ladder rung, right: the next pair (a soft tick and a drawn wave; nothing loud ever plays)
+		_card["step"] = step + 1
+		_card["answer"] = int(answers[step + 1])
+		_card["rung_at"] = _stage_t
+		_wrong.clear()
+		Sfx.play(&"click", 1.3, -14.0)
+		_say(_rung_line())
+		_answer_buttons()
+		_go.emit(&"step")
 		return
 	if i == int(_card["answer"]):
 		_state = &"busy"
@@ -574,6 +619,7 @@ func _answer_buttons() -> void:
 	if not _guided:
 		_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
 		_hint_btn.pressed.connect(hint)
+		_hint_btn.disabled = _hinted
 		_answers.add_child(_hint_btn)
 
 

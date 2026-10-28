@@ -27,8 +27,9 @@ const STATIONS: Array = [
 		"card": "station_a", "built": false, "movie": "",
 		"intro": "Air and bone on a live subject, masked by the plateau, every symbol on the chart."},
 	{"id": "td", "num": 4, "name": "Too loud?", "pitch": "Threshold of discomfort.", "color": Color("#f2b632"),
-		"card": "td_steps", "built": false, "movie": "",
-		"intro": "Watch the face, not the dial. Pairs of beeps, up 5 at a time, until the hand goes up."},
+		"card": "td_steps", "built": true, "movie": "", "star_line": "Even par! You watched the face, not the dial. That's a star.",
+		"intro": "Watch the face, not the dial. Pairs of beeps from %d, up %d at a time, until the hand goes up.\n" % [70, 5]
+			+ "Seat them, pick the first pitch, walk the ladder and chart it. Nothing loud ever plays here."},
 	{"id": "impression", "num": 5, "name": "One good impression", "pitch": "Dam, fill, cure, judge.", "color": Color("#ff9f1c"),
 		"card": "impression", "built": false, "movie": "",
 		"intro": "One impression only. No air in the tip, no voids, past the second bend."},
@@ -319,6 +320,8 @@ static func deal(station_id: String, rng: RandomNumberGenerator) -> Array[Dictio
 			return kit_round(rng)
 		"hands":
 			return hands_round(rng)
+		"td":
+			return td_round(rng)
 	return []
 
 
@@ -328,6 +331,8 @@ static func tries(station_id: String) -> Array[Dictionary]:
 			return kit_tries()
 		"hands":
 			return hands_tries()
+		"td":
+			return td_tries()
 	return []
 
 
@@ -539,3 +544,188 @@ static func _shuffle(a: Array, rng: RandomNumberGenerator) -> void:
 		var t: Variant = a[i]
 		a[i] = a[j]
 		a[j] = t
+
+
+# ================================================================ Station 4: Too loud? (the threshold of discomfort)
+
+## The bulletin's suggested TD routine (Candidate Information Bulletin, March 2025; CA_PRACTICAL_EXAM.md §3.1):
+## the face in view, the highest TESTED pitch first, pairs of short bursts from 70 dB, never more than 5 dB
+## up between pairs, a finger for annoying, the hand for stop, reflexes watched; recorded as TD, and no
+## hand at the limit is an arrow down at the 110 line. "Only suggestions": a clinic's own may differ.
+const TD_START_DB := 70
+const TD_STEP_DB := 5
+const TD_LIMIT_DB := 110
+## The ladder's choices, the same at every rung.
+const WALK_NEXT := 0
+const WALK_JUMP := 1
+const WALK_RECORD := 2
+const WALK_ARROW := 3
+const WALK_WORDS: Array[String] = ["Next pair: up %d" % TD_STEP_DB, "Jump up %d" % (TD_STEP_DB * 2), "Record TD here",
+	"No hand at %d: arrow" % TD_LIMIT_DB]
+## Faces on the ladder, by dB below the subject's TD (the hand): calm, a frown, a finger (annoying).
+const FACE_FROWN_BELOW := 10
+const FACE_FINGER_BELOW := 5
+## The seats: where the subject sits, seen from above, and which way they face. Only "face" lets you see
+## their face from the audiometer the whole time.
+const SEATS: Dictionary = {
+	"face": {"ok": true, "why": "Side-on to you: you see the face, they can't see your hands."},
+	"back": {"ok": false, "why": "Their back is to you: you'd miss the finger, the hand and every blink."},
+	"wall": {"ok": false, "why": "Facing the wall: no face, no reflexes, no TD."},
+	"far": {"ok": false, "why": "Behind the booth window frame: half the face is hidden."},
+}
+const SEAT_WORDS: Array[String] = ["Chair 1", "Chair 2", "Chair 3", "Chair 4"]
+## Quick rule cards. right first; the deal shuffles.
+const TD_RULES: Array = [
+	{"id": "start", "ask": "The first pair of the TD walk starts at...", "right": "%d dB" % TD_START_DB,
+		"wrongs": ["Their threshold + 10", "%d dB, to save time" % (TD_START_DB + 20)], "why": "Start at %d and walk up from there." % TD_START_DB},
+	{"id": "step", "ask": "No hand yet. How far up for the next pair?", "right": "%d dB, no more" % TD_STEP_DB,
+		"wrongs": ["%d dB" % (TD_STEP_DB * 2), "Straight to the limit"], "why": "Never more than %d dB between pairs." % TD_STEP_DB},
+	{"id": "finger", "ask": "Up goes a FINGER. What does it mean?", "right": "Annoying: keep going",
+		"wrongs": ["Stop: record TD", "They can't hear it"], "why": "A finger is annoying. The hand means stop."},
+	{"id": "hand", "ask": "Up goes the whole HAND. Now?", "right": "Stop: record TD here",
+		"wrongs": ["One more pair to be sure", "Back down 10 and retest"], "why": "The hand means they don't want any more: that level is the TD."},
+	{"id": "arrow", "ask": "%d dB, the limit, and no hand. On the chart:" % TD_LIMIT_DB, "right": "An arrow down at %d, TD" % TD_LIMIT_DB,
+		"wrongs": ["Nothing: leave it blank", "TD at %d" % (TD_LIMIT_DB + 10)], "why": "No hand at the limit: an arrow down at the %d line, marked TD." % TD_LIMIT_DB},
+	{"id": "reflex", "ask": "At 95 dB the subject blinks hard and flinches. What do you do?", "right": "Note it, go gently",
+		"wrongs": ["Ignore it: no hand yet", "Jump up %d to finish" % (TD_STEP_DB * 2)], "why": "Watch for reflexes: a blink, a flinch, a jerk. Note them and take care."},
+	{"id": "pairs", "ask": "How do you present each level?", "right": "A pair of short bursts",
+		"wrongs": ["One long steady tone", "Pulsed for ten seconds"], "why": "Pairs of short bursts, at least a second between pairs."},
+]
+## The pitches a chart might go up to: the highest TESTED one goes first.
+const TD_TOP_FREQS: Array[int] = [4000, 6000, 8000]
+const TD_FREQ_POOL: Array[int] = [500, 1000, 2000, 4000, 6000, 8000]
+
+## Hoot's guided cards for Station 4.
+const TD_TRIES: Array = [
+	{"kind": "seat", "order": ["back", "face", "wall", "far"],
+		"line": "Chair 2 sits side-on: you can watch the face from the audiometer. That's the one."},
+	{"kind": "walk", "td": 80,
+		"line": "Calm face: next pair. A finger is only annoying: up 5 more. The hand: record TD."},
+]
+
+
+static func td_rule(id: String) -> Dictionary:
+	for r: Dictionary in TD_RULES:
+		if String(r["id"]) == id:
+			return r
+	return {}
+
+
+## "Where do they sit?": four seats around the booth seen from above. order: four SEATS ids.
+static func seat_card(order: Array) -> Dictionary:
+	var answer := order.find("face")
+	var wrong_why := ""
+	for id: Variant in order:
+		if String(id) != "face":
+			wrong_why = String(SEATS[String(id)]["why"])
+			break
+	return {"kind": "seat", "title": "Where does the subject sit?", "seats": order.duplicate(), "options": SEAT_WORDS.duplicate(),
+		"answer": answer, "lines": ["Chair %d: %s" % [answer + 1, String(SEATS["face"]["why"])], "The bulletin: seat them so you can see their face."],
+		"hint": "You'll be watching for a finger, a hand and a blink. Which chair shows you the face?"}
+
+
+## "Which pitch first?": the chart's tested pitches; the highest tested one first.
+static func order_card(tested: Array, options: Array) -> Dictionary:
+	var top := 0
+	for f: Variant in tested:
+		top = maxi(top, int(f))
+	var words: Array[String] = []
+	for f: Variant in options:
+		words.append("%d Hz" % int(f))
+	return {"kind": "order", "title": "Which pitch first?", "tested": tested.duplicate(), "freqs": options.duplicate(), "options": words,
+		"answer": options.find(top),
+		"lines": ["%d Hz: the highest pitch you tested on this chart." % top, "Then work down through the others."],
+		"hint": "The bulletin starts at the highest frequency TESTED. Look at the chart's dots."}
+
+
+## A TD rule. order: three indexes into [right, wrong 1, wrong 2].
+static func rule_card(r: Dictionary, order: Array) -> Dictionary:
+	var all: Array[String] = [String(r["right"]), String(r["wrongs"][0]), String(r["wrongs"][1])]
+	var words: Array[String] = []
+	for i: Variant in order:
+		words.append(all[int(i)])
+	return {"kind": "rule", "title": "The TD routine", "rule": String(r["id"]), "ask": String(r["ask"]), "options": words,
+		"answer": order.find(0), "lines": [String(r["why"]), "The board's suggested routine: your clinic's may differ."],
+		"hint": "Start %d. Pairs. Up %d. Finger: annoying. Hand: stop. No hand at %d: arrow." % [TD_START_DB, TD_STEP_DB, TD_LIMIT_DB]}
+
+
+## The face at a rung: calm, frown, finger, hand (td = -1: never a hand; a finger near the limit).
+static func td_face(db: int, td: int) -> String:
+	var top := td if td > 0 else TD_LIMIT_DB + FACE_FINGER_BELOW
+	if td > 0 and db >= td:
+		return "hand"
+	if db >= top - FACE_FINGER_BELOW:
+		return "finger"
+	if db >= top - FACE_FROWN_BELOW:
+		return "frown"
+	return "calm"
+
+
+## "Walk the ladder": one decision per rung from TD_START_DB up. td: the subject's TD (-1: no hand at the
+## limit). The card keeps its rung in "step"; its "answer" is the live rung's.
+static func walk_card(td: int, blink := false) -> Dictionary:
+	var levels: Array[int] = []
+	var faces: Array[String] = []
+	var answers: Array[int] = []
+	var db := TD_START_DB
+	while true:
+		levels.append(db)
+		faces.append(td_face(db, td))
+		if td > 0 and db >= td:
+			answers.append(WALK_RECORD)
+			break
+		if db >= TD_LIMIT_DB:
+			answers.append(WALK_ARROW)
+			break
+		answers.append(WALK_NEXT)
+		db += TD_STEP_DB
+	var end_line := "TD %d: the hand went up. Record it like a threshold, marked TD." % td if td > 0 \
+		else "No hand at %d: an arrow down at the %d line, marked TD." % [TD_LIMIT_DB, TD_LIMIT_DB]
+	return {"kind": "walk", "title": "Too loud? Walk the ladder", "td": td, "blink": blink, "levels": levels, "faces": faces,
+		"answers": answers, "step": 0, "answer": answers[0], "options": WALK_WORDS.duplicate(),
+		"lines": [end_line, "Up %d at a time, watching the face, never the dial." % TD_STEP_DB],
+		"hint": "Calm or a frown: next pair. A finger is only annoying. The hand: record TD. Never jump %d." % (TD_STEP_DB * 2)}
+
+
+static func td_tries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for t: Dictionary in TD_TRIES:
+		var c := seat_card(t["order"]) if String(t["kind"]) == "seat" else walk_card(int(t["td"]))
+		c["line"] = String(t["line"])
+		out.append(c)
+	return out
+
+
+## Six honest cards: a seat, the first pitch, a rule, two ladder walks (one may reach the limit with no
+## hand), another rule.
+static func td_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var seats: Array = SEATS.keys()
+	_shuffle(seats, rng)
+	out.append(seat_card(seats))
+	var top: int = TD_TOP_FREQS[rng.randi_range(0, TD_TOP_FREQS.size() - 1)]
+	var tested: Array = []
+	for f: int in TD_FREQ_POOL:
+		if f <= top:
+			tested.append(f)
+	var opts: Array = [top, 1000, 2000]
+	for f: int in TD_FREQ_POOL:
+		if f > top:
+			opts.append(f)   # a pitch above the chart: not tested, not first
+			break
+	if opts.size() < 4:
+		opts.append(500)
+	_shuffle(opts, rng)
+	out.append(order_card(tested, opts))
+	var rules := TD_RULES.duplicate()
+	_shuffle(rules, rng)
+	var ro: Array = [0, 1, 2]
+	_shuffle(ro, rng)
+	out.append(rule_card(rules[0], ro))
+	var tds: Array = [85, 90, 95, 100, 105]
+	_shuffle(tds, rng)
+	out.append(walk_card(int(tds[0]), rng.randi_range(0, 1) == 0))
+	out.append(walk_card(-1 if rng.randi_range(0, 2) == 0 else int(tds[1]), rng.randi_range(0, 2) == 0))
+	_shuffle(ro, rng)
+	out.append(rule_card(rules[1], ro))
+	return out
