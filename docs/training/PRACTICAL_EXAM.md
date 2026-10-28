@@ -4,7 +4,7 @@ Steve asked (2026-10-28) for "exhaustive research into the california hearing ai
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
 (section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
-(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -136,6 +136,15 @@ down at the 110 line when there is no response.
   limit with no hand: record the **arrow at 110**.
 - **Never loud:** no sound plays at any level; each pair is a soft UI tick and a drawn wave (question 7).
 - **Earns:** the **TD Steps** card (gold).
+- **As built (PR 4):** six holes, keys 1-4: "Where does the subject sit?" (the booth from above, four chairs: side-on
+  to you, back to you, facing the wall, behind the window post), "Which pitch first?" (the chart's tested pitches;
+  the highest TESTED one, with an untested higher pitch as a decoy), two quick rule cards (start level, step,
+  finger, hand, the arrow, reflexes, pairs) and two ladder walks. A ladder asks once per rung: Next pair (up 5),
+  Jump up 10 (always a miss), Record TD here, or No hand at 110: arrow. The face goes calm, a frown, a finger, the
+  hand; some subjects blink hard on the finger rung, and about one in three walks reaches 110 with no hand. Each
+  rung's pair is a soft tick and a drawn pair of bursts. A miss on a rung is +1 and stays on that rung; one hint a
+  hole. Try it: the chair, then a short guided ladder to TD 80. **Station 3 moved to its own PR** (the next one):
+  it runs the real AudiOtron, which is bigger work than this pick-one frame.
 
 ### 3.5 Station 5: "One good impression" (the ear impression)
 
@@ -271,7 +280,7 @@ No data files outside code are planned; if one is added, it goes on the Web pres
 1. This research and design (docs only).
 2. The lesson card in the Training room, the lesson frame and **Station 1** (Pack the bag), tests and the bot.
 3. **Station 2** (Steady hands, the look, the Refer 8) and the movie "The Steady Hand".
-4. **Station 4** (TD) and **Station 3** (the tones on the AudiOtron).
+4. **Station 4** (TD). (Station 3, the tones on the AudiOtron, follows as its own PR.)
 5. **Station 5** (the impression).
 6. **Station 6** (delivery day) and **Station 7** (the bench).
 7. **Station 8** (exam day), the licence stamp and the print view.

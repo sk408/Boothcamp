@@ -109,7 +109,7 @@ func test_kit_tries_and_months() -> void:
 	assert_eq(String(tries[0]["items"][int(tries[0]["answer"])]), "inserts")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH), "Mar 2027")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH - 3), "Dec 2026")
-	assert_eq(PracticalDeck.deal("tones", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
+	assert_eq(PracticalDeck.deal("impression", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
 
 
 ## The room's tabs: Masking School first; THE PRACTICAL shows eight chips and its own cards, emits its
@@ -132,7 +132,7 @@ func test_room_switches_to_the_practical() -> void:
 	Events.awaiting_input.disconnect(acb)
 	assert_eq(beats.size(), 2, "the switch emits the beat again")
 	assert_eq(String(beats[1]["lesson"]), "practical")
-	assert_eq(beats[1]["built"], ["kit", "hands"])
+	assert_eq(beats[1]["built"], ["kit", "hands", "td"])
 	assert_eq((room.get("_chips") as Array).size(), 8)
 	assert_true(room.find_child("card_kit_bag", true, false) != null, "the practical's pins")
 	assert_true(room.find_child("card_skull_wall", true, false) == null, "masking's pins are gone")
@@ -140,7 +140,7 @@ func test_room_switches_to_the_practical() -> void:
 	var went := []
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
-	room.call("open_station", 3)   # SOON
+	room.call("open_station", 4)   # SOON
 	assert_eq(went, [])
 	PracticalSchool.next_station = ""
 	solvers[1].call()
@@ -418,4 +418,155 @@ func test_unsafe_pick_is_a_stop() -> void:
 	assert_true((school.get("_card") as Dictionary).has("sneeze_at"), "the sneeze plays")
 	school.call("pick", b)
 	assert_eq(int(school.get("_hole_strokes")), 3)
+	school.queue_free()
+
+
+# ================================================================ Station 4: Too loud?
+
+## Every dealt round is honest: one chair shows the face; the first pitch is the highest tested; each
+## ladder climbs from 70 in 5s and ends on the hand (TD) or at 110 with no hand (the arrow), its faces
+## only ever getting worse.
+func test_td_round_is_honest() -> void:
+	var order := ["calm", "frown", "finger", "hand"]
+	var arrows := 0
+	for seed in 60:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		var cards := PracticalDeck.td_round(rng)
+		assert_eq(cards.size(), PracticalDeck.ROUND_HOLES)
+		var kinds: Array = cards.map(func(c: Dictionary) -> String: return String(c["kind"]))
+		assert_eq(kinds, ["seat", "order", "rule", "walk", "walk", "rule"])
+		assert_ne(String(cards[2]["rule"]), String(cards[5]["rule"]), "two different rules")
+		for c: Dictionary in cards:
+			var ans := int(c["answer"])
+			assert_true(ans >= 0 and ans < (c["options"] as Array).size(), "answer in range")
+			assert_eq((c["lines"] as Array).size(), 2)
+			match String(c["kind"]):
+				"seat":
+					assert_eq(String(c["seats"][ans]), "face")
+				"order":
+					var top := 0
+					for f: Variant in c["tested"]:
+						top = maxi(top, int(f))
+					assert_eq(int(c["freqs"][ans]), top)
+					var uniq := {}
+					for f: Variant in c["freqs"]:
+						uniq[int(f)] = true
+					assert_eq(uniq.size(), 4, "four different pitches")
+				"rule":
+					assert_eq(String(c["options"][ans]), String(PracticalDeck.td_rule(String(c["rule"]))["right"]))
+				"walk":
+					var levels: Array = c["levels"]
+					var answers: Array = c["answers"]
+					var faces: Array = c["faces"]
+					assert_eq(int(levels[0]), PracticalDeck.TD_START_DB)
+					for i in levels.size():
+						assert_eq(int(levels[i]), PracticalDeck.TD_START_DB + i * PracticalDeck.TD_STEP_DB, "up 5 a rung")
+						assert_true(int(levels[i]) <= PracticalDeck.TD_LIMIT_DB)
+						if i > 0:
+							assert_true(order.find(faces[i]) >= order.find(faces[i - 1]), "faces only get worse")
+						if i < levels.size() - 1:
+							assert_eq(int(answers[i]), PracticalDeck.WALK_NEXT)
+							assert_ne(String(faces[i]), "hand")
+					assert_eq(ans, int(answers[0]))
+					if int(c["td"]) > 0:
+						assert_eq(int(answers[-1]), PracticalDeck.WALK_RECORD)
+						assert_eq(String(faces[-1]), "hand")
+						assert_eq(int(levels[-1]), int(c["td"]))
+					else:
+						arrows += 1
+						assert_eq(int(answers[-1]), PracticalDeck.WALK_ARROW)
+						assert_eq(int(levels[-1]), PracticalDeck.TD_LIMIT_DB)
+						assert_ne(String(faces[-1]), "hand")
+	assert_true(arrows > 5, "some subjects reach the limit with no hand (%d)" % arrows)
+
+
+func test_td_cards_draw() -> void:
+	var c := Control.new()
+	c.size = Vector2(880, 440)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2
+	var cards := PracticalDeck.td_round(rng) + PracticalDeck.td_tries()
+	var k := [0]
+	c.draw.connect(func() -> void:
+		var card: Dictionary = cards[(k[0] / 2) % cards.size()]
+		if card.has("levels"):
+			card["step"] = (card["levels"] as Array).size() - 1 if k[0] % 2 == 0 else 0
+		PracticalArt.draw_card(c, c.size, card, k[0] % 2 == 0, [] if k[0] % 2 == 0 else [1], 0.4))
+	add_node(c)
+	for i in cards.size() * 2:
+		k[0] = i
+		c.queue_redraw()
+		await wait_frames(1)
+	c.queue_free()
+
+
+## Station 4 plays through by its solvers: two guided cards (the ladder one rung at a time), six holes at
+## par, the TD Steps card.
+func test_td_plays_by_solvers() -> void:
+	Game.cli = {"seed": 9}
+	PracticalSchool.next_station = "td"
+	PracticalSchool.last_result = {}
+	var firsts := {}
+	var rungs := [0]
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		if int(info.get("sub", 0)) == 0:
+			firsts[beat] = int(firsts.get(beat, 0)) + 1
+		elif beat == &"practical_card":
+			rungs[0] += 1
+		solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	add_node(school)
+	for i in 1200:
+		if not went.is_empty():
+			break
+		await wait_frames(1)
+	Events.awaiting_input.disconnect(acb)
+	Events.goto_scene.disconnect(gcb)
+	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
+	assert_eq(int(firsts.get(&"practical_try", 0)), 2)
+	assert_eq(int(firsts.get(&"practical_card", 0)), 6)
+	assert_true(rungs[0] >= 6, "the ladders ask once per rung (%d more)" % rungs[0])
+	assert_eq(PracticalSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1])
+	assert_true(TrainingProgress.has_card("practical", "td_steps"))
+
+
+## On the ladder: a jump of 10 costs a stroke and stays on the rung; the right call climbs a rung and
+## clears the miss; one hint a hole.
+func test_ladder_rungs_and_strokes() -> void:
+	Game.cli = {"seed": 9}
+	PracticalSchool.next_station = "td"
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	var walk := []
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		if beat == &"practical_card" and String(info.get("kind", "")) == "walk":
+			if walk.is_empty():
+				walk.append(info)
+			return
+		if beat != &"practical_intro":
+			solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	add_node(school)
+	await wait_frames(3)
+	school.call("start")
+	for i in 600:
+		if not walk.is_empty():
+			break
+		await wait_frames(1)
+	Events.awaiting_input.disconnect(acb)
+	assert_false(walk.is_empty(), "reached a ladder")
+	assert_eq(int(walk[0]["best"]), PracticalDeck.WALK_NEXT, "70 dB: never the TD")
+	school.call("pick", PracticalDeck.WALK_JUMP)
+	assert_eq(int(school.get("_hole_strokes")), 2, "a jump of 10 is a miss")
+	assert_eq(int((school.get("_card") as Dictionary)["step"]), 0, "still on 70")
+	school.call("pick", PracticalDeck.WALK_NEXT)
+	assert_eq(int((school.get("_card") as Dictionary)["step"]), 1, "up a rung")
+	assert_true((school.get("_wrong") as Array).is_empty(), "the miss is cleared for the new rung")
+	school.call("hint")
+	school.call("hint")
+	assert_eq(int(school.get("_hole_strokes")), 3, "one hint a hole")
 	school.queue_free()

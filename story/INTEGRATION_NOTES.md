@@ -449,7 +449,9 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   `"practical"` through `TrainingProgress`. Built: 1 kit ("Pack the bag": what stays home, the calibration sticker,
   the listening check, the subject); 2 hands ("Steady hands": which grip is safe, a grip to judge, a hygiene moment,
   three looks to go ahead or refer by California's eight, `PracticalDeck.REFER_8`; an unsafe pick is a STOP worth
-  `UNSAFE_STROKES`; earns two cards, `card` and `card2`). A new station is a `PracticalDeck.STATIONS` entry with
+  `UNSAFE_STROKES`; earns two cards, `card` and `card2`); 4 td ("Too loud?": the seat, the first pitch, the TD
+  routine's rules, ladder walks; the bulletin's `TD_START_DB`, `TD_STEP_DB`, `TD_LIMIT_DB` named in the deck. A
+  ladder card carries `answers` and `step`: the station asks once per rung, beat `sub` counting them). A new station is a `PracticalDeck.STATIONS` entry with
   `built: true` plus its `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot
   `story/tests/practical_check.tscn`. No new data files.
   - **movies.gd** (additive): registry line `"steady_hand"` (`story/explainers/movies/steady_hand.gd`, chapter `gus`,
