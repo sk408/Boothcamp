@@ -33,8 +33,10 @@ const STATIONS: Array = [
 		"intro": "Watch the face, not the dial. Pairs of beeps from %d, up %d at a time, until the hand goes up.\n" % [70, 5]
 			+ "Seat them, pick the first pitch, walk the ladder and chart it. Nothing loud ever plays here."},
 	{"id": "impression", "num": 5, "name": "One good impression", "pitch": "Dam, fill, cure, judge.", "color": Color("#ff9f1c"),
-		"card": "impression", "built": false, "movie": "",
-		"intro": "One impression only. No air in the tip, no voids, past the second bend."},
+		"card": "impression", "built": true, "movie": "",
+		"star_line": "Even par! One impression, done right. That's a star.",
+		"intro": "One impression only. Look, tell, dam past the second bend, no air in the tip, no voids.\n"
+			+ "Walk the steps, pick the dam, fill it right, take it out kindly and judge what you made."},
 	{"id": "delivery", "num": 6, "name": "Delivery day", "pitch": "Retube, fit, counsel.", "color": Color("#1f9aa5"),
 		"card": "delivery", "built": false, "movie": "",
 		"intro": "Same bend, same length. Then fit the RIC and tell the truth, kindly."},
@@ -326,6 +328,8 @@ static func deal(station_id: String, rng: RandomNumberGenerator) -> Array[Dictio
 			return td_round(rng)
 		"tones":
 			return tone_round(rng)
+		"impression":
+			return impression_round(rng)
 	return []
 
 
@@ -339,6 +343,8 @@ static func tries(station_id: String) -> Array[Dictionary]:
 			return td_tries()
 		"tones":
 			return tone_tries()
+		"impression":
+			return impression_tries()
 	return []
 
 
@@ -956,4 +962,232 @@ static func tone_round(rng: RandomNumberGenerator, subject_id := "") -> Array[Di
 	others.erase(sib)
 	others = [twin, sib] + others
 	out.append(symbol_card(want, others, rng))
+	return out
+
+
+# ================================================================ Station 5: One good impression
+
+## Station B's impression (Candidate Information Bulletin, March 2025; CA_PRACTICAL_EXAM.md §3.2): one impression
+## only; the ear checked first; the block (ear dam) picked and placed, checked with the otoscope; material fully
+## expressed to the end of the tip ("no air in the tip"); canal and concha filled; the cure checked; the seal
+## broken; the ear inspected again; the impression judged (landmarks, no voids). Our steps, in our words.
+const IMP_STEPS: Array[String] = [
+	"Look in the ear", "Tell them what they'll feel", "Pick the dam size", "Place the dam past the 2nd bend",
+	"Check the dam with the otoscope", "Express material to the tip", "Fill the canal from the dam out",
+	"Fill the concha", "Check the cure", "Break the seal, roll it out", "Look in the ear again",
+]
+## A steps ladder asks this many rungs in a row (a window of IMP_STEPS).
+const STEP_RUNGS := 4
+
+## The canal and the dams, as small, medium, large. The snug dam is the canal's own size: a dam that
+## seals without stretching the canal; smaller lets material past, bigger won't go deep.
+const SIZES: Array[String] = ["small", "medium", "large"]
+const DAM_WORDS: Array[String] = ["Small dam", "Medium dam", "Large dam", "No dam: it's a short canal"]
+const DAM_NONE := 3
+
+## How deep the dam sits. "eardrum" is the STOP.
+const DEPTHS: Array[String] = ["opening", "first", "second", "eardrum"]
+const DEPTH_WORDS: Dictionary = {"opening": "At the canal opening", "first": "Just past the first bend",
+	"second": "Just past the second bend", "eardrum": "Right against the eardrum"}
+
+## The syringe tip before it goes near the ear. "ready": material to the very end.
+const TIPS: Dictionary = {
+	"ready": {"name": "Material to the tip", "why": "Fully expressed: no air can go in ahead of it."},
+	"bubble": {"name": "Bubble in the tip", "why": "Air in the tip blows a void into the impression."},
+	"half": {"name": "Half-way down the tip", "why": "Not expressed yet: the first push is air."},
+	"lump": {"name": "Lumpy, setting already", "why": "Mixed too long ago: it's curing before it's in."},
+}
+const TIP_WORDS: Array[String] = ["Syringe 1", "Syringe 2", "Syringe 3", "Syringe 4"]
+
+## The fill: one right way, three that leave a void or miss the canal.
+const FILL_RIGHT := "Tip at the dam, fill outward, tip kept buried"
+const FILL_WRONGS: Array[String] = ["Fill the concha first, then the canal", "Squirt in from the canal opening",
+	"Lift the tip out to look, then top it up"]
+
+## The cure check: the fingernail on the material left outside the ear.
+const CURE_WORDS: Array[String] = ["Not yet: wait and test again", "Cured: break the seal"]
+
+## Taking it out, then what next.
+const OUT_RIGHT := "Lift the pinna, break the seal, roll it out"
+const OUT_WRONGS: Array[String] = ["Pull it straight out by the handle", "Twist it hard until it frees", "Wiggle the dam thread first"]
+const AFTER_RIGHT := "Look in the ear again"
+const AFTER_WRONGS: Array[String] = ["Bag it and say goodbye", "Trim the impression", "Write the order form"]
+
+## Impressions to judge: the fault, or OK.
+const FAULTS_IMP: Dictionary = {
+	"ok": {"name": "OK: send it", "why": "Past the second bend, smooth, the dam on the end, the helix and concha clear."},
+	"void": {"name": "A void", "why": "A hole in the canal part: air got in. Take it again."},
+	"short": {"name": "Too short", "why": "It stops before the second bend: not enough canal to build on."},
+	"nodam": {"name": "No dam on the tip", "why": "Material went past where a dam should be. Look in that ear now!"},
+	"fold": {"name": "Folded helix", "why": "The helix lock is folded over: the shape is wrong."},
+	"blob": {"name": "A blob, no landmarks", "why": "No canal, concha or helix shape: the lab can't use it."},
+}
+const IMP_FAULT_IDS: Array[String] = ["void", "short", "nodam", "fold", "blob"]
+
+## Hoot's guided cards for Station 5.
+const IMP_TRIES: Array = [
+	{"kind": "depth", "order": ["opening", "second", "first", "eardrum"],
+		"line": "Just past the second bend: deep enough for the lab, a safe gap to the eardrum. That one."},
+	{"kind": "judge", "fault": "ok", "order": ["void", "ok", "short", "fold"],
+		"line": "Smooth, past the second bend, dam on the end: this one is OK."},
+]
+
+
+## "What comes next?": a ladder over STEP_RUNGS steps from `from`; each rung offers the next step and three
+## later ones (rung_options; answers holds the right index per rung).
+static func steps_card(from: int, rng: RandomNumberGenerator) -> Dictionary:
+	var rung_options: Array = []
+	var answers: Array[int] = []
+	for r in STEP_RUNGS:
+		var i := from + r
+		var pool: Array = []
+		for j in range(i + 1, IMP_STEPS.size()):
+			pool.append(j)
+		for j in range(0, i):
+			if pool.size() >= 6:
+				break
+			if j < from:
+				pool.append(j)   # an early step done already: never the answer
+		_shuffle(pool, rng)
+		var opts: Array = [i] + pool.slice(0, 3)
+		_shuffle(opts, rng)
+		var words: Array[String] = []
+		for o: Variant in opts:
+			words.append(IMP_STEPS[int(o)])
+		rung_options.append(words)
+		answers.append(opts.find(i))
+	return {"kind": "steps", "title": "What comes next?", "from": from, "step": 0, "answers": answers, "answer": answers[0],
+		"rung_options": rung_options, "options": (rung_options[0] as Array).duplicate(),
+		"lines": ["%s, then %s." % [IMP_STEPS[from + STEP_RUNGS - 1], IMP_STEPS[from + STEP_RUNGS] if from + STEP_RUNGS < IMP_STEPS.size() else "judge it"],
+			"Eleven steps, one impression. Skip one and the board marks it."],
+		"hint": "Look, tell, dam, check, express, canal, concha, cure, out, look again."}
+
+
+## "Which dam?": a canal of this size; the snug dam is its own size. The "no dam" choice is the STOP.
+static func dam_card(canal: String) -> Dictionary:
+	return {"kind": "dam", "title": "Which dam?", "canal": canal, "options": DAM_WORDS.duplicate(), "answer": SIZES.find(canal),
+		"unsafe": [DAM_NONE],
+		"lines": ["The %s dam: snug in a %s canal, sealed without a stretch." % [canal, canal], "Every impression gets a dam. Too small lets material past it."],
+		"hint": "Match the dam to the canal: snug, not loose, not forced."}
+
+
+## "How deep?": where the dam goes. order: four DEPTHS. Against the eardrum is the STOP.
+static func depth_card(order: Array) -> Dictionary:
+	var words: Array[String] = []
+	for d: Variant in order:
+		words.append(String(DEPTH_WORDS[String(d)]))
+	return {"kind": "depth", "title": "How deep does the dam go?", "depths": order.duplicate(), "options": words,
+		"answer": order.find("second"), "unsafe": [order.find("eardrum")],
+		"lines": ["Just past the second bend, with the ear light under safe support.", "Then check it with the otoscope before any material."],
+		"hint": "The lab needs the second bend. The eardrum needs a gap."}
+
+
+## "Ready to fill?": four syringe tips. order: four TIPS ids.
+static func tip_card(order: Array) -> Dictionary:
+	var wrong := ""
+	for id: Variant in order:
+		if String(id) != "ready":
+			wrong = String(id)
+			break
+	return {"kind": "tip", "title": "Which syringe is ready?", "tips": order.duplicate(), "options": TIP_WORDS.duplicate(),
+		"answer": order.find("ready"), "lines": [String(TIPS["ready"]["why"]), "\"No air in the tip\": the board's own words."],
+		"hint": "Material all the way to the end of the tip, smooth, no bubble."}
+
+
+## "How do you fill?" order: indexes into [right, wrong 1, 2, 3].
+static func fill_card(order: Array) -> Dictionary:
+	var all: Array[String] = [FILL_RIGHT]
+	all.append_array(FILL_WRONGS)
+	var words: Array[String] = []
+	for i: Variant in order:
+		words.append(all[int(i)])
+	return {"kind": "fill", "title": "Fill it", "options": words, "answer": order.find(0),
+		"lines": ["Start at the dam and back out slowly, the tip buried. Then the concha.", "Lift the tip out early and you leave a void."],
+		"hint": "Inside out: canal from the dam, then the concha. Never lift the tip out."}
+
+
+## "Cured?": the fingernail test on the leftover material. dent: true = not yet.
+static func cure_card(dent: bool, minutes: int) -> Dictionary:
+	return {"kind": "cure", "title": "Is it cured?", "dent": dent, "minutes": minutes, "options": CURE_WORDS.duplicate(), "answer": 0 if dent else 1,
+		"lines": ["A dent that stays: still soft. Wait and test again." if dent else "No dent: cured. Now break the seal.",
+			"Test the material outside the ear with a fingernail, not the clock alone."],
+		"hint": "Press a fingernail in. Does the dent stay?"}
+
+
+## "Out" or "after": one right move, three wrong. order: indexes into [right, wrong 1, 2, 3].
+static func out_card(after: bool, order: Array) -> Dictionary:
+	var all: Array[String] = [AFTER_RIGHT if after else OUT_RIGHT]
+	all.append_array(AFTER_WRONGS if after else OUT_WRONGS)
+	var words: Array[String] = []
+	for i: Variant in order:
+		words.append(all[int(i)])
+	return {"kind": "out", "title": "It's out. Now?" if after else "Take it out", "after": after, "options": words, "answer": order.find(0),
+		"lines": ["Look again: is the canal clear, no bits, no red marks?" if after else "Lift the pinna and ease the helix: the seal breaks, it rolls out.",
+			"Skip the second look and the board marks it." if after else "Pull straight out and the suction tugs the eardrum."],
+		"hint": "Before it goes in, and after it comes out: look." if after else "Break the seal first: it rolls out easily then."}
+
+
+## "Judge it": a cartoon impression with a fault (or none). order: four FAULTS_IMP ids incl. fault.
+static func judge_card(fault: String, order: Array) -> Dictionary:
+	var words: Array[String] = []
+	for id: Variant in order:
+		words.append(String(FAULTS_IMP[String(id)]["name"]))
+	return {"kind": "judge", "title": "Judge the impression", "fault": fault, "faults": order.duplicate(), "options": words,
+		"answer": order.find(fault), "lines": [String(FAULTS_IMP[fault]["why"]), "One impression only on exam day: judge it before the subject leaves."],
+		"hint": "Check the canal length, the dam on the end, the helix, and any holes."}
+
+
+static func _judge_order(fault: String, rng: RandomNumberGenerator) -> Array:
+	var pool: Array = ["ok"] + IMP_FAULT_IDS.duplicate()
+	pool.erase(fault)
+	_shuffle(pool, rng)
+	var order: Array = [fault] + pool.slice(0, 3)
+	_shuffle(order, rng)
+	return order
+
+
+static func impression_tries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for t: Dictionary in IMP_TRIES:
+		var c := depth_card(t["order"]) if String(t["kind"]) == "depth" else judge_card(String(t["fault"]), t["order"])
+		c["line"] = String(t["line"])
+		out.append(c)
+	return out
+
+
+## Six honest cards: the steps ladder, the dam (size or depth), the tip or the fill, the cure or the way out,
+## and two impressions to judge (different, at least one with a fault).
+static func impression_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.append(steps_card(rng.randi_range(0, IMP_STEPS.size() - STEP_RUNGS), rng))
+	if rng.randi_range(0, 1) == 0:
+		out.append(dam_card(SIZES[rng.randi_range(0, SIZES.size() - 1)]))
+	else:
+		var d: Array = DEPTHS.duplicate()
+		_shuffle(d, rng)
+		out.append(depth_card(d))
+	var o4: Array = [0, 1, 2, 3]
+	if rng.randi_range(0, 1) == 0:
+		var t: Array = TIPS.keys()
+		_shuffle(t, rng)
+		out.append(tip_card(t))
+	else:
+		_shuffle(o4, rng)
+		out.append(fill_card(o4))
+	match rng.randi_range(0, 2):
+		0:
+			out.append(cure_card(rng.randi_range(0, 1) == 0, rng.randi_range(3, 6)))
+		1:
+			_shuffle(o4, rng)
+			out.append(out_card(false, o4.duplicate()))
+		_:
+			_shuffle(o4, rng)
+			out.append(out_card(true, o4.duplicate()))
+	var faults: Array = IMP_FAULT_IDS.duplicate()
+	_shuffle(faults, rng)
+	var second := "ok" if rng.randi_range(0, 2) == 0 else String(faults[1])
+	var pair: Array = [String(faults[0]), second]
+	_shuffle(pair, rng)
+	for f: Variant in pair:
+		out.append(judge_card(String(f), _judge_order(String(f), rng)))
 	return out

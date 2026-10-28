@@ -67,6 +67,22 @@ static func draw_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: b
 			_mask(ci, size, card, reveal, wrong)
 		"symbol":
 			_symbols(ci, size, card, reveal, wrong)
+		"steps":
+			_steps(ci, size, card, reveal)
+		"dam":
+			_dam(ci, size, card, reveal, wrong)
+		"depth":
+			_depth(ci, size, card, reveal, wrong)
+		"tip":
+			_tips(ci, size, card, reveal, wrong)
+		"fill":
+			_fill(ci, size, card, reveal, t)
+		"cure":
+			_cure(ci, size, card, reveal)
+		"out":
+			_out(ci, size, card, reveal, t)
+		"judge":
+			_judge(ci, size, card, reveal, wrong)
 
 
 # ---------------------------------------------------------------- the kit tray
@@ -1017,6 +1033,275 @@ static func mini_chart(ci: CanvasItem, r: Rect2, marks: Array) -> void:
 		UiDraw.audiogram_symbol(ci, p[2], String(p[0]), p[1], 16.0, 2.5, bool(p[3]))
 	if marks.is_empty():
 		ci.draw_string(UiKit.font(600), g.position + Vector2(0, g.size.y * 0.5), "The chart fills in at the AudiOtron.", HORIZONTAL_ALIGNMENT_CENTER, g.size.x, 18, Palette.INK_SOFT)
+
+
+# ---------------------------------------------------------------- Station 5: One good impression
+
+const PUTTY := Color("#f28fb0")   ## impression material
+const COTTON := Color("#fffaf0")
+const CANAL_W: Dictionary = {"small": 26.0, "medium": 36.0, "large": 48.0}
+
+## The ear canal from the side: opening (left), the first bend, the second bend, the eardrum (right).
+static func canal_path(r: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([r.position + Vector2(0, r.size.y * 0.55), r.position + Vector2(r.size.x * 0.36, r.size.y * 0.3),
+		r.position + Vector2(r.size.x * 0.66, r.size.y * 0.66), r.position + Vector2(r.size.x, r.size.y * 0.48)])
+
+
+## A rounded tube along pts: an ink outline `edge` wide, then the fill, joints and ends round.
+static func tube(ci: CanvasItem, pts: PackedVector2Array, w: float, col: Color, edge := 3.0) -> void:
+	ci.draw_polyline(pts, Palette.INK, w + edge * 2.0, true)
+	for p: Vector2 in pts:
+		ci.draw_circle(p, w * 0.5 + edge, Palette.INK)
+	ci.draw_polyline(pts, col, w, true)
+	for p: Vector2 in pts:
+		ci.draw_circle(p, w * 0.5, col)
+
+
+## A point along the canal: seg 0..2, u 0..1 along that segment.
+static func canal_at(path: PackedVector2Array, seg: int, u: float) -> Vector2:
+	return path[seg].lerp(path[seg + 1], u)
+
+
+static func draw_canal(ci: CanvasItem, r: Rect2, w: float, labels := true) -> PackedVector2Array:
+	var path := canal_path(r)
+	tube(ci, path, w, Color("#f6b8a6"), 4.0)
+	# the eardrum: a grey oval across the end
+	ci.draw_colored_polygon(_oval(path[3] + Vector2(w * 0.3, 0), 6.0, w * 0.7, 12), Color("#c9ccd6"))
+	ci.draw_polyline(_ring(_oval(path[3] + Vector2(w * 0.3, 0), 6.0, w * 0.7, 12)), Palette.INK, 2.0, true)
+	if labels:
+		var f := UiKit.font(700)
+		ci.draw_string(f, path[1] + Vector2(-60, -w - 14), "1st bend", HORIZONTAL_ALIGNMENT_CENTER, 120, 15, Palette.INK_SOFT)
+		ci.draw_string(f, path[2] + Vector2(-60, w + 28), "2nd bend", HORIZONTAL_ALIGNMENT_CENTER, 120, 15, Palette.INK_SOFT)
+		ci.draw_string(f, path[3] + Vector2(-50, -w - 12), "eardrum", HORIZONTAL_ALIGNMENT_CENTER, 100, 15, Palette.INK_SOFT)
+		ci.draw_string(f, path[0] + Vector2(-40, w + 26), "opening", HORIZONTAL_ALIGNMENT_CENTER, 80, 15, Palette.INK_SOFT)
+	return path
+
+
+## A cotton dam with its thread trailing out of the ear.
+static func draw_dam(ci: CanvasItem, c: Vector2, w: float, thread_to := Vector2.INF) -> void:
+	if thread_to != Vector2.INF:
+		ci.draw_line(c, thread_to, Palette.INK, 2.0, true)
+	ci.draw_colored_polygon(_oval(c, w * 0.32, w * 0.5, 14), COTTON)
+	ci.draw_polyline(_ring(_oval(c, w * 0.32, w * 0.5, 14)), Palette.INK, 2.5, true)
+
+
+## The steps so far: a checklist of what's done and the live rung.
+static func _steps(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool) -> void:
+	var from := int(card["from"])
+	var step := int(card["step"]) + (1 if reveal else 0)
+	var r := Rect2(40, 84, size.x - 80, 340)
+	UiDraw.rounded_rect(ci, r, Palette.PAPER, 20, 3, Palette.INK)
+	var n := PracticalDeck.IMP_STEPS.size()
+	var rows := 6
+	var first := clampi(from + step - 3, 0, n - rows)
+	for k in rows:
+		var i := first + k
+		var y := r.position.y + 34 + k * 52
+		var done := i < from + step
+		var live := i == from + step and not reveal
+		var chip := Rect2(r.position.x + 24, y - 20, 40, 40)
+		UiDraw.rounded_rect(ci, chip, GREEN if done else (Palette.SUNNY if live else METAL), 10, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), chip.position + Vector2(0, 28), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 20, Palette.INK)
+		var txt := PracticalDeck.IMP_STEPS[i] if done else ("?  What comes next?" if live else "")
+		ci.draw_string(UiKit.font(700 if live else 600), Vector2(r.position.x + 82, y + 8), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.INK if done or live else Palette.INK_SOFT)
+		if done:
+			UiDraw.check(ci, Vector2(r.end.x - 40, y), 22.0, GREEN, 5.0)
+	if reveal:
+		_stamp(ci, Vector2(r.end.x - 150, r.end.y - 30), "IN ORDER", GREEN, -0.06)
+
+
+static func _dam(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var canal := String(card["canal"])
+	var w: float = CANAL_W[canal]
+	var r := Rect2(70, 150, 420, 200)
+	var path := draw_canal(ci, r, w)
+	ci.draw_string(UiKit.font(700), Vector2(70, 112), "A %s canal" % canal.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Palette.INK)
+	if reveal:
+		draw_dam(ci, canal_at(path, 2, 0.25), w)
+	var tray := Rect2(540, 96, size.x - 570, 320)
+	UiDraw.rounded_rect(ci, tray, Palette.PAPER, 20, 3, Palette.INK)
+	for i in 4:
+		var c := tray.position + Vector2(tray.size.x * 0.5, 44 + i * 74)
+		var tag := Rect2(tray.position + Vector2(14, 26 + i * 74), Vector2(36, 36))
+		UiDraw.rounded_rect(ci, tag, RED.lightened(0.5) if wrong.has(i) else Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), tag.position + Vector2(0, 26), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 36, 18, Palette.INK)
+		if i < 3:
+			draw_dam(ci, c, float(CANAL_W[PracticalDeck.SIZES[i]]))
+		else:
+			UiDraw.cross(ci, c, 26.0, RED, 5.0)
+		if reveal and i == int(card["answer"]):
+			UiDraw.check(ci, c + Vector2(70, 0), 22.0, GREEN, 5.0)
+
+
+static func _depth(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var w := 40.0
+	var r := Rect2(90, 140, size.x - 200, 230)
+	var path := draw_canal(ci, r, w)
+	var at := {"opening": canal_at(path, 0, 0.12), "first": canal_at(path, 1, 0.18), "second": canal_at(path, 2, 0.25), "eardrum": canal_at(path, 2, 0.88)}
+	var depths: Array = card["depths"]
+	for i in depths.size():
+		var c: Vector2 = at[String(depths[i])]
+		if reveal and i == int(card["answer"]):
+			draw_dam(ci, c, w)
+			_stamp(ci, c + Vector2(0, -80), "PAST THE 2ND BEND", GREEN, -0.05)
+			continue
+		var col := GREY if wrong.has(i) else Palette.SUNNY
+		ci.draw_circle(c, 18.0, Palette.INK)
+		ci.draw_circle(c, 15.0, col)
+		ci.draw_string(UiKit.font(700), c + Vector2(-18, 7), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 36, 18, Palette.INK)
+
+
+## A syringe, nozzle to the right; state: TIPS id.
+static func draw_syringe(ci: CanvasItem, c: Vector2, state: String) -> void:
+	var barrel := Rect2(c + Vector2(-90, -22), Vector2(120, 44))
+	UiDraw.rounded_rect(ci, barrel, Color(CLEAR, 0.9), 8, 3, Palette.INK)
+	ci.draw_rect(Rect2(barrel.position + Vector2(40, 6), Vector2(78, 32)), PUTTY)
+	ci.draw_rect(Rect2(c + Vector2(-118, -6), Vector2(30, 12)), METAL)
+	ci.draw_rect(Rect2(c + Vector2(-124, -24), Vector2(8, 48)), METAL)
+	var tip := PackedVector2Array([c + Vector2(30, -10), c + Vector2(96, -4), c + Vector2(96, 4), c + Vector2(30, 10)])
+	ci.draw_colored_polygon(tip, Color(CLEAR, 0.9))
+	var fill_to := {"ready": 96.0, "bubble": 96.0, "half": 60.0, "lump": 96.0}.get(state, 96.0) as float
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(30, -8), c + Vector2(fill_to, -3), c + Vector2(fill_to, 3), c + Vector2(30, 8)]), PUTTY)
+	if state == "bubble":
+		ci.draw_circle(c + Vector2(78, 0), 5.0, Palette.PAPER)
+		ci.draw_arc(c + Vector2(78, 0), 5.0, 0.0, TAU, 12, Palette.INK, 1.5, true)
+	if state == "lump":
+		for k in 3:
+			ci.draw_circle(c + Vector2(98 + k * 8, -4 + (k % 2) * 8), 6.0, PUTTY.darkened(0.2))
+	if state == "ready":
+		ci.draw_circle(c + Vector2(98, 0), 4.0, PUTTY)
+	var o := tip.duplicate()
+	o.append(tip[0])
+	ci.draw_polyline(o, Palette.INK, 2.5, true)
+
+
+static func _tips(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var tips: Array = card["tips"]
+	for i in tips.size():
+		var b := Rect2(40 + (i % 2) * ((size.x - 94) * 0.5 + 14), 88 + (i / 2) * 168, (size.x - 94) * 0.5, 156)
+		var right := reveal and i == int(card["answer"])
+		UiDraw.rounded_rect(ci, b, Color(GREEN, 0.18) if right else (Color(RED, 0.15) if wrong.has(i) else Palette.PAPER), 18, 3, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(b.position + Vector2(10, 10), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(10, 35), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		draw_syringe(ci, b.position + Vector2(b.size.x * 0.5 + 10, 74), String(tips[i]))
+		if reveal or wrong.has(i):
+			ci.draw_string(UiKit.font(700), b.position + Vector2(0, 138), String(PracticalDeck.TIPS[String(tips[i])]["name"]), HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 17,
+				GREEN.darkened(0.2) if right else Palette.INK_SOFT)
+
+
+static func _fill(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	var w := 40.0
+	var r := Rect2(260, 150, size.x - 330, 200)
+	var path := draw_canal(ci, r, w)
+	var dam := canal_at(path, 2, 0.25)
+	draw_dam(ci, dam, w)
+	if reveal:
+		# filled from the dam outward
+		var pts := PackedVector2Array([path[0], path[1], path[2], dam])
+		ci.draw_polyline(pts, PUTTY, w - 6.0, true)
+		for p: Vector2 in pts:
+			ci.draw_circle(p, (w - 6.0) * 0.5, PUTTY)
+		ci.draw_circle(path[0] + Vector2(-60, 0), 54.0, PUTTY)
+		ci.draw_arc(path[0] + Vector2(-60, 0), 54.0, 0.0, TAU, 32, Palette.INK, 3.0, true)
+		_stamp(ci, Vector2(size.x * 0.5, 404), "NO VOIDS", GREEN, -0.05)
+	else:
+		var k := 0.5 + 0.5 * sin(t * 2.0)
+		ci.draw_string(UiKit.font(700), Vector2(60, 130), "Dam placed,", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.INK)
+		ci.draw_string(UiKit.font(700), Vector2(60, 160), "checked. Now?", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.INK)
+		draw_syringe(ci, Vector2(130 + 10 * k, 280), "ready")
+
+
+static func _cure(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool) -> void:
+	var c := Vector2(300, 270)
+	ci.draw_colored_polygon(_oval(c, 150.0, 70.0, 32), PUTTY)
+	ci.draw_polyline(_ring(_oval(c, 150.0, 70.0, 32)), Palette.INK, 3.0, true)
+	if bool(card["dent"]):
+		ci.draw_arc(c + Vector2(10, -6), 22.0, 0.2, PI - 0.2, 12, PUTTY.darkened(0.35), 6.0, true)
+	else:
+		ci.draw_arc(c + Vector2(10, -6), 22.0, 0.2, PI - 0.2, 12, Color(PUTTY.darkened(0.15), 0.4), 2.0, true)
+	# the fingernail coming down
+	UiDraw.rounded_rect(ci, Rect2(c + Vector2(-14, -170), Vector2(48, 140)), HAND, 20, 3, Palette.INK)
+	UiDraw.rounded_rect(ci, Rect2(c + Vector2(-6, -60), Vector2(32, 26)), Color("#ffe8dc"), 10, 2, Palette.INK)
+	# the clock
+	var k := Vector2(640, 220)
+	ci.draw_circle(k, 92.0, Palette.INK)
+	ci.draw_circle(k, 86.0, Palette.PAPER)
+	var m := int(card["minutes"])
+	ci.draw_arc(k, 70.0, -PI * 0.5, -PI * 0.5 + TAU * m / 10.0, 32, GOLD, 22.0, true)
+	ci.draw_string(UiKit.font(700), k + Vector2(-60, 14), "%d min" % m, HORIZONTAL_ALIGNMENT_CENTER, 120, 32, Palette.INK)
+	ci.draw_string(UiKit.font(600), Vector2(500, 352), "Fingernail test,", HORIZONTAL_ALIGNMENT_CENTER, 280, 18, Palette.INK_SOFT)
+	ci.draw_string(UiKit.font(600), Vector2(500, 376), "material outside the ear", HORIZONTAL_ALIGNMENT_CENTER, 280, 18, Palette.INK_SOFT)
+	if reveal:
+		_stamp(ci, c + Vector2(0, 112), "STILL SOFT" if bool(card["dent"]) else "CURED", GOLD.darkened(0.3) if bool(card["dent"]) else GREEN, -0.06)
+
+
+static func _out(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	var e := Vector2(360, 250)
+	_profile(ci, e, 1.1, Vector2.ZERO)
+	if bool(card["after"]):
+		# the impression in the hand, the otoscope waiting
+		var c := Vector2(680, 200)
+		ci.draw_colored_polygon(_oval(c, 60.0, 44.0, 24), PUTTY)
+		ci.draw_polyline(_ring(_oval(c, 60.0, 44.0, 24)), Palette.INK, 3.0, true)
+		ci.draw_line(c + Vector2(-50, 20), c + Vector2(-110, 70), PUTTY, 18.0, true)
+		draw_dam(ci, c + Vector2(-112, 72), 30.0)
+		if reveal:
+			_tool(ci, e + Vector2(4, 2), 1.1, "oto_up", false)
+			_stamp(ci, Vector2(680, 340), "LOOK AGAIN", GREEN, -0.06)
+	else:
+		ci.draw_colored_polygon(_oval(e + Vector2(6, -2), 20.0, 26.0, 16), PUTTY)
+		ci.draw_polyline(_ring(_oval(e + Vector2(6, -2), 20.0, 26.0, 16)), Palette.INK, 3.0, true)
+		if reveal:
+			var k := 0.5 + 0.5 * sin(t * 3.0)
+			UiDraw.arrow(ci, e + Vector2(20, -70 - 10 * k), 34.0, Vector2(0, -1), GREEN)
+			_stamp(ci, Vector2(680, 300), "SEAL BROKEN", GREEN, -0.06)
+
+
+## A cartoon impression: the concha body, the helix lock, the canal stalk with its two bends and the dam,
+## drawn with one fault (FAULTS_IMP) or none.
+static func draw_impression(ci: CanvasItem, c: Vector2, k: float, fault: String) -> void:
+	if fault == "blob":
+		var b := _oval(c, 90.0 * k, 64.0 * k, 24)
+		for i in b.size():
+			b[i] += Vector2(sin(i * 1.7) * 8.0, cos(i * 2.3) * 6.0) * k
+		ci.draw_colored_polygon(b, PUTTY)
+		ci.draw_polyline(_ring(b), Palette.INK, 3.0, true)
+		return
+	var stalk := PackedVector2Array([c + Vector2(40, -10) * k, c + Vector2(100, -50) * k, c + Vector2(160, -20) * k, c + Vector2(210, -40) * k])
+	if fault == "short":
+		stalk = stalk.slice(0, 3)
+		stalk[2] = c + Vector2(130, -35) * k
+	tube(ci, stalk, 34.0 * k, PUTTY)
+	if fault == "nodam":
+		ci.draw_line(stalk[-1], stalk[-1] + Vector2(46, -6) * k, PUTTY, 8.0 * k, true)   # a spike where the dam should be
+	else:
+		draw_dam(ci, stalk[-1] + Vector2(12, 0) * k, 34.0 * k)
+	if fault == "void":
+		ci.draw_circle(stalk[1] + Vector2(14, 6) * k, 9.0 * k, Palette.PAPER)
+		ci.draw_arc(stalk[1] + Vector2(14, 6) * k, 9.0 * k, 0.0, TAU, 12, Palette.INK, 2.0, true)
+	var body := _oval(c, 70.0 * k, 56.0 * k, 24)
+	ci.draw_colored_polygon(body, PUTTY)
+	ci.draw_polyline(_ring(body), Palette.INK, 3.0, true)
+	# the helix lock, up and back
+	var helix := PackedVector2Array([c + Vector2(-30, -40) * k, c + Vector2(-50, -110) * k, c + Vector2(-10, -140) * k])
+	if fault == "fold":
+		helix = PackedVector2Array([c + Vector2(-30, -40) * k, c + Vector2(-50, -90) * k, c + Vector2(-20, -60) * k])
+	tube(ci, helix, 24.0 * k, PUTTY)
+	if fault == "fold":
+		ci.draw_line(c + Vector2(-50, -90) * k, c + Vector2(-26, -64) * k, PUTTY.darkened(0.3), 3.0, true)
+
+
+static func _judge(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var r := Rect2(40, 86, size.x - 80, 330)
+	UiDraw.rounded_rect(ci, r, Color("#f3fbff"), 22, 3, Palette.INK)
+	draw_impression(ci, Vector2(300, 290), 1.3, String(card["fault"]))
+	if reveal:
+		var ok := String(card["fault"]) == "ok"
+		_stamp(ci, Vector2(680, 140), "SEND IT" if ok else String(PracticalDeck.FAULTS_IMP[String(card["fault"])]["name"]).to_upper(), GREEN if ok else RED, -0.06)
+		if not ok:
+			ci.draw_string(UiKit.font(700), Vector2(560, 200), "Take it again.", HORIZONTAL_ALIGNMENT_CENTER, 240, 22, Palette.INK)
+	elif not wrong.is_empty():
+		_stamp(ci, Vector2(680, 140), "LOOK AGAIN", GREY, 0.05)
 
 
 static func _box(ci: CanvasItem, r: Rect2, col: Color) -> void:

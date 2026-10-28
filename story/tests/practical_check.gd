@@ -3,7 +3,7 @@ extends Node
 ## end to end with a test bot and prints PRACTICAL_CHECK_RESULT {json} (docs/training/PRACTICAL_EXAM.md).
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/practical_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=kit|hands|tones|td picks the station (default kit); --subject=pt_dev|pt_rosa|pt_may fixes Station 3's
+## --station=kit|hands|tones|td|impression picks the station (default kit); --subject=pt_dev|pt_rosa|pt_may fixes Station 3's
 ## practice subject. Station 3's booth holes (beat practical_booth) always run the solver: the textbook on
 ## the real AudiOtron until Hoot's montage, under every policy. The room opens on Masking
 ## School, so the bot first switches to THE PRACTICAL (the tab's click with --policy=mouse, Tab with keys,
