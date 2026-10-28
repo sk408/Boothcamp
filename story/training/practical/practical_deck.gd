@@ -38,11 +38,15 @@ const STATIONS: Array = [
 		"intro": "One impression only. Look, tell, dam past the second bend, no air in the tip, no voids.\n"
 			+ "Walk the steps, pick the dam, fill it right, take it out kindly and judge what you made."},
 	{"id": "delivery", "num": 6, "name": "Delivery day", "pitch": "Retube, fit, counsel.", "color": Color("#1f9aa5"),
-		"card": "delivery", "built": false, "movie": "",
-		"intro": "Same bend, same length. Then fit the RIC and tell the truth, kindly."},
+		"card": "delivery", "built": true, "movie": "",
+		"star_line": "Even par! A neat retube, a snug fit and the truth, kindly. That's a star.",
+		"intro": "Same bend, same length. Then fit the RIC and tell the truth, kindly.\n"
+			+ "Retube a mold, pick the wire and the dome, and answer Gus's first-week questions."},
 	{"id": "bench", "num": 7, "name": "The bench", "pitch": "Look, listen, test, fix.", "color": Color("#8e5cc4"),
-		"card": "bench_tree", "built": false, "movie": "",
-		"intro": "A dead aid, a weak one, a whistler. Find the fault, fix it or send it in."},
+		"card": "bench_tree", "built": true, "movie": "",
+		"star_line": "Even par! Looked, listened, tested, fixed. That's a star.",
+		"intro": "A dead aid, a weak one, a whistler. Find the fault, fix it or send it in.\n"
+			+ "Three aids on the bench, a whistle to place, a test box to read, and one to fix, send or replace."},
 	{"id": "exam", "num": 8, "name": "Exam day", "pitch": "Two rooms, the whole job.", "color": Color("#e5383b"),
 		"card": "", "built": false, "movie": "",
 		"intro": "Room A, then Room B. Scripted examiners, no hints. Finish for the Booth Camp Practical licence."},
@@ -330,6 +334,10 @@ static func deal(station_id: String, rng: RandomNumberGenerator) -> Array[Dictio
 			return tone_round(rng)
 		"impression":
 			return impression_round(rng)
+		"delivery":
+			return delivery_round(rng)
+		"bench":
+			return bench_round(rng)
 	return []
 
 
@@ -345,6 +353,10 @@ static func tries(station_id: String) -> Array[Dictionary]:
 			return tone_tries()
 		"impression":
 			return impression_tries()
+		"delivery":
+			return delivery_tries()
+		"bench":
+			return bench_tries()
 	return []
 
 
@@ -1190,4 +1202,284 @@ static func impression_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
 	_shuffle(pair, rng)
 	for f: Variant in pair:
 		out.append(judge_card(String(f), _judge_order(String(f), rng)))
+	return out
+
+
+# ================================================================ Station 6: Delivery day
+
+## Station B's fitting and post-fitting (Candidate Information Bulletin, March 2025; CA_PRACTICAL_EXAM.md §3.2):
+## replace the tubing on an earmold with the station's pre-bent #13 tubing; fit the RIC to the ear and orient a
+## new user; realistic expectations; care and maintenance. Our lines, in our words.
+## New tubes: "same": the old bend and length (right); "long": the bend right, not trimmed; "flip": bent the
+## other way (it points at the eye); "short": straight and cut short.
+const TUBES: Dictionary = {
+	"same": {"name": "Same bend, cut to the old length", "why": "The new tube copies the old one: the same bend, the same length."},
+	"long": {"name": "Same bend, left long", "why": "Too long: the aid hangs off the ear and the mold pulls out."},
+	"flip": {"name": "Bent the other way", "why": "Flipped: the aid would sit pointing at their eye."},
+	"short": {"name": "Cut short and straight", "why": "Too short and no bend: it drags the mold out of the canal."},
+}
+const TUBE_WORDS: Array[String] = ["Tube 1", "Tube 2", "Tube 3", "Tube 4"]
+
+## RIC wires on a drawn ear: "pull" (too short: the aid lifts off the ear), "flush" (right), "gape" (too long:
+## the wire bows out from the head).
+const WIRES: Dictionary = {
+	"pull": "Too short: it lifts the aid off the ear and tugs the dome.",
+	"flush": "Flush: the wire lies flat along the head, the aid snug behind the ear.",
+	"gape": "Too long: the wire bows out and the aid slides down.",
+}
+const WIRE_WORDS: Array[String] = ["Wire 1", "Wire 2", "Wire 3"]
+const DOME_WORDS: Array[String] = ["Small dome", "Medium dome", "Large dome"]
+
+## Gus's first-week questions: the true and kind answer and two that aren't.
+const COUNSEL: Array = [
+	{"id": "normal", "ask": "Will these make my hearing normal again?",
+		"right": "They'll help a lot with soft speech. Noisy rooms stay harder.",
+		"wrongs": ["Yes: like brand-new ears.", "Not much. Don't expect a change."],
+		"why": "Realistic expectations: real help, not new ears."},
+	{"id": "wear", "ask": "How long should I wear them each day?",
+		"right": "All your waking hours: your brain learns sound by hearing it.",
+		"wrongs": ["An hour a day until you like them.", "Only when you're out with people."],
+		"why": "Wearing them all day is how the brain gets used to sound."},
+	{"id": "voice", "ask": "My own voice sounds odd, like in a barrel.",
+		"right": "That's common at first. If it lasts a few weeks, we adjust.",
+		"wrongs": ["That means they're broken.", "That never goes away: live with it."],
+		"why": "Own-voice is common early on; if it stays, the fit is adjusted."},
+	{"id": "charge", "ask": "How do I keep them going?",
+		"right": "Into the charger every night: full again by morning.",
+		"wrongs": ["Charge them once a week.", "Keep them in the bathroom so they stay warm."],
+		"why": "A nightly charge, and away from steam."},
+	{"id": "clean", "ask": "How do I keep them clean?",
+		"right": "Wipe them dry daily, brush the dome, change the wax guard when sound fades.",
+		"wrongs": ["Rinse them under the tap.", "Don't touch them: we clean them once a year."],
+		"why": "Daily dry care; the wax guard is the usual reason for a weak aid."},
+	{"id": "loop", "ask": "I can't follow the sermon at church.",
+		"right": "Ask if the church has a hearing loop: your telecoil setting picks it up.",
+		"wrongs": ["Turn them all the way up at church.", "Take them out at church: they don't help there."],
+		"why": "A loop brings the voice straight to the aid."},
+	{"id": "dinner", "ask": "Any tips for dinner out with friends?",
+		"right": "Sit with your back to the wall, face them, good light on their faces.",
+		"wrongs": ["Sit by the kitchen so you hear everything.", "Ask everyone to shout."],
+		"why": "Communication tips: face the talker, light on faces, noise behind you."},
+	{"id": "insert", "ask": "How do they go in?",
+		"right": "Aid over the ear first, then push the dome in and tuck the wire flat.",
+		"wrongs": ["Dome in first, then let the aid dangle.", "Any way: they sort themselves out."],
+		"why": "Over the ear, dome in, wire flat: practise it with them in the room."},
+]
+
+## Hoot's guided cards for Station 6.
+const DELIVERY_TRIES: Array = [
+	{"kind": "tube", "order": ["flip", "same", "long", "short"],
+		"line": "Tube 2 copies the old tube: same bend, cut to the same length. That's the one."},
+	{"kind": "counsel", "counsel": "normal", "order": [1, 0, 2],
+		"line": "True and kind: real help with soft speech, noise still harder. The middle one."},
+]
+
+
+static func counsel(id: String) -> Dictionary:
+	for c: Dictionary in COUNSEL:
+		if String(c["id"]) == id:
+			return c
+	return {}
+
+
+## "Retube it": the old tube on the mold and four new ones. order: four TUBES ids.
+static func tube_card(order: Array) -> Dictionary:
+	return {"kind": "tube", "title": "Retube the earmold", "tubes": order.duplicate(), "options": TUBE_WORDS.duplicate(),
+		"answer": order.find("same"), "lines": [String(TUBES["same"]["why"]), "Pre-bent #13 tubing: thread it, match the bend, trim to the old length."],
+		"hint": "Lay the new tube next to the old one. Same curve? Same length?"}
+
+
+## "Which wire?": the same aid on three wires on a drawn ear. order: three WIRES ids.
+static func wire_card(order: Array) -> Dictionary:
+	return {"kind": "wire", "title": "Fit the RIC: the wire", "wires": order.duplicate(), "options": WIRE_WORDS.duplicate(),
+		"answer": order.find("flush"), "lines": [String(WIRES["flush"]), "Too short pulls, too long gapes."],
+		"hint": "The wire should hug the head from the aid to the canal: no tug, no loop."}
+
+
+## "Which dome?": a canal opening of this size. The snug dome is the canal's own size.
+static func dome_card(canal: String) -> Dictionary:
+	return {"kind": "dome", "title": "Fit the RIC: the dome", "canal": canal, "options": DOME_WORDS.duplicate(), "answer": SIZES.find(canal),
+		"lines": ["The %s dome: snug, not squashed." % canal, "Too small falls out and whistles; too big bunches up and gets sore."],
+		"hint": "Match the dome to the canal opening: it should seal without folding."}
+
+
+## "Gus asks": the true, kind answer. order: three indexes into [right, wrong 1, wrong 2].
+static func counsel_card(c: Dictionary, order: Array) -> Dictionary:
+	var all: Array[String] = [String(c["right"]), String(c["wrongs"][0]), String(c["wrongs"][1])]
+	var words: Array[String] = []
+	for i: Variant in order:
+		words.append(all[int(i)])
+	return {"kind": "counsel", "title": "Gus asks", "counsel": String(c["id"]), "ask": String(c["ask"]), "options": words,
+		"answer": order.find(0), "lines": [String(c["why"]), "True and kind: never promise new ears, never take the hope away."],
+		"hint": "Pick the answer that is true AND kind."}
+
+
+static func delivery_tries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for t: Dictionary in DELIVERY_TRIES:
+		var c := tube_card(t["order"]) if String(t["kind"]) == "tube" else counsel_card(counsel(String(t["counsel"])), t["order"])
+		c["line"] = String(t["line"])
+		out.append(c)
+	return out
+
+
+## Six honest cards: the retube, the wire, the dome, three of Gus's questions (all different).
+static func delivery_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var tubes: Array = TUBES.keys()
+	_shuffle(tubes, rng)
+	out.append(tube_card(tubes))
+	var wires: Array = WIRES.keys()
+	_shuffle(wires, rng)
+	out.append(wire_card(wires))
+	out.append(dome_card(SIZES[rng.randi_range(0, SIZES.size() - 1)]))
+	var qs := COUNSEL.duplicate()
+	_shuffle(qs, rng)
+	for i in 3:
+		var o: Array = [0, 1, 2]
+		_shuffle(o, rng)
+		out.append(counsel_card(qs[i], o))
+	return out
+
+
+# ================================================================ Station 7: The bench
+
+## Station B's troubleshooting (bulletin; CA_PRACTICAL_EXAM.md §3.2 and the 2020 outline's post-fitting area):
+## look, listen, test, fix; internal or external feedback; which electroacoustic measure a fault changes;
+## repair in the office, send away, or replace.
+## An aid on the bench: the ticket, what you find, and the fix.
+const BENCH: Array = [
+	{"id": "flat", "aid": "bte", "ticket": "Dead", "clue": "battery", "find": "The battery tester reads empty.",
+		"fix": "Fresh battery, then a listening check", "why": "Test the battery first: the cheapest fix there is."},
+	{"id": "guard", "aid": "ric", "ticket": "Dead", "clue": "wax", "find": "Battery good. A brown plug in the receiver's mouth.",
+		"fix": "Change the wax guard", "why": "A blocked wax guard silences a RIC: swap it and listen."},
+	{"id": "wet", "aid": "bte", "ticket": "Weak, crackly", "clue": "drops", "find": "Drops of water in the tube.",
+		"fix": "Blower bulb: clear the tube", "why": "Moisture in the tube muffles the sound: blow it through, then dry it."},
+	{"id": "crack", "aid": "bte", "ticket": "Whistles", "clue": "crack", "find": "The tube is hard, yellow and split.",
+		"fix": "Retube with new #13 tubing", "why": "Old tubing cracks and leaks sound: the whistle. Retube it."},
+	{"id": "dome", "aid": "ric", "ticket": "Weak", "clue": "wax", "find": "The dome is packed with wax.",
+		"fix": "Swap the dome", "why": "A clogged dome blocks the sound: a new dome, then listen."},
+	{"id": "contacts", "aid": "ric", "ticket": "Comes and goes", "clue": "green", "find": "Green crust on the battery contacts.",
+		"fix": "Clean the contacts", "why": "Corroded contacts cut the power on and off: clean them gently."},
+]
+const BENCH_FIXES: Array[String] = ["Fresh battery, then a listening check", "Change the wax guard", "Blower bulb: clear the tube",
+	"Retube with new #13 tubing", "Swap the dome", "Clean the contacts"]
+
+## The test box: which measure is off for this complaint (after the easy fixes).
+const BOX: Array = [
+	{"id": "distortion", "ticket": "Sounds rough, even with a fresh battery.", "measure": "Distortion too high",
+		"why": "Rough sound shows as high harmonic distortion."},
+	{"id": "gain", "ticket": "Weak, with a new battery, guard and tube.", "measure": "Gain too low",
+		"why": "Weak with everything clean: the gain is below its spec."},
+	{"id": "output", "ticket": "Loud sounds come out thin and small.", "measure": "Output (OSPL90) too low",
+		"why": "The loudest it can play is under spec: maximum output is low."},
+	{"id": "current", "ticket": "A fresh battery dies in a day.", "measure": "Battery current too high",
+		"why": "The aid draws more current than its spec: it eats batteries."},
+]
+
+## The whistle: where does it squeal?
+const WHISTLE: Array = [
+	{"id": "hand", "where": "It whistles cupped in your hand, but not in the ear.", "answer": 0,
+		"why": "In the hand is normal: sound leaks back. In the ear it's sealed. All good."},
+	{"id": "fit", "where": "It whistles in the ear. Off the ear, covered, it's quiet.", "answer": 1,
+		"why": "External feedback: sound leaks round the fit. A bigger dome or a better mold."},
+	{"id": "inside", "where": "It whistles on the bench with the receiver fully blocked.", "answer": 2,
+		"why": "Internal feedback: it squeals sealed off. Something inside: send it in."},
+]
+const WHISTLE_WORDS: Array[String] = ["Normal: nothing to fix", "External: refit the dome or mold", "Internal: send it in"]
+
+## Repair in the office, send it away, or replace it.
+const FATE: Array = [
+	{"id": "tube", "ticket": "A 2-year-old BTE. Split tube.", "answer": 0, "why": "A tube is an office fix: retube it today."},
+	{"id": "receiver", "ticket": "A 1-year-old RIC, in warranty. Dead receiver after a fresh guard.", "answer": 1,
+		"why": "A dead part in warranty: send it to the maker."},
+	{"id": "old", "ticket": "A 9-year-old aid, out of warranty. The maker no longer repairs it.", "answer": 2,
+		"why": "No repair is possible: time to talk about a new one."},
+	{"id": "dome", "ticket": "A 3-year-old RIC. The dome came off in the ear canal last week.", "answer": 0,
+		"why": "A new dome, fitted firmly, in the office. And check the ear is clear."},
+]
+const FATE_WORDS: Array[String] = ["Fix it here", "Send it to the maker", "Replace it"]
+
+## Hoot's guided cards for Station 7.
+const BENCH_TRIES: Array = [
+	{"kind": "bench", "bench": "flat", "line": "Dead? Test the battery first. It reads empty: a fresh one, then listen."},
+	{"kind": "whistle", "whistle": "fit", "line": "Whistles in the ear, quiet sealed off: that's the fit. External."},
+]
+
+
+static func bench(id: String) -> Dictionary:
+	for b: Dictionary in BENCH:
+		if String(b["id"]) == id:
+			return b
+	return {}
+
+
+static func _pick(list: Array, id: String) -> Dictionary:
+	for d: Dictionary in list:
+		if String(d["id"]) == id:
+			return d
+	return {}
+
+
+## "On the bench": the ticket, what you find, which fix. others: three wrong BENCH_FIXES in order.
+static func bench_card(b: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+	var pool: Array = BENCH_FIXES.duplicate()
+	pool.erase(String(b["fix"]))
+	_shuffle(pool, rng)
+	var words: Array = [String(b["fix"])] + pool.slice(0, 3)
+	_shuffle(words, rng)
+	var typed: Array[String] = []
+	for w: Variant in words:
+		typed.append(String(w))
+	return {"kind": "bench", "title": "On the bench", "bench": String(b["id"]), "aid": String(b["aid"]), "ticket": String(b["ticket"]),
+		"clue": String(b["clue"]), "find": String(b["find"]), "options": typed, "answer": typed.find(String(b["fix"])),
+		"lines": [String(b["why"]), "Look, listen, test, fix. Then listen again."], "hint": "Fix what you found, cheapest first."}
+
+
+## "The test box": which measure is off for this complaint? order: the four BOX entries' order.
+static func box_card(bx: Dictionary, order: Array) -> Dictionary:
+	var words: Array[String] = []
+	for id: Variant in order:
+		words.append(String(_pick(BOX, String(id))["measure"]))
+	return {"kind": "box", "title": "The test box", "box": String(bx["id"]), "ticket": String(bx["ticket"]), "measures": order.duplicate(),
+		"options": words, "answer": order.find(String(bx["id"])), "lines": [String(bx["why"]), "Compare every measure with the maker's spec sheet."],
+		"hint": "Rough: distortion. Weak: gain. Loud sounds thin: output. Eats batteries: current."}
+
+
+static func whistle_card(w: Dictionary) -> Dictionary:
+	return {"kind": "whistle", "title": "Where does it whistle?", "whistle": String(w["id"]), "where": String(w["where"]),
+		"options": WHISTLE_WORDS.duplicate(), "answer": int(w["answer"]), "lines": [String(w["why"]), "Feedback: outside the aid (the fit) or inside it (the maker)."],
+		"hint": "Sealed off and still whistling means inside. Quiet sealed off means the fit."}
+
+
+static func fate_card(f: Dictionary) -> Dictionary:
+	return {"kind": "fate", "title": "Fix, send or replace?", "fate": String(f["id"]), "ticket": String(f["ticket"]),
+		"options": FATE_WORDS.duplicate(), "answer": int(f["answer"]), "lines": [String(f["why"]), "Can't fix it here? Send it in. Can't send it? Replace."],
+		"hint": "Office fixes: tubes, domes, guards, batteries. Parts in warranty go to the maker."}
+
+
+static func bench_tries(rng := RandomNumberGenerator.new()) -> Array[Dictionary]:
+	rng.seed = 7
+	var out: Array[Dictionary] = []
+	for t: Dictionary in BENCH_TRIES:
+		var c := bench_card(bench(String(t["bench"])), rng) if String(t["kind"]) == "bench" else whistle_card(_pick(WHISTLE, String(t["whistle"])))
+		c["line"] = String(t["line"])
+		out.append(c)
+	return out
+
+
+## Six honest cards: two aids on the bench (different tickets' fixes), the whistle, the test box, a third aid,
+## and fix / send / replace.
+static func bench_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var bs := BENCH.duplicate()
+	_shuffle(bs, rng)
+	out.append(bench_card(bs[0], rng))
+	out.append(bench_card(bs[1], rng))
+	out.append(whistle_card(WHISTLE[rng.randi_range(0, WHISTLE.size() - 1)]))
+	var order: Array = BOX.map(func(b: Dictionary) -> String: return String(b["id"]))
+	_shuffle(order, rng)
+	out.append(box_card(BOX[rng.randi_range(0, BOX.size() - 1)], order))
+	out.append(bench_card(bs[2], rng))
+	out.append(fate_card(FATE[rng.randi_range(0, FATE.size() - 1)]))
 	return out

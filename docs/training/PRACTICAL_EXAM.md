@@ -4,7 +4,7 @@ Steve asked (2026-10-28) for "exhaustive research into the california hearing ai
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
 (section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
-(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5); Station 5, One good impression (PR 6). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5); Station 5, One good impression (PR 6); Stations 6 and 7, Delivery day and The bench (PR 7). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -201,6 +201,12 @@ expectations, care and maintenance; replace tubing on an earmold with #13 tubing
   reusing the fitting and tune-up days' voice. Communication tips (face the speaker, light on faces, a quieter table)
   get their own card.
 - **Earns:** the **Delivery** card (teal).
+- **As built (PR 7):** six pick-one holes, keys 1-4: the retube (the old yellowed tube beside four new ones: the
+  same bend cut to the old length, left long, bent the other way, cut short and straight), the RIC's wire (one aid
+  on three wires on a drawn ear: pulls, flush, gapes), the dome (small, medium or large for a drawn canal opening)
+  and three of Gus's eight week-one questions (expectations, wearing time, own voice, charging, cleaning, the loop
+  at church, dinner out, putting them in), each with one true, kind answer and two that aren't. Try it: the
+  retube, then "Will these make my hearing normal again?". Day 14's own lines are not reused; the words are new.
 
 ### 3.7 Station 7: "The bench" (troubleshooting)
 
@@ -216,6 +222,12 @@ electroacoustic measure a fault changes.
   (send it in).
 - **Repair, send away, or replace:** the last card of each aid.
 - **Earns:** the **Bench Tree** card (purple): look, listen, test, fix, or send.
+- **As built (PR 7):** pick-one cards (Day 15's bench scenes are not reused), six holes: three aids on the bench
+  (a ticket, a drawn clue under a magnifier and what you find; pick the fix out of four: a fresh battery, a new
+  wax guard, the blower bulb, a retube, a new dome, cleaned contacts), the whistle (normal in the hand, external,
+  internal), the test box (rough: distortion; weak: gain; loud sounds thin: output; eats batteries: current; the
+  bars are drawn after the answer) and fix here, send to the maker, or replace. Try it: a dead BTE with a flat
+  battery, then a whistle from the fit.
 
 ### 3.8 Station 8: "Exam day" (the mock exam)
 

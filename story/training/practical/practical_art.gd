@@ -7,6 +7,7 @@ extends RefCounted
 ## missed; t: seconds since the card was shown (for small wobbles).
 
 const UiKit := preload("res://story/ui_kit.gd")
+const Portraits := preload("res://story/portraits.gd")
 const PracticalDeck := preload("res://story/training/practical/practical_deck.gd")
 const ArcadeArt := preload("res://story/arcade/arcade_art.gd")
 
@@ -83,6 +84,22 @@ static func draw_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: b
 			_out(ci, size, card, reveal, t)
 		"judge":
 			_judge(ci, size, card, reveal, wrong)
+		"tube":
+			_tubes(ci, size, card, reveal, wrong)
+		"wire":
+			_wires(ci, size, card, reveal, wrong)
+		"dome":
+			_domes(ci, size, card, reveal, wrong)
+		"counsel":
+			_counsel(ci, size, card, reveal, t)
+		"bench":
+			_bench(ci, size, card, reveal, t)
+		"box":
+			_box_card(ci, size, card, reveal)
+		"whistle":
+			_whistle(ci, size, card, reveal, t)
+		"fate":
+			_fate(ci, size, card, reveal)
 
 
 # ---------------------------------------------------------------- the kit tray
@@ -1302,6 +1319,257 @@ static func _judge(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool
 			ci.draw_string(UiKit.font(700), Vector2(560, 200), "Take it again.", HORIZONTAL_ALIGNMENT_CENTER, 240, 22, Palette.INK)
 	elif not wrong.is_empty():
 		_stamp(ci, Vector2(680, 140), "LOOK AGAIN", GREY, 0.05)
+
+
+# ---------------------------------------------------------------- Station 6: Delivery day
+
+const MOLD := Color("#ffd8c2")
+const TUBE_COL := Color("#e8f6ff")
+const AID := Color("#c9b8a6")
+
+## An earmold (left) with its tube: state "same" | "long" | "flip" | "short" ("old": the yellowed original).
+static func draw_mold(ci: CanvasItem, c: Vector2, k: float, state: String) -> void:
+	var body := _oval(c, 34.0 * k, 28.0 * k, 20)
+	ci.draw_colored_polygon(body, MOLD)
+	ci.draw_polyline(_ring(body), Palette.INK, 2.5, true)
+	var pts := PackedVector2Array()
+	var bend := -1.0 if state == "flip" else 1.0
+	var reach := {"same": 1.0, "old": 1.0, "long": 1.45, "flip": 1.0, "short": 0.45}.get(state, 1.0) as float
+	for i in 13:
+		var u := i / 12.0 * reach
+		var p := c + Vector2(0, -26) * k + Vector2(sin(minf(u, 1.0) * PI * 0.5) * 70.0 * bend, -u * 110.0) * k
+		if state == "short":
+			p = c + Vector2(0, -26) * k + Vector2(0, -u * 110.0) * k
+		pts.append(p)
+	ci.draw_polyline(pts, Palette.INK, 10.0 * k, true)
+	ci.draw_polyline(pts, Color("#f2e3a0") if state == "old" else TUBE_COL, 6.0 * k, true)
+
+
+static func _tubes(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var old := Rect2(30, 86, 170, 330)
+	UiDraw.rounded_rect(ci, old, Color("#fff4cf"), 18, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), old.position + Vector2(0, 30), "The old tube", HORIZONTAL_ALIGNMENT_CENTER, old.size.x, 18, Palette.INK)
+	draw_mold(ci, old.position + Vector2(70, 270), 1.0, "old")
+	var tubes: Array = card["tubes"]
+	var w := (size.x - 230 - 3 * 12) / 4.0
+	for i in tubes.size():
+		var b := Rect2(216 + i * (w + 12), 86, w, 330)
+		var right := reveal and i == int(card["answer"])
+		UiDraw.rounded_rect(ci, b, Color(GREEN, 0.18) if right else (Color(RED, 0.15) if wrong.has(i) else Palette.PAPER), 18, 3, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(b.position + Vector2(10, 10), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(10, 35), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		draw_mold(ci, b.position + Vector2(b.size.x * 0.38, 270), 0.85, String(tubes[i]))
+		if right:
+			_stamp(ci, b.position + Vector2(b.size.x * 0.5, 306), "MATCH", GREEN, -0.06)
+		elif wrong.has(i):
+			_stamp(ci, b.position + Vector2(b.size.x * 0.5, 306), "NO", GREY, 0.05)
+
+
+## A RIC on an ear seen from the side: the aid behind the ear, the wire over it to the canal.
+static func draw_ric(ci: CanvasItem, e: Vector2, k: float, fit: String) -> void:
+	var ear := _oval(e, 30.0 * k, 50.0 * k, 24)
+	ci.draw_colored_polygon(ear, Palette.SKIN.darkened(0.06))
+	ci.draw_polyline(_ring(ear), Palette.INK, 2.5, true)
+	ci.draw_circle(e + Vector2(-6, 6) * k, 6.0 * k, Color("#5a2f2f"))
+	var aid_at := e + Vector2(30, -12) * k
+	if fit == "pull":
+		aid_at = e + Vector2(26, -56) * k
+	elif fit == "gape":
+		aid_at = e + Vector2(40, 10) * k
+	var top := e + Vector2(10, -52) * k
+	var wire := PackedVector2Array()
+	for i in 11:
+		var u := i / 10.0
+		var p := (aid_at + Vector2(0, -26) * k).lerp(top, minf(u * 2.0, 1.0)) if u < 0.5 else top.lerp(e + Vector2(-6, 6) * k, (u - 0.5) * 2.0)
+		if fit == "gape" and u > 0.3 and u < 0.8:
+			p += Vector2(-30, -16) * k * sin((u - 0.3) / 0.5 * PI)
+		wire.append(p)
+	if fit == "pull":
+		wire = PackedVector2Array([aid_at + Vector2(0, -26) * k, e + Vector2(-6, 6) * k])
+	ci.draw_polyline(wire, Palette.INK, 4.0, true)
+	var body := Rect2(aid_at - Vector2(10, 28) * k, Vector2(20, 56) * k)
+	UiDraw.rounded_rect(ci, body, AID, int(10 * k), 2, Palette.INK)
+	ci.draw_circle(e + Vector2(-6, 6) * k, 7.0 * k, Palette.PAPER)
+	ci.draw_arc(e + Vector2(-6, 6) * k, 7.0 * k, 0.0, TAU, 12, Palette.INK, 2.0, true)
+
+
+static func _wires(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var wires: Array = card["wires"]
+	var w := (size.x - 60 - 2 * 14) / 3.0
+	for i in wires.size():
+		var b := Rect2(30 + i * (w + 14), 86, w, 330)
+		var right := reveal and i == int(card["answer"])
+		UiDraw.rounded_rect(ci, b, Color(GREEN, 0.18) if right else (Color(RED, 0.15) if wrong.has(i) else Palette.PAPER), 18, 3, Palette.INK)
+		UiDraw.rounded_rect(ci, Rect2(b.position + Vector2(10, 10), Vector2(34, 34)), Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), b.position + Vector2(10, 35), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 20, Palette.INK)
+		draw_ric(ci, b.position + Vector2(b.size.x * 0.45, 190), 1.6, String(wires[i]))
+		if reveal or wrong.has(i):
+			_wrap(ci, String(PracticalDeck.WIRES[String(wires[i])]).split(":")[0], Rect2(b.position + Vector2(10, 284), Vector2(b.size.x - 20, 40)), 18, GREEN.darkened(0.2) if right else Palette.INK_SOFT)
+
+
+## A dome (mushroom tip) of a size.
+static func draw_dome(ci: CanvasItem, c: Vector2, w: float) -> void:
+	var cap := PackedVector2Array()
+	for i in 17:
+		var a := PI + PI * i / 16.0
+		cap.append(c + Vector2(cos(a) * w * 0.5, sin(a) * w * 0.55))
+	ci.draw_colored_polygon(cap, Color(CLEAR, 0.95))
+	var o := cap.duplicate()
+	o.append(cap[0])
+	ci.draw_polyline(o, Palette.INK, 2.5, true)
+	ci.draw_rect(Rect2(c + Vector2(-6, 0), Vector2(12, 22)), AID)
+	ci.draw_rect(Rect2(c + Vector2(-6, 0), Vector2(12, 22)), Palette.INK, false, 2.0)
+
+
+static func _domes(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, wrong: Array) -> void:
+	var canal := String(card["canal"])
+	var cw: float = CANAL_W[canal] * 1.4
+	var v := Rect2(30, 86, 300, 330)
+	UiDraw.rounded_rect(ci, v, Color("#ffe8dc"), 18, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), v.position + Vector2(0, 32), "A %s canal" % canal.to_upper(), HORIZONTAL_ALIGNMENT_CENTER, v.size.x, 22, Palette.INK)
+	var cc := v.position + Vector2(v.size.x * 0.5, 190)
+	ci.draw_colored_polygon(_oval(cc, cw * 0.5, cw * 0.62, 24), Color("#5a2f2f"))
+	ci.draw_polyline(_ring(_oval(cc, cw * 0.5, cw * 0.62, 24)), Palette.INK, 3.0, true)
+	if reveal:
+		draw_dome(ci, cc + Vector2(0, 8), cw)
+	ci.draw_string(UiKit.font(600), v.position + Vector2(0, 300), "the canal opening", HORIZONTAL_ALIGNMENT_CENTER, v.size.x, 16, Palette.INK_SOFT)
+	var tray := Rect2(350, 86, size.x - 380, 330)
+	UiDraw.rounded_rect(ci, tray, Palette.PAPER, 18, 3, Palette.INK)
+	for i in 3:
+		var c := tray.position + Vector2(tray.size.x * (i + 0.5) / 3.0, 200)
+		UiDraw.rounded_rect(ci, Rect2(c + Vector2(-17, -130), Vector2(34, 34)), RED.lightened(0.5) if wrong.has(i) else Palette.SUNNY, 9, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), c + Vector2(-17, -104), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 34, 18, Palette.INK)
+		draw_dome(ci, c, float(CANAL_W[PracticalDeck.SIZES[i]]) * 1.4)
+		ci.draw_string(UiKit.font(700), c + Vector2(-60, 80), PracticalDeck.SIZES[i], HORIZONTAL_ALIGNMENT_CENTER, 120, 18, Palette.INK)
+		if reveal and i == int(card["answer"]):
+			UiDraw.check(ci, c + Vector2(0, 116), 24.0, GREEN, 5.0)
+
+
+## Gus's question in a speech bubble.
+static func _counsel(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	Portraits.draw(ci, "Gus", Vector2(150, 260), 100.0, fmod(t, 0.5) < 0.25 and t < 2.0)
+	ci.draw_string(UiKit.font(700), Vector2(50, 400), "Gus, week one", HORIZONTAL_ALIGNMENT_CENTER, 200, 20, Palette.INK)
+	var b := Rect2(290, 110, size.x - 320, 200)
+	UiDraw.rounded_rect(ci, b, Palette.PAPER, 24, 3, Palette.INK)
+	ci.draw_colored_polygon(PackedVector2Array([b.position + Vector2(2, 120), b.position + Vector2(-34, 150), b.position + Vector2(2, 150)]), Palette.PAPER)
+	ci.draw_polyline(PackedVector2Array([b.position + Vector2(0, 120), b.position + Vector2(-34, 150), b.position + Vector2(0, 150)]), Palette.INK, 3.0, true)
+	_wrap(ci, "\"%s\"" % String(card["ask"]), Rect2(b.position + Vector2(26, 24), b.size - Vector2(52, 48)), 30, Palette.INK)
+	if reveal:
+		_stamp(ci, Vector2(b.get_center().x, 360), "TRUE AND KIND", GREEN, -0.05)
+
+
+# ---------------------------------------------------------------- Station 7: The bench
+
+## A BTE or a RIC lying on the bench.
+static func draw_aid(ci: CanvasItem, c: Vector2, k: float, kind: String) -> void:
+	var body := PackedVector2Array()
+	for i in 21:
+		var a := PI * 0.15 + PI * 1.1 * i / 20.0
+		body.append(c + Vector2(cos(a) * 70.0, sin(a) * 26.0 - 30.0 + sin(a * 0.5) * 10.0) * k)
+	var o := _oval(c, 36.0 * k, 70.0 * k, 24)
+	for i in o.size():
+		o[i] = c + (o[i] - c).rotated(-0.5)
+	ci.draw_colored_polygon(o, AID)
+	ci.draw_polyline(_ring(o), Palette.INK, 3.0, true)
+	if kind == "bte":
+		var hook := PackedVector2Array([c + Vector2(-30, -56) * k, c + Vector2(-70, -90) * k, c + Vector2(-110, -60) * k, c + Vector2(-120, 20) * k])
+		tube(ci, hook, 10.0 * k, TUBE_COL)
+		draw_mold(ci, c + Vector2(-130, 70) * k, k * 0.9, "same")
+	else:
+		var wire := PackedVector2Array([c + Vector2(-26, -58) * k, c + Vector2(-80, -86) * k, c + Vector2(-130, -50) * k, c + Vector2(-140, 30) * k])
+		ci.draw_polyline(wire, Palette.INK, 4.0, true)
+		draw_dome(ci, c + Vector2(-140, 50) * k, 46.0 * k)
+
+
+static func _clue(ci: CanvasItem, c: Vector2, clue: String) -> void:
+	ci.draw_circle(c, 62.0, Palette.INK)
+	ci.draw_circle(c, 56.0, Color("#f3fbff"))
+	match clue:
+		"battery":
+			UiDraw.rounded_rect(ci, Rect2(c - Vector2(28, 18), Vector2(56, 36)), METAL, 8, 3, Palette.INK)
+			ci.draw_rect(Rect2(c + Vector2(28, -6), Vector2(6, 12)), Palette.INK)
+			ci.draw_rect(Rect2(c - Vector2(22, 12), Vector2(6, 24)), RED)
+		"wax":
+			ci.draw_circle(c, 26.0, METAL)
+			ci.draw_circle(c, 16.0, Color("#8a5a2b"))
+			ci.draw_circle(c + Vector2(5, -4), 6.0, Color("#b07a3c"))
+		"drops":
+			for d: Vector2 in [Vector2(-16, -8), Vector2(10, 6), Vector2(18, -18)]:
+				ci.draw_circle(c + d, 9.0, Color("#7fc4f0"))
+				ci.draw_colored_polygon(PackedVector2Array([c + d + Vector2(-8, -2), c + d + Vector2(0, -18), c + d + Vector2(8, -2)]), Color("#7fc4f0"))
+		"crack":
+			tube(ci, PackedVector2Array([c + Vector2(-40, 20), c + Vector2(40, -20)]), 18.0, Color("#f2e3a0"))
+			ci.draw_polyline(PackedVector2Array([c + Vector2(-4, -2), c + Vector2(2, 4), c + Vector2(-2, 8), c + Vector2(6, 14)]), Palette.INK, 2.5, true)
+		"green":
+			UiDraw.rounded_rect(ci, Rect2(c - Vector2(28, 18), Vector2(56, 36)), METAL, 8, 3, Palette.INK)
+			for d: Vector2 in [Vector2(-16, 10), Vector2(12, 14), Vector2(20, -10), Vector2(-6, -14)]:
+				ci.draw_circle(c + d, 7.0, Color("#5fae6a"))
+	ci.draw_line(c + Vector2(40, 40), c + Vector2(76, 76), Palette.INK, 10.0, true)
+
+
+## A repair ticket, pinned.
+static func _ticket(ci: CanvasItem, r: Rect2, head: String, body: String) -> void:
+	UiDraw.rounded_rect(ci, Rect2(r.position + Vector2(0, 6), r.size), Color(0, 0, 0, 0.18), 16)
+	UiDraw.rounded_rect(ci, r, Color("#fff4cf"), 16, 3, Palette.INK)
+	ci.draw_circle(r.position + Vector2(r.size.x * 0.5, 14), 7.0, RED)
+	ci.draw_string(UiKit.font(700), r.position + Vector2(20, 52), head, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 40, 26, Palette.INK)
+	_wrap(ci, body, Rect2(r.position + Vector2(20, 66), Vector2(r.size.x - 40, r.size.y - 76)), 20, Palette.INK)
+
+
+static func _bench(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	ci.draw_rect(Rect2(24, 330, size.x - 48, 90), Color("#d8b98a"))
+	draw_aid(ci, Vector2(250, 250), 1.1, String(card["aid"]))
+	_clue(ci, Vector2(420, 170), String(card["clue"]))
+	_ticket(ci, Rect2(540, 90, size.x - 570, 230), "Ticket: %s" % String(card["ticket"]), "You find: %s" % String(card["find"]))
+	if reveal:
+		_stamp(ci, Vector2(680, 372), "FIXED: LISTEN AGAIN", GREEN, -0.05)
+
+
+static func _box_card(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool) -> void:
+	_ticket(ci, Rect2(30, 90, 330, 200), "The ticket", String(card["ticket"]))
+	var r := Rect2(390, 90, size.x - 420, 320)
+	UiDraw.rounded_rect(ci, r, Color("#2e3a4a"), 20, 3, Palette.INK)
+	ci.draw_string(UiKit.font(700), r.position + Vector2(0, 32), "TEST BOX", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 20, Palette.PAPER)
+	var ms: Array = card["measures"]
+	for i in ms.size():
+		var y := r.position.y + 64 + i * 62
+		var name := String(PracticalDeck._pick(PracticalDeck.BOX, String(ms[i]))["measure"]).split(" ")[0]
+		ci.draw_string(UiKit.font(700), Vector2(r.position.x + 16, y + 22), name, HORIZONTAL_ALIGNMENT_LEFT, 110, 16, Palette.PAPER)
+		var bar := Rect2(r.position.x + 130, y, r.size.x - 150, 32)
+		ci.draw_rect(bar, Color("#1d2633"))
+		ci.draw_rect(Rect2(bar.position + Vector2(bar.size.x * 0.4, 0), Vector2(bar.size.x * 0.25, bar.size.y)), Color(GREEN, 0.45))
+		if reveal:
+			var bad := String(ms[i]) == String(card["box"])
+			var v := 0.52
+			if bad:
+				v = 0.88 if String(ms[i]) in ["distortion", "current"] else 0.18
+			ci.draw_rect(Rect2(bar.position + Vector2(0, 8), Vector2(bar.size.x * v, 16)), RED if bad else Palette.SUNNY)
+		else:
+			ci.draw_string(UiKit.font(700), bar.position + Vector2(0, 24), "?", HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 20, Palette.PAPER)
+	if reveal:
+		_stamp(ci, Vector2(195, 350), "OUT OF SPEC", RED, -0.06)
+
+
+static func _whistle(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool, t: float) -> void:
+	draw_aid(ci, Vector2(250, 260), 1.0, "ric")
+	var k := 0.0 if Game.settings.get("reduced_motion", false) else fmod(t * 1.5, 1.0)
+	for i in 3:
+		var rr := 40.0 + 30.0 * fmod(k + i / 3.0, 1.0)
+		ci.draw_arc(Vector2(120, 150), rr, -1.2, 0.2, 16, Color(GOLD.darkened(0.2), 1.0 - fmod(k + i / 3.0, 1.0)), 5.0, true)
+	ci.draw_string(UiKit.font(700), Vector2(60, 110), "EEEEEE!", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, GOLD.darkened(0.3))
+	_ticket(ci, Rect2(440, 96, size.x - 470, 240), "Ticket: Whistles", String(card["where"]))
+	if reveal:
+		_stamp(ci, Vector2(650, 380), String(card["options"][int(card["answer"])]).split(":")[0].to_upper(), GREEN, -0.05)
+
+
+static func _fate(ci: CanvasItem, size: Vector2, card: Dictionary, reveal: bool) -> void:
+	_ticket(ci, Rect2(60, 96, 420, 280), "On the bench", String(card["ticket"]))
+	var labels: Array[String] = ["FIX HERE", "SEND IN", "REPLACE"]
+	for i in 3:
+		var c := Vector2(640, 140 + i * 100)
+		var on := reveal and i == int(card["answer"])
+		UiDraw.rounded_rect(ci, Rect2(c - Vector2(120, 34), Vector2(240, 68)), (GREEN if on else METAL) if reveal else Palette.PAPER, 16, 3, Palette.INK)
+		ci.draw_string(UiKit.font(700), c + Vector2(-120, 10), labels[i], HORIZONTAL_ALIGNMENT_CENTER, 240, 24, Palette.PAPER if on else Palette.INK)
 
 
 static func _box(ci: CanvasItem, r: Rect2, col: Color) -> void:
