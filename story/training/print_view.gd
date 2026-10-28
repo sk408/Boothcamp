@@ -4,6 +4,8 @@ extends Control
 ## once the exam is done. "Save picture" writes the page as a PNG for printing: into Documents/BoothCamp
 ## on a PC (user:// when Documents can't be written), a browser download on the web. The room opens it
 ## once every card is earned; Close, Enter or P shuts it.
+## (practical) With lesson = "practical": The Practical's eight cards, four by two, and the Booth Camp Practical
+## licence once Exam day is finished (docs/training/PRACTICAL_EXAM.md §4).
 ##   var pv := PrintView.new(); room.add_child(pv); pv.closed.connect(...)
 
 const UiKit := preload("res://story/ui_kit.gd")
@@ -11,14 +13,19 @@ const MaskDeck := preload("res://story/training/masking/mask_deck.gd")
 const TrainingProgress := preload("res://story/training/training_progress.gd")
 const CheatCard := preload("res://story/training/cheat_card.gd")
 const Diploma := preload("res://story/training/diploma.gd")
+const PracticalDeck := preload("res://story/training/practical/practical_deck.gd")
+const Licence := preload("res://story/training/practical/licence.gd")
 
 const PAGE := Rect2(90, 24, 1100, 672)
 const FILE_NAME := "masking-cheat-sheets.png"
+const PRACTICAL_FILE_NAME := "practical-cheat-sheets.png"
 
 signal closed
 
 ## Where the last "Save picture" went ("" = not saved; "download" on the web), for the tests.
 var saved_to := ""
+## Whose cards: "masking" (Masking School) or "practical" (The Practical). Set before adding to the tree.
+var lesson := "masking"
 var _page: Control
 var _buttons: HBoxContainer
 var _note: Label
@@ -40,13 +47,15 @@ func _ready() -> void:
 	_page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_page.draw.connect(_draw_page)
 	add_child(_page)
-	var got := TrainingProgress.cards(MaskDeck.LESSON)
-	for i in MaskDeck.CARD_ORDER.size():
-		var id: String = MaskDeck.CARD_ORDER[i]
-		var cc := CheatCard.new(MaskDeck.cheat_card(id), got.has(id), 19)
+	var practical := lesson == "practical"
+	var deck: GDScript = PracticalDeck if practical else MaskDeck
+	var got := TrainingProgress.cards(deck.LESSON)
+	for i in deck.CARD_ORDER.size():
+		var id: String = deck.CARD_ORDER[i]
+		var cc := CheatCard.new(deck.cheat_card(id), got.has(id), 16 if practical else 19)
 		cc.name = "print_%s" % id
-		cc.size = Vector2(330, 172)
-		cc.position = Vector2(30 + (i % 3) * 354, 104 + (i / 3) * 200)
+		cc.size = Vector2(252, 160) if practical else Vector2(330, 172)
+		cc.position = Vector2(30 + (i % 4) * 264, 104 + (i / 4) * 172) if practical else Vector2(30 + (i % 3) * 354, 104 + (i / 3) * 200)
 		_page.add_child(cc)
 	_buttons = HBoxContainer.new()
 	_buttons.add_theme_constant_override("separation", 14)
@@ -64,6 +73,9 @@ func _ready() -> void:
 	_note.position = PAGE.position + Vector2(30, PAGE.size.y - 112)
 	_note.size = Vector2(PAGE.size.x - 520, 50)
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if lesson == "practical":   # beside the licence
+		_note.position.x += 290
+		_note.size.x -= 290
 	add_child(_note)
 	Juice.bounce_in(_page)
 
@@ -74,6 +86,19 @@ func _draw_page() -> void:
 	_page.draw_rect(r, Palette.PAPER)
 	_page.draw_rect(r, Palette.INK, false, 4.0)
 	var f := UiKit.font(700)
+	if lesson == "practical":
+		_page.draw_string(f, Vector2(30, 56), "THE PRACTICAL: MY CHEAT SHEETS", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.INK)
+		_page.draw_string(UiKit.font(600), Vector2(32, 86), "California's two rooms, practised one station at a time. Eight cards, one page.",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK_SOFT)
+		var at := Vector2(160, 526)
+		if Licence.earned():
+			Licence.draw(_page, at, 1.0, Licence.grade(), Licence.passed())
+		else:
+			_page.draw_string(f, at + Vector2(-130, -6), "The licence", HORIZONTAL_ALIGNMENT_CENTER, 260, 20, Palette.INK_SOFT)
+			_page.draw_string(UiKit.font(600), at + Vector2(-130, 20), "stamps here (Exam day)", HORIZONTAL_ALIGNMENT_CENTER, 260, 17, Palette.INK_SOFT)
+		_page.draw_string(UiKit.font(600), Vector2(30, r.size.y - 20), "Booth Camp: a learning game. Our own practice exam; check the board's latest bulletin.",
+			HORIZONTAL_ALIGNMENT_LEFT, PAGE.size.x - 520, 14, Palette.INK_SOFT)
+		return
 	_page.draw_string(f, Vector2(30, 56), "MASKING SCHOOL: MY CHEAT SHEETS", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.INK)
 	_page.draw_string(UiKit.font(600), Vector2(32, 86), "Why, when and how much to mask, and the occlusion effect. Five cards, one page.",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK_SOFT)
@@ -129,19 +154,23 @@ func save_picture() -> void:
 	var crop := Rect2i(Vector2i(at), Vector2i(PAGE.size * scale)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
 	var page := img.get_region(crop)
 	if OS.has_feature("web"):
-		JavaScriptBridge.download_buffer(page.save_png_to_buffer(), FILE_NAME, "image/png")
+		JavaScriptBridge.download_buffer(page.save_png_to_buffer(), _file_name(), "image/png")
 		saved_to = "download"
-		_note.text = "Downloaded %s: open it and print!" % FILE_NAME
+		_note.text = "Downloaded %s: open it and print!" % _file_name()
 		return
 	var dir := OS.get_system_dir(OS.SYSTEM_DIR_DOCUMENTS).path_join("BoothCamp")
 	if dir == "BoothCamp" or DirAccess.make_dir_recursive_absolute(dir) != OK:
 		dir = OS.get_user_data_dir()
-	var path := dir.path_join(FILE_NAME)
+	var path := dir.path_join(_file_name())
 	if page.save_png(path) != OK:
-		path = OS.get_user_data_dir().path_join(FILE_NAME)
+		path = OS.get_user_data_dir().path_join(_file_name())
 		if page.save_png(path) != OK:
 			_note.text = "Couldn't save the picture. A screenshot works too!"
 			return
 	saved_to = path
 	_note.text = "Saved: %s" % path
 	Sfx.play(&"ding", 1.2, -8.0)
+
+
+func _file_name() -> String:
+	return PRACTICAL_FILE_NAME if lesson == "practical" else FILE_NAME

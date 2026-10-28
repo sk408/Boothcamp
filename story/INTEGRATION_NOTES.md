@@ -442,8 +442,9 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **(practical) The Practical**, the Training room's second lesson (docs/training/PRACTICAL_EXAM.md, research in
   docs/training/CA_PRACTICAL_EXAM.md). `training_room.gd` gets two lesson tabs under the sign (MASKING SCHOOL,
   THE PRACTICAL; Tab or a click switches; `TrainingRoom.lesson` remembers it for the session, Masking School first).
-  The board, chips (eight, two columns of four, SOON under the number) and pins follow the tab; the print view stays
-  Masking School's. New: `story/training/practical/practical_deck.gd` (stations, cards, generators; the bulletin's
+  The board, chips (eight, two columns of four, SOON under the number) and pins follow the tab; each lesson has its
+  print view once its cards are all earned (`print_view.gd` gains `lesson`, additive; The Practical's button sits on
+  the pin board's header), and Exam day's licence replaces the clipboard on the lesson card. New: `story/training/practical/practical_deck.gd` (stations, cards, generators; the bulletin's
   numbers named there: `CAL_MONTHS`, `SANITIZER_MAX_OZ`, the subject rules), `practical_art.gd` (the cards' drawings),
   `practical_school.tscn` + `.gd` (the station loop on its own drawn stage, beats `practical_*`), save lesson
   `"practical"` through `TrainingProgress`. Built: 1 kit ("Pack the bag": what stays home, the calibration sticker,
@@ -462,11 +463,18 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   the steps, the dam's size or depth, the syringe tip or the fill, the cure or the way out, two impressions to
   judge; a ladder card may carry `rung_options`, its own four choices per rung); 6 delivery ("Delivery day": the
   retube, the RIC's wire and dome, Gus's week-one questions) and 7 bench ("The bench": aids with tickets, the
-  whistle, the test box, fix / send / replace). Only Station 8, the exam day, is left to build. A new station is a `PracticalDeck.STATIONS` entry with
+  whistle, the test box, fix / send / replace); 8 exam ("Exam day": `PracticalDeck.exam_round()` deals each station's
+  round and keeps one card of each kind in `EXAM_ROOMS` order, plus room, task, points (`EXAM_POINTS`, 30 in all) and
+  the examiner's `prompt`; no Try it, a room card per room (`practical_next` with `room`), no hints, a miss -1 point, an
+  unsafe pick a STOP that ends the task; the record's `best` is the fewest points lost, `exam_grade()` S/A/B/C;
+  `story/training/practical/licence.gd` draws the licence and keeps `{"pass"}` beside the stations in the lesson's save).
+  A new station is a `PracticalDeck.STATIONS` entry with
   `built: true` plus its `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot
   `story/tests/practical_check.tscn`. No new data files.
   - **movies.gd** (additive): registry line `"steady_hand"` (`story/explainers/movies/steady_hand.gd`, chapter `gus`,
     `"training": true`, stage `story/training/practical/practical_sets.gd`): Station 2's lead-in on a first visit, never
     Day 1's own movie; on the title's Hoot's Movies as "Training".
   - **training_progress.gd** (additive): `earn_card(lesson, id)` for a station that earns a second card.
+  - **title_screen.gd** (additive): "Practical: A (pass)" in the stats line after the masking diploma, read through
+    `licence.gd` (read only: looking creates nothing in the save).
   with the diploma, the print view and its saved PNG, and the AudiOtron's chip. **No new data files**, so the Web preset needs nothing.

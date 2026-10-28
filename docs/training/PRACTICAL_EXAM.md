@@ -4,7 +4,7 @@ Steve asked (2026-10-28) for "exhaustive research into the california hearing ai
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
 (section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
-(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5); Station 5, One good impression (PR 6); Stations 6 and 7, Delivery day and The bench (PR 7). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5); Station 5, One good impression (PR 6); Stations 6 and 7, Delivery day and The bench (PR 7); Station 8, Exam day, the licence and the print view (PR 8): **all eight stations are built**. **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -243,6 +243,20 @@ electroacoustic measure a fault changes.
 - **Grade:** points as a percentage, **S / A / B / C**, and **Practical pass** at B or better with no STOP (question
   9). Hoot's hints are off. Finishing earns the **Booth Camp Practical licence** stamp (a game licence, clearly not a
   board one) on the lesson card and a "Practical: A" line on the title.
+- **As built (PR 8):** no Try it (the exam is the test). A room card opens each room: its tasks and their points, the
+  real room's minutes (shown, never a clock: no reward for speed) and Hoot's line from outside. Sixteen tasks dealt
+  fresh from the stations' own generators: **Room A** kit (2 points), hygiene (1), look and call (2, refer on some
+  seeds), first ear (1), air thresholds on the better ear on the real AudiOtron (3; a slip or a stamp 10 dB off costs
+  a point), the masking call on the subject's own chart (2), a TD ladder (3), record a symbol (1); **Room B** safe
+  support (2), the ear dam (2), judge an impression (2), retube (2), the RIC's wire (2), a counselling question (1),
+  a bench aid (2), the whistle (2). 30 points. The examiner (our own drawing, glasses and a clipboard) reads a
+  prompt card and says "Noted." after a miss, "Thank you." after an answer, nothing else; the hint button reads "No
+  hints in the exam". A miss costs a point; an unsafe pick is a STOP: the task ends at once, its points lost, the
+  right answer shown, and the room goes on. Grade S 100%, A 90%, B 75%, else C; Practical pass at B or better with no
+  STOP. The score sheet shows each task's points by room (a STOP in red), the grade, PASS or NOT YET, and the
+  licence card (Hoot's photo, the best grade, PASS once any sitting passed, "a game licence, not a board one"); the
+  lesson card wears it, the exam chip shows "Best: Grade A, pass", the title adds "Practical: A (pass)". Every point
+  earns the star. Try it: Exam day, and go for a pass.
 
 ## 4. The cheat-sheet cards
 
@@ -258,6 +272,9 @@ electroacoustic measure a fault changes.
 | Bench Tree | purple | Look. Listen. Test. Fix. Can't fix? Send it in. Can't send? Replace. |
 
 A **print view** with all eight cards on one page (P in the room once all are earned), as Masking School has.
+**As built (PR 8):** the PRINT VIEW button takes the pin board's header once all eight are earned (every slot on the
+board is a card); the page shows the eight cards four by two and the licence (or where it will stamp); "Save
+picture" writes `practical-cheat-sheets.png` to Documents\BoothCamp (a download on the web).
 
 ## 5. Honesty and safety
 
