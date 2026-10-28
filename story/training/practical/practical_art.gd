@@ -1615,3 +1615,48 @@ static func _wrap(ci: CanvasItem, text: String, r: Rect2, px: int, col: Color) -
 		lines.append(cur)
 	for i in lines.size():
 		ci.draw_string(f, r.position + Vector2(0, px + i * (px + 6)), lines[i], HORIZONTAL_ALIGNMENT_CENTER if r.size.x < 260 else HORIZONTAL_ALIGNMENT_LEFT, r.size.x, px, col)
+
+
+# ---------------------------------------------------------------- Station 8: Exam day
+
+## The task's points on the title banner's right end ("2 PTS"), and a big STOP across a stopped task.
+static func draw_task_tag(ci: CanvasItem, card: Dictionary, stopped: bool) -> void:
+	var r := Rect2(742, 24, 106, 36)
+	UiDraw.rounded_rect(ci, r, Palette.SUNNY, 10, 3, Palette.INK)
+	var pts := int(card.get("points", 0))
+	ci.draw_string(UiKit.font(700), r.position + Vector2(0, 26), "%d PT%s" % [pts, "" if pts == 1 else "S"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 20, Palette.INK)
+	if stopped:
+		ci.draw_set_transform(Vector2(440, 250), -0.12, Vector2.ONE)
+		UiDraw.rounded_rect(ci, Rect2(-170, -50, 340, 100), Color(Palette.PAPER, 0.9), 14, 6, RED)
+		ci.draw_string(UiKit.font(700), Vector2(-170, 22), "STOP", HORIZONTAL_ALIGNMENT_CENTER, 340, 64, RED)
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The examiner: a calm face with glasses and a grey bob, a collar and a clipboard (our own drawing).
+static func draw_examiner(ci: CanvasItem, c: Vector2, r: float, talk_open := false) -> void:
+	ci.draw_circle(c, r + 5.0, Palette.INK)
+	ci.draw_circle(c, r, Color("#e3ecff"))
+	var k := r / 38.0
+	# shoulders and collar
+	ci.draw_circle(c + Vector2(0, 40) * k, 26.0 * k, Color("#3b3f52"))
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-8, 16) * k, c + Vector2(8, 16) * k, c + Vector2(0, 26) * k]), Palette.PAPER)
+	# hair, face, hair fringe
+	ci.draw_circle(c + Vector2(0, -6) * k, 20.0 * k, METAL)
+	ci.draw_circle(c + Vector2(0, -2) * k, 16.0 * k, HAND)
+	ci.draw_rect(Rect2(c + Vector2(-17, -24) * k, Vector2(34, 9) * k), METAL)
+	# glasses and eyes
+	for sx: float in [-1.0, 1.0]:
+		var e := c + Vector2(7 * sx, -3) * k
+		ci.draw_arc(e, 5.5 * k, 0.0, TAU, 16, Palette.INK, 2.0 * k, true)
+		ci.draw_circle(e, 1.8 * k, Palette.INK)
+	ci.draw_line(c + Vector2(-1.5, -3) * k, c + Vector2(1.5, -3) * k, Palette.INK, 2.0 * k)
+	# mouth
+	if talk_open:
+		ci.draw_circle(c + Vector2(0, 7) * k, 3.0 * k, Palette.INK)
+	else:
+		ci.draw_line(c + Vector2(-4, 7) * k, c + Vector2(4, 7) * k, Palette.INK, 2.0 * k, true)
+	# the clipboard
+	var cb := Rect2(c + Vector2(12, 14) * k, Vector2(18, 22) * k)
+	ci.draw_rect(cb, Palette.WOOD)
+	ci.draw_rect(Rect2(cb.position + Vector2(3, 4) * k, cb.size - Vector2(6, 7) * k), Palette.PAPER)
+	ci.draw_rect(Rect2(cb.position + Vector2(5, -2) * k, Vector2(8, 4) * k), METAL)

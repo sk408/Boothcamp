@@ -109,11 +109,11 @@ func test_kit_tries_and_months() -> void:
 	assert_eq(String(tries[0]["items"][int(tries[0]["answer"])]), "inserts")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH), "Mar 2027")
 	assert_eq(PracticalDeck.month_word(PracticalDeck.EXAM_MONTH - 3), "Dec 2026")
-	assert_eq(PracticalDeck.deal("exam", RandomNumberGenerator.new()), [], "unbuilt stations deal nothing")
+	assert_eq(PracticalDeck.deal("nope", RandomNumberGenerator.new()), [], "no such station deals nothing")
 
 
 ## The room's tabs: Masking School first; THE PRACTICAL shows eight chips and its own cards, emits its
-## beat again, and its first chip opens Pack the bag; a SOON chip stays put.
+## beat again, and its first chip opens Pack the bag.
 func test_room_switches_to_the_practical() -> void:
 	var room: Control = (load("res://story/training/training_room.tscn") as PackedScene).instantiate()
 	var beats: Array[Dictionary] = []
@@ -132,16 +132,14 @@ func test_room_switches_to_the_practical() -> void:
 	Events.awaiting_input.disconnect(acb)
 	assert_eq(beats.size(), 2, "the switch emits the beat again")
 	assert_eq(String(beats[1]["lesson"]), "practical")
-	assert_eq(beats[1]["built"], ["kit", "hands", "tones", "td", "impression", "delivery", "bench"])
+	assert_eq(beats[1]["built"], ["kit", "hands", "tones", "td", "impression", "delivery", "bench", "exam"])
 	assert_eq((room.get("_chips") as Array).size(), 8)
 	assert_true(room.find_child("card_kit_bag", true, false) != null, "the practical's pins")
 	assert_true(room.find_child("card_skull_wall", true, false) == null, "masking's pins are gone")
-	assert_false(bool(room.call("can_print")), "no print view on The Practical")
+	assert_false(bool(room.call("can_print")), "no print view before every card")
 	var went := []
 	var gcb := func(path: String) -> void: went.append(path)
 	Events.goto_scene.connect(gcb)
-	room.call("open_station", 7)   # SOON
-	assert_eq(went, [])
 	PracticalSchool.next_station = ""
 	solvers[1].call()
 	Events.goto_scene.disconnect(gcb)
@@ -941,3 +939,174 @@ func test_delivery_and_bench_play_by_solvers() -> void:
 		assert_eq(int(firsts.get(&"practical_card", 0)), 6)
 		assert_eq(PracticalSchool.last_result.get("strokes"), [1, 1, 1, 1, 1, 1])
 		assert_true(TrainingProgress.has_card("practical", String(PracticalDeck.station(id)["card"])))
+
+
+# ---------------------------------------------------------------- Station 8: Exam day
+
+## Sixteen tasks, Room A then Room B in the rooms' order; 30 points; every task has a prompt; Room A's
+## first ear, booth and masking call share one subject, the booth is air on the better ear, and the masking
+## call carries the subject's own unmasked chart (so it reads alone).
+func test_exam_round_is_honest() -> void:
+	assert_eq(PracticalDeck.exam_max(), 30)
+	for seed in 12:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		var cards := PracticalDeck.exam_round(rng)
+		assert_eq(cards.size(), 16, "seed %d: sixteen tasks" % seed)
+		var kinds: Array = []
+		var pts := 0
+		var subjects := {}
+		for c: Dictionary in cards:
+			kinds.append("dam" if String(c["kind"]) == "depth" else String(c["kind"]))
+			pts += int(c["points"])
+			assert_true(String(c["prompt"]).begins_with("Please"), "%s: the examiner's prompt" % c["kind"])
+			if c.has("subject"):
+				subjects[String(c["subject"])] = true
+			if String(c["kind"]) != "booth":
+				_honest(c)
+		assert_eq(kinds, PracticalDeck.EXAM_ROOMS["A"] + PracticalDeck.EXAM_ROOMS["B"])
+		assert_eq(pts, 30)
+		assert_eq(subjects.size(), 1, "one subject in Room A")
+		var s := PracticalDeck.tone_subject(String(subjects.keys()[0]))
+		var booth: Dictionary = cards[4]
+		assert_eq([String(booth["test"]), String(booth["ear"])], ["ac", String(s["better"])])
+		var mask: Dictionary = cards[5]
+		assert_eq(int(mask["answer"]), int(PracticalDeck.MASK_ANSWER[String(s["mask"])]))
+		assert_eq((mask["chart"] as Array).size(), 18 + ClinicRules.BC_REQUIRED.size(), "air on both ears, bone on the better")
+		assert_eq([String(cards[0]["room"]), int(cards[0]["task"]), String(cards[8]["room"]), int(cards[8]["task"])], ["A", 1, "B", 1])
+
+
+## The grade by the points lost; a pass is B or better with no STOP; a STOP costs a task's every point.
+func test_exam_grades_and_pass() -> void:
+	assert_eq(PracticalDeck.exam_grade(0), "S")
+	assert_eq(PracticalDeck.exam_grade(1), "A")
+	assert_eq(PracticalDeck.exam_grade(3), "A", "27 of 30 is 90%")
+	assert_eq(PracticalDeck.exam_grade(4), "B")
+	assert_eq(PracticalDeck.exam_grade(7), "B", "23 of 30")
+	assert_eq(PracticalDeck.exam_grade(8), "C")
+	assert_true(PracticalDeck.exam_passed(7, 0))
+	assert_false(PracticalDeck.exam_passed(2, 1), "a STOP: no pass, whatever the points")
+	assert_false(PracticalDeck.exam_passed(8, 0))
+	assert_eq(PracticalDeck.exam_task_points(3, 1, false), 3)
+	assert_eq(PracticalDeck.exam_task_points(3, 3, false), 1)
+	assert_eq(PracticalDeck.exam_task_points(2, 9, false), 0)
+	assert_eq(PracticalDeck.exam_task_points(2, 1, true), 0)
+
+
+## Played by the solvers: no Try it, two room cards, sixteen tasks, every point, an S, a pass and the licence on
+## the title and the lesson card. Only the STOP decides the second sitting.
+func test_exam_plays_by_solvers() -> void:
+	Game.cli = {"seed": 2}
+	PracticalSchool.next_station = "exam"
+	PracticalSchool.last_result = {}
+	var firsts := {}
+	var rooms: Array = []
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		if int(info.get("sub", 0)) == 0:
+			firsts[beat] = int(firsts.get(beat, 0)) + 1
+		if info.has("room") and beat == &"practical_next":
+			rooms.append(String(info["room"]))
+		solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	var went := []
+	var gcb := func(path: String) -> void: went.append(path)
+	Events.goto_scene.connect(gcb)
+	var scale := Engine.time_scale
+	Engine.time_scale = 4.0
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	add_node(school)
+	var t0 := Time.get_ticks_msec()
+	while went.is_empty() and Time.get_ticks_msec() - t0 < 120000:
+		await wait_frames(1)
+	Engine.time_scale = scale
+	Events.awaiting_input.disconnect(acb)
+	Events.goto_scene.disconnect(gcb)
+	assert_eq(went, ["res://story/training/training_room.tscn"], "back to the room")
+	assert_eq(int(firsts.get(&"practical_try", 0)), 0, "the exam is the test: no Try it")
+	assert_eq(rooms, ["A", "B"])
+	assert_eq(int(firsts.get(&"practical_card", 0)) + int(firsts.get(&"practical_booth", 0)), 16)
+	var r := PracticalSchool.last_result
+	assert_eq([int(r["points"]), int(r["max"]), String(r["grade"]), bool(r["pass"]), int(r["stops"]), bool(r["star"])], [30, 30, "S", true, 0, true])
+	assert_true(bool(r["first_pass"]))
+	var lic := preload("res://story/training/practical/licence.gd")
+	assert_true(lic.earned() and lic.passed())
+	assert_eq(lic.grade(), "S")
+	var title: Control = (load("res://story/title_screen.tscn") as PackedScene).instantiate()
+	assert_true(String(title.call("_stats_text")).contains("Practical: S (pass)"), "the title says so")
+	title.free()
+
+
+## In the exam an unsafe pick is a STOP: the task ends at once with its points lost (no second try), the hint
+## does nothing, and a plain miss costs one point.
+func test_exam_stop_ends_the_task() -> void:
+	Game.cli = {"seed": 5}
+	PracticalSchool.next_station = "exam"
+	var school: Control = (load("res://story/training/practical/practical_school.tscn") as PackedScene).instantiate()
+	var cards: Array[Dictionary] = []
+	var acb := func(beat: StringName, info: Dictionary, solver: Callable) -> void:
+		if beat == &"practical_card" and String(info["kind"]) == "grip":
+			cards.append(info)
+		elif beat in [&"practical_intro", &"practical_next", &"practical_booth"] or beat == &"practical_card":
+			solver.call_deferred()
+	Events.awaiting_input.connect(acb)
+	var scale := Engine.time_scale
+	Engine.time_scale = 4.0
+	add_node(school)
+	var t0 := Time.get_ticks_msec()
+	while cards.is_empty() and Time.get_ticks_msec() - t0 < 120000:
+		await wait_frames(1)
+	Engine.time_scale = scale
+	Events.awaiting_input.disconnect(acb)
+	assert_eq(String(cards[0]["kind"]), "grip")
+	assert_eq(int(cards[0]["points"]), 2)
+	assert_eq(String(cards[0]["room"]), "B")
+	school.call("hint")
+	assert_eq(int(school.get("_hole_strokes")), 1, "no hints in the exam")
+	var bad := int((cards[0]["unsafe"] as Array)[0])
+	school.call("pick", bad)
+	assert_true(bool(school.get("_stopped")), "STOP")
+	assert_eq(String(school.get("_state")), "next", "the task is over: on to the next")
+	school.call("pick", int(cards[0]["best"]))
+	assert_eq(int(school.get("_hole_strokes")), 1 + PracticalDeck.UNSAFE_STROKES, "no second try")
+	assert_eq((school.get("_got") as Array).back(), 0, "a STOP loses the task's points")
+	assert_eq((school.get("_stops") as Array).back(), true)
+	school.queue_free()
+
+
+## The licence and the exam's task tag draw; the examiner draws; Practical print view shows eight cards and
+## the licence once every card is earned (P in the room).
+func test_licence_and_print_view() -> void:
+	var c := Control.new()
+	c.size = Vector2(880, 440)
+	var k := [0]
+	c.draw.connect(func() -> void:
+		var L := preload("res://story/training/practical/licence.gd")
+		L.draw(c, Vector2(200, 200), 1.0, ["S", "A", "B", "C", ""][k[0] % 5], k[0] % 2 == 0)
+		PracticalArt.draw_task_tag(c, {"points": 1 + k[0] % 3}, k[0] % 2 == 1)
+		PracticalArt.draw_examiner(c, Vector2(600, 100), 38.0, k[0] % 2 == 0))
+	add_node(c)
+	for i in 6:
+		k[0] = i
+		c.queue_redraw()
+		await wait_frames(1)
+	c.queue_free()
+	TrainingRoom.lesson = "practical"
+	for id: String in PracticalDeck.CARD_ORDER:
+		TrainingProgress.earn_card("practical", id)
+	TrainingProgress.record_round("practical", "exam", 2, "")
+	var room: Control = (load("res://story/training/training_room.tscn") as PackedScene).instantiate()
+	add_node(room)
+	await wait_frames(2)
+	assert_true(bool(room.call("can_print")))
+	assert_true(room.find_child("print_view_button", true, false) != null)
+	room.call("open_print")
+	await wait_frames(2)
+	var pv: Node = room.find_child("PrintView", true, false)
+	assert_true(pv != null)
+	assert_eq(String(pv.get("lesson")), "practical")
+	for id: String in PracticalDeck.CARD_ORDER:
+		assert_true(pv.find_child("print_" + id, true, false) != null, "the page shows %s" % id)
+	assert_eq(String(pv.call("_file_name")), "practical-cheat-sheets.png")
+	pv.call("close_view")
+	await wait_frames(2)
+	room.queue_free()

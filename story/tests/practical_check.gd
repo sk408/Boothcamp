@@ -3,7 +3,7 @@ extends Node
 ## end to end with a test bot and prints PRACTICAL_CHECK_RESULT {json} (docs/training/PRACTICAL_EXAM.md).
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/practical_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=kit|hands|tones|td|impression|delivery|bench picks the station (default kit); --subject=pt_dev|pt_rosa|pt_may fixes Station 3's
+## --station=kit|hands|tones|td|impression|delivery|bench|exam picks the station (default kit); --subject=pt_dev|pt_rosa|pt_may fixes Station 3's
 ## practice subject. Station 3's booth holes (beat practical_booth) always run the solver: the textbook on
 ## the real AudiOtron until Hoot's montage, under every policy. The room opens on Masking
 ## School, so the bot first switches to THE PRACTICAL (the tab's click with --policy=mouse, Tab with keys,
@@ -15,6 +15,9 @@ extends Node
 ##   guess    real keys, a wrong answer first on every hole: every hole a bogey (an unsafe grip a STOP,
 ##            PracticalDeck.UNSAFE_STROKES over), no star
 ##   hint     real keys, Hoot's hint (H) then the right answer: every hole a bogey, no star
+## Exam day (--station=exam): no Try it; the room cards (practical_next with room) are pressed like Next; the
+## bot keeps its own score sheet (each task's points, a miss a point, an unsafe guess a STOP that costs them all)
+## and checks the scorecard's points, grade, pass and the licence; under hint, H must do nothing (no hints).
 ## --via-title: start on the title and open the Training room from its Training button, as a player would.
 ## Every run ends back in the Training room on THE PRACTICAL, whose station must then show its record
 ## and card(s). A first visit to a station with a movie (Station 2) starts it; the bot skips it. --shots=/abs/dir under xvfb: practical_room, practical_intro, practical_try, practical_card,
@@ -76,6 +79,8 @@ class Driver extends Node:
 	var expect_over := 0   # what this run's misses and hints should cost
 	var tries_seen := 0    # Try it cards (a guided ladder asks once per rung)
 	var holes_seen := 0    # round holes: pick cards (rung 0) and Station 3's booth holes
+	var sheet: Array = []  # Exam day: the bot's own score sheet, [{points, misses, stop}] per task
+	var rooms_seen: PackedStringArray = []
 	var result: Dictionary = {}
 	var _clock := 0.0
 	var _last := 0.0
@@ -174,6 +179,8 @@ class Driver extends Node:
 				solver.call()   # skip Hoot's movie (test_training_practical checks it)
 			&"practical_booth":
 				holes_seen += 1
+				if station == "exam":
+					sheet.append({"points": int(PracticalDeck.EXAM_POINTS["booth"]), "misses": 0, "stop": false})
 				await _wait(1.2)
 				await _shoot("practical_booth")
 				await _shoot("practical_booth_%s" % String(data.get("test", "")))
@@ -185,12 +192,24 @@ class Driver extends Node:
 				await _shoot("practical_card")
 				await _shoot("practical_card_%s" % String(data.get("kind", "")))
 				var n := (data["options"] as Array).size()
-				if policy == "guess":   # a wrong pick on every rung of a ladder too
+				if station == "exam":
+					if int(data.get("sub", 0)) == 0:
+						sheet.append({"points": int(data.get("points", 0)), "misses": 0, "stop": false})
+					if policy == "guess" and not bool(sheet[-1]["stop"]):
+						if (data.get("unsafe", []) as Array).has((int(data["best"]) + 1) % n):
+							sheet[-1]["stop"] = true
+						else:
+							sheet[-1]["misses"] = int(sheet[-1]["misses"]) + 1
+				elif policy == "guess":   # a wrong pick on every rung of a ladder too
 					expect_over += PracticalDeck.UNSAFE_STROKES if (data.get("unsafe", []) as Array).has((int(data["best"]) + 1) % n) else 1
 				elif policy == "hint" and int(data.get("sub", 0)) == 0:   # one hint a hole
 					expect_over += 1
 				await _answer(data, solver, true)
 			&"practical_next":
+				if data.has("room"):
+					rooms_seen.append(String(data["room"]))
+					await _wait(0.4)
+					await _shoot("practical_room_%s" % String(data["room"]))
 				await _wait(0.4)
 				await _shoot("practical_card_right")
 				match policy:
@@ -239,6 +258,8 @@ class Driver extends Node:
 				await _key(KEY_1 + best)
 			"guess":
 				await _key(KEY_1 + (best + 1) % n)
+				if station == "exam" and (beat.get("unsafe", []) as Array).has((best + 1) % n):
+					return   # Exam day's STOP ended the task: no second try (a late key would land on the next task)
 				await _wait(0.2)
 				await _key(KEY_1 + best)
 			"hint":
@@ -247,6 +268,9 @@ class Driver extends Node:
 				await _key(KEY_1 + best)
 
 	func _check_result(score: Dictionary) -> void:
+		if station == "exam":
+			_check_exam(score)
+			return
 		var strokes: Array = result.get("strokes", [])
 		var over := int(result.get("over_par", -1))
 		var holes := PracticalDeck.ROUND_HOLES if station != "tones" else holes_seen
@@ -260,6 +284,36 @@ class Driver extends Node:
 		var tries := PracticalDeck.tries(station).size()
 		if tries_seen != tries:
 			problems.append("%d Try it cards, expected %d" % [tries_seen, tries])
+
+	## Exam day: sixteen tasks over two rooms, and the points, grade and pass by the bot's own sheet.
+	func _check_exam(score: Dictionary) -> void:
+		var tasks := 0
+		for r: String in PracticalDeck.EXAM_ROOMS:
+			tasks += (PracticalDeck.EXAM_ROOMS[r] as Array).size()
+		if holes_seen != tasks or (result.get("strokes", []) as Array).size() != tasks:
+			problems.append("%d tasks asked, %d scored, expected %d" % [holes_seen, (result.get("strokes", []) as Array).size(), tasks])
+		if Array(rooms_seen) != ["A", "B"]:
+			problems.append("room cards %s, expected A then B" % str(rooms_seen))
+		if tries_seen != 0:
+			problems.append("the exam showed %d Try it cards" % tries_seen)
+		var lost := 0
+		var stops := 0
+		for t: Dictionary in sheet:
+			lost += int(t["points"]) if bool(t["stop"]) else mini(int(t["points"]), int(t["misses"]))
+			stops += 1 if bool(t["stop"]) else 0
+		var mx := PracticalDeck.exam_max()
+		if int(result.get("max", -1)) != mx or int(result.get("points", -1)) != mx - lost:
+			problems.append("%s run scored %s of %s, expected %d of %d" % [policy, str(result.get("points")), str(result.get("max")), mx - lost, mx])
+		if int(result.get("stops", -1)) != stops:
+			problems.append("%s STOPs, expected %d" % [str(result.get("stops")), stops])
+		if String(result.get("grade", "")) != PracticalDeck.exam_grade(lost) or bool(result.get("pass", false)) != PracticalDeck.exam_passed(lost, stops):
+			problems.append("grade %s pass %s, expected %s %s" % [str(result.get("grade")), str(result.get("pass")), PracticalDeck.exam_grade(lost),
+				str(PracticalDeck.exam_passed(lost, stops))])
+		if bool(score.get("star", false)) != (lost == 0):
+			problems.append("the scorecard's star is %s" % str(score.get("star")))
+		if policy in ["careful", "keys", "mouse", "hint"] and lost != 0:
+			problems.append("a %s run lost %d points" % [policy, lost])
+		print("PracticalCheck exam: %d of %d, grade %s, pass %s, STOPs %d" % [mx - lost, mx, PracticalDeck.exam_grade(lost), str(PracticalDeck.exam_passed(lost, stops)), stops])
 
 	func _check_room() -> void:
 		var rec: Dictionary = Progress.station(PracticalDeck.LESSON, station)
@@ -276,6 +330,10 @@ class Driver extends Node:
 			var card := room.find_child("card_" + card_id, true, false) if room != null else null
 			if card == null or not bool(card.get("earned")):
 				problems.append("the room does not pin the %s card" % card_id)
+		if station == "exam":
+			var lic := preload("res://story/training/practical/licence.gd")
+			if not lic.earned() or lic.grade() != String(result.get("grade", "?")) or lic.passed() != bool(result.get("pass", false)):
+				problems.append("the licence is earned %s, grade %s, pass %s" % [str(lic.earned()), lic.grade(), str(lic.passed())])
 		if Progress.stars("masking") != 0 or not Progress.cards("masking").is_empty():
 			problems.append("The Practical wrote into Masking School's save")
 		var code := 0

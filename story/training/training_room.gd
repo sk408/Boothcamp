@@ -7,7 +7,9 @@ extends Control
 ## exam's diploma (diploma.gd) is stamped on the lesson card once Station 6 is finished.
 ## (practical) Two lesson tabs under the sign: MASKING SCHOOL and THE PRACTICAL (docs/training/PRACTICAL_EXAM.md,
 ## story/training/practical/); the lesson card, its chips (eight for The Practical, two columns of four) and
-## the pinned cards follow the tab. The print view is Masking School's only.
+## the pinned cards follow the tab. Each lesson has its print view once all its cards are earned (The Practical's
+## button sits on its pin board's header); Exam day's licence (practical/licence.gd) replaces the clipboard on the
+## lesson card once the exam is finished.
 ## Controls: keys 1-6 (1-8) open a station; Tab or a click on a tab switches the lesson; Left / Right / Up / Down and Enter (or Space); the mouse hovers
 ## and clicks; P opens the print view (all cards earned); T or "Back to the title" goes home; Esc pauses, like everywhere. A station that is not
 ## built yet shows SOON and only says so.
@@ -24,6 +26,7 @@ const Diploma := preload("res://story/training/diploma.gd")
 const PrintView := preload("res://story/training/print_view.gd")
 const PracticalDeck := preload("res://story/training/practical/practical_deck.gd")
 const PracticalSchool := preload("res://story/training/practical/practical_school.gd")
+const Licence := preload("res://story/training/practical/licence.gd")
 const TITLE_SCENE := "res://story/title_screen.tscn"
 const SCHOOL_SCENE := "res://story/training/masking/masking_school.tscn"
 const PRACTICAL_SCENE := "res://story/training/practical/practical_school.tscn"
@@ -245,12 +248,11 @@ func selected() -> int:
 	return _sel
 
 
-## The print view (Masking School's) opens once every one of its cheat-sheet cards is earned.
+## The lesson's print view opens once every one of its cheat-sheet cards is earned.
 func can_print() -> bool:
-	if lesson != "masking":
-		return false
-	for id: String in MaskDeck.CARD_ORDER:
-		if not TrainingProgress.has_card(MaskDeck.LESSON, id):
+	var d := deck()
+	for id: String in d.CARD_ORDER:
+		if not TrainingProgress.has_card(d.LESSON, id):
 			return false
 	return true
 
@@ -260,6 +262,7 @@ func open_print() -> void:
 		return
 	Sfx.play(&"pop", 1.0, -8.0)
 	_print = PrintView.new()
+	_print.lesson = lesson
 	_print.closed.connect(func() -> void: _print = null)
 	_field.add_child(_print)
 
@@ -432,6 +435,8 @@ func _build_lesson() -> void:
 		c.star = bool(rec["star"])
 		c.best = int(rec["best"])
 		c.best_line = d.round_name(c.best)
+		if lesson == "practical" and String(st["id"]) == "exam" and c.best >= 0:
+			c.best_line = "Grade %s%s" % [PracticalDeck.exam_grade(c.best), ", pass" if Licence.passed() else ""]
 		c.position = LESSON_RECT.position + Vector2(24 + (i % 2) * (cs.x + 24), 104 + (i / 2) * (cs.y + gap))
 		c.picked.connect(open_station)
 		c.hovered.connect(func(j: int) -> void:
@@ -462,7 +467,19 @@ func _build_lesson() -> void:
 			cc.position = PINS_RECT.position + Vector2(10 + (i % 2) * 196, 64 + (i / 2) * 148)
 		cc.rotation = deg_to_rad([-2.0, 1.5, 1.0, -1.5, -1.0, 1.5, 1.0, -1.5][i % 8])
 		_layer.add_child(cc)
-	if can_print():
+	if can_print() and lesson == "practical":
+		# every slot on the board is a card: the button takes the header's place
+		_print_btn = UiKit.button("PRINT VIEW", &"", Vector2(250, 44))
+		_print_btn.name = "print_view_button"
+		_print_btn.add_theme_font_size_override("font_size", 20)
+		_print_btn.position = PINS_RECT.position + Vector2((PINS_RECT.size.x - 250) * 0.5, 8)
+		_print_btn.pressed.connect(open_print)
+		if UiKit.show_key_hints():
+			var kc := UiKit.key_chip("P", 14)
+			kc.position = Vector2(8, 8)
+			_print_btn.add_child(kc)
+		_layer.add_child(_print_btn)
+	elif can_print():
 		_print_btn = UiKit.button("PRINT VIEW", &"", Vector2(182, 132))
 		_print_btn.name = "print_view_button"
 		_print_btn.add_theme_font_size_override("font_size", 22)
@@ -480,6 +497,8 @@ func _welcome() -> String:
 	if lesson == "practical":
 		if TrainingProgress.data(PracticalDeck.LESSON)["stations"].is_empty():
 			return "The practical: two rooms, one live ear, no notes. Let's make your hands remember."
+		if can_print():
+			return "All eight cards! Press P for the print view: one page to take with you."
 		return "Back for more practice? Pick a station, or replay one for its star."
 	if TrainingProgress.data(MaskDeck.LESSON)["stations"].is_empty():
 		return "Welcome to my Training room! Short lessons, big ideas. Start with masking?"
@@ -520,7 +539,9 @@ func _draw_board(ci: Control) -> void:
 	ci.draw_string(f, lc.position + Vector2(30, 56), "THE PRACTICAL" if practical else "MASKING SCHOOL", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Palette.PAPER)
 	ci.draw_string(UiKit.font(600), lc.position + Vector2(32, 86), "California's two rooms, practised one station at a time." if practical
 		else "Why, when and how much: and the occlusion effect.", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(Palette.PAPER, 0.85))
-	if practical:
+	if practical and Licence.earned():
+		Licence.draw(ci, lc.position + Vector2(lc.size.x - 74, 50), 0.5, Licence.grade(), Licence.passed())
+	elif practical:
 		_draw_clipboard(ci, lc.position + Vector2(lc.size.x - 84, 50), 1.0)
 	elif has_diploma():
 		Diploma.draw(ci, lc.position + Vector2(lc.size.x - 84, 46), 0.62, MaskDeck.exam_grade(int(TrainingProgress.station(MaskDeck.LESSON, "exam")["best"])))
@@ -532,7 +553,8 @@ func _draw_board(ci: Control) -> void:
 	# the pin board for the cheat-sheet cards
 	var pb := PINS_RECT
 	UiDraw.rounded_rect(ci, pb, Color(FRAME, 0.35), 22, 4, FRAME)
-	ci.draw_string(f, pb.position + Vector2(0, 42), "MY CHEAT SHEETS", HORIZONTAL_ALIGNMENT_CENTER, pb.size.x, 26, Palette.PAPER)
+	if not (practical and can_print()):   # The Practical's print button takes the header's place
+		ci.draw_string(f, pb.position + Vector2(0, 42), "MY CHEAT SHEETS", HORIZONTAL_ALIGNMENT_CENTER, pb.size.x, 26, Palette.PAPER)
 	# "More lessons soon", dimmed, under Masking School's cards (the print view's tile once every card is earned)
 	if practical or can_print():
 		return

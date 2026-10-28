@@ -17,7 +17,10 @@ extends Control
 ## player's first stamps, then Hoot's montage). 5 "One good impression" (the steps, one rung at a time with four
 ## choices each; the dam's size or depth; the syringe tip or the fill; the cure or the way out; two impressions
 ## to judge). 6 "Delivery day" (the retube, the RIC's wire and dome, three of Gus's first-week questions). 7 "The
-## bench" (three aids with a ticket and a find, the whistle, the test box, fix / send / replace).
+## bench" (three aids with a ticket and a find, the whistle, the test box, fix / send / replace). 8 "Exam day"
+## (the mock exam: no Try it, Room A then Room B, each opened by a room card; an examiner reads a prompt card
+## per task and says nothing else; no hints; points on the score sheet, an unsafe pick a STOP that ends the
+## task; the grade, Practical pass and the Booth Camp Practical licence, licence.gd).
 ## Controls: keys 1-4 answer, H hint (a stroke), Enter / Space go on, R plays again on the scorecard,
 ## T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off:
 ## every answer is drawn, and no tone is ever played to test the player.
@@ -28,6 +31,8 @@ extends Control
 ##   practical_card {station, hole, kind, sub, best, options, unsafe, mouse}  solver: the right answer
 ##     (a ladder card asks again per rung: sub 0, 1, 2...; so does a guided ladder's practical_try)
 ##   practical_next {station, hole}                           solver: Next
+##     (Exam day's room cards: practical_next {station, hole: -1, room: "A" / "B"})
+##   (Exam day's practical_card also carries room, task, points; there is no hint)
 ##   practical_booth {station, hole, kind, test, ear}         solver: the textbook until Hoot's montage
 ##   practical_scorecard {station, over_par, star}            solver: back to the room
 
@@ -37,6 +42,7 @@ const PracticalDeck := preload("res://story/training/practical/practical_deck.gd
 const PracticalArt := preload("res://story/training/practical/practical_art.gd")
 const TrainingProgress := preload("res://story/training/training_progress.gd")
 const CheatCard := preload("res://story/training/cheat_card.gd")
+const Licence := preload("res://story/training/practical/licence.gd")
 const ROOM_SCENE := "res://story/training/training_room.tscn"
 const PLAYER_SCENE := "res://story/explainers/explainer_player.tscn"
 const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
@@ -53,7 +59,8 @@ const HOLE_COLORS: Array[Color] = [Color("#5bc8a3"), Color("#ffd23f"), Color("#f
 
 ## The station the room opens next (a room chip sets it before goto_scene).
 static var next_station := "kit"
-## The last finished round, for the tests and the bot: {station, strokes, over_par, star, new_card, best}.
+## The last finished round, for the tests and the bot: {station, strokes, over_par, star, new_card, best};
+## Exam day adds points, max, grade, pass, stops, tasks ([{room, task, kind, points, got, stop}]), first_pass.
 static var last_result: Dictionary = {}
 
 var station_id := "kit"
@@ -88,6 +95,12 @@ var _guided := false   # a Try it card: only the right answer is open
 var _screen: AudiometerScreen
 var _clinic: Node3D
 var _subject: PatientProfile
+# Exam day: who is talking (the examiner in the rooms), each task's points and its STOP
+var _speaker := "Hoot"
+var _stopped := false
+var _got: Array[int] = []
+var _stops: Array[bool] = []
+var _cards: Array[Dictionary] = []
 
 signal _go(what: StringName)
 
@@ -129,7 +142,8 @@ func _run() -> void:
 		await _play_movie()
 	if _leaving:
 		return
-	await _try_it()
+	if not _is_exam():   # the exam has no Try it: it is the test
+		await _try_it()
 	if _leaving:
 		return
 	await _round()
@@ -210,35 +224,119 @@ func _try_it() -> void:
 
 func _round() -> void:
 	strokes.clear()
-	_update_score()
+	_got.clear()
+	_stops.clear()
 	var cards := PracticalDeck.deal(station_id, rng)
 	if station_id == "tones" and Game.cli.has("subject"):
 		cards = PracticalDeck.tone_round(rng, String(Game.cli["subject"]))   # bots and tests: one subject
+	_cards = cards
+	_update_score()
+	var room := ""
 	for h in cards.size():
-		_set_top("Hole %d of %d" % [h + 1, cards.size()])
+		if _is_exam() and String(cards[h]["room"]) != room:
+			room = String(cards[h]["room"])
+			await _room_card(room)
+			if _leaving:
+				return
+		if _is_exam():
+			_set_top("Room %s: task %d of %d" % [room, int(cards[h]["task"]), (PracticalDeck.EXAM_ROOMS[room] as Array).size()])
+		else:
+			_set_top("Hole %d of %d" % [h + 1, cards.size()])
 		_deal_card(cards[h])
-		if _card.has("subject") and _screen != null:
+		if _card.has("subject") and _screen != null and not _is_exam():
 			_card["chart"] = _chart_marks()
 		if String(_card["kind"]) == "booth":
 			await _booth_hole(h)
 		else:
-			_say(_ask_line())
-			_feedback_text(_ask_feedback())
+			var base := {"station": station_id, "hole": h, "kind": String(_card["kind"])}
+			if _is_exam():
+				_say(String(_card["prompt"]), "Examiner")
+				_feedback_text("%s\nWorth %d point%s on the score sheet. No hints in the exam." % [_ask_line(), int(_card["points"]),
+					"" if int(_card["points"]) == 1 else "s"])
+				base.merge({"room": room, "task": int(_card["task"]), "points": int(_card["points"])})
+			else:
+				_say(_ask_line())
+				_feedback_text(_ask_feedback())
 			_answer_buttons()
 			_state = &"card"
-			await _ask(&"practical_card", {"station": station_id, "hole": h, "kind": String(_card["kind"])})
+			await _ask(&"practical_card", base)
 		if _leaving:
 			return
 		strokes.append(_hole_strokes)
+		if _is_exam():
+			_got.append(PracticalDeck.exam_task_points(int(_card["points"]), _hole_strokes, _stopped))
+			_stops.append(_stopped)
 		_update_score()
 		_state = &"next"
-		_show_next("Next hole" if h < cards.size() - 1 else "Scorecard")
+		_show_next(("Next task" if h < cards.size() - 1 else "The score sheet") if _is_exam() else ("Next hole" if h < cards.size() - 1 else "Scorecard"))
 		Events.awaiting_input.emit(&"practical_next", {"station": station_id, "hole": h, "mouse": {"click": _next_btn.text}}, press_next)
 		await _go
 		Events.input_resolved.emit(&"practical_next")
 		if _leaving:
 			return
 	_close_booth()
+	_speaker = "Hoot"
+
+
+## Exam day: the room's card (its tasks, the real room's minutes, no clock here), Hoot waiting outside.
+func _room_card(room: String) -> void:
+	_close_booth()   # Room A's booth stays in Room A
+	_card = {}
+	_clear_answers()
+	_set_top("")
+	_say("No owls in the exam room. You've got this!" if room == "A" else "Room A done! Deep breath. Room B: impressions, fittings, the bench.")
+	_feedback_text("")
+	_state = &"next"
+	_show_overlay(_room_panel(room))
+	Events.awaiting_input.emit(&"practical_next", {"station": station_id, "hole": -1, "room": room, "mouse": {"click": "Enter Room %s" % room}}, press_next)
+	await _go
+	Events.input_resolved.emit(&"practical_next")
+	_hide_overlay()
+
+
+func _room_panel(room: String) -> Control:
+	var p := UiKit.panel(info["color"], Palette.INK, 28)
+	p.custom_minimum_size = Vector2(760, 0)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	p.add_child(v)
+	var head := UiKit.label("ROOM %s" % room, 52, Palette.PAPER, 700)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	var sub := UiKit.label(("Station A: the tones. %d minutes in the real exam; no clock here." if room == "A"
+		else "Station B: hands on. %d minutes in the real exam; no clock here.") % int(PracticalDeck.EXAM_MINUTES[room]), 20, Palette.SUNNY, 700)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(sub)
+	var flow := HFlowContainer.new()
+	flow.alignment = FlowContainer.ALIGNMENT_CENTER
+	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("v_separation", 8)
+	flow.custom_minimum_size = Vector2(700, 0)
+	for c: Dictionary in _cards:
+		if String(c["room"]) != room:
+			continue
+		var chip := UiKit.panel(Palette.PAPER, Palette.INK, 12)
+		chip.add_child(UiKit.label("%d. %s  (%d)" % [int(c["task"]), PracticalDeck.exam_task_name(c), int(c["points"])], 17, Palette.INK, 700))
+		flow.add_child(chip)
+	v.add_child(flow)
+	var rules := UiKit.label("The examiner reads a prompt card and says nothing else. A miss costs a point; an unsafe move is a STOP: "
+		+ "that task ends with its points lost, and the room goes on.", 18, Palette.PAPER, 600)
+	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rules.custom_minimum_size = Vector2(700, 0)
+	rules.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(rules)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(row)
+	var go := UiKit.button("Enter Room %s" % room, &"", Vector2(260, 60))
+	go.add_theme_font_size_override("font_size", 24)
+	go.pressed.connect(press_next)
+	row.add_child(go)
+	return p
+
+
+func _is_exam() -> bool:
+	return station_id == "exam"
 
 
 ## Emit the live card's beat and wait for its answer. A ladder card ("answers", Station 4) asks once per
@@ -265,6 +363,7 @@ func _deal_card(c: Dictionary) -> void:
 	_wrong.clear()
 	_hole_strokes = 1
 	_hinted = false
+	_stopped = false
 	_stage_t = 0.0
 
 
@@ -277,8 +376,11 @@ func _booth_hole(h: int) -> void:
 	var test := String(_card["test"])
 	var ear := String(_card["ear"])
 	_clear_answers()
-	_say("%s, %s ear. Your first %d stamp%s: then I'll fill the rest." % [PracticalDeck.TEST_WORDS[test], ear, int(_card["stamps"]),
-		"" if int(_card["stamps"]) == 1 else "s"])
+	if _is_exam():
+		_say("%s Your first %d stamps; the rest is filled for you." % [String(_card["prompt"]), int(_card["stamps"])], "Examiner")
+	else:
+		_say("%s, %s ear. Your first %d stamp%s: then I'll fill the rest." % [PracticalDeck.TEST_WORDS[test], ear, int(_card["stamps"]),
+			"" if int(_card["stamps"]) == 1 else "s"])
 	_feedback_text(_booth_feedback(test))
 	_state = &"next"
 	_show_next("Into the booth")
@@ -331,8 +433,9 @@ func _booth_hole(h: int) -> void:
 	if _hole_strokes == 1:
 		Sfx.play(&"ding", 1.1, -6.0)
 	_feedback_text("%s\n%s" % [String(_card["lines"][0]), String(_card["lines"][1]) if _hole_strokes == 1 else
-		"%d slip%s, %d stamp%s off: +%d. The AudiOtron's tips name each one." % [slips, "" if slips == 1 else "s", off, "" if off == 1 else "s", _hole_strokes - 1]])
-	_say(_hole_line())
+		"%d slip%s, %d stamp%s off: %s%d. The AudiOtron's tips name each one." % [slips, "" if slips == 1 else "s", off, "" if off == 1 else "s",
+			"-" if _is_exam() else "+", _hole_strokes - 1]])
+	_say(_hole_line(), _speaker)
 
 
 func _booth_feedback(test: String) -> String:
@@ -625,7 +728,7 @@ func pick(i: int) -> void:
 		var lines: Array = _card["lines"]
 		_feedback_text("%s\n%s" % [String(lines[0]), String(lines[1])])
 		if not _guided:
-			_say(_hole_line())
+			_say(_hole_line(), _speaker)
 		for b: Button in _answer_list():
 			var mine := int(b.get_meta("answer", -1)) == i
 			b.disabled = not mine
@@ -639,7 +742,12 @@ func pick(i: int) -> void:
 	var unsafe := (_card.get("unsafe", []) as Array).has(i)
 	_hole_strokes += PracticalDeck.UNSAFE_STROKES if unsafe else 1
 	Sfx.play(&"error", 1.0, -10.0)
-	if unsafe:
+	if unsafe and _is_exam():
+		_stop_task(i)
+		return
+	if _is_exam():
+		_say("Noted.", "Examiner")   # the examiner says nothing else
+	elif unsafe:
 		_say("STOP! That's the one they stop you for. Brace first, then go in.")
 		if not _card.has("sneeze_at"):
 			_card["sneeze_at"] = _stage_t
@@ -652,8 +760,26 @@ func pick(i: int) -> void:
 			Juice.shake(b, 5.0, 0.25)
 
 
+## Exam day's STOP: an unsafe pick ends the task with its points lost; the right answer is shown, the room goes on.
+func _stop_task(i: int) -> void:
+	_stopped = true
+	_state = &"busy"
+	_reveal = true
+	if not _card.has("sneeze_at"):
+		_card["sneeze_at"] = _stage_t
+	_say("Stop. Thank you. We'll move on.", "Examiner")
+	_feedback_text("STOP: unsafe. This task's %d point%s are lost; the room goes on.\n%s" % [int(_card["points"]),
+		"" if int(_card["points"]) == 1 else "s", String(_card["lines"][0])])
+	for b: Button in _answer_list():
+		b.disabled = true
+		if int(b.get_meta("answer", -1)) == i:
+			b.text = "STOP: unsafe"
+			Juice.shake(b, 5.0, 0.25)
+	_go.emit(&"stop")
+
+
 func hint() -> void:
-	if _state != &"card" or _hinted or _guided:
+	if _state != &"card" or _hinted or _guided or _is_exam():
 		return
 	_hinted = true
 	_hole_strokes += 1
@@ -664,6 +790,8 @@ func hint() -> void:
 
 
 func _hole_line() -> String:
+	if _is_exam():
+		return "Thank you."
 	match _hole_strokes:
 		1:
 			return "Spot on! Par."
@@ -686,6 +814,10 @@ func _scorecard() -> void:
 	for s: int in strokes:
 		total += s
 	var over := total - strokes.size()
+	var exam := {}
+	if _is_exam():
+		exam = _exam_sheet()
+		over = int(exam["max"]) - int(exam["points"])   # the exam's record keeps the fewest points lost
 	var star := over == 0
 	var rec := TrainingProgress.record_round(PracticalDeck.LESSON, station_id, over, String(info["card"]))
 	# Station 2 earns a second card (California's Refer 8) with the first
@@ -693,10 +825,18 @@ func _scorecard() -> void:
 	rec["new_card2"] = card2 != "" and TrainingProgress.earn_card(PracticalDeck.LESSON, card2)
 	last_result = {"station": station_id, "strokes": strokes.duplicate(), "over_par": over, "star": star,
 		"new_card": bool(rec["new_card"]), "best": int(rec["best"])}
+	if _is_exam():
+		exam["first_pass"] = Licence.record_pass(bool(exam["pass"]))
+		last_result.merge(exam, true)
 	print("PRACTICAL_RESULT %s" % JSON.stringify(last_result))
 	_state = &"score"
-	_show_overlay(_score_panel(over, rec))
-	if star:
+	_show_overlay(_exam_panel(exam, rec) if _is_exam() else _score_panel(over, rec))
+	if _is_exam():
+		Sfx.play(&"fanfare" if bool(exam["pass"]) else &"ding", 1.0, -8.0)
+		_say(String(info["star_line"]) if star else ("Grade %s, and a pass! The licence says so." % String(exam["grade"]) if bool(exam["pass"])
+			else "Grade %s. %s Play again: every sitting is practice." % [String(exam["grade"]),
+				"A STOP means no pass this time, whatever the points." if int(exam["stops"]) > 0 else "A pass needs a B: %d%%." % int(PracticalDeck.EXAM_GRADES[2][0])]))
+	elif star:
 		Sfx.play(&"fanfare", 1.0, -8.0)
 		_say(String(info.get("star_line", "Even par! That's a star.")))
 	else:
@@ -710,6 +850,22 @@ func _scorecard() -> void:
 		await _round()
 		if not _leaving:
 			await _scorecard()
+
+
+## Exam day's score sheet: {points, max, grade, pass, stops, tasks}.
+func _exam_sheet() -> Dictionary:
+	var got := 0
+	var mx := 0
+	var stops := 0
+	var tasks: Array = []
+	for i in _got.size():
+		var c: Dictionary = _cards[i]
+		got += _got[i]
+		mx += int(c["points"])
+		stops += 1 if _stops[i] else 0
+		tasks.append({"room": String(c["room"]), "task": int(c["task"]), "kind": String(c["kind"]), "points": int(c["points"]), "got": _got[i], "stop": _stops[i]})
+	var lost := mx - got
+	return {"points": got, "max": mx, "grade": PracticalDeck.exam_grade(lost), "pass": PracticalDeck.exam_passed(lost, stops), "stops": stops, "tasks": tasks}
 
 
 func play_again() -> void:
@@ -788,7 +944,7 @@ func _build() -> void:
 	_top_label.position = Vector2(500, 26)
 	_field.add_child(_top_label)
 	_score_label = UiKit.label("", 20, Palette.INK_SOFT, 600)
-	_score_label.position = Vector2(670, 28)
+	_score_label.position = Vector2(760 if _is_exam() else 670, 28)   # the exam's top line is longer
 	_field.add_child(_score_label)
 	var leave_btn := UiKit.button("Back to the room", &"", Vector2(232, 48))
 	leave_btn.position = Vector2(FIELD.x - 88 - 232, 14)   # clear of the pause button in the corner
@@ -803,7 +959,9 @@ func _build() -> void:
 	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stage.draw.connect(func() -> void:
 		if not _card.is_empty():
-			PracticalArt.draw_card(_stage, _stage.size, _card, _reveal, _wrong, _stage_t))
+			PracticalArt.draw_card(_stage, _stage.size, _card, _reveal, _wrong, _stage_t)
+			if _is_exam():
+				PracticalArt.draw_task_tag(_stage, _card, _stopped))
 	_field.add_child(_stage)
 	# Hoot's corner
 	var hoot := UiKit.panel(Palette.PAPER, Palette.INK, 20)
@@ -817,7 +975,11 @@ func _build() -> void:
 	_hoot_face.custom_minimum_size = Vector2(86, 86)
 	_hoot_face.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_hoot_face.draw.connect(func() -> void:
-		Portraits.draw(_hoot_face, "Hoot", Vector2(43, 43), 38.0, _talk > 0.0 and fmod(_talk, 0.25) > 0.12))
+		var open := _talk > 0.0 and fmod(_talk, 0.25) > 0.12
+		if _speaker == "Examiner":
+			PracticalArt.draw_examiner(_hoot_face, Vector2(43, 43), 38.0, open)
+		else:
+			Portraits.draw(_hoot_face, "Hoot", Vector2(43, 43), 38.0, open))
 	hh.add_child(_hoot_face)
 	_hoot_label = UiKit.label("", 19, Palette.INK, 600)
 	_hoot_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -842,7 +1004,8 @@ func _build() -> void:
 	fp.add_child(_feedback)
 	_field.add_child(fp)
 	if UiKit.show_key_hints():
-		var hr := UiKit.hint_row([["1", "2", "3", "4"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"], 16)
+		var hr := UiKit.hint_row([["1", "2", "3", "4"], "answer", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"] if _is_exam()
+			else [["1", "2", "3", "4"], "answer", ["H"], "hint", ["Enter"], "next", ["T"], "room", ["Esc"], "pause"], 16)
 		hr.position = Vector2(24, 676)
 		_field.add_child(hr)
 	_overlay = UiKit.full_rect(Control.MOUSE_FILTER_STOP)
@@ -856,10 +1019,11 @@ func _layout() -> void:
 	_field.position = Vector2(maxf(off.x, 0.0), maxf(off.y, 0.0))
 
 
-func _say(text: String) -> void:
+func _say(text: String, who := "Hoot") -> void:
+	_speaker = who
 	_hoot_label.text = text
 	_talk = minf(2.0, text.length() / 30.0)
-	Events.dialogue_line.emit("Hoot", text)
+	Events.dialogue_line.emit(who, text)
 
 
 func _set_top(text: String) -> void:
@@ -873,6 +1037,14 @@ func _update_score() -> void:
 	var total := 0
 	for s: int in strokes:
 		total += s
+	if _is_exam():
+		var got := 0
+		var asked := 0
+		for i in _got.size():
+			got += _got[i]
+			asked += int(_cards[i]["points"])
+		_score_label.text = "Points %d of %d" % [got, asked]
+		return
 	_score_label.text = "Strokes %d (%s)" % [total, PracticalDeck.round_name(total - strokes.size())]
 
 
@@ -907,9 +1079,9 @@ func _answer_buttons() -> void:
 			b.disabled = true
 		_answers.add_child(b)
 	if not _guided:
-		_hint_btn = _side_button("Hoot's hint (+1)", "H", Vector2(SIDE_W, 50))
+		_hint_btn = _side_button("No hints in the exam" if _is_exam() else "Hoot's hint (+1)", "" if _is_exam() else "H", Vector2(SIDE_W, 50))
 		_hint_btn.pressed.connect(hint)
-		_hint_btn.disabled = _hinted
+		_hint_btn.disabled = _hinted or _is_exam()
 		_answers.add_child(_hint_btn)
 
 
@@ -1090,6 +1262,98 @@ func _score_panel(over: int, rec: Dictionary) -> Control:
 	row.add_child(back)
 	if UiKit.show_key_hints():
 		var hr := UiKit.hint_row([["R"], "play again", ["Enter"], "back to the room"], 16)
+		hr.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_child(hr)
+	return p
+
+
+## Exam day's scorecard: the score sheet by room (each task's points, a STOP in red), the total, the grade, pass
+## or not yet, and the licence.
+func _exam_panel(exam: Dictionary, rec: Dictionary) -> Control:
+	var p := UiKit.panel(Palette.PAPER, Palette.INK, 28)
+	p.custom_minimum_size = Vector2(980, 0)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	p.add_child(v)
+	var head := UiKit.label("EXAM DAY: THE SCORE SHEET", 30, Palette.INK, 700)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 18)
+	v.add_child(body)
+	var rooms := VBoxContainer.new()
+	rooms.add_theme_constant_override("separation", 8)
+	body.add_child(rooms)
+	for room: String in ["A", "B"]:
+		var rl := UiKit.label("Room %s" % room, 18, Palette.INK_SOFT, 700)
+		rooms.add_child(rl)
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("v_separation", 6)
+		flow.custom_minimum_size = Vector2(640, 0)
+		for t: Dictionary in exam["tasks"]:
+			if String(t["room"]) != room:
+				continue
+			var full := int(t["got"]) == int(t["points"])
+			var col: Color = Palette.MINT if full else (PracticalArt.RED if bool(t["stop"]) else Palette.SUNNY)
+			var chip := UiKit.panel(col, Palette.INK, 10)
+			chip.custom_minimum_size = Vector2(152, 0)
+			var cv := VBoxContainer.new()
+			chip.add_child(cv)
+			var n := UiKit.label(PracticalDeck.exam_task_name(t), 14, Palette.PAPER if bool(t["stop"]) else Palette.INK, 600)
+			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cv.add_child(n)
+			var g := UiKit.label("STOP  0/%d" % int(t["points"]) if bool(t["stop"]) else "%d/%d" % [int(t["got"]), int(t["points"])], 17,
+				Palette.PAPER if bool(t["stop"]) else Palette.INK, 700)
+			g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cv.add_child(g)
+			flow.add_child(chip)
+		rooms.add_child(flow)
+	# the grade badge and the licence
+	var side := Control.new()
+	side.name = "exam_grade"
+	side.custom_minimum_size = Vector2(280, 300)
+	var grade := String(exam["grade"])
+	var passed := bool(exam["pass"])
+	side.draw.connect(func() -> void:
+		var f := UiKit.font(700)
+		side.draw_string(f, Vector2(0, 30), "%d of %d points" % [int(exam["points"]), int(exam["max"])], HORIZONTAL_ALIGNMENT_CENTER, side.size.x, 24, Palette.INK)
+		var c := Vector2(side.size.x * 0.5, 82)
+		side.draw_circle(c + Vector2(0, 3), 36.0, Color(0, 0, 0, 0.25))
+		side.draw_circle(c, 36.0, Palette.grade_color(grade))
+		side.draw_arc(c, 36.0, 0.0, TAU, 32, Palette.INK, 3.0, true)
+		side.draw_string(f, c + Vector2(-36, 15), grade, HORIZONTAL_ALIGNMENT_CENTER, 72, 42, Palette.INK)
+		var word := "PRACTICAL PASS" if passed else ("STOP: NOT YET" if int(exam["stops"]) > 0 else "NOT YET: B PASSES")
+		side.draw_string(f, Vector2(0, 148), word, HORIZONTAL_ALIGNMENT_CENTER, side.size.x, 20, Palette.MINT.darkened(0.3) if passed else PracticalArt.RED)
+		Licence.draw(side, Vector2(side.size.x * 0.5, 232), 0.9, Licence.grade(), Licence.passed()))
+	body.add_child(side)
+	var star := Control.new()
+	star.custom_minimum_size = Vector2(0, 44)
+	star.draw.connect(func() -> void:
+		var c := Vector2(star.size.x * 0.5 - 120, 22)
+		UiDraw.star(star, c + Vector2(0, 3), 20.0, Color(Palette.INK, 0.3))
+		UiDraw.star(star, c, 20.0, Palette.SUNNY if bool(rec["star"]) else Color(Palette.INK_SOFT, 0.25))
+		var t := "Star earned!" if int(exam["points"]) == int(exam["max"]) else ("Star kept from before" if bool(rec["star"]) else "Every point earns the star")
+		star.draw_string(UiKit.font(700), c + Vector2(30, 7), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.INK))
+	v.add_child(star)
+	if bool(exam.get("first_pass", false)) or int(TrainingProgress.station(PracticalDeck.LESSON, "exam")["plays"]) == 1:
+		var nl := UiKit.label("Your Booth Camp Practical licence is on the lesson card!", 20, Palette.CORAL, 700)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(nl)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	v.add_child(row)
+	var again := UiKit.button("Sit it again", &"", Vector2(200, 56))
+	again.add_theme_font_size_override("font_size", 22)
+	again.pressed.connect(play_again)
+	row.add_child(again)
+	var back := UiKit.button("Back to the Training room", &"", Vector2(340, 56))
+	back.add_theme_font_size_override("font_size", 22)
+	back.pressed.connect(leave)
+	row.add_child(back)
+	if UiKit.show_key_hints():
+		var hr := UiKit.hint_row([["R"], "sit again", ["Enter"], "back to the room"], 16)
 		hr.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_child(hr)
 	return p

@@ -48,8 +48,10 @@ const STATIONS: Array = [
 		"intro": "A dead aid, a weak one, a whistler. Find the fault, fix it or send it in.\n"
 			+ "Three aids on the bench, a whistle to place, a test box to read, and one to fix, send or replace."},
 	{"id": "exam", "num": 8, "name": "Exam day", "pitch": "Two rooms, the whole job.", "color": Color("#e5383b"),
-		"card": "", "built": false, "movie": "",
-		"intro": "Room A, then Room B. Scripted examiners, no hints. Finish for the Booth Camp Practical licence."},
+		"card": "", "built": true, "movie": "",
+		"star_line": "Every point on the sheet! Grade S, and the licence is yours.",
+		"intro": "Room A, then Room B. An examiner reads short prompt cards and says nothing else. No hints, no Hoot.\n"
+			+ "Each task is worth points on the score sheet; an unsafe move is a STOP and ends that task. Finish for the Booth Camp Practical licence."},
 ]
 
 ## The cheat-sheet cards in pin order.
@@ -338,6 +340,8 @@ static func deal(station_id: String, rng: RandomNumberGenerator) -> Array[Dictio
 			return delivery_round(rng)
 		"bench":
 			return bench_round(rng)
+		"exam":
+			return exam_round(rng)
 	return []
 
 
@@ -1483,3 +1487,126 @@ static func bench_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
 	out.append(bench_card(bs[2], rng))
 	out.append(fate_card(FATE[rng.randi_range(0, FATE.size() - 1)]))
 	return out
+
+
+# ================================================================ Station 8: Exam day
+
+## The mock exam (PRACTICAL_EXAM.md §3.8): Room A then Room B, the stations' own cards, dealt fresh. Each task is
+## worth points on our own score sheet (built from the bulletin's focus areas, not the board's sheet); a miss
+## costs a point, an unsafe pick is a STOP: the task ends with its points lost and the room goes on. No hints.
+## Grade from the points: S all of them, A 90%, B 75%, else C. "Practical pass" is B or better with no STOP.
+const EXAM_ROOMS: Dictionary = {
+	"A": ["tray", "wash", "look", "first", "booth", "mask", "walk", "symbol"],
+	"B": ["grip", "dam", "judge", "tube", "wire", "counsel", "bench", "whistle"],
+}
+## The real rooms' times (bulletin): shown on the room cards, never a clock. No reward for speed.
+const EXAM_MINUTES: Dictionary = {"A": 35, "B": 30}
+const EXAM_POINTS: Dictionary = {"tray": 2, "wash": 1, "look": 2, "first": 1, "booth": 3, "mask": 2, "walk": 3, "symbol": 1,
+	"grip": 2, "dam": 2, "depth": 2, "judge": 2, "tube": 2, "wire": 2, "counsel": 1, "bench": 2, "whistle": 2}
+const EXAM_GRADES: Array = [[100, "S"], [90, "A"], [75, "B"]]
+const EXAM_PASSING: Array[String] = ["S", "A", "B"]
+## The examiner's prompt cards, written for the game (the real examiners read their own and say nothing else).
+const EXAM_PROMPTS: Dictionary = {
+	"tray": "Please set out your kit.", "wash": "Please prepare to examine your subject.",
+	"look": "Please inspect your subject's ear.", "first": "Please begin air conduction testing.",
+	"booth": "Please obtain air conduction thresholds.", "mask": "Please state whether masking is needed.",
+	"walk": "Please find the threshold of discomfort.", "symbol": "Please record the result.",
+	"grip": "Please demonstrate safe support.", "dam": "Please place the ear dam.", "depth": "Please place the ear dam.",
+	"judge": "Please evaluate the impression.", "tube": "Please retube this earmold.", "wire": "Please fit this hearing aid.",
+	"counsel": "Please answer your subject's question.", "bench": "Please troubleshoot this hearing aid.",
+	"whistle": "Please explain this feedback.",
+}
+
+
+## Sixteen tasks: each station's round dealt fresh and one card of each wanted kind kept, in the room's order.
+## Room A's subject (first ear, the booth, the masking call) is one Station 3 practice subject throughout.
+## Each card gains room, task (1-based within the room), points and prompt.
+static func exam_round(rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var pool: Array[Dictionary] = []
+	for id: String in ["kit", "hands", "tones", "td", "impression", "delivery", "bench"]:
+		pool.append_array(deal(id, rng))
+	var out: Array[Dictionary] = []
+	for room: String in ["A", "B"]:
+		var kinds: Array = EXAM_ROOMS[room]
+		for i in kinds.size():
+			var k := String(kinds[i])
+			var c: Dictionary = {}
+			for p: Dictionary in pool:
+				var pk := String(p["kind"])
+				if pk == k or (k == "dam" and pk == "depth") or (k == "booth" and pk == "booth" and String(p["test"]) == "ac"):
+					c = p
+					break
+			if c.is_empty():
+				continue
+			pool.erase(c)
+			if k == "mask":
+				c["chart"] = subject_chart(tone_subject(String(c["subject"])))
+			c.merge({"room": room, "task": i + 1, "points": int(EXAM_POINTS[String(c["kind"])]), "prompt": exam_prompt(c)}, true)
+			out.append(c)
+	return out
+
+
+## The examiner's prompt for a task, with the ear or tool where the card has one.
+static func exam_prompt(c: Dictionary) -> String:
+	var k := String(c["kind"])
+	if k == "booth":
+		return "Please obtain air conduction thresholds, %s ear." % String(c["ear"])
+	if k == "look":
+		return "Please inspect your subject's %s ear." % String(c["ear"])
+	return String(EXAM_PROMPTS.get(k, "Please go ahead."))
+
+
+## Room A's masking call stands alone: the subject's unmasked chart (air on both ears, bone on the better ear
+## standing for the better cochlea) as mini-chart marks [ear, test, freq, db, no_response].
+static func subject_chart(s: Dictionary) -> Array:
+	var out: Array = []
+	var better := String(s["better"])
+	for ear: String in ["right", "left"]:
+		var ac: Dictionary = s["ac_" + ear]
+		for f: int in ClinicRules.ROUTINE_FREQS:
+			if ac.has(f):
+				out.append([ear, "ac", f, int(ac[f]), false])
+	for f: int in ClinicRules.BC_REQUIRED:
+		var b := 999
+		for ear: String in ["right", "left"]:
+			var ac: Dictionary = s["ac_" + ear]
+			if ac.has(f):
+				b = mini(b, int((s.get("bc_" + ear, {}) as Dictionary).get(f, ac[f])))   # as tone_patient: bone = air unless listed
+		if b < 999:
+			out.append([better, "bc", f, b, false])
+	return out
+
+
+## A task's points: its value less one a miss (Station 3's booth: one a slip or a stamp off), none after a STOP.
+static func exam_task_points(points: int, strokes: int, stopped: bool) -> int:
+	return 0 if stopped else maxi(0, points - (strokes - 1))
+
+
+static func exam_max() -> int:
+	var n := 0
+	for room: String in EXAM_ROOMS:
+		for k: Variant in EXAM_ROOMS[room]:
+			n += int(EXAM_POINTS[String(k)])
+	return n
+
+
+## The grade from the points lost (a finished exam's record keeps the fewest).
+static func exam_grade(lost: int) -> String:
+	var mx := exam_max()
+	var pct := 100.0 * float(mx - maxi(0, lost)) / float(mx)
+	for g: Array in EXAM_GRADES:
+		if pct >= float(g[0]) - 0.001:
+			return String(g[1])
+	return "C"
+
+
+static func exam_passed(lost: int, stops: int) -> bool:
+	return stops == 0 and EXAM_PASSING.has(exam_grade(lost))
+
+
+## The task's short name on the score sheet.
+static func exam_task_name(c: Dictionary) -> String:
+	return {"tray": "Kit", "wash": "Hygiene", "look": "Look and call", "first": "First ear", "booth": "Air thresholds",
+		"mask": "Masking call", "walk": "TD", "symbol": "Record", "grip": "Safe support", "dam": "Ear dam", "depth": "Ear dam",
+		"judge": "Judge the impression", "tube": "Retube", "wire": "RIC fit", "counsel": "Counsel", "bench": "Troubleshoot",
+		"whistle": "Feedback"}.get(String(c["kind"]), String(c["kind"])) as String

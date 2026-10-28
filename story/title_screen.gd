@@ -989,6 +989,10 @@ func _stats_text() -> String:
 			best = int(((st as Dictionary)["exam"] as Dictionary).get("best", -1))
 	if best >= 0:
 		parts.append("Masking diploma: %s" % load("res://story/training/masking/mask_deck.gd").exam_grade(best))
+	# (practical) the Booth Camp Practical licence (Exam day finished), its best grade and a pass
+	var lic: Script = load("res://story/training/practical/licence.gd")
+	if lic.earned():
+		parts.append("Practical: %s%s" % [lic.grade(), " (pass)" if lic.passed() else ""])
 	return "  -  ".join(parts)
 
 
