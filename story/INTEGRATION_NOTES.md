@@ -447,7 +447,13 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   numbers named there: `CAL_MONTHS`, `SANITIZER_MAX_OZ`, the subject rules), `practical_art.gd` (the cards' drawings),
   `practical_school.tscn` + `.gd` (the station loop on its own drawn stage, beats `practical_*`), save lesson
   `"practical"` through `TrainingProgress`. Built: 1 kit ("Pack the bag": what stays home, the calibration sticker,
-  the listening check, the subject). A new station is a `PracticalDeck.STATIONS` entry with `built: true` plus its
-  `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot `story/tests/practical_check.tscn`. No new
-  data files.
+  the listening check, the subject); 2 hands ("Steady hands": which grip is safe, a grip to judge, a hygiene moment,
+  three looks to go ahead or refer by California's eight, `PracticalDeck.REFER_8`; an unsafe pick is a STOP worth
+  `UNSAFE_STROKES`; earns two cards, `card` and `card2`). A new station is a `PracticalDeck.STATIONS` entry with
+  `built: true` plus its `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot
+  `story/tests/practical_check.tscn`. No new data files.
+  - **movies.gd** (additive): registry line `"steady_hand"` (`story/explainers/movies/steady_hand.gd`, chapter `gus`,
+    `"training": true`, stage `story/training/practical/practical_sets.gd`): Station 2's lead-in on a first visit, never
+    Day 1's own movie; on the title's Hoot's Movies as "Training".
+  - **training_progress.gd** (additive): `earn_card(lesson, id)` for a station that earns a second card.
   with the diploma, the print view and its saved PNG, and the AudiOtron's chip. **No new data files**, so the Web preset needs nothing.
