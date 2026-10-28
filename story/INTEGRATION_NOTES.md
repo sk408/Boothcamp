@@ -439,4 +439,15 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
 - **title_screen.gd** (additive): the stats line adds "Masking diploma: <grade>" once the exam is finished (read
   straight from the save, no writes).
 - **Bot**: `story/tests/training_check.tscn` (tools/README.md); `story/tests/training_shots.tscn` shoots the room
+- **(practical) The Practical**, the Training room's second lesson (docs/training/PRACTICAL_EXAM.md, research in
+  docs/training/CA_PRACTICAL_EXAM.md). `training_room.gd` gets two lesson tabs under the sign (MASKING SCHOOL,
+  THE PRACTICAL; Tab or a click switches; `TrainingRoom.lesson` remembers it for the session, Masking School first).
+  The board, chips (eight, two columns of four, SOON under the number) and pins follow the tab; the print view stays
+  Masking School's. New: `story/training/practical/practical_deck.gd` (stations, cards, generators; the bulletin's
+  numbers named there: `CAL_MONTHS`, `SANITIZER_MAX_OZ`, the subject rules), `practical_art.gd` (the cards' drawings),
+  `practical_school.tscn` + `.gd` (the station loop on its own drawn stage, beats `practical_*`), save lesson
+  `"practical"` through `TrainingProgress`. Built: 1 kit ("Pack the bag": what stays home, the calibration sticker,
+  the listening check, the subject). A new station is a `PracticalDeck.STATIONS` entry with `built: true` plus its
+  `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot `story/tests/practical_check.tscn`. No new
+  data files.
   with the diploma, the print view and its saved PNG, and the AudiOtron's chip. **No new data files**, so the Web preset needs nothing.
