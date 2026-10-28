@@ -3,7 +3,9 @@ extends Node
 ## end to end with a test bot and prints PRACTICAL_CHECK_RESULT {json} (docs/training/PRACTICAL_EXAM.md).
 ##   timeout 300 godot --headless --path . --fixed-fps 30 -- \
 ##     --scene=res://story/tests/practical_check.tscn --fresh --policy=careful --speed=4 --seed=1
-## --station=kit|hands|td picks the station (default kit). The room opens on Masking
+## --station=kit|hands|tones|td picks the station (default kit); --subject=pt_dev|pt_rosa|pt_may fixes Station 3's
+## practice subject. Station 3's booth holes (beat practical_booth) always run the solver: the textbook on
+## the real AudiOtron until Hoot's montage, under every policy. The room opens on Masking
 ## School, so the bot first switches to THE PRACTICAL (the tab's click with --policy=mouse, Tab with keys,
 ## select_lesson for careful), then opens the station.
 ## Policies (--policy=):
@@ -16,7 +18,7 @@ extends Node
 ## --via-title: start on the title and open the Training room from its Training button, as a player would.
 ## Every run ends back in the Training room on THE PRACTICAL, whose station must then show its record
 ## and card(s). A first visit to a station with a movie (Station 2) starts it; the bot skips it. --shots=/abs/dir under xvfb: practical_room, practical_intro, practical_try, practical_card,
-## practical_card_right, practical_scorecard, practical_room_after.
+## practical_card_right, practical_booth, practical_scorecard, practical_room_after.
 ## Exit codes: 0 every check passed, 1 a check failed, 2 stalled, 3 overall timeout,
 ## 5 script errors were logged, 6 a mouse target was not found.
 
@@ -73,6 +75,7 @@ class Driver extends Node:
 	var visits := 0
 	var expect_over := 0   # what this run's misses and hints should cost
 	var tries_seen := 0    # Try it cards (a guided ladder asks once per rung)
+	var holes_seen := 0    # round holes: pick cards (rung 0) and Station 3's booth holes
 	var result: Dictionary = {}
 	var _clock := 0.0
 	var _last := 0.0
@@ -169,7 +172,15 @@ class Driver extends Node:
 			&"explainer":
 				await _wait(0.6)
 				solver.call()   # skip Hoot's movie (test_training_practical checks it)
+			&"practical_booth":
+				holes_seen += 1
+				await _wait(1.2)
+				await _shoot("practical_booth")
+				await _shoot("practical_booth_%s" % String(data.get("test", "")))
+				solver.call()   # the textbook on the real AudiOtron until Hoot's montage takes over
 			&"practical_card":
+				if int(data.get("sub", 0)) == 0:
+					holes_seen += 1
 				await _wait(READ_S)
 				await _shoot("practical_card")
 				await _shoot("practical_card_%s" % String(data.get("kind", "")))
@@ -238,9 +249,9 @@ class Driver extends Node:
 	func _check_result(score: Dictionary) -> void:
 		var strokes: Array = result.get("strokes", [])
 		var over := int(result.get("over_par", -1))
-		var holes := PracticalDeck.ROUND_HOLES
-		if strokes.size() != holes:
-			problems.append("%d holes, expected %d" % [strokes.size(), holes])
+		var holes := PracticalDeck.ROUND_HOLES if station != "tones" else holes_seen
+		if strokes.size() != holes or holes_seen != holes:
+			problems.append("%d holes (%d asked), expected %d" % [strokes.size(), holes_seen, holes])
 		var want := expect_over
 		if over != want:
 			problems.append("%s run finished %d over par, expected %d (strokes %s)" % [policy, over, want, str(strokes)])

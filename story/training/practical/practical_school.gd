@@ -12,7 +12,9 @@ extends Control
 ## ahead or refer by California's eight; its movie "The Steady Hand"). An unsafe pick (a grip that
 ## isn't braced) is the lesson's one STOP: it costs PracticalDeck.UNSAFE_STROKES, not one. 4 "Too loud?"
 ## (the seat, the first pitch, the TD routine's rules, two ladder walks: one call per rung of beep pairs,
-## the face drawn, nothing loud ever played).
+## the face drawn, nothing loud ever played). 3 "Station A: the tones" (phones, first ear, bone, the masking call,
+## a symbol, and booth holes on the real AudiOtron with a practice subject who answers by the rules: the
+## player's first stamps, then Hoot's montage).
 ## Controls: keys 1-4 answer, H hint (a stroke), Enter / Space go on, R plays again on the scorecard,
 ## T leaves for the room; Esc pauses, like everywhere. Everything clicks too. Playable with sound off:
 ## every answer is drawn, and no tone is ever played to test the player.
@@ -23,6 +25,7 @@ extends Control
 ##   practical_card {station, hole, kind, sub, best, options, unsafe, mouse}  solver: the right answer
 ##     (a ladder card asks again per rung: sub 0, 1, 2...; so does a guided ladder's practical_try)
 ##   practical_next {station, hole}                           solver: Next
+##   practical_booth {station, hole, kind, test, ear}         solver: the textbook until Hoot's montage
 ##   practical_scorecard {station, over_par, star}            solver: back to the room
 
 const UiKit := preload("res://story/ui_kit.gd")
@@ -33,6 +36,9 @@ const TrainingProgress := preload("res://story/training/training_progress.gd")
 const CheatCard := preload("res://story/training/cheat_card.gd")
 const ROOM_SCENE := "res://story/training/training_room.tscn"
 const PLAYER_SCENE := "res://story/explainers/explainer_player.tscn"
+const AUDIOMETER_SCENE := "res://ui/audiometer/audiometer_screen.tscn"
+const CLINIC_SCENE := "res://world/clinic.tscn"
+const Bean := preload("res://world/characters/bean.gd")
 
 const FIELD := Vector2(1280, 720)
 const STAGE_AT := Vector2(24, 84)
@@ -75,6 +81,10 @@ var _wrong: Array[int] = []
 var _hole_strokes := 1
 var _hinted := false
 var _guided := false   # a Try it card: only the right answer is open
+# Station 3's booth: one AudiOtron (and the clinic behind its window) per round, hidden between holes
+var _screen: AudiometerScreen
+var _clinic: Node3D
+var _subject: PatientProfile
 
 signal _go(what: StringName)
 
@@ -199,14 +209,21 @@ func _round() -> void:
 	strokes.clear()
 	_update_score()
 	var cards := PracticalDeck.deal(station_id, rng)
+	if station_id == "tones" and Game.cli.has("subject"):
+		cards = PracticalDeck.tone_round(rng, String(Game.cli["subject"]))   # bots and tests: one subject
 	for h in cards.size():
 		_set_top("Hole %d of %d" % [h + 1, cards.size()])
 		_deal_card(cards[h])
-		_say(_ask_line())
-		_feedback_text(_ask_feedback())
-		_answer_buttons()
-		_state = &"card"
-		await _ask(&"practical_card", {"station": station_id, "hole": h, "kind": String(_card["kind"])})
+		if _card.has("subject") and _screen != null:
+			_card["chart"] = _chart_marks()
+		if String(_card["kind"]) == "booth":
+			await _booth_hole(h)
+		else:
+			_say(_ask_line())
+			_feedback_text(_ask_feedback())
+			_answer_buttons()
+			_state = &"card"
+			await _ask(&"practical_card", {"station": station_id, "hole": h, "kind": String(_card["kind"])})
 		if _leaving:
 			return
 		strokes.append(_hole_strokes)
@@ -218,6 +235,7 @@ func _round() -> void:
 		Events.input_resolved.emit(&"practical_next")
 		if _leaving:
 			return
+	_close_booth()
 
 
 ## Emit the live card's beat and wait for its answer. A ladder card ("answers", Station 4) asks once per
@@ -247,6 +265,212 @@ func _deal_card(c: Dictionary) -> void:
 	_stage_t = 0.0
 
 
+# ---------------------------------------------------------------- Station 3: the booth
+
+## A booth hole: the card, "Into the booth", the real AudiOtron with the practice subject (the player's
+## first stamps, then Hoot's montage), then the tally. Strokes: par 1, plus one per technique slip or stamp
+## BOOTH_OFF_DB or more off the subject's answer, at most BOOTH_MAX_EXTRA.
+func _booth_hole(h: int) -> void:
+	var test := String(_card["test"])
+	var ear := String(_card["ear"])
+	_clear_answers()
+	_say("%s, %s ear. Your first %d stamp%s: then I'll fill the rest." % [PracticalDeck.TEST_WORDS[test], ear, int(_card["stamps"]),
+		"" if int(_card["stamps"]) == 1 else "s"])
+	_feedback_text(_booth_feedback(test))
+	_state = &"next"
+	_show_next("Into the booth")
+	Events.awaiting_input.emit(&"practical_next", {"station": station_id, "hole": h, "booth": true, "mouse": {"click": _next_btn.text}}, press_next)
+	await _go
+	Events.input_resolved.emit(&"practical_next")
+	if _leaving:
+		return
+	_clear_answers()
+	_state = &"booth"
+	_open_booth(String(_card["subject"]))
+	_dress(test, ear)
+	var plan := {"test": test, "air_transducer": "phones", "hoot_turn_after": int(_card["stamps"]), "montage_after": true,
+		"hoot_turn_text": "Nice! I'll fill in the rest of this ear.", "done_title": "%s DONE!" % String(_card["title"]).to_upper()}
+	if test == "bc" or test == "bc_masked":
+		plan["bc_freqs"] = ClinicRules.BC_REQUIRED.duplicate()
+	if test != "ac":
+		plan["masking_controls"] = true
+	Events.phase_changed.emit(&"audiometry", {})   # clears Hoot's tips, like the days
+	_screen.process_mode = Node.PROCESS_MODE_INHERIT
+	_screen.visible = true
+	_screen.start_test(_subject, ear, false, plan)
+	var errs0 := _screen.session.errors.size()
+	Events.awaiting_input.emit(&"practical_booth", {"station": station_id, "hole": h, "kind": "booth", "test": test, "ear": ear}, solve_booth)
+	await _screen.test_finished
+	Events.input_resolved.emit(&"practical_booth")
+	if _leaving or _screen == null:
+		return
+	_screen.visible = false
+	_screen.process_mode = Node.PROCESS_MODE_DISABLED   # hidden between holes: its keys (H, 1-4...) are the card's
+	Stage.set_booth_view_active(false)
+	Hoot.clear()
+	var mine := 0
+	var hoots := 0
+	var off := 0
+	var st: Dictionary = (_screen.session.sheet(StringName(test))["stored"] as Dictionary)[ear]
+	for f: int in st:
+		var inf: Dictionary = st[f]
+		if bool(inf.get("by_hoot", false)):
+			hoots += 1
+			continue
+		mine += 1
+		if not bool(inf.get("no_response", false)) and absf(float(inf.get("error_db", 0.0))) >= PracticalDeck.BOOTH_OFF_DB:
+			off += 1
+	var slips := _screen.session.errors.size() - errs0
+	_card.merge({"mine": mine, "hoots": hoots, "off": off, "slips": slips, "chart": _chart_marks()}, true)
+	_hole_strokes = 1 + mini(PracticalDeck.BOOTH_MAX_EXTRA, slips + off)
+	_reveal = true
+	_wrong.clear()
+	if _hole_strokes == 1:
+		Sfx.play(&"ding", 1.1, -6.0)
+	_feedback_text("%s\n%s" % [String(_card["lines"][0]), String(_card["lines"][1]) if _hole_strokes == 1 else
+		"%d slip%s, %d stamp%s off: +%d. The AudiOtron's tips name each one." % [slips, "" if slips == 1 else "s", off, "" if off == 1 else "s", _hole_strokes - 1]])
+	_say(_hole_line())
+
+
+func _booth_feedback(test: String) -> String:
+	match test:
+		"ac":
+			return "Air: 1 kHz first, down 10 after a yes, up 5 after a no; two yeses going up is the threshold."
+		"bc":
+			return "Bone on the better ear's mastoid, phones off. Unmasked bone stands for the better cochlea."
+		"bc_masked":
+			return "Noise in the other ear, then the plateau: heard, noise up 5; missed, tone up 5; three steps that hold."
+	return "Masked air: noise in the other ear and the same plateau walk. On the chart: triangle right, square left."
+
+
+## The AudiOtron and the 3D clinic behind its booth window, made once a round for the round's subject.
+func _open_booth(subject_id: String) -> void:
+	if _screen != null:
+		return
+	var s := PracticalDeck.tone_subject(subject_id)
+	_subject = PracticalDeck.tone_patient(s)
+	Game.begin_visit(_subject.id)
+	Game.set_visit_flag("instructed", true)
+	if ResourceLoader.exists(CLINIC_SCENE):
+		_clinic = (load(CLINIC_SCENE) as PackedScene).instantiate() as Node3D
+		_clinic.set("patient_spec", _subject_look(s))
+		add_child(_clinic)
+		var cam: Camera3D = _clinic.call("get_main_camera") if _clinic.has_method("get_main_camera") else null
+		if cam != null:
+			cam.current = false
+		var c: Variant = _clinic
+		c.gus.position = c.SPOTS[&"booth"]   # already in the chair: no walk in from the hallway
+		_clinic.call("sit")
+	_screen = (load(AUDIOMETER_SCENE) as PackedScene).instantiate() as AudiometerScreen
+	add_child(_screen)
+
+
+## The subject's bean: Grandpa Gus's build in their own colours, no walker.
+func _subject_look(s: Dictionary) -> Dictionary:
+	var look: Dictionary = Bean.GUS.duplicate()
+	var seed := String(s["id"]).hash()
+	look["name"] = String(s["name"])
+	look["face"] = &"doris" if String(s["pronoun"]) == "she" else &"gus"
+	look["walker"] = false
+	look["mustache"] = false
+	look["glasses"] = &""
+	look["cardigan"] = [Color("#3a9d96"), Color("#c77dba"), Color("#f2a541"), Color("#5b7fc7")][posmod(seed, 4)]
+	look["hair"] = [Color("#5a3a22"), Color("#c9ccd6"), Color("#2e2442"), Color("#e0a940")][posmod(seed >> 3, 4)]
+	look["hair_style"] = &"bun" if String(s["pronoun"]) == "she" else &"quiff"
+	return look
+
+
+## Put the right transducers on the subject in the booth (the window shows it).
+func _dress(test: String, ear: String) -> void:
+	if _clinic == null:
+		return
+	match test:
+		"ac", "ac_masked":
+			_clinic.call("take_off_bone_oscillator")
+			_clinic.call("put_on_earphones", true, false)
+		"bc":
+			_clinic.call("take_off_earphones")
+			_clinic.call("put_on_bone_oscillator", ear)
+		"bc_masked":
+			_clinic.call("take_off_earphones")
+			_clinic.call("put_on_bone_oscillator", ear)
+			_clinic.call("put_on_masking_phone", PracticalDeck.other_ear(ear), false)
+
+
+func _close_booth() -> void:
+	for n: Node in [_screen, _clinic]:
+		if n != null:
+			remove_child(n)   # out of the tree now: the booth view and the Stage registrations go with it
+			n.queue_free()
+	_screen = null
+	_clinic = null
+	_subject = null
+
+
+## The chart so far as mini-chart marks: [ear, test, freq, db, no_response], air before masked air.
+func _chart_marks() -> Array:
+	var out: Array = []
+	if _screen == null or _screen.session == null:
+		return out
+	for t: StringName in [&"ac", &"bc", &"bc_masked", &"ac_masked"]:
+		var sh: Dictionary = _screen.session.sheet(t)
+		if sh.is_empty():
+			continue
+		for e: String in ["right", "left"]:
+			var st: Dictionary = (sh["stored"] as Dictionary)[e]
+			for f: int in st:
+				if bool((st[f] as Dictionary).get("retest", false)):
+					continue
+				out.append([e, String(t), f, int(st[f]["stored_db"]), bool(st[f].get("no_response", false))])
+	return out
+
+
+## The booth's solver (tests, bots): the textbook through the session, the way the AudiOtron's own tests
+## drive it, until Hoot's montage takes over or the ear is done; the screen then finishes as in play.
+func solve_booth() -> void:
+	if _state != &"booth" or _screen == null:
+		return
+	var s := _screen.session
+	var ear := String(_card["ear"])
+	var guard := 0
+	var n := 0
+	while guard < 600 and not s.is_ear_complete(ear) and not bool(_screen.get("_auto_running")) and not bool(_screen.get("_finishing")):
+		guard += 1
+		var rem := s.required_remaining(ear)
+		if s.test == s.goal_test and s.measurement(ear, s.freq).is_empty() and not rem.is_empty() and s.freq != rem[0]:
+			s.set_freq(rem[0])
+		var a := s.recommended_action()
+		match a["action"]:
+			&"present":
+				# Hoot's own varied gaps and beep lengths: never a steady rhythm
+				_tick(s, AoAutoTester.GAPS[n % AoAutoTester.GAPS.size()])
+				_screen._hold_add("solver")
+				_tick(s, AoAutoTester.DURATIONS[n % AoAutoTester.DURATIONS.size()])
+				n += 1
+				_screen._hold_remove("solver")
+				_tick(s, ClinicRules.RESPONSE_WINDOW_S + 0.1)
+			&"softer", &"louder":
+				s.set_level(int(a["target_db"]))
+			&"mask_louder", &"mask_softer":
+				s.set_mask_level(int(a["target_mask"]))
+			&"mask_toggle":
+				s.toggle_mask()
+			&"transducer":
+				s.set_transducer(a["target"])
+			&"store":
+				_screen._store(false)
+			&"no_response":
+				_screen._store(true)
+			_:
+				_tick(s, 0.1)
+	_screen._refresh()
+
+
+static func _tick(s: AudiometrySession, seconds: float) -> void:
+	for i in int(round(seconds / 0.05)):
+		s.advance(0.05)
+
+
 func _ask_line() -> String:
 	match String(_card["kind"]):
 		"tray":
@@ -273,6 +497,16 @@ func _ask_line() -> String:
 			return String(_card["ask"])
 		"walk":
 			return _rung_line()
+		"phones":
+			return "Phones on. Which cup goes on their %s ear?" % String(_card["ear"]).to_upper()
+		"first":
+			return "Air comes first. Which ear do you test first?"
+		"bone":
+			return "Air's done on both ears. Where does the bone oscillator sit?"
+		"mask":
+			return "Air on both ears, bone on the better one. What does the chart need now?"
+		"symbol":
+			return "Record it. Which symbol goes on the chart?"
 	return "Pick one."
 
 
@@ -306,6 +540,12 @@ func _ask_feedback() -> String:
 		"seat", "order", "rule", "walk":
 			return "The board's suggested TD routine: face in view, top pitch first, %d dB, pairs, up %d, finger, hand, arrow at %d." % [
 				PracticalDeck.TD_START_DB, PracticalDeck.TD_STEP_DB, PracticalDeck.TD_LIMIT_DB]
+		"phones", "first", "bone":
+			return "Station A, before the first beep: the right cup on the right ear, the better ear first, bone on the mastoid."
+		"mask":
+			return "Your subject's chart from the booth. The rules are drawn on the right."
+		"symbol":
+			return "The board marks every symbol: right red, left blue, the right shape for each test."
 	return ""
 
 
@@ -452,6 +692,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if k != null:
 		code = k.keycode if k.keycode != KEY_NONE else k.physical_keycode
 	var n := (_card.get("options", []) as Array).size()
+	if _state == &"booth":
+		return   # the AudiOtron has the keys
 	var handled := true
 	if code == KEY_T:
 		leave()

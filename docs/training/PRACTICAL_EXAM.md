@@ -4,7 +4,7 @@ Steve asked (2026-10-28) for "exhaustive research into the california hearing ai
 "create our own practical exam in the training section of the game." The research is
 [CA_PRACTICAL_EXAM.md](CA_PRACTICAL_EXAM.md); this page is the game design, built in small PRs after this one
 (section 9). **Built so far:** the lesson tabs in the Training room, the lesson frame and Station 1, Pack the bag
-(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
+(PR 2); Station 2, Steady hands, and Hoot's movie "The Steady Hand" (PR 3); Station 4, Too loud? (PR 4); Station 3, Station A: the tones (PR 5). **Steve: section 10 is your question list. Reply by number only where you disagree; every default stands
 otherwise.**
 
 | | |
@@ -122,6 +122,19 @@ with the right symbols and colours.
 - **The clock** (section 6): each step costs **exam minutes** on a drawn clock; running long never costs a point,
   Hoot just says "Real exam: 35 minutes for all of Station A."
 - **Earns:** the **Station A Order** card (gold): check, look, air better ear first, bone, mask, TD, record.
+- **As built (PR 5):** one subject a round, three in all, each one of Station 1's good subjects answering by the
+  rules on over-ear headphones: Dev, 34 (near-normal, left a touch better: nothing to mask), Rosa, 70 (a sloping
+  loss, the right better, a gap at 500 Hz on the left: masked bone) and Aunt May, 58 (a one-sided loss on the left:
+  masked bone and masked air). Pick holes, keys 1-4: "Phones on" (which cup on this ear), "Which ear first?" (what
+  the subject says), "Bone on" (four numbered spots on a drawn head), "Mask?" (the subject's own chart from the
+  booth, with the bone and air rules drawn beside it) and "Record it" (four drawn symbols: the asked one, the other
+  ear's twin, the same ear's masked or unmasked sibling, one more). **Booth holes** run the real AudiOtron with the
+  3D clinic behind its window: air on the better ear, air on the other, unmasked bone on the better ear, then the
+  masked sheets the chart needs on the poorer ear. The player stamps the first thresholds (two for air and bone,
+  one for a masked sheet) and Hoot's montage fills the rest of the ear. A booth hole's par is a clean hole: one
+  stroke per technique slip the AudiOtron already flags, or per stamp 10 dB off the subject's answer, at most +3.
+  So 8 to 10 holes a round. Try it: the red cup, then the mastoid. **Deferred:** the exam clock (section 6) and
+  the TD on this chart (Station 4 has it).
 
 ### 3.4 Station 4: "Too loud?" (the threshold of discomfort)
 

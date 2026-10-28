@@ -451,7 +451,14 @@ Everything is in `story/arcade/` plus its tests in `story/tests/`. Shared files:
   three looks to go ahead or refer by California's eight, `PracticalDeck.REFER_8`; an unsafe pick is a STOP worth
   `UNSAFE_STROKES`; earns two cards, `card` and `card2`); 4 td ("Too loud?": the seat, the first pitch, the TD
   routine's rules, ladder walks; the bulletin's `TD_START_DB`, `TD_STEP_DB`, `TD_LIMIT_DB` named in the deck. A
-  ladder card carries `answers` and `step`: the station asks once per rung, beat `sub` counting them). A new station is a `PracticalDeck.STATIONS` entry with
+  ladder card carries `answers` and `step`: the station asks once per rung, beat `sub` counting them); 3 tones
+  ("Station A: the tones": phones on, the first ear, the bone's spot, the masking call, a symbol to record, and booth
+  holes on the **real AudiOtron**: `practical_school.gd` instantiates `ui/audiometer/audiometer_screen.tscn` and
+  `world/clinic.tscn` once a round (hidden and PROCESS_MODE_DISABLED between holes, freed at the round's end) with a
+  practice subject built in code, `PracticalDeck.tone_patient()`: three of Station 1's subjects who answer by the rules
+  (slope 0.5, no false alarms), `start_test` plans with `hoot_turn_after` = the player's stamps and `montage_after`;
+  booth strokes: 1 + slips (`session.errors`) + stamps 10 dB off (`error_db`), at most +3; beat `practical_booth`).
+  The audiometer and clinic are used as is: no change to `ui/` or `world/`. A new station is a `PracticalDeck.STATIONS` entry with
   `built: true` plus its `deal`/`tries` branches and its card kinds in `practical_art.gd`. Bot
   `story/tests/practical_check.tscn`. No new data files.
   - **movies.gd** (additive): registry line `"steady_hand"` (`story/explainers/movies/steady_hand.gd`, chapter `gus`,
